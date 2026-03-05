@@ -461,8 +461,8 @@
     <div class="loginLogo">LI</div>
     <h2>Ingeniería de Procesos</h2>
     <p>Línea Italia · Inicia sesión para continuar</p>
-    <label>Correo electrónico</label>
-    <input class="input" type="email" id="loginEmail" placeholder="usuario@lineaitalia.com" style="margin-bottom:10px">
+    <label>Usuario</label>
+    <input class="input" type="email" id="loginEmail" placeholder="adrian, ramon, francisco, alexis..." style="margin-bottom:10px">
     <label>Contraseña</label>
     <input class="input" type="password" id="loginPassword" placeholder="••••••••" style="margin-bottom:14px">
     <div class="loginErr" id="loginErr">Correo o contraseña incorrectos.</div>
@@ -2889,11 +2889,13 @@ function escapeHtml(str){
  *  ========================================================= */
 // Default users — admin can add more in settings with email+password
 function getAuthUsers(){
-  return DB.authUsers || [
-    {email:"admin@lineaitalia.com", password:"admin123", userId: DB.users[0]?.id, role:"admin"},
-    {email:"ramon@lineaitalia.com", password:"user123", userId: DB.users[1]?.id, role:"user"},
-    {email:"francisco@lineaitalia.com", password:"user123", userId: DB.users[2]?.id, role:"user"},
-    {email:"alexis@lineaitalia.com", password:"user123", userId: DB.users[3]?.id, role:"user"},
+  if(DB.authUsers && DB.authUsers.length) return DB.authUsers;
+  // Default credentials - stored by username to avoid email encoding issues
+  return [
+    {user:"adrian", password:"admin123", role:"admin", nameMatch:"Adrián"},
+    {user:"ramon", password:"user123", role:"user", nameMatch:"Ramón"},
+    {user:"francisco", password:"user123", role:"user", nameMatch:"Francisco"},
+    {user:"alexis", password:"user123", role:"user", nameMatch:"Alexis"},
   ];
 }
 
@@ -2903,16 +2905,17 @@ function doLogin(){
   const email = document.getElementById("loginEmail").value.trim().toLowerCase();
   const pass = document.getElementById("loginPassword").value;
   const authUsers = getAuthUsers();
-  const found = authUsers.find(u => u.email.toLowerCase()===email && u.password===pass);
+  const emailOrUser = email.split("@")[0].toLowerCase();
+  const found = authUsers.find(u => (u.email && u.email.toLowerCase()===email || u.user && u.user.toLowerCase()===emailOrUser) && u.password===pass);
   if(!found){
     document.getElementById("loginErr").style.display="block";
     return;
   }
   CURRENT_USER = {
     email: found.email,
-    userId: found.userId,
+    userId: found.userId || (DB.users.find(u=>u.name===found.nameMatch)||DB.users[0]||{}).id,
     role: found.role,
-    name: userName(found.userId)
+    name: found.nameMatch || userName(found.userId)
   };
   localStorage.setItem("li_session", JSON.stringify(CURRENT_USER));
   document.getElementById("loginScreen").style.display = "none";
@@ -3417,23 +3420,4 @@ function initGsUI(){
       CURRENT_USER = JSON.parse(savedSession);
       document.getElementById("loginScreen").style.display = "none";
       applyRoleUI();
-      document.getElementById("sideUserName").textContent = CURRENT_USER.name + " (" + (CURRENT_USER.role==="admin"?"Admin":"Usuario") + ")";
-    } catch(e){ CURRENT_USER = null; }
-  }
-
-  // Acceso rápido: Ctrl/Cmd + K abre quick add
-  window.addEventListener("keydown", (e)=>{
-    const isMac = navigator.platform.toLowerCase().includes("mac");
-    const mod = isMac ? e.metaKey : e.ctrlKey;
-    if(mod && e.key.toLowerCase()==="k"){
-      e.preventDefault();
-      qaType.value="deliverable";
-      qaRender();
-      openDialog(dlgQuickAdd);
-    }
-  });
-})();
-
-</script>
-</body>
-</html>
+      document.getElementById("sideUserName").textContent = CURRENT_USER.name + " (" + (C
