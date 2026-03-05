@@ -2333,7 +2333,7 @@ document.body.addEventListener("click", (e)=>{
           </div>
           <div>
             <label>Compromiso</label>
-            <input class="input" type="date" id="ed_due" value="${d.due||t}">
+            <input class="input" type="date" id="ed_due" value="${d.due||t}" onchange="document.getElementById('ed_due_reason_row').style.display=this.value!=='${d.due||t}'?'block':'none'">
           </div>
         </div>
         <div id="ed_due_reason_row" style="display:none; margin-top:4px">
@@ -2343,15 +2343,6 @@ document.body.addEventListener("click", (e)=>{
             <option value="seguimiento">Falta de seguimiento (penaliza -5% score)</option>
           </select>
         </div>
-        <script>
-          (function(){
-            const orig = "${d.due||t}";
-            document.getElementById("ed_due").addEventListener("change", function(){
-              const row = document.getElementById("ed_due_reason_row");
-              row.style.display = this.value !== orig ? "block" : "none";
-            });
-          })();
-        </script>
         <div class="formGrid">
           <div>
             <label>Estado</label>
@@ -3398,7 +3389,7 @@ function initGsUI(){
   });
 
   // Auto-login as admin (login desactivado temporalmente)
-  CURRENT_USER = { email:"admin@lineaitalia.com", userId: DB.users[0]?.id, role:"admin", name: DB.users[0]?.name || "Admin" };
+  CURRENT_USER = { email:"<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0667626b6f68466a6f6863676f72676a6f672865696b">[email&#160;protected]</a>", userId: DB.users[0]?.id, role:"admin", name: DB.users[0]?.name || "Admin" };
   document.getElementById("loginScreen").style.display = "none";
   applyRoleUI();
   const sideUser = document.getElementById("sideUserName");
@@ -3409,7 +3400,7 @@ function initGsUI(){
     const mod = isMac ? e.metaKey : e.ctrlKey;
     if(mod && e.key.toLowerCase()==="k"){
       e.preventDefault();
-      qaType.value="deliverable";
+         qaType.value="deliverable";
       qaRender();
       openDialog(dlgQuickAdd);
     }
