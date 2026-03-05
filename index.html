@@ -3389,7 +3389,7 @@ function initGsUI(){
   });
 
   // Auto-login as admin (login desactivado temporalmente)
-  CURRENT_USER = { email:"<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0667626b6f68466a6f6863676f72676a6f672865696b">[email&#160;protected]</a>", userId: DB.users[0]?.id, role:"admin", name: DB.users[0]?.name || "Admin" };
+  CURRENT_USER = { userId: DB.users[0]?.id, role:"admin", name: DB.users[0]?.name || "Admin" };
   document.getElementById("loginScreen").style.display = "none";
   applyRoleUI();
   const sideUser = document.getElementById("sideUserName");
