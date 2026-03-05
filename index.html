@@ -329,6 +329,74 @@
 
     .hidden{display:none !important}
 
+    /* LOGIN */
+    #loginScreen{
+      position:fixed; inset:0; z-index:10000;
+      background: radial-gradient(1200px 800px at 20% 10%, rgba(37,99,235,.15), transparent 60%),
+                  radial-gradient(900px 600px at 80% 30%, rgba(22,163,74,.10), transparent 55%),
+                  var(--bg);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .loginBox{
+      background:var(--panel); border:1px solid var(--line);
+      border-radius:20px; padding:32px; width:min(420px,92vw);
+      box-shadow: 0 20px 60px rgba(15,23,42,.12);
+    }
+    .loginBox h2{margin:0 0 4px; font-size:22px}
+    .loginBox p{margin:0 0 20px; color:var(--muted); font-size:13px}
+    .loginLogo{
+      width:52px; height:52px; border-radius:14px;
+      background:rgba(37,99,235,.10); border:1px solid rgba(37,99,235,.20);
+      display:grid; place-items:center; margin-bottom:16px;
+      font-size:24px; font-weight:800; color:var(--accent);
+    }
+    .loginErr{color:var(--bad); font-size:12px; margin-top:8px; display:none}
+
+    /* CALENDAR */
+    .calGrid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+    .calDay{
+      min-height:72px; border:1px solid var(--line); border-radius:10px;
+      padding:6px; background:var(--panel); cursor:pointer;
+      transition:.12s ease; font-size:11px;
+    }
+    .calDay:hover{border-color:rgba(37,99,235,.35); background:rgba(37,99,235,.04)}
+    .calDay.today{border-color:var(--accent); background:rgba(37,99,235,.06)}
+    .calDay.other-month{opacity:.35}
+    .calDay .day-num{font-weight:700; font-size:13px; margin-bottom:3px}
+    .calDay .ev{
+      font-size:10px; padding:2px 5px; border-radius:5px; margin-bottom:2px;
+      background:rgba(37,99,235,.10); color:var(--accent);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .calDay .ev.warn{background:rgba(217,119,6,.10); color:#92400e}
+    .calDay .ev.bad{background:rgba(220,38,38,.10); color:#991b1b}
+    .calDay .ev.ok{background:rgba(22,163,74,.10); color:#065f46}
+    .calHeader{display:flex; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap}
+    .calHeader h3{margin:0; font-size:17px; flex:1}
+    .calDayNames{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:4px}
+    .calDayNames span{text-align:center; font-size:11px; color:var(--muted); font-weight:600; padding:4px 0}
+
+    /* PERSON CARD COLLAPSE */
+    .personCard{cursor:pointer; user-select:none}
+    .personCard:hover .personBar{border-color:rgba(37,99,235,.3)}
+    .personDetail{display:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--line)}
+    .personDetail.open{display:block}
+
+    /* SCORE PENALTY */
+    .penaltyTag{
+      display:inline-flex; align-items:center; gap:4px; padding:3px 8px;
+      border-radius:999px; font-size:11px; font-weight:600;
+      background:rgba(220,38,38,.10); color:#991b1b; border:1px solid rgba(220,38,38,.2);
+    }
+
+    /* AUTO SYNC BAR */
+    #autoSyncBar{
+      position:fixed; bottom:0; left:0; right:0; height:2px;
+      background:var(--accent); transform:scaleX(0); transform-origin:left;
+      z-index:9998; transition:transform 30s linear;
+    }
+    #autoSyncBar.running{transform:scaleX(1)}
+
     dialog{
       border:none;
       padding:0;
@@ -387,6 +455,24 @@
   </style>
 </head>
 <body>
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="loginBox">
+    <div class="loginLogo">LI</div>
+    <h2>Ingeniería de Procesos</h2>
+    <p>Línea Italia · Inicia sesión para continuar</p>
+    <label>Correo electrónico</label>
+    <input class="input" type="email" id="loginEmail" placeholder="usuario@lineaitalia.com" style="margin-bottom:10px">
+    <label>Contraseña</label>
+    <input class="input" type="password" id="loginPassword" placeholder="••••••••" style="margin-bottom:14px">
+    <div class="loginErr" id="loginErr">Correo o contraseña incorrectos.</div>
+    <button class="btn primary" id="btnLogin" style="width:100%; margin-top:8px; padding:12px">Iniciar sesión</button>
+  </div>
+</div>
+
+<!-- AUTO SYNC BAR -->
+<div id="autoSyncBar"></div>
+
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
@@ -401,11 +487,13 @@
     </div>
 
     <nav class="nav" id="nav">
-      <button class="active" data-view="dashboard"><span class="dot"></span> Dashboard</button>
+      <button data-view="dashboard"><span class="dot"></span> Dashboard</button>
       <button data-view="projects"><span class="dot"></span> Proyectos</button>
       <button data-view="deliverables"><span class="dot"></span> Entregables</button>
       <button data-view="routines"><span class="dot"></span> Rutinas</button>
       <button data-view="incidents"><span class="dot"></span> Incidencias</button>
+      <button data-view="calendar"><span class="dot"></span> Calendario</button>
+      <button data-view="workspace" id="navWorkspace"><span class="dot"></span> Mi Espacio</button>
       <button data-view="reports"><span class="dot"></span> Reportes</button>
       <button data-view="settings"><span class="dot"></span> Configuración</button>
     </nav>
@@ -423,6 +511,11 @@
       <div class="flex between">
         <button class="btn small ghost" id="btnExportAll">Exportar CSV</button>
         <button class="btn small danger" id="btnReset">Reset</button>
+      </div>
+      <div class="hr"></div>
+      <div class="flex between" style="align-items:center">
+        <span class="small" id="sideUserName" style="font-weight:600; color:var(--text)">—</span>
+        <button class="btn small danger" id="btnLogout">Salir</button>
       </div>
       <p class="small muted" style="margin:10px 0 0; line-height:1.35">
         Los datos se sincronizan con Google Sheets. Todos en tu equipo ven los mismos datos en tiempo real.
@@ -801,10 +894,154 @@
       </div>
     </section>
 
+    <!-- CALENDAR -->
+    <section id="view-calendar" class="hidden">
+      <div class="topbar">
+        <div class="title">
+          <h2>Calendario</h2>
+          <p>Actividades y entregables del mes.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="calHeader">
+          <button class="btn small" id="calPrev">◀</button>
+          <h3 id="calTitle">—</h3>
+          <button class="btn small" id="calNext">▶</button>
+          <button class="btn small primary" id="calToday">Hoy</button>
+        </div>
+        <div class="calDayNames">
+          <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+        </div>
+        <div class="calGrid" id="calGrid"></div>
+      </div>
+    </section>
+
+    <!-- WORKSPACE (Mi Espacio) -->
+    <section id="view-workspace" class="hidden">
+      <div class="topbar">
+        <div class="title">
+          <h2>Mi Espacio</h2>
+          <p id="workspaceSubtitle">Tus tareas, entregables y proyectos personales.</p>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btnAddMyTask">+ Agregar tarea</button>
+        </div>
+      </div>
+
+      <div class="grid kpis" id="workspaceKpis" style="margin-bottom:12px"></div>
+
+      <div class="card">
+        <b>Mis tareas personales</b>
+        <div class="small muted">Visibles solo para ti y el administrador.</div>
+        <div class="hr"></div>
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Estado</th>
+                <th>Tarea</th>
+                <th>Prioridad</th>
+                <th>Fecha</th>
+                <th class="right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tableMyTasks"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <b>Mis entregables asignados</b>
+        <div class="hr"></div>
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Estado</th>
+                <th>Entregable</th>
+                <th>Proyecto</th>
+                <th>Fecha</th>
+                <th class="right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tableMyDeliverables"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
   </main>
 </div>
 
-<!-- QUICK ADD MODAL -->
+<!-- CALENDAR DAY MODAL -->
+<dialog id="dlgCalDay">
+  <div class="modal">
+    <header>
+      <div>
+        <h3 id="calDayTitle">Actividades del día</h3>
+        <p id="calDayDate" class="muted"></p>
+      </div>
+      <button class="btn small ghost" data-close>✕</button>
+    </header>
+    <div class="content" id="calDayContent"></div>
+    <footer><button class="btn" data-close>Cerrar</button></footer>
+  </div>
+</dialog>
+
+<!-- MY TASK MODAL -->
+<dialog id="dlgMyTask">
+  <div class="modal">
+    <header>
+      <div>
+        <h3 id="myTaskTitle">Nueva tarea</h3>
+        <p class="muted">Tarea personal en tu espacio de trabajo.</p>
+      </div>
+      <button class="btn small ghost" data-close>✕</button>
+    </header>
+    <div class="content">
+      <label>Nombre de la tarea</label>
+      <input class="input" id="mt_title" placeholder="Ej: Revisar planos de la sección B">
+      <div class="formGrid" style="margin-top:10px">
+        <div>
+          <label>Prioridad</label>
+          <select class="input" id="mt_priority">
+            <option>Alta</option><option selected>Media</option><option>Baja</option>
+          </select>
+        </div>
+        <div>
+          <label>Fecha límite</label>
+          <input class="input" type="date" id="mt_due">
+        </div>
+      </div>
+      <label>Notas</label>
+      <textarea class="input" id="mt_notes" placeholder="Contexto, referencias..."></textarea>
+    </div>
+    <footer>
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="mtSave">Guardar</button>
+    </footer>
+  </div>
+</dialog>
+
+<!-- MONTH CLOSE MODAL -->
+<dialog id="dlgMonthClose">
+  <div class="modal">
+    <header>
+      <div>
+        <h3>Cierre de mes</h3>
+        <p class="muted">Guarda el resumen mensual en Google Sheets y reinicia.</p>
+      </div>
+      <button class="btn small ghost" data-close>✕</button>
+    </header>
+    <div class="content" id="monthCloseContent"></div>
+    <footer>
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="btnConfirmMonthClose">Confirmar cierre</button>
+    </footer>
+  </div>
+</dialog>
+
+
 <dialog id="dlgQuickAdd">
   <div class="modal">
     <header>
@@ -1307,47 +1544,75 @@ function renderPeople(){
   const cards = DB.users.map(u=>{
     const s = semaforoForUser(u.id);
     const c = complianceForUser(u.id);
-
     const complianceLevel = c.pct>=85 ? "ok" : (c.pct>=70 ? "warn" : "bad");
-    const complianceTag = complianceLevel==="ok" ? "ok" : (complianceLevel==="warn" ? "warn" : "bad");
-
     const pillClass = s.level==="ok" ? "ok" : s.level==="warn" ? "warn" : "bad";
+    const scoreColor = complianceLevel==="ok"?"var(--ok)":complianceLevel==="warn"?"var(--warn)":"var(--bad)";
 
-    const approvedInfo = c.approvedTotal
-      ? ` · Aprobados a tiempo: <b style="color:var(--text)">${c.approvedPct}%</b> (${c.approvedOnTime}/${c.approvedTotal})`
-      : ``;
+    // Score penalty info
+    const penalties = (DB.deliverables||[]).filter(d=>d.assigneeId===u.id && d.scorePenalty);
+    const totalPenalty = penalties.reduce((a,d)=>a+(d.scorePenalty||0),0);
+    const adjustedPct = Math.max(0, c.pct - totalPenalty);
+    const adjLevel = adjustedPct>=85?"ok":adjustedPct>=70?"warn":"bad";
 
     return `
-      <div class="card" style="padding:12px">
-        <div class="flex between wrap" style="gap:12px">
-          <div style="min-width:260px; flex:1">
-            <div class="metric">
-              <div>
-                <b>${u.name}</b> <span class="small muted">· ${u.role} · ${u.team}</span>
+      <div class="card personCard" style="padding:12px" onclick="togglePersonDetail('${u.id}')">
+        <div class="flex between wrap" style="gap:8px; align-items:center">
+          <div style="flex:1; min-width:180px">
+            <div class="flex" style="gap:8px; align-items:center; margin-bottom:6px">
+              <b>${u.name}</b>
+              <span class="small muted">· ${u.role}</span>
+              <span class="pill ${pillClass}" style="padding:3px 8px; font-size:11px"><span class="s"></span>${s.label}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px">
+              <div class="progress ${complianceLevel}" style="flex:1; height:8px">
+                <span style="width:${adjustedPct}%"></span>
               </div>
-              <span class="tag ${complianceTag}">${c.pct}% cumplimiento</span>
+              <span style="font-size:12px; font-weight:700; color:${scoreColor}; min-width:36px">${adjustedPct}%</span>
             </div>
+            ${totalPenalty>0?`<div class="small muted" style="margin-top:3px"><span class="penaltyTag">-${totalPenalty}% por seguimiento</span></div>`:""}
+          </div>
+          <span style="color:var(--muted); font-size:16px" id="chevron-${u.id}">▶</span>
+        </div>
 
-            <div class="small muted" style="margin:6px 0 8px">
-              Entregables (con fecha): <b style="color:var(--text)">${c.total}</b> · Cumplidos: <b style="color:var(--text)">${c.compliant}</b> · Vencidos: <b style="color:var(--text)">${c.overdue}</b>${approvedInfo}
+        <div class="personDetail" id="detail-${u.id}">
+          <div class="grid" style="grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px">
+            <div style="background:var(--panel2); border-radius:10px; padding:10px; border:1px solid var(--line); text-align:center">
+              <div class="small muted">Entregables</div>
+              <div style="font-size:18px; font-weight:800">${c.total}</div>
             </div>
-
-            <div class="progress ${complianceLevel}">
-              <span style="width:${c.pct}%"></span>
+            <div style="background:var(--panel2); border-radius:10px; padding:10px; border:1px solid var(--line); text-align:center">
+              <div class="small muted">Cumplidos</div>
+              <div style="font-size:18px; font-weight:800; color:var(--ok)">${c.compliant}</div>
             </div>
-
-            <div class="small muted" style="margin-top:8px">
-              Vencidos (activos): <b style="color:var(--text)">${s.overdue}</b> · Bloqueo máx: <b style="color:var(--text)">${s.maxBlockDays}</b>d · Rutinas pend. hoy: <b style="color:var(--text)">${s.pendingRoutines}</b>
+            <div style="background:var(--panel2); border-radius:10px; padding:10px; border:1px solid var(--line); text-align:center">
+              <div class="small muted">Vencidos</div>
+              <div style="font-size:18px; font-weight:800; color:var(--bad)">${c.overdue}</div>
             </div>
           </div>
-
-          <span class="pill ${pillClass}"><span class="s"></span>${s.label}</span>
+          <div class="small muted">
+            Aprobados a tiempo: <b style="color:var(--text)">${c.approvedPct}%</b> (${c.approvedOnTime}/${c.approvedTotal}) ·
+            Bloqueo máx: <b style="color:var(--text)">${s.maxBlockDays}d</b> ·
+            Rutinas pend. hoy: <b style="color:var(--text)">${s.pendingRoutines}</b>
+          </div>
+          ${penalties.length>0?`
+          <div style="margin-top:8px">
+            <div class="small muted" style="margin-bottom:4px">Penalizaciones por falta de seguimiento:</div>
+            ${penalties.map(d=>`<div class="small" style="color:var(--bad)">-${d.scorePenalty}% · ${d.title}</div>`).join("")}
+          </div>`:""}
         </div>
       </div>
     `;
   }).join("");
 
   container.innerHTML = cards || `<div class="muted small">No hay usuarios.</div>`;
+}
+
+function togglePersonDetail(userId){
+  const detail = document.getElementById("detail-"+userId);
+  const chevron = document.getElementById("chevron-"+userId);
+  if(!detail) return;
+  detail.classList.toggle("open");
+  if(chevron) chevron.textContent = detail.classList.contains("open") ? "▼" : "▶";
 }
 
 function renderHotTable(){
@@ -2087,6 +2352,22 @@ document.body.addEventListener("click", (e)=>{
             <input class="input" type="date" id="ed_due" value="${d.due||t}">
           </div>
         </div>
+        <div id="ed_due_reason_row" style="display:none; margin-top:4px">
+          <label>Motivo del cambio de fecha</label>
+          <select class="input" id="ed_due_reason">
+            <option value="externo">Factor externo (no afecta score)</option>
+            <option value="seguimiento">Falta de seguimiento (penaliza -5% score)</option>
+          </select>
+        </div>
+        <script>
+          (function(){
+            const orig = "${d.due||t}";
+            document.getElementById("ed_due").addEventListener("change", function(){
+              const row = document.getElementById("ed_due_reason_row");
+              row.style.display = this.value !== orig ? "block" : "none";
+            });
+          })();
+        </script>
         <div class="formGrid">
           <div>
             <label>Estado</label>
@@ -2110,10 +2391,12 @@ document.body.addEventListener("click", (e)=>{
       onSave: ()=>{
         const newStatus = document.getElementById("ed_status").value;
         const blocked = document.getElementById("ed_blocked").value==="yes" || newStatus==="Bloqueado";
+        const oldDue = d.due;
+        const newDue = document.getElementById("ed_due").value;
         d.title = document.getElementById("ed_title").value.trim();
         d.projectId = document.getElementById("ed_project").value;
         d.assigneeId = document.getElementById("ed_assignee").value;
-        d.due = document.getElementById("ed_due").value;
+        d.due = newDue;
         d.status = newStatus;
         d.blocked = blocked;
         if(blocked && !d.blockSince) d.blockSince = todayISO();
@@ -2125,7 +2408,20 @@ document.body.addEventListener("click", (e)=>{
           d.blocked = false;
           d.blockSince = null;
         }
-        toast("Actualizado", "Entregable guardado.");
+        // Score penalty for date change due to lack of follow-up
+        if(newDue !== oldDue){
+          const reason = document.getElementById("ed_due_reason")?.value;
+          if(reason === "seguimiento"){
+            d.scorePenalty = (d.scorePenalty||0) + 5;
+            d.dueDateHistory = [...(d.dueDateHistory||[]), {from:oldDue, to:newDue, reason:"seguimiento", date:todayISO()}];
+            toast("Fecha cambiada", "Se aplicó penalización de -5% al score por falta de seguimiento.");
+          } else {
+            d.dueDateHistory = [...(d.dueDateHistory||[]), {from:oldDue, to:newDue, reason:"externo", date:todayISO()}];
+            toast("Actualizado", "Fecha cambiada por factor externo. Sin penalización.");
+          }
+        } else {
+          toast("Actualizado", "Entregable guardado.");
+        }
       }
     });
     return;
@@ -2589,11 +2885,386 @@ function escapeHtml(str){
 }
 
 /** =========================================================
+ *  AUTENTICACIÓN
+ *  ========================================================= */
+// Default users — admin can add more in settings with email+password
+function getAuthUsers(){
+  return DB.authUsers || [
+    {email:"admin@lineaitalia.com", password:"admin123", userId: DB.users[0]?.id, role:"admin"},
+    {email:"ramon@lineaitalia.com", password:"user123", userId: DB.users[1]?.id, role:"user"},
+    {email:"francisco@lineaitalia.com", password:"user123", userId: DB.users[2]?.id, role:"user"},
+    {email:"alexis@lineaitalia.com", password:"user123", userId: DB.users[3]?.id, role:"user"},
+  ];
+}
+
+let CURRENT_USER = null; // {email, userId, role, name}
+
+function doLogin(){
+  const email = document.getElementById("loginEmail").value.trim().toLowerCase();
+  const pass = document.getElementById("loginPassword").value;
+  const authUsers = getAuthUsers();
+  const found = authUsers.find(u => u.email.toLowerCase()===email && u.password===pass);
+  if(!found){
+    document.getElementById("loginErr").style.display="block";
+    return;
+  }
+  CURRENT_USER = {
+    email: found.email,
+    userId: found.userId,
+    role: found.role,
+    name: userName(found.userId)
+  };
+  localStorage.setItem("li_session", JSON.stringify(CURRENT_USER));
+  document.getElementById("loginScreen").style.display = "none";
+  applyRoleUI();
+  document.getElementById("sideUserName").textContent = CURRENT_USER.name + " (" + (CURRENT_USER.role==="admin"?"Admin":"Usuario") + ")";
+  renderAll();
+  toast("Bienvenido", CURRENT_USER.name);
+}
+
+function applyRoleUI(){
+  if(!CURRENT_USER) return;
+  const isAdmin = CURRENT_USER.role === "admin";
+  // Hide admin-only nav items for regular users
+  const adminOnly = ["projects","deliverables","routines","incidents","reports","settings"];
+  document.querySelectorAll("#nav button[data-view]").forEach(btn=>{
+    if(adminOnly.includes(btn.dataset.view)){
+      btn.style.display = isAdmin ? "" : "none";
+    }
+  });
+  // Show workspace always
+  document.getElementById("navWorkspace").style.display = "";
+  if(!isAdmin) showView("dashboard");
+}
+
+document.getElementById("btnLogin").addEventListener("click", doLogin);
+document.getElementById("loginEmail").addEventListener("keydown", e=>{ if(e.key==="Enter") document.getElementById("loginPassword").focus(); });
+document.getElementById("loginPassword").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
+
+document.getElementById("btnLogout").addEventListener("click", ()=>{
+  CURRENT_USER = null;
+  localStorage.removeItem("li_session");
+  document.getElementById("loginScreen").style.display = "flex";
+  document.getElementById("loginEmail").value = "";
+  document.getElementById("loginPassword").value = "";
+  document.getElementById("loginErr").style.display = "none";
+});
+
+/** =========================================================
+ *  CALENDARIO
+ *  ========================================================= */
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+
+const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+function renderCalendar(){
+  const title = document.getElementById("calTitle");
+  const grid = document.getElementById("calGrid");
+  if(!title || !grid) return;
+
+  title.textContent = MONTHS_ES[calMonth] + " " + calYear;
+
+  // First day of month (0=Sun..6=Sat), convert to Mon-first
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const startOffset = (firstDay + 6) % 7; // Mon=0
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const daysInPrev = new Date(calYear, calMonth, 0).getDate();
+
+  const today = todayISO();
+
+  // Build events map: dateISO -> [{title, type, status}]
+  const evMap = {};
+  const addEv = (dateISO, ev) => {
+    if(!dateISO) return;
+    if(!evMap[dateISO]) evMap[dateISO] = [];
+    evMap[dateISO].push(ev);
+  };
+
+  DB.deliverables.forEach(d=>{
+    if(d.due) addEv(d.due, {title:d.title, type:"entregable", status:d.status, assignee:userName(d.assigneeId)});
+  });
+  DB.incidents.forEach(i=>{
+    if(i.due) addEv(i.due, {title:i.title, type:"incidencia", severity:i.severity});
+  });
+  (DB.myTasks||[]).forEach(t=>{
+    if(t.due && (!CURRENT_USER || CURRENT_USER.role==="admin" || t.userId===CURRENT_USER.userId))
+      addEv(t.due, {title:t.title, type:"tarea", userId:t.userId});
+  });
+
+  let cells = "";
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+  for(let i=0; i<totalCells; i++){
+    let day, month, year, otherMonth=false;
+    if(i < startOffset){
+      day = daysInPrev - startOffset + i + 1;
+      month = calMonth - 1; year = calYear;
+      if(month<0){month=11; year--;}
+      otherMonth = true;
+    } else if(i >= startOffset + daysInMonth){
+      day = i - startOffset - daysInMonth + 1;
+      month = calMonth + 1; year = calYear;
+      if(month>11){month=0; year++;}
+      otherMonth = true;
+    } else {
+      day = i - startOffset + 1;
+      month = calMonth; year = calYear;
+    }
+    const isoDate = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const isToday = isoDate === today;
+    const evs = evMap[isoDate] || [];
+
+    const evHTML = evs.slice(0,3).map(ev=>{
+      let cls = "";
+      if(ev.type==="entregable"){
+        const t2 = todayISO();
+        cls = ev.status==="Aprobado"?"ok":(isoDate<t2&&ev.status!=="Aprobado"?"bad":"");
+      } else if(ev.type==="incidencia") cls="warn";
+      return `<div class="ev ${cls}" title="${ev.title}">${ev.title}</div>`;
+    }).join("");
+    const more = evs.length>3 ? `<div class="ev" style="opacity:.6">+${evs.length-3} más</div>` : "";
+
+    cells += `<div class="calDay${otherMonth?" other-month":""}${isToday?" today":""}" data-cal-date="${isoDate}">
+      <div class="day-num">${day}</div>
+      ${evHTML}${more}
+    </div>`;
+  }
+  grid.innerHTML = cells;
+
+  // Click on day
+  grid.querySelectorAll(".calDay[data-cal-date]").forEach(el=>{
+    el.addEventListener("click", ()=> openCalDay(el.dataset.calDate, evMap[el.dataset.calDate]||[]));
+  });
+}
+
+function openCalDay(dateISO, evs){
+  const dlg = document.getElementById("dlgCalDay");
+  document.getElementById("calDayTitle").textContent = "Actividades — " + fmtDate(dateISO);
+  document.getElementById("calDayDate").textContent = evs.length ? evs.length + " actividad(es)" : "Sin actividades";
+  document.getElementById("calDayContent").innerHTML = evs.length ? evs.map(ev=>`
+    <div style="padding:10px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; background:var(--panel2)">
+      <div style="font-weight:600">${ev.title}</div>
+      <div class="small muted">${ev.type==="entregable"?("Entregable · "+ev.assignee):ev.type==="incidencia"?("Incidencia · Severidad: "+ev.severity):"Tarea personal"}</div>
+      ${ev.status?`<div class="small muted">Estado: ${ev.status}</div>`:""}
+    </div>
+  `).join("") : `<div class="muted small">No hay actividades para este día.</div>`;
+  openDialog(dlg);
+}
+
+document.getElementById("calPrev").addEventListener("click", ()=>{
+  calMonth--; if(calMonth<0){calMonth=11; calYear--;} renderCalendar();
+});
+document.getElementById("calNext").addEventListener("click", ()=>{
+  calMonth++; if(calMonth>11){calMonth=0; calYear++;} renderCalendar();
+});
+document.getElementById("calToday").addEventListener("click", ()=>{
+  calYear=new Date().getFullYear(); calMonth=new Date().getMonth(); renderCalendar();
+});
+
+/** =========================================================
+ *  WORKSPACE (Mi Espacio)
+ *  ========================================================= */
+function renderWorkspace(){
+  if(!CURRENT_USER) return;
+  const isAdmin = CURRENT_USER.role === "admin";
+  document.getElementById("workspaceSubtitle").textContent = isAdmin
+    ? "Vista de administrador — todas las tareas personales del equipo"
+    : `Hola ${CURRENT_USER.name} · Tus tareas y entregables`;
+
+  const myId = CURRENT_USER.userId;
+  const tasks = (DB.myTasks||[]).filter(t=> isAdmin || t.userId===myId);
+  const myDels = DB.deliverables.filter(d=> isAdmin || d.assigneeId===myId);
+
+  // Workspace KPIs
+  const pending = tasks.filter(t=>t.status!=="Completada").length;
+  const done = tasks.filter(t=>t.status==="Completada").length;
+  const myOverdue = myDels.filter(d=>d.due&&d.status!=="Aprobado"&&daysBetween(d.due,todayISO())>0).length;
+  document.getElementById("workspaceKpis").innerHTML = `
+    <div class="card kpi ${pending>3?"warn":"ok"}"><div class="label">Tareas pendientes</div><div class="value">${pending}</div></div>
+    <div class="card kpi ok"><div class="label">Tareas completadas</div><div class="value">${done}</div></div>
+    <div class="card kpi ${myOverdue>0?"bad":"ok"}"><div class="label">Entregables vencidos</div><div class="value">${myOverdue}</div></div>
+  `;
+
+  // My tasks table
+  const taskRows = tasks.map(t=>{
+    const prioTag = t.priority==="Alta"?`<span class="tag bad">Alta</span>`:t.priority==="Media"?`<span class="tag warn">Media</span>`:`<span class="tag ok">Baja</span>`;
+    const stTag = t.status==="Completada"?`<span class="tag ok">Completada</span>`:`<span class="tag warn">Pendiente</span>`;
+    return `<tr>
+      <td>${stTag}</td>
+      <td><b>${t.title}</b>${isAdmin?`<div class="small muted">${userName(t.userId)}</div>`:""}<div class="small muted">${t.notes||""}</div></td>
+      <td>${prioTag}</td>
+      <td>${t.due?fmtDate(t.due):"—"}</td>
+      <td class="right">
+        ${t.status!=="Completada"?`<button class="btn small" data-done-task="${t.id}">Completar</button>`:""}
+        <button class="btn small danger" data-del-task="${t.id}">Eliminar</button>
+      </td>
+    </tr>`;
+  }).join("");
+  document.getElementById("tableMyTasks").innerHTML = taskRows || `<tr><td colspan="5" class="muted small">No hay tareas.</td></tr>`;
+
+  // My deliverables
+  const delRows = myDels.map(d=>`<tr>
+    <td>${statusTag(d.status, d.due)}</td>
+    <td><b>${d.title}</b>${isAdmin?`<div class="small muted">${userName(d.assigneeId)}</div>`:""}</td>
+    <td>${projectName(d.projectId)}</td>
+    <td>${d.due?fmtDate(d.due):"—"}</td>
+    <td class="right"><button class="btn small" data-edit-del="${d.id}">Editar</button></td>
+  </tr>`).join("");
+  document.getElementById("tableMyDeliverables").innerHTML = delRows || `<tr><td colspan="5" class="muted small">Sin entregables asignados.</td></tr>`;
+}
+
+// My task add
+let editingTaskId = null;
+document.getElementById("btnAddMyTask").addEventListener("click", ()=>{
+  editingTaskId = null;
+  document.getElementById("myTaskTitle").textContent = "Nueva tarea";
+  document.getElementById("mt_title").value="";
+  document.getElementById("mt_notes").value="";
+  document.getElementById("mt_due").value=todayISO();
+  document.getElementById("mt_priority").value="Media";
+  openDialog(document.getElementById("dlgMyTask"));
+});
+
+document.getElementById("mtSave").addEventListener("click", ()=>{
+  const title = document.getElementById("mt_title").value.trim();
+  if(!title) return toast("Falta dato","Escribe el nombre de la tarea.");
+  if(!DB.myTasks) DB.myTasks = [];
+  if(editingTaskId){
+    const t = DB.myTasks.find(x=>x.id===editingTaskId);
+    if(t){ t.title=title; t.priority=document.getElementById("mt_priority").value; t.due=document.getElementById("mt_due").value; t.notes=document.getElementById("mt_notes").value.trim(); }
+  } else {
+    DB.myTasks.push({
+      id:uid("mt"), title, priority:document.getElementById("mt_priority").value,
+      due:document.getElementById("mt_due").value, notes:document.getElementById("mt_notes").value.trim(),
+      status:"Pendiente", userId: CURRENT_USER?.userId || DB.users[0]?.id,
+      createdAt:todayISO()
+    });
+  }
+  saveDB(); closeDialog(document.getElementById("dlgMyTask")); renderAll();
+  toast("Tarea guardada", title);
+});
+
+// Task done / delete via event delegation (added to existing body click handler below)
+
+/** =========================================================
+ *  CIERRE MENSUAL
+ *  ========================================================= */
+function openMonthClose(){
+  const t = new Date();
+  const monthName = MONTHS_ES[t.getMonth()] + " " + t.getFullYear();
+  const summary = DB.users.map(u=>{
+    const c = complianceForUser(u.id);
+    const penalties = (DB.deliverables||[]).filter(d=>d.assigneeId===u.id&&d.scorePenalty).reduce((a,d)=>a+(d.scorePenalty||0),0);
+    const final = Math.max(0,c.pct-penalties);
+    return `<tr><td><b>${u.name}</b></td><td>${c.total}</td><td>${c.compliant}</td><td>${c.overdue}</td><td>${penalties}%</td><td><b>${final}%</b></td></tr>`;
+  }).join("");
+
+  document.getElementById("monthCloseContent").innerHTML = `
+    <p>Mes a cerrar: <b>${monthName}</b></p>
+    <p class="small muted">Se guardará este resumen en Google Sheets y se reiniciarán las penalizaciones.</p>
+    <div style="overflow:auto"><table>
+      <thead><tr><th>Persona</th><th>Total</th><th>Cumplidos</th><th>Vencidos</th><th>Penalización</th><th>Score Final</th></tr></thead>
+      <tbody>${summary}</tbody>
+    </table></div>
+  `;
+  openDialog(document.getElementById("dlgMonthClose"));
+}
+
+document.getElementById("btnConfirmMonthClose").addEventListener("click", async ()=>{
+  const t = new Date();
+  const monthKey = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}`;
+  const monthName = MONTHS_ES[t.getMonth()] + " " + t.getFullYear();
+
+  const summary = DB.users.map(u=>{
+    const c = complianceForUser(u.id);
+    const penalties = (DB.deliverables||[]).filter(d=>d.assigneeId===u.id&&d.scorePenalty).reduce((a,d)=>a+(d.scorePenalty||0),0);
+    return { name:u.name, total:c.total, compliant:c.compliant, overdue:c.overdue, penalties, final:Math.max(0,c.pct-penalties) };
+  });
+
+  if(!DB.monthlyHistory) DB.monthlyHistory = {};
+  DB.monthlyHistory[monthKey] = { month:monthName, closedAt:todayISO(), summary };
+
+  // Reset penalties
+  DB.deliverables.forEach(d=>{ d.scorePenalty=0; d.dueDateHistory=[]; });
+
+  saveDB();
+  closeDialog(document.getElementById("dlgMonthClose"));
+  renderAll();
+  toast("Mes cerrado ✓", "Historial guardado en Google Sheets. Penalizaciones reiniciadas.");
+});
+
+/** =========================================================
+ *  AUTO-SYNC CADA 30 SEGUNDOS
+ *  ========================================================= */
+function startAutoSync(){
+  setInterval(async ()=>{
+    if(!GS_URL || _syncInProgress) return;
+    // Reset bar animation
+    const bar = document.getElementById("autoSyncBar");
+    if(bar){ bar.classList.remove("running"); void bar.offsetWidth; bar.classList.add("running"); }
+    await gsPull();
+  }, 30000);
+  // Start bar animation on load
+  setTimeout(()=>{
+    const bar = document.getElementById("autoSyncBar");
+    if(bar){ bar.classList.add("running"); }
+  }, 1000);
+}
+
+/** =========================================================
+ *  CORREOS AUTOMÁTICOS (via Apps Script)
+ *  ========================================================= */
+async function sendEmailNotification(type, data){
+  if(!GS_URL) return;
+  try{
+    const payload = JSON.stringify({ action:"sendEmail", type, data });
+    await fetch(GS_URL, {
+      method:"POST", mode:"no-cors",
+      headers:{"Content-Type":"text/plain"}, body:payload
+    });
+  } catch(e){ console.warn("Email notification failed:", e); }
+}
+
+/** =========================================================
+ *  PATCH: body click for new task actions
+ *  ========================================================= */
+document.body.addEventListener("click", (e)=>{
+  const doneTask = e.target.closest("[data-done-task]")?.dataset.doneTask;
+  const delTask = e.target.closest("[data-del-task]")?.dataset.delTask;
+  if(doneTask){
+    const t = (DB.myTasks||[]).find(x=>x.id===doneTask);
+    if(t){ t.status="Completada"; saveDB(); renderAll(); toast("Completada",t.title); }
+    return;
+  }
+  if(delTask){
+    const idx = (DB.myTasks||[]).findIndex(x=>x.id===delTask);
+    if(idx>=0){ const title=DB.myTasks[idx].title; DB.myTasks.splice(idx,1); saveDB(); renderAll(); toast("Eliminada",title); }
+    return;
+  }
+});
+
+/** =========================================================
+ *  PATCH: renderAll to include new views
+ *  ========================================================= */
+const _origRenderAll = renderAll;
+function renderAll(){
+  _origRenderAll();
+  renderCalendar();
+  renderWorkspace();
+}
+
+/** =========================================================
+ *  CIERRE MES BUTTON en Reports
+ *  ========================================================= */
+
+/** =========================================================
  *  SINCRONIZACIÓN GOOGLE SHEETS
  *  ========================================================= */
 const LS_GS_URL   = "li_gs_script_url_v1";
 const LS_LAST_SYNC = "li_gs_last_sync_v1";
-let GS_URL = localStorage.getItem(LS_GS_URL) || "";
+// When served from Apps Script, use current page URL as the API endpoint
+let GS_URL = localStorage.getItem(LS_GS_URL) || window.location.href.split("?")[0] || "";
 let _syncInProgress = false;
 
 function syncDotUpdate(state){
@@ -2627,25 +3298,22 @@ async function gsPush(){
   syncDotUpdate("syncing");
   try{
     const payload = JSON.stringify({ action:"save", data: DB });
-    // Encode data as URL parameter to avoid CORS preflight
-    const encodedData = encodeURIComponent(payload);
-    const url = GS_URL + "?method=post&body=" + encodedData;
-    const res = await fetch(url, { redirect: "follow" });
-    const text = await res.text();
-    const json = JSON.parse(text);
-    if(json.ok){
-      const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
-      localStorage.setItem(LS_LAST_SYNC, now);
-      const el = document.getElementById("lastSyncTime");
-      if(el) el.textContent = now;
-      syncDotUpdate("ok");
-      toast("Datos subidos ✓", "Tu equipo puede ver los cambios.");
-    } else {
-      throw new Error(json.error || "Error desconocido");
-    }
+    const res = await fetch(GS_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain" },
+      body: payload
+    });
+    // no-cors means we can't read the response, but if no error was thrown it worked
+    const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
+    localStorage.setItem(LS_LAST_SYNC, now);
+    const el = document.getElementById("lastSyncTime");
+    if(el) el.textContent = now;
+    syncDotUpdate("ok");
+    toast("Datos subidos ✓", "Tu equipo puede ver los cambios.");
   } catch(err){
     syncDotUpdate("error");
-    toast("Error de sync", "Revisa la URL en Configuración. Detalle: " + err.message);
+    toast("Error de sync", "Detalle: " + err.message);
   } finally {
     _syncInProgress = false;
   }
@@ -2657,7 +3325,7 @@ async function gsPull(){
   _syncInProgress = true;
   syncDotUpdate("syncing");
   try{
-    const res = await fetch(GS_URL + "?action=load", { redirect: "follow" });
+    const res = await fetch(GS_URL + "?action=load");
     const text = await res.text();
     const json = JSON.parse(text);
     if(json.ok && json.data){
@@ -2671,7 +3339,6 @@ async function gsPull(){
       syncDotUpdate("ok");
       toast("Datos descargados ✓", "Los datos del equipo están actualizados.");
     } else if(json.ok && !json.data){
-      // No data yet, push local data
       syncDotUpdate("ok");
       toast("Sin datos remotos", "Subiendo tus datos locales al servidor…");
       _syncInProgress = false;
@@ -2682,7 +3349,7 @@ async function gsPull(){
     }
   } catch(err){
     syncDotUpdate("error");
-    toast("Error al descargar", "Revisa la URL en Configuración. Detalle: " + err.message);
+    toast("Error al descargar", "Detalle: " + err.message);
   } finally {
     _syncInProgress = false;
   }
@@ -2709,6 +3376,7 @@ function initGsUI(){
   const urlInput = document.getElementById("gsScriptUrl");
   if(urlInput){
     urlInput.value = GS_URL;
+    urlInput.placeholder = "Auto-configurado (servido desde Apps Script)";
     if(GS_URL) syncDotUpdate("ok"); else syncDotUpdate("none");
   }
   const lastSync = localStorage.getItem(LS_LAST_SYNC);
@@ -2717,7 +3385,7 @@ function initGsUI(){
 
   document.getElementById("btnSaveGsUrl")?.addEventListener("click", ()=>{
     const val = (document.getElementById("gsScriptUrl")?.value||"").trim();
-    if(!val){ toast("URL vacía", "Pega la URL de tu Apps Script."); return; }
+    if(!val){ toast("URL vacía", "La URL ya está configurada automáticamente."); return; }
     GS_URL = val;
     localStorage.setItem(LS_GS_URL, GS_URL);
     syncDotUpdate("ok");
@@ -2736,9 +3404,22 @@ function initGsUI(){
   document.getElementById("todayLabel").textContent = fmtDate(todayISO());
   initLogo();
   qaRender();
-  renderAll();
   initGsUI();
-  gsAutoPull();
+  gsAutoPull().then(()=>{
+    renderAll();
+    startAutoSync();
+  });
+
+  // Restore session if exists
+  const savedSession = localStorage.getItem("li_session");
+  if(savedSession){
+    try{
+      CURRENT_USER = JSON.parse(savedSession);
+      document.getElementById("loginScreen").style.display = "none";
+      applyRoleUI();
+      document.getElementById("sideUserName").textContent = CURRENT_USER.name + " (" + (CURRENT_USER.role==="admin"?"Admin":"Usuario") + ")";
+    } catch(e){ CURRENT_USER = null; }
+  }
 
   // Acceso rápido: Ctrl/Cmd + K abre quick add
   window.addEventListener("keydown", (e)=>{
@@ -2752,6 +3433,7 @@ function initGsUI(){
     }
   });
 })();
+-e 
 </script>
 </body>
 </html>
