@@ -1,0 +1,2580 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ingeniería de procesos — Control de equipo (LI)</title>
+  <style>
+    :root{
+      --bg:#f5f7fb;
+      --panel:#ffffff;
+      --panel2:#f1f5f9;
+      --text:#0f172a;
+      --muted:#475569;
+      --line:#e2e8f0;
+      --ok:#16a34a;
+      --warn:#d97706;
+      --bad:#dc2626;
+      --chip:#e8f0ff;
+      --accent:#2563eb;
+      --shadow: 0 10px 26px rgba(15,23,42,.08);
+      --radius:16px;
+      --radius2:12px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--font);
+      color:var(--text);
+      background:radial-gradient(1200px 800px at 20% 10%, rgba(37,99,235,.10), transparent 60%),
+                 radial-gradient(900px 600px at 80% 30%, rgba(22,163,74,.08), transparent 55%),
+                 var(--bg);
+      min-height:100vh;
+    }
+    a{color:inherit}
+    .app{
+      display:grid;
+      grid-template-columns: 290px 1fr;
+      min-height:100vh;
+    }
+    .sidebar{
+      padding:18px 16px;
+      border-right:1px solid var(--line);
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      position:sticky;
+      top:0;
+      height:100vh;
+    }
+    .brand{
+      display:flex; align-items:center; gap:12px;
+      padding:14px 12px;
+      border-radius: var(--radius2);
+      background:var(--panel);
+      border:1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+    .logoBtn{
+      all:unset;
+      cursor:pointer;
+      width:44px; height:44px;
+      border-radius:14px;
+      background: var(--panel2);
+      border:1px solid var(--line);
+      display:grid; place-items:center;
+      overflow:hidden;
+      flex:0 0 auto;
+    }
+    .logoBtn:hover{box-shadow: 0 6px 18px rgba(15,23,42,.10)}
+    .logoBtn img{width:100%; height:100%; object-fit:contain; display:block; padding:6px;}
+    .brand h1{font-size:14px; margin:0}
+    .brand p{font-size:12px; margin:2px 0 0; color:var(--muted)}
+    .nav{
+      margin-top:14px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .nav button{
+      all:unset;
+      cursor:pointer;
+      padding:12px 12px;
+      border-radius: 12px;
+      border:1px solid transparent;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      color:var(--muted);
+      transition:.15s ease;
+    }
+    .nav button:hover{
+      background:var(--panel2);
+      border-color: var(--line);
+      color:var(--text);
+    }
+    .nav button.active{
+      background:rgba(37,99,235,.10);
+      border-color: rgba(37,99,235,.28);
+      color:var(--text);
+    }
+    .nav .dot{
+      width:10px; height:10px; border-radius:999px;
+      background:rgba(15,23,42,.18);
+      box-shadow: 0 0 0 4px rgba(255,255,255,.03);
+    }
+    .nav button.active .dot{ background: var(--accent); box-shadow: 0 0 0 4px rgba(37,99,235,.10);}
+
+    .sidepanel{
+      margin-top:14px;
+      padding:14px 12px;
+      border-radius: var(--radius2);
+      background:var(--panel);
+      border:1px solid var(--line);
+    }
+    .sidepanel .row{
+      display:flex; justify-content:space-between; align-items:center;
+      font-size:12px;
+      margin:8px 0;
+      color:var(--muted);
+    }
+    .sidepanel .row b{color:var(--text); font-weight:700}
+    .sidepanel .hr{height:1px; background:var(--line); margin:10px 0}
+.progress{
+      height:10px;
+      background: var(--panel2);
+      border:1px solid var(--line);
+      border-radius:999px;
+      overflow:hidden;
+    }
+    .progress > span{
+      display:block;
+      height:100%;
+      width:0%;
+      background: var(--accent);
+    }
+    .progress.ok > span{background: var(--ok)}
+    .progress.warn > span{background: var(--warn)}
+    .progress.bad > span{background: var(--bad)}
+    .metric{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:var(--panel2);
+      border:1px solid var(--line);
+      color:var(--muted);
+      font-size:12px;
+    }
+    .pill .s{
+      width:8px; height:8px; border-radius:99px;
+      background:rgba(255,255,255,.3);
+    }
+    .pill.ok .s{background:var(--ok)}
+    .pill.warn .s{background:var(--warn)}
+    .pill.bad .s{background:var(--bad)}
+
+    main{
+      padding:22px;
+    }
+    .topbar{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+    .title h2{margin:0; font-size:20px}
+    .title p{margin:4px 0 0; color:var(--muted); font-size:13px}
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    .btn{
+      appearance:none;
+      border:1px solid var(--line);
+      background:var(--panel);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      transition:.15s ease;
+      font-weight:600;
+      font-size:13px;
+    }
+    .btn:hover{transform:translateY(-1px); border-color: rgba(37,99,235,.28)}
+    .btn.primary{
+      background: rgba(37,99,235,.12);
+      border-color: rgba(37,99,235,.28);
+    }
+    .btn.danger{
+      background: rgba(239,68,68,.12);
+      border-color: rgba(239,68,68,.28);
+    }
+    .btn.small{padding:8px 10px; border-radius:10px; font-size:12px}
+    .btn.ghost{background:transparent}
+    .input, select, textarea{
+      width:100%;
+      background: var(--panel);
+      border:1px solid var(--line);
+      color: var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      outline:none;
+      font-family:var(--font);
+      font-size:13px;
+    }
+    textarea{min-height:90px; resize:vertical}
+    label{font-size:12px; color:var(--muted); display:block; margin:10px 0 6px}
+    .grid{
+      display:grid;
+      gap:12px;
+    }
+    .grid.kpis{grid-template-columns: repeat(4, minmax(180px, 1fr));}
+    @media (max-width:1050px){
+      .app{grid-template-columns: 1fr}
+      .sidebar{position:relative; height:auto}
+      .grid.kpis{grid-template-columns: repeat(2, minmax(180px, 1fr));}
+    }
+    @media (max-width:640px){
+      .grid.kpis{grid-template-columns: 1fr;}
+    }
+    .card{
+      background: var(--panel);
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      padding:14px;
+      box-shadow: var(--shadow);
+    }
+    .kpi{
+      display:flex; flex-direction:column; gap:6px;
+      padding:16px;
+    }
+    .kpi .label{color:var(--muted); font-size:12px}
+    .kpi .value{font-size:22px; font-weight:800}
+    .kpi .hint{color:var(--muted); font-size:12px}
+    .kpi .trend{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted)}
+    .kpi .trend .dot{width:8px; height:8px; border-radius:99px; background:rgba(255,255,255,.25)}
+    .kpi.ok .trend .dot{background:var(--ok)}
+    .kpi.warn .trend .dot{background:var(--warn)}
+    .kpi.bad .trend .dot{background:var(--bad)}
+
+    .row2{
+      display:grid;
+      grid-template-columns: 1.4fr .9fr;
+      gap:12px;
+      margin-top:12px;
+    }
+    @media (max-width:1050px){ .row2{grid-template-columns:1fr} }
+
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      overflow:hidden;
+      border-radius: 14px;
+      border:1px solid var(--line);
+      background: var(--panel);
+    }
+    thead th{
+      text-align:left;
+      font-size:12px;
+      color: var(--muted);
+      padding:10px 10px;
+      background: var(--panel2);
+      border-bottom:1px solid var(--line);
+      font-weight:700;
+    }
+    tbody td{
+      padding:10px 10px;
+      border-bottom:1px solid rgba(31,42,58,.55);
+      font-size:13px;
+      vertical-align:top;
+    }
+    tbody tr:last-child td{border-bottom:none}
+    .tag{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:5px 9px;
+      border-radius:999px;
+      font-size:12px;
+      border:1px solid var(--line);
+      background: var(--panel2);
+      color: var(--muted);
+      white-space:nowrap;
+    }
+    .tag.ok{border-color: rgba(22,163,74,.25); background: rgba(22,163,74,.10); color:#065f46;}
+    .tag.warn{border-color: rgba(217,119,6,.25); background: rgba(217,119,6,.10); color:#92400e;}
+    .tag.bad{border-color: rgba(220,38,38,.25); background: rgba(220,38,38,.10); color:#991b1b;}
+    .tag.blue{border-color: rgba(37,99,235,.25); background: rgba(37,99,235,.10); color:#1e3a8a;}
+    .tag.gray{border-color: rgba(148,163,184,.35); background: var(--panel2); color: var(--muted);}
+    .muted{color:var(--muted)}
+    .flex{display:flex; gap:10px; align-items:center}
+    .between{justify-content:space-between}
+    .wrap{flex-wrap:wrap}
+    .right{text-align:right}
+    .small{font-size:12px}
+    .hr{height:1px; background:var(--line); margin:10px 0}
+.progress{
+      height:10px;
+      background: var(--panel2);
+      border:1px solid var(--line);
+      border-radius:999px;
+      overflow:hidden;
+    }
+    .progress > span{
+      display:block;
+      height:100%;
+      width:0%;
+      background: var(--accent);
+    }
+    .progress.ok > span{background: var(--ok)}
+    .progress.warn > span{background: var(--warn)}
+    .progress.bad > span{background: var(--bad)}
+    .metric{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+
+    .hidden{display:none !important}
+
+    dialog{
+      border:none;
+      padding:0;
+      border-radius: 18px;
+      background: var(--panel);
+      color:var(--text);
+      width:min(720px, 92vw);
+      box-shadow: var(--shadow);
+      border:1px solid var(--line);
+    }
+    dialog::backdrop{background: rgba(15,23,42,.35)}
+    .modal{
+      padding:14px;
+    }
+    .modal header{
+      display:flex; justify-content:space-between; align-items:center;
+      gap:12px;
+      padding:4px 4px 10px;
+    }
+    .modal header h3{margin:0; font-size:16px}
+    .modal header p{margin:3px 0 0; color:var(--muted); font-size:12px}
+    .modal .content{
+      padding:6px 4px 12px;
+    }
+    .modal footer{
+      display:flex; justify-content:flex-end; gap:10px;
+      padding:10px 4px 4px;
+      border-top:1px solid var(--line);
+    }
+    .formGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width:700px){ .formGrid{grid-template-columns:1fr} }
+
+    .toast{
+      position:fixed; bottom:18px; right:18px;
+      background: var(--panel);
+      border:1px solid var(--line);
+      padding:12px 14px;
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      max-width:min(420px, 92vw);
+      transform: translateY(20px);
+      opacity:0;
+      pointer-events:none;
+      transition:.18s ease;
+      z-index:9999;
+    }
+    .toast.show{transform:translateY(0); opacity:1}
+    .toast .t{font-weight:800; margin:0 0 4px}
+    .toast .m{margin:0; color:var(--muted); font-size:12px}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:11px; padding:2px 6px; border:1px solid var(--line); border-radius:8px; background:var(--panel); color:var(--muted)}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <button class="logoBtn" id="logoBtn" title="Clic para cargar el logo de Línea Italia">
+        <img id="liLogoImg" alt="Línea Italia" />
+      </button>
+      <input type="file" id="logoInput" accept="image/*" hidden />
+      <div>
+        <h1>Ingeniería de procesos</h1>
+        <p>Línea Italia · Control de equipo (MVP local)</p>
+      </div>
+    </div>
+
+    <nav class="nav" id="nav">
+      <button class="active" data-view="dashboard"><span class="dot"></span> Dashboard</button>
+      <button data-view="projects"><span class="dot"></span> Proyectos</button>
+      <button data-view="deliverables"><span class="dot"></span> Entregables</button>
+      <button data-view="routines"><span class="dot"></span> Rutinas</button>
+      <button data-view="incidents"><span class="dot"></span> Incidencias</button>
+      <button data-view="reports"><span class="dot"></span> Reportes</button>
+      <button data-view="settings"><span class="dot"></span> Configuración</button>
+    </nav>
+
+    <div class="sidepanel" id="sideStats">
+      <div class="flex between wrap">
+        <span class="pill gray"><span class="s"></span>Hoy: <b id="todayLabel" style="color:var(--text);font-weight:800"></b></span>
+        <span class="pill gray"><span class="s"></span>Datos: <span class="kbd">localStorage</span></span>
+      </div>
+      <div class="hr"></div>
+      <div class="row"><span>Entregables vencidos</span><b id="sideOverdue">0</b></div>
+      <div class="row"><span>Bloqueos activos</span><b id="sideBlocks">0</b></div>
+      <div class="row"><span>Rutinas pendientes hoy</span><b id="sideRoutines">0</b></div>
+      <div class="hr"></div>
+      <div class="flex between">
+        <button class="btn small ghost" id="btnExportAll">Exportar CSV</button>
+        <button class="btn small danger" id="btnReset">Reset</button>
+      </div>
+      <p class="small muted" style="margin:10px 0 0; line-height:1.35">
+        Tip: prueba rápido con <span class="kbd">Agregar</span> y actualiza estados. Todo se guarda en tu navegador.
+      </p>
+    </div>
+  </aside>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="view-dashboard">
+      <div class="topbar">
+        <div class="title">
+          <h2>Dashboard</h2>
+          <p>Semáforo, KPIs y focos rojos del día.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnCheckIn">Check-in diario</button>
+          <button class="btn primary" id="btnQuickAdd">Agregar (Proyecto/Entregable/Rutina/Incidencia)</button>
+        </div>
+      </div>
+
+      <div class="grid kpis" id="kpiGrid"></div>
+
+      <div class="row2">
+        <div class="card">
+          <div class="flex between wrap">
+            <div>
+              <b>Top vencidos / en riesgo</b>
+              <div class="small muted">Entregables próximos o vencidos (prioridad alta primero).</div>
+            </div>
+            <div class="flex">
+              <select class="input" id="filterAssignee" style="min-width:220px">
+                <option value="">Filtrar por responsable (todos)</option>
+              </select>
+            </div>
+          </div>
+          <div class="hr"></div>
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Entregable</th>
+                  <th>Proyecto</th>
+                  <th>Responsable</th>
+                  <th>Fecha</th>
+                  <th>Bloqueo</th>
+                  <th class="right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tableHot"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex between wrap">
+            <div>
+              <b>Semáforo por persona</b>
+              <div class="small muted">Verde: ok · Amarillo: riesgo · Rojo: crítico</div>
+            </div>
+          </div>
+          <div class="hr"></div>
+          <div id="peopleList" class="grid" style="grid-template-columns:1fr; gap:10px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROJECTS -->
+    <section id="view-projects" class="hidden">
+      <div class="topbar">
+        <div class="title">
+          <h2>Proyectos</h2>
+          <p>Organiza por entregables, prioridad y estatus.</p>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btnAddProject">Agregar proyecto</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex between wrap">
+          <div class="flex wrap" style="gap:10px; min-width:260px">
+            <select class="input" id="projFilterStatus" style="min-width:180px">
+              <option value="">Estatus (todos)</option>
+              <option value="Activo">Activo</option>
+              <option value="En riesgo">En riesgo</option>
+              <option value="Detenido">Detenido</option>
+              <option value="Cerrado">Cerrado</option>
+            </select>
+            <select class="input" id="projFilterPriority" style="min-width:180px">
+              <option value="">Prioridad (todas)</option>
+              <option value="Alta">Alta</option>
+              <option value="Media">Media</option>
+              <option value="Baja">Baja</option>
+            </select>
+          </div>
+          <input class="input" id="projSearch" placeholder="Buscar proyecto..." style="max-width:360px">
+        </div>
+        <div class="hr"></div>
+
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Proyecto</th>
+                <th>Prioridad</th>
+                <th>Estatus</th>
+                <th>Líder</th>
+                <th>Fechas</th>
+                <th class="right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tableProjects"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- DELIVERABLES -->
+    <section id="view-deliverables" class="hidden">
+      <div class="topbar">
+        <div class="title">
+          <h2>Entregables</h2>
+          <p>Lista filtrable, estados, bloqueos y evidencias.</p>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btnAddDeliverable">Agregar entregable</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="grid" style="grid-template-columns: 1.2fr 1fr 1fr 1fr; gap:10px">
+          <input class="input" id="delSearch" placeholder="Buscar entregable...">
+          <select class="input" id="delFilterProject"><option value="">Proyecto (todos)</option></select>
+          <select class="input" id="delFilterStatus">
+            <option value="">Estado (todos)</option>
+            <option>Pendiente</option>
+            <option>En progreso</option>
+            <option>En revisión</option>
+            <option>Aprobado</option>
+            <option>Bloqueado</option>
+          </select>
+          <select class="input" id="delFilterAssignee"><option value="">Responsable (todos)</option></select>
+        </div>
+
+        <div class="hr"></div>
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Estado</th>
+                <th>Entregable</th>
+                <th>Proyecto</th>
+                <th>Responsable</th>
+                <th>Compromiso</th>
+                <th>Bloqueo</th>
+                <th class="right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tableDeliverables"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ROUTINES -->
+    <section id="view-routines" class="hidden">
+      <div class="topbar">
+        <div class="title">
+          <h2>Rutinas</h2>
+          <p>Checklists recurrentes y cumplimiento.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnRunRoutines">Completar rutinas de hoy</button>
+          <button class="btn primary" id="btnAddRoutine">Agregar rutina</button>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="card">
+          <b>Rutinas programadas</b>
+          <div class="small muted">Diaria / semanal / mensual. (MVP: evaluación simple por “toca hoy”).</div>
+          <div class="hr"></div>
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rutina</th>
+                  <th>Frecuencia</th>
+                  <th>Responsable</th>
+                  <th>Toca hoy</th>
+                  <th class="right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tableRoutines"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <b>Historial (últimos 14 días)</b>
+          <div class="small muted">Ejecuciones de checklist por persona.</div>
+          <div class="hr"></div>
+          <div style="overflow:auto; max-height:420px">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Rutina</th>
+                  <th>Responsable</th>
+                  <th>Estatus</th>
+                </tr>
+              </thead>
+              <tbody id="tableRoutineRuns"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INCIDENTS -->
+    <section id="view-incidents" class="hidden">
+      <div class="topbar">
+        <div class="title">
+          <h2>Incidencias</h2>
+          <p>Registro y seguimiento (acciones correctivas).</p>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btnAddIncident">Agregar incidencia</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="grid" style="grid-template-columns: 1.2fr 1fr 1fr 1fr; gap:10px">
+          <input class="input" id="incSearch" placeholder="Buscar incidencia...">
+          <select class="input" id="incFilterSeverity">
+            <option value="">Severidad (todas)</option>
+            <option>Alta</option><option>Media</option><option>Baja</option>
+          </select>
+          <select class="input" id="incFilterStatus">
+            <option value="">Estatus (todos)</option>
+            <option>Abierta</option><option>Atendida</option><option>Cerrada</option>
+          </select>
+          <select class="input" id="incFilterOwner"><option value="">Responsable (todos)</option></select>
+        </div>
+
+        <div class="hr"></div>
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Estatus</th>
+                <th>Incidencia</th>
+                <th>Categoría</th>
+                <th>Severidad</th>
+                <th>Responsable</th>
+                <th>Fecha límite</th>
+                <th class="right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tableIncidents"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORTS -->
+    <section id="view-reports" class="hidden">
+      <div class="topbar">
+        <div class="title">
+          <h2>Reportes</h2>
+          <p>Resumen semanal (simple) y exportable.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnExportDeliverables">Exportar entregables (CSV)</button>
+          <button class="btn" id="btnExportIncidents">Exportar incidencias (CSV)</button>
+        </div>
+      </div>
+
+      <div class="card" id="weeklyReport"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="view-settings" class="hidden">
+      <div class="topbar">
+        <div class="title">
+          <h2>Configuración</h2>
+          <p>Usuarios, reglas del semáforo y datos de ejemplo.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnAddUser">Agregar usuario</button>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="card">
+          <b>Equipo</b>
+          <div class="small muted">Usuarios y roles (Admin/Líder/Colaborador).</div>
+          <div class="hr"></div>
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Rol</th>
+                  <th>Equipo</th>
+                  <th class="right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tableUsers"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <b>Reglas del semáforo (MVP)</b>
+          <div class="small muted">Edita números y el semáforo se recalcula.</div>
+          <div class="hr"></div>
+
+          <label>Amarillo si entregables vencidos ≥</label>
+          <input class="input" type="number" id="ruleYellowOverdue" min="0" step="1" />
+          <label>Rojo si entregables vencidos ≥</label>
+          <input class="input" type="number" id="ruleRedOverdue" min="0" step="1" />
+
+          <label>Amarillo si bloqueos activos (días) ≥</label>
+          <input class="input" type="number" id="ruleYellowBlockDays" min="0" step="1" />
+          <label>Rojo si bloqueos activos (días) ≥</label>
+          <input class="input" type="number" id="ruleRedBlockDays" min="0" step="1" />
+
+          <label>Amarillo si rutinas pendientes hoy ≥</label>
+          <input class="input" type="number" id="ruleYellowRoutinePending" min="0" step="1" />
+          <label>Rojo si rutinas pendientes hoy ≥</label>
+          <input class="input" type="number" id="ruleRedRoutinePending" min="0" step="1" />
+
+          <div class="hr"></div>
+          <div class="flex between wrap">
+            <button class="btn" id="btnSaveRules">Guardar reglas</button>
+            <span class="small muted">Se guardan en localStorage.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- QUICK ADD MODAL -->
+<dialog id="dlgQuickAdd">
+  <div class="modal">
+    <header>
+      <div>
+        <h3>Agregar rápido</h3>
+        <p>Elige qué quieres crear y llena lo básico.</p>
+      </div>
+      <button class="btn small ghost" data-close>✕</button>
+    </header>
+    <div class="content">
+      <label>Tipo</label>
+      <select class="input" id="qaType">
+        <option value="project">Proyecto</option>
+        <option value="deliverable">Entregable</option>
+        <option value="routine">Rutina</option>
+        <option value="incident">Incidencia</option>
+      </select>
+
+      <div class="hr"></div>
+
+      <!-- Dynamic form -->
+      <div id="qaForm"></div>
+    </div>
+    <footer>
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="qaSave">Guardar</button>
+    </footer>
+  </div>
+</dialog>
+
+<!-- CHECK-IN MODAL -->
+<dialog id="dlgCheckIn">
+  <div class="modal">
+    <header>
+      <div>
+        <h3>Check-in diario</h3>
+        <p>2 minutos: ayer / hoy / bloqueos.</p>
+      </div>
+      <button class="btn small ghost" data-close>✕</button>
+    </header>
+    <div class="content">
+      <div class="formGrid">
+        <div>
+          <label>Usuario</label>
+          <select class="input" id="ciUser"></select>
+        </div>
+        <div>
+          <label>Fecha</label>
+          <input class="input" type="date" id="ciDate" />
+        </div>
+      </div>
+
+      <label>Ayer hice</label>
+      <textarea class="input" id="ciYesterday" placeholder="Ej: Cerré entregable X, avancé Y..."></textarea>
+
+      <label>Hoy haré</label>
+      <textarea class="input" id="ciToday" placeholder="Ej: Modelar pieza, revisar planos, liberar..."></textarea>
+
+      <label>Bloqueos</label>
+      <textarea class="input" id="ciBlocks" placeholder="Ej: Falta validación, falta material, duda con cliente..."></textarea>
+    </div>
+    <footer>
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="ciSave">Guardar check-in</button>
+    </footer>
+  </div>
+</dialog>
+
+<!-- GENERIC EDIT MODAL -->
+<dialog id="dlgEdit">
+  <div class="modal">
+    <header>
+      <div>
+        <h3 id="editTitle">Editar</h3>
+        <p id="editSub" class="muted">Actualiza campos.</p>
+      </div>
+      <button class="btn small ghost" data-close>✕</button>
+    </header>
+    <div class="content" id="editBody"></div>
+    <footer>
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="editSave">Guardar</button>
+    </footer>
+  </div>
+</dialog>
+
+<div class="toast" id="toast">
+  <p class="t" id="toastTitle">Listo</p>
+  <p class="m" id="toastMsg">Acción realizada.</p>
+</div>
+
+<script>
+/** =========================================================
+ *  Control de Equipo — MVP en un solo HTML
+ *  - Datos en localStorage
+ *  - CRUD básico (proyectos, entregables, rutinas, incidencias)
+ *  - Dashboard con KPIs y semáforo
+ *  ========================================================= */
+
+const LS_KEY = "control_equipo_mvp_v1";
+const LS_LOGO_KEY = "li_logo_dataurl_v1";
+
+function uid(prefix="id"){
+  return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+}
+
+function todayISO(d=new Date()){
+  const t = new Date(d);
+  t.setHours(0,0,0,0);
+  const yyyy = t.getFullYear();
+  const mm = String(t.getMonth()+1).padStart(2,'0');
+  const dd = String(t.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function daysBetween(aISO, bISO){
+  // a->b
+  const a = new Date(aISO+"T00:00:00");
+  const b = new Date(bISO+"T00:00:00");
+  return Math.round((b-a)/(1000*60*60*24));
+}
+
+function fmtDate(iso){
+  if(!iso) return "—";
+  const [y,m,d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+function toast(title, msg){
+  const el = document.getElementById("toast");
+  document.getElementById("toastTitle").textContent = title;
+  document.getElementById("toastMsg").textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>el.classList.remove("show"), 2400);
+}
+
+
+function defaultLogoDataUrl(){
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="180" height="180" rx="36" fill="url(#g)"/>
+  <text x="90" y="112" font-family="Arial, sans-serif" font-size="76" font-weight="800" text-anchor="middle" fill="white">LI</text>
+  </svg>`;
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+
+function initLogo(){
+  const img = document.getElementById("liLogoImg");
+  if(!img) return;
+
+  const saved = localStorage.getItem(LS_LOGO_KEY);
+  img.src = saved || defaultLogoDataUrl();
+
+  const btn = document.getElementById("logoBtn");
+  const input = document.getElementById("logoInput");
+  if(!btn || !input) return;
+
+  btn.addEventListener("click", ()=> input.click());
+
+  input.addEventListener("change", ()=>{
+    const file = input.files && input.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const dataUrl = reader.result;
+      try{
+        localStorage.setItem(LS_LOGO_KEY, dataUrl);
+      }catch{
+        toast("No se pudo guardar", "Tu navegador no permitió guardar el logo (storage lleno).");
+      }
+      img.src = dataUrl;
+      toast("Logo actualizado", "Se guardó en tu navegador.");
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function downloadCSV(filename, rows){
+  const escape = (v) => {
+    const s = (v ?? "").toString();
+    if(/[",\n]/.test(s)) return `"${s.replaceAll('"','""')}"`;
+    return s;
+  };
+  const csv = rows.map(r => r.map(escape).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/** ---------------------------
+ *  Estado (DB local)
+ *  -------------------------- */
+function defaultDB(){
+  const t = todayISO();
+  const users = [
+    {id: uid("u"), name: "Adrián", role:"Admin", team:"Innovación"},
+    {id: uid("u"), name: "Ramón", role:"Líder", team:"Ingeniería"},
+    {id: uid("u"), name: "Francisco", role:"Colaborador", team:"Ingeniería"},
+    {id: uid("u"), name: "Alexis", role:"Colaborador", team:"Ingeniería"},
+  ];
+
+  const projects = [
+    {id: uid("p"), name:"Attesa Evo", priority:"Alta", status:"Activo", leaderId: users[1].id, start:"2026-02-03", end:"2026-03-15", notes:"Evolución de línea soft seating, variantes y electrificación."},
+    {id: uid("p"), name:"Showroom León", priority:"Media", status:"En riesgo", leaderId: users[0].id, start:"2026-01-20", end:"2026-03-01", notes:"Planeación, layout, selección de exhibición y cronograma."},
+  ];
+
+  const deliverables = [
+    {id: uid("d"), title:"Mockups de nuevas variantes", projectId: projects[0].id, assigneeId: users[2].id, due:"2026-02-12", status:"En progreso", blocked:false, blockSince:null, evidence:"", notes:"Incluir variante con cargador." , completedAt:null},
+    {id: uid("d"), title:"Ficha técnica conceptual", projectId: projects[0].id, assigneeId: users[3].id, due:"2026-02-10", status:"Bloqueado", blocked:true, blockSince:"2026-02-09", evidence:"", notes:"Falta validación de medidas." , completedAt:null},
+    {id: uid("d"), title:"Lista de productos por zona", projectId: projects[1].id, assigneeId: users[0].id, due:"2026-02-18", status:"En revisión", blocked:false, blockSince:null, evidence:"Drive/…", notes:"Organizar por configuraciones." , completedAt:null},
+  ];
+
+  const routines = [
+    {id: uid("r"), name:"Actualizar avances de entregables", frequency:"Diaria", assigneeId: users[2].id, checklist:["Actualizar estado","Agregar evidencia si aplica","Registrar bloqueo si existe"]},
+    {id: uid("r"), name:"Revisión semanal de bloqueos", frequency:"Semanal", assigneeId: users[1].id, checklist:["Listar bloqueos","Asignar responsables","Fecha de desbloqueo"]},
+    {id: uid("r"), name:"Cierre de incidencias críticas", frequency:"Diaria", assigneeId: users[0].id, checklist:["Revisar severidad Alta","Definir acción correctiva","Cerrar/escala"]},
+  ];
+
+  const routineRuns = [
+    {id: uid("rr"), routineId: routines[0].id, date: t, assigneeId: users[2].id, status:"Pendiente"},
+    {id: uid("rr"), routineId: routines[2].id, date: t, assigneeId: users[0].id, status:"Pendiente"},
+  ];
+
+  const incidents = [
+    {id: uid("i"), title:"Retraso por falta de validación", category:"Proceso", severity:"Alta", ownerId: users[1].id, due:"2026-02-19", status:"Abierta", notes:"Validar dimensiones con planta.", actions:"Agendar revisión hoy."},
+    {id: uid("i"), title:"Evidencia incompleta en entregable", category:"Calidad", severity:"Media", ownerId: users[2].id, due:"2026-02-20", status:"Atendida", notes:"Falta link final.", actions:"Adjuntar drive y cerrar."},
+  ];
+
+  const checkins = [];
+
+  const rules = {
+    yellowOverdue: 1,
+    redOverdue: 3,
+    yellowBlockDays: 2,
+    redBlockDays: 5,
+    yellowRoutinePending: 1,
+    redRoutinePending: 2,
+  };
+
+  return { users, projects, deliverables, routines, routineRuns, incidents, checkins, rules };
+}
+
+function loadDB(){
+  const raw = localStorage.getItem(LS_KEY);
+  if(!raw) {
+    const db = defaultDB();
+    localStorage.setItem(LS_KEY, JSON.stringify(db));
+    return db;
+  }
+  try{
+    const db = JSON.parse(raw);
+    return db;
+  }catch{
+    const db = defaultDB();
+    localStorage.setItem(LS_KEY, JSON.stringify(db));
+    return db;
+  }
+}
+
+function saveDB(){
+  localStorage.setItem(LS_KEY, JSON.stringify(DB));
+}
+
+let DB = loadDB();
+
+/** ---------------------------
+ *  Helpers de lookup
+ *  -------------------------- */
+const byId = (arr, id) => arr.find(x=>x.id===id) || null;
+
+function userName(id){
+  const u = byId(DB.users, id);
+  return u ? u.name : "—";
+}
+function projectName(id){
+  const p = byId(DB.projects, id);
+  return p ? p.name : "—";
+}
+
+function statusTag(status, dueISO=null){
+  const t = todayISO();
+  const overdue = dueISO ? (daysBetween(dueISO, t) > 0) : false;
+
+  if(status==="Aprobado") return `<span class="tag ok">Aprobado</span>`;
+  if(status==="Bloqueado") return `<span class="tag bad">Bloqueado</span>`;
+  if(status==="En revisión") return `<span class="tag blue">En revisión</span>`;
+  if(status==="En progreso") return overdue ? `<span class="tag warn">En progreso · Vencido</span>` : `<span class="tag blue">En progreso</span>`;
+  if(status==="Pendiente") return overdue ? `<span class="tag bad">Pendiente · Vencido</span>` : `<span class="tag gray">Pendiente</span>`;
+  return `<span class="tag gray">${status||"—"}</span>`;
+}
+
+function priorityTag(p){
+  if(p==="Alta") return `<span class="tag bad">Alta</span>`;
+  if(p==="Media") return `<span class="tag warn">Media</span>`;
+  if(p==="Baja") return `<span class="tag ok">Baja</span>`;
+  return `<span class="tag gray">${p||"—"}</span>`;
+}
+
+function calcKPIs(){
+  const t = todayISO();
+
+  const dels = DB.deliverables;
+  const active = dels.filter(d => d.status !== "Aprobado");
+  const overdue = active.filter(d => d.due && daysBetween(d.due, t) > 0);
+  const dueSoon = active.filter(d => d.due && daysBetween(t, d.due) >= 0 && daysBetween(t, d.due) <= 3);
+
+  // On-time completion ratio (consider those approved that have completedAt)
+  const approved = dels.filter(d => d.status === "Aprobado");
+  const approvedWithDates = approved.filter(d => d.completedAt && d.due);
+  const onTime = approvedWithDates.filter(d => daysBetween(d.completedAt, d.due) >= 0).length;
+  const onTimePct = approvedWithDates.length ? Math.round((onTime/approvedWithDates.length)*100) : 0;
+
+  const blocked = active.filter(d => d.blocked);
+  const blockAges = blocked.map(d => d.blockSince ? daysBetween(d.blockSince, t) : 0);
+  const maxBlockAge = blockAges.length ? Math.max(...blockAges) : 0;
+
+  // Routine pending today
+  const runsToday = DB.routineRuns.filter(r => r.date === t);
+  const pendingToday = runsToday.filter(r => r.status === "Pendiente").length;
+  const doneToday = runsToday.filter(r => r.status === "Completada").length;
+  const routineCompliance = (pendingToday + doneToday) ? Math.round((doneToday/(pendingToday+doneToday))*100) : 0;
+
+  // Incidents
+  const openInc = DB.incidents.filter(i => i.status !== "Cerrada").length;
+  const criticalOpen = DB.incidents.filter(i => i.status !== "Cerrada" && i.severity === "Alta").length;
+
+  // Avg delay (only overdue)
+  const avgDelay = overdue.length ? Math.round(overdue.reduce((acc,d)=>acc+daysBetween(d.due, t),0)/overdue.length) : 0;
+
+  return {
+    overdueCount: overdue.length,
+    dueSoonCount: dueSoon.length,
+    blockedCount: blocked.length,
+    maxBlockAge,
+    onTimePct,
+    routinePendingToday: pendingToday,
+    routineCompliance,
+    openInc,
+    criticalOpen,
+    avgDelay
+  };
+}
+
+function deliverableComplianceStats(list, refISO=todayISO()){
+  const items = (list||[]).filter(d => d.due);
+  const total = items.length;
+  let compliant = 0;
+  let overdue = 0;
+  let approvedTotal = 0;
+  let approvedOnTime = 0;
+  let approvedLate = 0;
+
+  for(const d of items){
+    if(d.status === "Aprobado" && d.completedAt){
+      approvedTotal++;
+      // On-time if completedAt <= due  => daysBetween(completedAt, due) >= 0
+      if(daysBetween(d.completedAt, d.due) >= 0){
+        compliant++;
+        approvedOnTime++;
+      }else{
+        approvedLate++;
+      }
+    }else{
+      // Still open: counts as compliant if it is not overdue yet
+      if(daysBetween(refISO, d.due) >= 0){
+        compliant++;
+      }else{
+        overdue++;
+      }
+    }
+  }
+
+  const pct = total ? Math.round((compliant/total)*100) : 0;
+  const approvedPct = approvedTotal ? Math.round((approvedOnTime/approvedTotal)*100) : 0;
+
+  return { total, compliant, overdue, pct, approvedTotal, approvedOnTime, approvedLate, approvedPct };
+}
+
+function complianceForUser(userId){
+  const mine = DB.deliverables.filter(d => d.assigneeId === userId);
+  return deliverableComplianceStats(mine, todayISO());
+}
+
+function complianceForUserRange(userId, startISO, endISO){
+  const mine = DB.deliverables.filter(d => d.assigneeId === userId && d.due && d.due >= startISO && d.due <= endISO);
+  return deliverableComplianceStats(mine, todayISO());
+}
+
+function semaforoForUser(userId){
+  const t = todayISO();
+  const rules = DB.rules;
+
+  const myDels = DB.deliverables.filter(d => d.assigneeId===userId && d.status!=="Aprobado");
+  const overdue = myDels.filter(d => d.due && daysBetween(d.due, t) > 0).length;
+
+  const myBlocks = myDels.filter(d => d.blocked);
+  const maxBlockDays = myBlocks.reduce((m,d)=>Math.max(m, d.blockSince ? daysBetween(d.blockSince, t) : 0), 0);
+
+  const myRunsToday = DB.routineRuns.filter(r => r.date===t && r.assigneeId===userId);
+  const pendingRoutines = myRunsToday.filter(r => r.status==="Pendiente").length;
+
+  // Determine color
+  let level = "ok";
+  if(overdue >= rules.redOverdue || maxBlockDays >= rules.redBlockDays || pendingRoutines >= rules.redRoutinePending){
+    level = "bad";
+  } else if(overdue >= rules.yellowOverdue || maxBlockDays >= rules.yellowBlockDays || pendingRoutines >= rules.yellowRoutinePending){
+    level = "warn";
+  }
+
+  const label = level==="ok" ? "Verde" : level==="warn" ? "Amarillo" : "Rojo";
+  return { level, label, overdue, maxBlockDays, pendingRoutines };
+}
+
+function ensureRoutineRunsForToday(){
+  const t = todayISO();
+  // Create pending run for routines that "toca hoy"
+  const shouldRun = DB.routines.filter(r => routineTouchesToday(r, t));
+  for(const r of shouldRun){
+    const exists = DB.routineRuns.some(rr => rr.date===t && rr.routineId===r.id && rr.assigneeId===r.assigneeId);
+    if(!exists){
+      DB.routineRuns.push({id: uid("rr"), routineId:r.id, date:t, assigneeId:r.assigneeId, status:"Pendiente"});
+    }
+  }
+  saveDB();
+}
+
+function routineTouchesToday(routine, tISO){
+  // MVP: diaria siempre; semanal toca lunes; mensual toca día 1
+  const d = new Date(tISO+"T00:00:00");
+  const dow = d.getDay(); // 0 domingo, 1 lunes...
+  const dom = d.getDate();
+  if(routine.frequency==="Diaria") return true;
+  if(routine.frequency==="Semanal") return dow===1; // lunes
+  if(routine.frequency==="Mensual") return dom===1;
+  return false;
+}
+
+/** ---------------------------
+ *  Render: navegación
+ *  -------------------------- */
+function showView(view){
+  document.querySelectorAll("main section[id^='view-']").forEach(s => s.classList.add("hidden"));
+  const el = document.getElementById("view-"+view);
+  if(el) el.classList.remove("hidden");
+
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("active", b.dataset.view===view));
+  renderAll();
+}
+
+document.getElementById("nav").addEventListener("click", (e)=>{
+  const btn = e.target.closest("button[data-view]");
+  if(!btn) return;
+  showView(btn.dataset.view);
+});
+
+/** ---------------------------
+ *  Render: Dashboard + tablas
+ *  -------------------------- */
+function renderKPIs(){
+  ensureRoutineRunsForToday();
+  const k = calcKPIs();
+
+  const kpis = [
+    {label:"% Entregables a tiempo", value: `${k.onTimePct}%`, hint:"De entregables aprobados con fecha.", level: k.onTimePct>=85 ? "ok" : (k.onTimePct>=70 ? "warn" : "bad")},
+    {label:"Entregables vencidos", value: `${k.overdueCount}`, hint:`Promedio atraso: ${k.avgDelay} días`, level: k.overdueCount===0 ? "ok" : (k.overdueCount<=2 ? "warn" : "bad")},
+    {label:"Bloqueos activos", value: `${k.blockedCount}`, hint:`Antigüedad máx: ${k.maxBlockAge} días`, level: k.blockedCount===0 ? "ok" : (k.maxBlockAge<=2 ? "warn" : "bad")},
+    {label:"Rutinas hoy", value: `${k.routineCompliance}%`, hint:`Pendientes: ${k.routinePendingToday}`, level: k.routineCompliance>=90 ? "ok" : (k.routineCompliance>=70 ? "warn" : "bad")},
+  ];
+
+  const grid = document.getElementById("kpiGrid");
+  grid.innerHTML = kpis.map(x => `
+    <div class="card kpi ${x.level}">
+      <div class="label">${x.label}</div>
+      <div class="value">${x.value}</div>
+      <div class="trend"><span class="dot"></span> <span>${x.hint}</span></div>
+    </div>
+  `).join("");
+
+  // Side stats
+  document.getElementById("sideOverdue").textContent = k.overdueCount;
+  document.getElementById("sideBlocks").textContent = k.blockedCount;
+  document.getElementById("sideRoutines").textContent = k.routinePendingToday;
+  document.getElementById("todayLabel").textContent = fmtDate(todayISO());
+}
+
+function renderPeople(){
+  const container = document.getElementById("peopleList");
+  const cards = DB.users.map(u=>{
+    const s = semaforoForUser(u.id);
+    const c = complianceForUser(u.id);
+
+    const complianceLevel = c.pct>=85 ? "ok" : (c.pct>=70 ? "warn" : "bad");
+    const complianceTag = complianceLevel==="ok" ? "ok" : (complianceLevel==="warn" ? "warn" : "bad");
+
+    const pillClass = s.level==="ok" ? "ok" : s.level==="warn" ? "warn" : "bad";
+
+    const approvedInfo = c.approvedTotal
+      ? ` · Aprobados a tiempo: <b style="color:var(--text)">${c.approvedPct}%</b> (${c.approvedOnTime}/${c.approvedTotal})`
+      : ``;
+
+    return `
+      <div class="card" style="padding:12px">
+        <div class="flex between wrap" style="gap:12px">
+          <div style="min-width:260px; flex:1">
+            <div class="metric">
+              <div>
+                <b>${u.name}</b> <span class="small muted">· ${u.role} · ${u.team}</span>
+              </div>
+              <span class="tag ${complianceTag}">${c.pct}% cumplimiento</span>
+            </div>
+
+            <div class="small muted" style="margin:6px 0 8px">
+              Entregables (con fecha): <b style="color:var(--text)">${c.total}</b> · Cumplidos: <b style="color:var(--text)">${c.compliant}</b> · Vencidos: <b style="color:var(--text)">${c.overdue}</b>${approvedInfo}
+            </div>
+
+            <div class="progress ${complianceLevel}">
+              <span style="width:${c.pct}%"></span>
+            </div>
+
+            <div class="small muted" style="margin-top:8px">
+              Vencidos (activos): <b style="color:var(--text)">${s.overdue}</b> · Bloqueo máx: <b style="color:var(--text)">${s.maxBlockDays}</b>d · Rutinas pend. hoy: <b style="color:var(--text)">${s.pendingRoutines}</b>
+            </div>
+          </div>
+
+          <span class="pill ${pillClass}"><span class="s"></span>${s.label}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  container.innerHTML = cards || `<div class="muted small">No hay usuarios.</div>`;
+}
+
+function renderHotTable(){
+  const t = todayISO();
+  const filterAssignee = document.getElementById("filterAssignee").value;
+
+  const active = DB.deliverables.filter(d => d.status !== "Aprobado");
+  const scored = active.map(d=>{
+    const overdueDays = d.due ? Math.max(0, daysBetween(d.due, t)) : 0;
+    const dueIn = d.due ? daysBetween(t, d.due) : 9999;
+    const risk = (overdueDays>0 ? 1000+overdueDays : (dueIn>=0 && dueIn<=3 ? 100-dueIn : 0))
+              + (d.blocked ? 500 : 0)
+              + (d.status==="Pendiente" ? 30 : 0);
+    return {d, risk, overdueDays, dueIn};
+  }).sort((a,b)=>b.risk-a.risk).slice(0, 12);
+
+  const rows = scored
+    .filter(x => !filterAssignee || x.d.assigneeId===filterAssignee)
+    .map(x=>{
+      const d = x.d;
+      const proj = projectName(d.projectId);
+      const ass = userName(d.assigneeId);
+      const dateHint = d.due ? (x.overdueDays>0 ? `Vencido ${x.overdueDays}d` : `En ${x.dueIn}d`) : "—";
+      return `
+        <tr>
+          <td>${statusTag(d.status, d.due)}</td>
+          <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,80)}</div></td>
+          <td>${proj}</td>
+          <td>${ass}</td>
+          <td>${d.due ? `${fmtDate(d.due)} <div class="small muted">${dateHint}</div>` : "—"}</td>
+          <td>${d.blocked ? `<span class="tag bad">Sí · ${d.blockSince? daysBetween(d.blockSince,t):0}d</span>` : `<span class="tag gray">No</span>`}</td>
+          <td class="right">
+            <button class="btn small" data-edit-del="${d.id}">Editar</button>
+            <button class="btn small" data-approve-del="${d.id}">Aprobar</button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+  document.getElementById("tableHot").innerHTML = rows || `
+    <tr><td colspan="7" class="muted small">Sin entregables activos.</td></tr>
+  `;
+}
+
+function renderProjects(){
+  const status = document.getElementById("projFilterStatus").value;
+  const priority = document.getElementById("projFilterPriority").value;
+  const q = document.getElementById("projSearch").value.trim().toLowerCase();
+
+  const rows = DB.projects
+    .filter(p => !status || p.status===status)
+    .filter(p => !priority || p.priority===priority)
+    .filter(p => !q || p.name.toLowerCase().includes(q) || (p.notes||"").toLowerCase().includes(q))
+    .map(p=>`
+      <tr>
+        <td><b>${p.name}</b><div class="small muted">${(p.notes||"").slice(0,90)}</div></td>
+        <td>${priorityTag(p.priority)}</td>
+        <td>${p.status==="Cerrado" ? `<span class="tag ok">Cerrado</span>` : (p.status==="Detenido" ? `<span class="tag bad">Detenido</span>` : (p.status==="En riesgo" ? `<span class="tag warn">En riesgo</span>` : `<span class="tag blue">Activo</span>`))}</td>
+        <td>${userName(p.leaderId)}</td>
+        <td>${fmtDate(p.start)} → ${fmtDate(p.end)}</td>
+        <td class="right">
+          <button class="btn small" data-open-proj="${p.id}">Ver</button>
+          <button class="btn small" data-edit-proj="${p.id}">Editar</button>
+          <button class="btn small danger" data-del-proj="${p.id}">Eliminar</button>
+        </td>
+      </tr>
+    `).join("");
+  document.getElementById("tableProjects").innerHTML = rows || `<tr><td colspan="6" class="muted small">No hay proyectos.</td></tr>`;
+}
+
+function renderDeliverables(){
+  const q = document.getElementById("delSearch").value.trim().toLowerCase();
+  const proj = document.getElementById("delFilterProject").value;
+  const status = document.getElementById("delFilterStatus").value;
+  const ass = document.getElementById("delFilterAssignee").value;
+  const t = todayISO();
+
+  const rows = DB.deliverables
+    .filter(d => !q || d.title.toLowerCase().includes(q) || (d.notes||"").toLowerCase().includes(q))
+    .filter(d => !proj || d.projectId===proj)
+    .filter(d => !status || d.status===status)
+    .filter(d => !ass || d.assigneeId===ass)
+    .sort((a,b)=> (a.due||"9999-12-31").localeCompare(b.due||"9999-12-31"))
+    .map(d=>{
+      const block = d.blocked ? `<span class="tag bad">Sí · ${d.blockSince? daysBetween(d.blockSince,t):0}d</span>` : `<span class="tag gray">No</span>`;
+      return `
+        <tr>
+          <td>${statusTag(d.status, d.due)}</td>
+          <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,80)}</div></td>
+          <td>${projectName(d.projectId)}</td>
+          <td>${userName(d.assigneeId)}</td>
+          <td>${d.due ? fmtDate(d.due) : "—"}</td>
+          <td>${block}</td>
+          <td class="right">
+            <button class="btn small" data-edit-del="${d.id}">Editar</button>
+            <button class="btn small" data-approve-del="${d.id}">Aprobar</button>
+            <button class="btn small danger" data-del-del="${d.id}">Eliminar</button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+  document.getElementById("tableDeliverables").innerHTML = rows || `<tr><td colspan="7" class="muted small">No hay entregables.</td></tr>`;
+}
+
+function renderRoutines(){
+  const t = todayISO();
+  const rows = DB.routines.map(r=>{
+    const touches = routineTouchesToday(r, t);
+    return `
+      <tr>
+        <td><b>${r.name}</b><div class="small muted">${(r.checklist||[]).length} items</div></td>
+        <td><span class="tag gray">${r.frequency}</span></td>
+        <td>${userName(r.assigneeId)}</td>
+        <td>${touches ? `<span class="tag warn">Sí</span>` : `<span class="tag gray">No</span>`}</td>
+        <td class="right">
+          <button class="btn small" data-run-r="${r.id}">Marcar hoy</button>
+          <button class="btn small" data-edit-r="${r.id}">Editar</button>
+          <button class="btn small danger" data-del-r="${r.id}">Eliminar</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+  document.getElementById("tableRoutines").innerHTML = rows || `<tr><td colspan="5" class="muted small">No hay rutinas.</td></tr>`;
+
+  // Runs
+  const from = new Date(todayISO()+"T00:00:00");
+  from.setDate(from.getDate()-13);
+  const fromISO = todayISO(from);
+
+  const runRows = DB.routineRuns
+    .filter(rr => rr.date >= fromISO)
+    .sort((a,b)=> b.date.localeCompare(a.date))
+    .map(rr=>{
+      const r = byId(DB.routines, rr.routineId);
+      const tag = rr.status==="Completada" ? `<span class="tag ok">Completada</span>` : `<span class="tag warn">Pendiente</span>`;
+      return `
+        <tr>
+          <td>${fmtDate(rr.date)}</td>
+          <td>${r ? r.name : "—"}</td>
+          <td>${userName(rr.assigneeId)}</td>
+          <td>${tag}</td>
+        </tr>
+      `;
+    }).join("");
+  document.getElementById("tableRoutineRuns").innerHTML = runRows || `<tr><td colspan="4" class="muted small">Sin ejecuciones aún.</td></tr>`;
+}
+
+function renderIncidents(){
+  const q = document.getElementById("incSearch").value.trim().toLowerCase();
+  const sev = document.getElementById("incFilterSeverity").value;
+  const st = document.getElementById("incFilterStatus").value;
+  const own = document.getElementById("incFilterOwner").value;
+
+  const rows = DB.incidents
+    .filter(i => !q || i.title.toLowerCase().includes(q) || (i.notes||"").toLowerCase().includes(q) || (i.actions||"").toLowerCase().includes(q))
+    .filter(i => !sev || i.severity===sev)
+    .filter(i => !st || i.status===st)
+    .filter(i => !own || i.ownerId===own)
+    .sort((a,b)=> (a.due||"9999-12-31").localeCompare(b.due||"9999-12-31"))
+    .map(i=>{
+      const sevTag = i.severity==="Alta" ? `<span class="tag bad">Alta</span>` : (i.severity==="Media" ? `<span class="tag warn">Media</span>` : `<span class="tag ok">Baja</span>`);
+      const stTag = i.status==="Abierta" ? `<span class="tag bad">Abierta</span>` : (i.status==="Atendida" ? `<span class="tag warn">Atendida</span>` : `<span class="tag ok">Cerrada</span>`);
+      return `
+        <tr>
+          <td>${stTag}</td>
+          <td><b>${i.title}</b><div class="small muted">${(i.notes||"").slice(0,70)}</div></td>
+          <td><span class="tag gray">${i.category||"—"}</span></td>
+          <td>${sevTag}</td>
+          <td>${userName(i.ownerId)}</td>
+          <td>${i.due ? fmtDate(i.due) : "—"}</td>
+          <td class="right">
+            <button class="btn small" data-edit-i="${i.id}">Editar</button>
+            <button class="btn small" data-close-i="${i.id}">Cerrar</button>
+            <button class="btn small danger" data-del-i="${i.id}">Eliminar</button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+  document.getElementById("tableIncidents").innerHTML = rows || `<tr><td colspan="7" class="muted small">No hay incidencias.</td></tr>`;
+}
+
+function renderReports(){
+  const t = new Date(todayISO()+"T00:00:00");
+  const weekStart = new Date(t);
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay()+6)%7)); // monday
+  const ws = todayISO(weekStart);
+
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate()+6);
+  const we = todayISO(weekEnd);
+
+  const weekDels = DB.deliverables.filter(d => d.due && d.due >= ws && d.due <= we);
+  const weekRuns = DB.routineRuns.filter(r => r.date >= ws && r.date <= we);
+  const weekInc = DB.incidents.filter(i => i.due && i.due >= ws && i.due <= we);
+
+  const approvedThisWeek = DB.deliverables.filter(d => d.status==="Aprobado" && d.completedAt && d.completedAt>=ws && d.completedAt<=we);
+
+  const perUser = DB.users.map(u=>{
+    const uD = weekDels.filter(d=>d.assigneeId===u.id);
+    const cW = complianceForUserRange(u.id, ws, we);
+    const uOver = uD.filter(d=>d.status!=="Aprobado" && daysBetween(d.due, todayISO())>0).length;
+    const uApp = approvedThisWeek.filter(d=>d.assigneeId===u.id).length;
+    const uRuns = weekRuns.filter(r=>r.assigneeId===u.id);
+    const uDone = uRuns.filter(r=>r.status==="Completada").length;
+    const uTot = uRuns.length;
+    const uComp = uTot ? Math.round((uDone/uTot)*100) : 0;
+
+    const pill = uOver===0 ? "ok" : (uOver<=1 ? "warn" : "bad");
+
+    return `
+      <tr>
+        <td><b>${u.name}</b></td>
+        <td>${uD.length}</td>
+        <td>${cW.total ? (cW.pct+"%") : "—"}</td>
+        <td>${uApp}</td>
+        <td>${uOver}</td>
+        <td>${uComp}%</td>
+        <td><span class="pill ${pill}"><span class="s"></span>${pill==="ok"?"OK":pill==="warn"?"Riesgo":"Crítico"}</span></td>
+      </tr>
+    `;
+  }).join("");
+
+  document.getElementById("weeklyReport").innerHTML = `
+    <div class="flex between wrap">
+      <div>
+        <b>Semana (${fmtDate(ws)} → ${fmtDate(we)})</b>
+        <div class="small muted">Resumen por persona (entregables y rutinas).</div>
+      </div>
+      <div class="flex wrap">
+        <span class="tag gray">Entregables en semana: <b style="color:var(--text)">${weekDels.length}</b></span>
+        <span class="tag gray">Incidencias con fecha: <b style="color:var(--text)">${weekInc.length}</b></span>
+        <span class="tag gray">Aprobados: <b style="color:var(--text)">${approvedThisWeek.length}</b></span>
+      </div>
+    </div>
+    <div class="hr"></div>
+    <div style="overflow:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Persona</th>
+            <th>Entregables (semana)</th>
+            <th>Cumplimiento (%)</th>
+            <th>Aprobados (semana)</th>
+            <th>Vencidos (hoy)</th>
+            <th>Rutinas (%)</th>
+            <th>Estatus</th>
+          </tr>
+        </thead>
+        <tbody>${perUser}</tbody>
+      </table>
+    </div>
+    <div class="hr"></div>
+    <div class="small muted">
+      Tip: este reporte es MVP. Si lo montas con backend (Supabase), puedes automatizarlo por correo y dejar histórico por mes.
+    </div>
+  `;
+}
+
+function renderUsers(){
+  const rows = DB.users.map(u=>`
+    <tr>
+      <td><b>${u.name}</b></td>
+      <td><span class="tag gray">${u.role}</span></td>
+      <td>${u.team||"—"}</td>
+      <td class="right">
+        <button class="btn small" data-edit-u="${u.id}">Editar</button>
+        <button class="btn small danger" data-del-u="${u.id}">Eliminar</button>
+      </td>
+    </tr>
+  `).join("");
+  document.getElementById("tableUsers").innerHTML = rows || `<tr><td colspan="4" class="muted small">No hay usuarios.</td></tr>`;
+}
+
+function fillSelects(){
+  // Preservar selecciones actuales (evita que los filtros “se reseten” en cada render)
+  const cur = {
+    filterAssignee: document.getElementById("filterAssignee")?.value || "",
+    delFilterAssignee: document.getElementById("delFilterAssignee")?.value || "",
+    delFilterProject: document.getElementById("delFilterProject")?.value || "",
+    incFilterOwner: document.getElementById("incFilterOwner")?.value || "",
+    ciUser: document.getElementById("ciUser")?.value || "",
+  };
+
+  // Users
+  const userOptions = DB.users.map(u=>`<option value="${u.id}">${u.name} · ${u.role}</option>`).join("");
+
+  // Dashboard filter
+  const f = document.getElementById("filterAssignee");
+  f.innerHTML = `<option value="">Filtrar por responsable (todos)</option>` + userOptions;
+
+  // Deliverables filters
+  document.getElementById("delFilterAssignee").innerHTML = `<option value="">Responsable (todos)</option>` + userOptions;
+  document.getElementById("delFilterProject").innerHTML = `<option value="">Proyecto (todos)</option>` + DB.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join("");
+
+  // Incidents filter
+  document.getElementById("incFilterOwner").innerHTML = `<option value="">Responsable (todos)</option>` + userOptions;
+
+  // Check-in user
+  document.getElementById("ciUser").innerHTML = userOptions;
+
+  // Restaurar selecciones si siguen existiendo
+  const setIfExists = (id, val) => {
+    if(!val) return;
+    const el = document.getElementById(id);
+    if(!el) return;
+    const has = Array.from(el.options).some(o => o.value === val);
+    if(has) el.value = val;
+  };
+  setIfExists("filterAssignee", cur.filterAssignee);
+  setIfExists("delFilterAssignee", cur.delFilterAssignee);
+  setIfExists("delFilterProject", cur.delFilterProject);
+  setIfExists("incFilterOwner", cur.incFilterOwner);
+  setIfExists("ciUser", cur.ciUser);
+
+  // Rules in settings
+  document.getElementById("ruleYellowOverdue").value = DB.rules.yellowOverdue;
+  document.getElementById("ruleRedOverdue").value = DB.rules.redOverdue;
+  document.getElementById("ruleYellowBlockDays").value = DB.rules.yellowBlockDays;
+  document.getElementById("ruleRedBlockDays").value = DB.rules.redBlockDays;
+  document.getElementById("ruleYellowRoutinePending").value = DB.rules.yellowRoutinePending;
+  document.getElementById("ruleRedRoutinePending").value = DB.rules.redRoutinePending;
+}
+
+function renderAll(){
+  fillSelects();
+  renderKPIs();
+  renderPeople();
+  renderHotTable();
+  renderProjects();
+  renderDeliverables();
+  renderRoutines();
+  renderIncidents();
+  renderReports();
+  renderUsers();
+}
+
+/** ---------------------------
+ *  Modales: utilidades
+ *  -------------------------- */
+function openDialog(dlg){
+  if(!dlg.open) dlg.showModal();
+}
+function closeDialog(dlg){
+  if(dlg.open) dlg.close();
+}
+document.querySelectorAll("dialog [data-close]").forEach(btn=>{
+  btn.addEventListener("click", (e)=> closeDialog(e.target.closest("dialog")));
+});
+
+/** ---------------------------
+ *  Quick Add: forms dinámicos
+ *  -------------------------- */
+const dlgQuickAdd = document.getElementById("dlgQuickAdd");
+const qaType = document.getElementById("qaType");
+const qaForm = document.getElementById("qaForm");
+
+function qaRender(){
+  const type = qaType.value;
+  const userOptions = DB.users.map(u=>`<option value="${u.id}">${u.name}</option>`).join("");
+  const projOptions = DB.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join("");
+  const t = todayISO();
+
+  if(type==="project"){
+    qaForm.innerHTML = `
+      <div class="formGrid">
+        <div>
+          <label>Nombre del proyecto</label>
+          <input class="input" id="qa_p_name" placeholder="Ej: Bench 3000" />
+        </div>
+        <div>
+          <label>Líder</label>
+          <select class="input" id="qa_p_leader">${userOptions}</select>
+        </div>
+      </div>
+      <div class="formGrid">
+        <div>
+          <label>Prioridad</label>
+          <select class="input" id="qa_p_priority">
+            <option>Alta</option><option selected>Media</option><option>Baja</option>
+          </select>
+        </div>
+        <div>
+          <label>Estatus</label>
+          <select class="input" id="qa_p_status">
+            <option selected>Activo</option><option>En riesgo</option><option>Detenido</option><option>Cerrado</option>
+          </select>
+        </div>
+      </div>
+      <div class="formGrid">
+        <div>
+          <label>Inicio</label>
+          <input class="input" type="date" id="qa_p_start" value="${t}" />
+        </div>
+        <div>
+          <label>Fin</label>
+          <input class="input" type="date" id="qa_p_end" value="${t}" />
+        </div>
+      </div>
+      <label>Notas</label>
+      <textarea class="input" id="qa_p_notes" placeholder="Contexto / objetivo..."></textarea>
+    `;
+  }
+
+  if(type==="deliverable"){
+    const defaultProj = DB.projects[0]?.id || "";
+    qaForm.innerHTML = `
+      <div class="formGrid">
+        <div>
+          <label>Entregable</label>
+          <input class="input" id="qa_d_title" placeholder="Ej: Plano final para CNC" />
+        </div>
+        <div>
+          <label>Proyecto</label>
+          <select class="input" id="qa_d_project">${projOptions}</select>
+        </div>
+      </div>
+      <div class="formGrid">
+        <div>
+          <label>Responsable</label>
+          <select class="input" id="qa_d_assignee">${userOptions}</select>
+        </div>
+        <div>
+          <label>Fecha compromiso</label>
+          <input class="input" type="date" id="qa_d_due" value="${t}" />
+        </div>
+      </div>
+      <div class="formGrid">
+        <div>
+          <label>Estado</label>
+          <select class="input" id="qa_d_status">
+            <option selected>Pendiente</option>
+            <option>En progreso</option>
+            <option>En revisión</option>
+            <option>Aprobado</option>
+            <option>Bloqueado</option>
+          </select>
+        </div>
+        <div>
+          <label>Bloqueado</label>
+          <select class="input" id="qa_d_blocked">
+            <option value="no" selected>No</option>
+            <option value="yes">Sí</option>
+          </select>
+        </div>
+      </div>
+      <label>Notas</label>
+      <textarea class="input" id="qa_d_notes" placeholder="Criterios de aceptación / detalle..."></textarea>
+    `;
+    // preselect
+    setTimeout(()=>{
+      const sel = document.getElementById("qa_d_project");
+      if(sel && defaultProj) sel.value = defaultProj;
+    },0);
+  }
+
+  if(type==="routine"){
+    qaForm.innerHTML = `
+      <div class="formGrid">
+        <div>
+          <label>Rutina</label>
+          <input class="input" id="qa_r_name" placeholder="Ej: Bitácora diaria de producción" />
+        </div>
+        <div>
+          <label>Responsable</label>
+          <select class="input" id="qa_r_assignee">${userOptions}</select>
+        </div>
+      </div>
+      <div class="formGrid">
+        <div>
+          <label>Frecuencia</label>
+          <select class="input" id="qa_r_freq">
+            <option selected>Diaria</option><option>Semanal</option><option>Mensual</option>
+          </select>
+        </div>
+        <div>
+          <label>Checklist (1 por línea)</label>
+          <textarea class="input" id="qa_r_check" placeholder="Ej:\nRevisar pendientes\nActualizar estatus\nSubir evidencia"></textarea>
+        </div>
+      </div>
+    `;
+  }
+
+  if(type==="incident"){
+    qaForm.innerHTML = `
+      <div class="formGrid">
+        <div>
+          <label>Incidencia</label>
+          <input class="input" id="qa_i_title" placeholder="Ej: Falta de material X" />
+        </div>
+        <div>
+          <label>Categoría</label>
+          <select class="input" id="qa_i_cat">
+            <option>Calidad</option><option>Proceso</option><option>Material</option><option>Cliente</option><option>Máquina</option><option>Seguridad</option>
+          </select>
+        </div>
+      </div>
+      <div class="formGrid">
+        <div>
+          <label>Severidad</label>
+          <select class="input" id="qa_i_sev">
+            <option>Alta</option><option selected>Media</option><option>Baja</option>
+          </select>
+        </div>
+        <div>
+          <label>Responsable</label>
+          <select class="input" id="qa_i_owner">${userOptions}</select>
+        </div>
+      </div>
+      <div class="formGrid">
+        <div>
+          <label>Fecha límite</label>
+          <input class="input" type="date" id="qa_i_due" value="${t}" />
+        </div>
+        <div>
+          <label>Estatus</label>
+          <select class="input" id="qa_i_status">
+            <option selected>Abierta</option><option>Atendida</option><option>Cerrada</option>
+          </select>
+        </div>
+      </div>
+      <label>Notas</label>
+      <textarea class="input" id="qa_i_notes" placeholder="Qué pasó / contexto..."></textarea>
+      <label>Acciones</label>
+      <textarea class="input" id="qa_i_actions" placeholder="Acción correctiva / siguiente paso..."></textarea>
+    `;
+  }
+}
+
+qaType.addEventListener("change", qaRender);
+
+/** ---------------------------
+ *  CRUD: create
+ *  -------------------------- */
+document.getElementById("btnQuickAdd").addEventListener("click", ()=>{
+  qaType.value = "project";
+  qaRender();
+  openDialog(dlgQuickAdd);
+});
+
+document.getElementById("qaSave").addEventListener("click", ()=>{
+  const type = qaType.value;
+  const t = todayISO();
+
+  if(type==="project"){
+    const name = document.getElementById("qa_p_name").value.trim();
+    if(!name) return toast("Falta dato", "Escribe el nombre del proyecto.");
+    DB.projects.push({
+      id: uid("p"),
+      name,
+      leaderId: document.getElementById("qa_p_leader").value,
+      priority: document.getElementById("qa_p_priority").value,
+      status: document.getElementById("qa_p_status").value,
+      start: document.getElementById("qa_p_start").value || t,
+      end: document.getElementById("qa_p_end").value || t,
+      notes: document.getElementById("qa_p_notes").value.trim()
+    });
+    saveDB();
+    closeDialog(dlgQuickAdd);
+    toast("Proyecto creado", name);
+    showView("projects");
+    return;
+  }
+
+  if(type==="deliverable"){
+    const title = document.getElementById("qa_d_title").value.trim();
+    if(!title) return toast("Falta dato", "Escribe el nombre del entregable.");
+    const status = document.getElementById("qa_d_status").value;
+    const blocked = document.getElementById("qa_d_blocked").value==="yes" || status==="Bloqueado";
+    DB.deliverables.push({
+      id: uid("d"),
+      title,
+      projectId: document.getElementById("qa_d_project").value,
+      assigneeId: document.getElementById("qa_d_assignee").value,
+      due: document.getElementById("qa_d_due").value || t,
+      status,
+      blocked,
+      blockSince: blocked ? t : null,
+      evidence: "",
+      notes: document.getElementById("qa_d_notes").value.trim(),
+      completedAt: status==="Aprobado" ? t : null
+    });
+    saveDB();
+    closeDialog(dlgQuickAdd);
+    toast("Entregable creado", title);
+    showView("deliverables");
+    return;
+  }
+
+  if(type==="routine"){
+    const name = document.getElementById("qa_r_name").value.trim();
+    if(!name) return toast("Falta dato", "Escribe el nombre de la rutina.");
+    const checklistText = document.getElementById("qa_r_check").value.trim();
+    const checklist = checklistText ? checklistText.split("\n").map(x=>x.trim()).filter(Boolean) : [];
+    DB.routines.push({
+      id: uid("r"),
+      name,
+      frequency: document.getElementById("qa_r_freq").value,
+      assigneeId: document.getElementById("qa_r_assignee").value,
+      checklist
+    });
+    saveDB();
+    closeDialog(dlgQuickAdd);
+    toast("Rutina creada", name);
+    showView("routines");
+    return;
+  }
+
+  if(type==="incident"){
+    const title = document.getElementById("qa_i_title").value.trim();
+    if(!title) return toast("Falta dato", "Escribe el título de la incidencia.");
+    DB.incidents.push({
+      id: uid("i"),
+      title,
+      category: document.getElementById("qa_i_cat").value,
+      severity: document.getElementById("qa_i_sev").value,
+      ownerId: document.getElementById("qa_i_owner").value,
+      due: document.getElementById("qa_i_due").value || t,
+      status: document.getElementById("qa_i_status").value,
+      notes: document.getElementById("qa_i_notes").value.trim(),
+      actions: document.getElementById("qa_i_actions").value.trim()
+    });
+    saveDB();
+    closeDialog(dlgQuickAdd);
+    toast("Incidencia creada", title);
+    showView("incidents");
+    return;
+  }
+});
+
+/** ---------------------------
+ *  Accesos directos a modales
+ *  -------------------------- */
+document.getElementById("btnAddProject").addEventListener("click", ()=>{
+  qaType.value="project"; qaRender(); openDialog(dlgQuickAdd);
+});
+document.getElementById("btnAddDeliverable").addEventListener("click", ()=>{
+  qaType.value="deliverable"; qaRender(); openDialog(dlgQuickAdd);
+});
+document.getElementById("btnAddRoutine").addEventListener("click", ()=>{
+  qaType.value="routine"; qaRender(); openDialog(dlgQuickAdd);
+});
+document.getElementById("btnAddIncident").addEventListener("click", ()=>{
+  qaType.value="incident"; qaRender(); openDialog(dlgQuickAdd);
+});
+
+/** ---------------------------
+ *  Check-in diario
+ *  -------------------------- */
+const dlgCheckIn = document.getElementById("dlgCheckIn");
+
+document.getElementById("btnCheckIn").addEventListener("click", ()=>{
+  document.getElementById("ciDate").value = todayISO();
+  openDialog(dlgCheckIn);
+});
+
+document.getElementById("ciSave").addEventListener("click", ()=>{
+  const userId = document.getElementById("ciUser").value;
+  const date = document.getElementById("ciDate").value || todayISO();
+  const y = document.getElementById("ciYesterday").value.trim();
+  const td = document.getElementById("ciToday").value.trim();
+  const b = document.getElementById("ciBlocks").value.trim();
+
+  if(!y && !td && !b) return toast("Sin cambios", "Escribe al menos una línea en el check-in.");
+
+  // overwrite if same user+date exists
+  const idx = DB.checkins.findIndex(c => c.userId===userId && c.date===date);
+  const obj = {id: uid("c"), userId, date, yesterday:y, today:td, blocks:b};
+  if(idx>=0) DB.checkins[idx]=obj; else DB.checkins.push(obj);
+
+  saveDB();
+  closeDialog(dlgCheckIn);
+  toast("Check-in guardado", `${userName(userId)} · ${fmtDate(date)}`);
+  renderAll();
+});
+
+/** ---------------------------
+ *  Edit modal (genérico)
+ *  -------------------------- */
+const dlgEdit = document.getElementById("dlgEdit");
+let editContext = null;
+
+function openEdit({title, sub, bodyHTML, onSave}){
+  editContext = {onSave};
+  document.getElementById("editTitle").textContent = title;
+  document.getElementById("editSub").textContent = sub || "";
+  document.getElementById("editBody").innerHTML = bodyHTML;
+  openDialog(dlgEdit);
+}
+
+document.getElementById("editSave").addEventListener("click", ()=>{
+  if(editContext?.onSave) editContext.onSave();
+  closeDialog(dlgEdit);
+  editContext = null;
+  saveDB();
+  renderAll();
+});
+
+/** ---------------------------
+ *  Acciones en tablas (event delegation)
+ *  -------------------------- */
+document.body.addEventListener("click", (e)=>{
+  // Deliverable actions
+  const editDel = e.target.closest("[data-edit-del]")?.dataset.editDel;
+  const approveDel = e.target.closest("[data-approve-del]")?.dataset.approveDel;
+  const delDel = e.target.closest("[data-del-del]")?.dataset.delDel;
+
+  if(editDel){
+    const d = byId(DB.deliverables, editDel);
+    if(!d) return;
+    const userOptions = DB.users.map(u=>`<option value="${u.id}" ${u.id===d.assigneeId?"selected":""}>${u.name}</option>`).join("");
+    const projOptions = DB.projects.map(p=>`<option value="${p.id}" ${p.id===d.projectId?"selected":""}>${p.name}</option>`).join("");
+    const t = todayISO();
+
+    openEdit({
+      title:"Editar entregable",
+      sub:"Actualiza estado, fecha, bloqueo y evidencia.",
+      bodyHTML: `
+        <div class="formGrid">
+          <div>
+            <label>Entregable</label>
+            <input class="input" id="ed_title" value="${escapeHtml(d.title)}">
+          </div>
+          <div>
+            <label>Proyecto</label>
+            <select class="input" id="ed_project">${projOptions}</select>
+          </div>
+        </div>
+        <div class="formGrid">
+          <div>
+            <label>Responsable</label>
+            <select class="input" id="ed_assignee">${userOptions}</select>
+          </div>
+          <div>
+            <label>Compromiso</label>
+            <input class="input" type="date" id="ed_due" value="${d.due||t}">
+          </div>
+        </div>
+        <div class="formGrid">
+          <div>
+            <label>Estado</label>
+            <select class="input" id="ed_status">
+              ${["Pendiente","En progreso","En revisión","Aprobado","Bloqueado"].map(s=>`<option ${s===d.status?"selected":""}>${s}</option>`).join("")}
+            </select>
+          </div>
+          <div>
+            <label>Bloqueado</label>
+            <select class="input" id="ed_blocked">
+              <option value="no" ${!d.blocked?"selected":""}>No</option>
+              <option value="yes" ${d.blocked?"selected":""}>Sí</option>
+            </select>
+          </div>
+        </div>
+        <label>Evidencia (link / nota)</label>
+        <input class="input" id="ed_evidence" value="${escapeHtml(d.evidence||"")}" placeholder="Ej: Drive/…">
+        <label>Notas</label>
+        <textarea class="input" id="ed_notes">${escapeHtml(d.notes||"")}</textarea>
+      `,
+      onSave: ()=>{
+        const newStatus = document.getElementById("ed_status").value;
+        const blocked = document.getElementById("ed_blocked").value==="yes" || newStatus==="Bloqueado";
+        d.title = document.getElementById("ed_title").value.trim();
+        d.projectId = document.getElementById("ed_project").value;
+        d.assigneeId = document.getElementById("ed_assignee").value;
+        d.due = document.getElementById("ed_due").value;
+        d.status = newStatus;
+        d.blocked = blocked;
+        if(blocked && !d.blockSince) d.blockSince = todayISO();
+        if(!blocked) d.blockSince = null;
+        d.evidence = document.getElementById("ed_evidence").value.trim();
+        d.notes = document.getElementById("ed_notes").value.trim();
+        if(newStatus==="Aprobado"){
+          d.completedAt = todayISO();
+          d.blocked = false;
+          d.blockSince = null;
+        }
+        toast("Actualizado", "Entregable guardado.");
+      }
+    });
+    return;
+  }
+
+  if(approveDel){
+    const d = byId(DB.deliverables, approveDel);
+    if(!d) return;
+    d.status = "Aprobado";
+    d.completedAt = todayISO();
+    d.blocked = false;
+    d.blockSince = null;
+    saveDB();
+    renderAll();
+    toast("Aprobado", d.title);
+    return;
+  }
+
+  if(delDel){
+    const idx = DB.deliverables.findIndex(x=>x.id===delDel);
+    if(idx<0) return;
+    const title = DB.deliverables[idx].title;
+    DB.deliverables.splice(idx,1);
+    saveDB();
+    renderAll();
+    toast("Eliminado", title);
+    return;
+  }
+
+  // Project actions
+  const editProj = e.target.closest("[data-edit-proj]")?.dataset.editProj;
+  const delProj = e.target.closest("[data-del-proj]")?.dataset.delProj;
+  const openProj = e.target.closest("[data-open-proj]")?.dataset.openProj;
+
+  if(openProj){
+    // Jump to deliverables filtered by project
+    showView("deliverables");
+    document.getElementById("delFilterProject").value = openProj;
+    renderDeliverables();
+    toast("Filtro aplicado", "Mostrando entregables del proyecto.");
+    return;
+  }
+
+  if(editProj){
+    const p = byId(DB.projects, editProj);
+    if(!p) return;
+    const userOptions = DB.users.map(u=>`<option value="${u.id}" ${u.id===p.leaderId?"selected":""}>${u.name}</option>`).join("");
+    openEdit({
+      title:"Editar proyecto",
+      sub:"Cambia prioridad, estatus y fechas.",
+      bodyHTML: `
+        <div class="formGrid">
+          <div>
+            <label>Proyecto</label>
+            <input class="input" id="ep_name" value="${escapeHtml(p.name)}">
+          </div>
+          <div>
+            <label>Líder</label>
+            <select class="input" id="ep_leader">${userOptions}</select>
+          </div>
+        </div>
+        <div class="formGrid">
+          <div>
+            <label>Prioridad</label>
+            <select class="input" id="ep_priority">
+              ${["Alta","Media","Baja"].map(x=>`<option ${x===p.priority?"selected":""}>${x}</option>`).join("")}
+            </select>
+          </div>
+          <div>
+            <label>Estatus</label>
+            <select class="input" id="ep_status">
+              ${["Activo","En riesgo","Detenido","Cerrado"].map(x=>`<option ${x===p.status?"selected":""}>${x}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+        <div class="formGrid">
+          <div>
+            <label>Inicio</label>
+            <input class="input" type="date" id="ep_start" value="${p.start||todayISO()}">
+          </div>
+          <div>
+            <label>Fin</label>
+            <input class="input" type="date" id="ep_end" value="${p.end||todayISO()}">
+          </div>
+        </div>
+        <label>Notas</label>
+        <textarea class="input" id="ep_notes">${escapeHtml(p.notes||"")}</textarea>
+      `,
+      onSave: ()=>{
+        p.name = document.getElementById("ep_name").value.trim();
+        p.leaderId = document.getElementById("ep_leader").value;
+        p.priority = document.getElementById("ep_priority").value;
+        p.status = document.getElementById("ep_status").value;
+        p.start = document.getElementById("ep_start").value;
+        p.end = document.getElementById("ep_end").value;
+        p.notes = document.getElementById("ep_notes").value.trim();
+        toast("Actualizado", "Proyecto guardado.");
+      }
+    });
+    return;
+  }
+
+  if(delProj){
+    const idx = DB.projects.findIndex(x=>x.id===delProj);
+    if(idx<0) return;
+    const name = DB.projects[idx].name;
+
+    // Also remove deliverables tied to this project
+    DB.deliverables = DB.deliverables.filter(d=>d.projectId!==delProj);
+    DB.projects.splice(idx,1);
+
+    saveDB();
+    renderAll();
+    toast("Eliminado", `${name} (y sus entregables)`);
+    return;
+  }
+
+  // Routine actions
+  const runR = e.target.closest("[data-run-r]")?.dataset.runR;
+  const editR = e.target.closest("[data-edit-r]")?.dataset.editR;
+  const delR = e.target.closest("[data-del-r]")?.dataset.delR;
+
+  if(runR){
+    const r = byId(DB.routines, runR);
+    if(!r) return;
+    const t = todayISO();
+    ensureRoutineRunsForToday();
+    const rr = DB.routineRuns.find(x=>x.date===t && x.routineId===r.id && x.assigneeId===r.assigneeId);
+    if(rr) rr.status = "Completada";
+    saveDB();
+    renderAll();
+    toast("Rutina completada", r.name);
+    return;
+  }
+
+  if(editR){
+    const r = byId(DB.routines, editR);
+    if(!r) return;
+    const userOptions = DB.users.map(u=>`<option value="${u.id}" ${u.id===r.assigneeId?"selected":""}>${u.name}</option>`).join("");
+    openEdit({
+      title:"Editar rutina",
+      sub:"Ajusta frecuencia, responsable y checklist.",
+      bodyHTML: `
+        <div class="formGrid">
+          <div>
+            <label>Rutina</label>
+            <input class="input" id="er_name" value="${escapeHtml(r.name)}">
+          </div>
+          <div>
+            <label>Responsable</label>
+            <select class="input" id="er_assignee">${userOptions}</select>
+          </div>
+        </div>
+        <div class="formGrid">
+          <div>
+            <label>Frecuencia</label>
+            <select class="input" id="er_freq">
+              ${["Diaria","Semanal","Mensual"].map(x=>`<option ${x===r.frequency?"selected":""}>${x}</option>`).join("")}
+            </select>
+          </div>
+          <div>
+            <label>Checklist (1 por línea)</label>
+            <textarea class="input" id="er_check">${escapeHtml((r.checklist||[]).join("\n"))}</textarea>
+          </div>
+        </div>
+      `,
+      onSave: ()=>{
+        r.name = document.getElementById("er_name").value.trim();
+        r.assigneeId = document.getElementById("er_assignee").value;
+        r.frequency = document.getElementById("er_freq").value;
+        const txt = document.getElementById("er_check").value.trim();
+        r.checklist = txt ? txt.split("\n").map(x=>x.trim()).filter(Boolean) : [];
+        toast("Actualizado", "Rutina guardada.");
+      }
+    });
+    return;
+  }
+
+  if(delR){
+    const idx = DB.routines.findIndex(x=>x.id===delR);
+    if(idx<0) return;
+    const name = DB.routines[idx].name;
+    DB.routineRuns = DB.routineRuns.filter(rr => rr.routineId!==delR);
+    DB.routines.splice(idx,1);
+    saveDB();
+    renderAll();
+    toast("Eliminada", name);
+    return;
+  }
+
+  // Incident actions
+  const editI = e.target.closest("[data-edit-i]")?.dataset.editI;
+  const closeI = e.target.closest("[data-close-i]")?.dataset.closeI;
+  const delI = e.target.closest("[data-del-i]")?.dataset.delI;
+
+  if(editI){
+    const i = byId(DB.incidents, editI);
+    if(!i) return;
+    const userOptions = DB.users.map(u=>`<option value="${u.id}" ${u.id===i.ownerId?"selected":""}>${u.name}</option>`).join("");
+    openEdit({
+      title:"Editar incidencia",
+      sub:"Actualiza estatus, severidad y acciones.",
+      bodyHTML: `
+        <div class="formGrid">
+          <div>
+            <label>Incidencia</label>
+            <input class="input" id="ei_title" value="${escapeHtml(i.title)}">
+          </div>
+          <div>
+            <label>Categoría</label>
+            <select class="input" id="ei_cat">
+              ${["Calidad","Proceso","Material","Cliente","Máquina","Seguridad"].map(x=>`<option ${x===i.category?"selected":""}>${x}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+        <div class="formGrid">
+          <div>
+            <label>Severidad</label>
+            <select class="input" id="ei_sev">
+              ${["Alta","Media","Baja"].map(x=>`<option ${x===i.severity?"selected":""}>${x}</option>`).join("")}
+            </select>
+          </div>
+          <div>
+            <label>Responsable</label>
+            <select class="input" id="ei_owner">${userOptions}</select>
+          </div>
+        </div>
+        <div class="formGrid">
+          <div>
+            <label>Fecha límite</label>
+            <input class="input" type="date" id="ei_due" value="${i.due||todayISO()}">
+          </div>
+          <div>
+            <label>Estatus</label>
+            <select class="input" id="ei_status">
+              ${["Abierta","Atendida","Cerrada"].map(x=>`<option ${x===i.status?"selected":""}>${x}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+        <label>Notas</label>
+        <textarea class="input" id="ei_notes">${escapeHtml(i.notes||"")}</textarea>
+        <label>Acciones</label>
+        <textarea class="input" id="ei_actions">${escapeHtml(i.actions||"")}</textarea>
+      `,
+      onSave: ()=>{
+        i.title = document.getElementById("ei_title").value.trim();
+        i.category = document.getElementById("ei_cat").value;
+        i.severity = document.getElementById("ei_sev").value;
+        i.ownerId = document.getElementById("ei_owner").value;
+        i.due = document.getElementById("ei_due").value;
+        i.status = document.getElementById("ei_status").value;
+        i.notes = document.getElementById("ei_notes").value.trim();
+        i.actions = document.getElementById("ei_actions").value.trim();
+        toast("Actualizada", "Incidencia guardada.");
+      }
+    });
+    return;
+  }
+
+  if(closeI){
+    const i = byId(DB.incidents, closeI);
+    if(!i) return;
+    i.status = "Cerrada";
+    saveDB();
+    renderAll();
+    toast("Cerrada", i.title);
+    return;
+  }
+
+  if(delI){
+    const idx = DB.incidents.findIndex(x=>x.id===delI);
+    if(idx<0) return;
+    const title = DB.incidents[idx].title;
+    DB.incidents.splice(idx,1);
+    saveDB();
+    renderAll();
+    toast("Eliminada", title);
+    return;
+  }
+
+  // Users actions
+  const editU = e.target.closest("[data-edit-u]")?.dataset.editU;
+  const delU = e.target.closest("[data-del-u]")?.dataset.delU;
+
+  if(editU){
+    const u = byId(DB.users, editU);
+    if(!u) return;
+    openEdit({
+      title:"Editar usuario",
+      sub:"Nombre, rol y equipo.",
+      bodyHTML: `
+        <div class="formGrid">
+          <div>
+            <label>Nombre</label>
+            <input class="input" id="eu_name" value="${escapeHtml(u.name)}">
+          </div>
+          <div>
+            <label>Rol</label>
+            <select class="input" id="eu_role">
+              ${["Admin","Líder","Colaborador"].map(x=>`<option ${x===u.role?"selected":""}>${x}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+        <label>Equipo</label>
+        <input class="input" id="eu_team" value="${escapeHtml(u.team||"")}" placeholder="Ej: Ingeniería">
+      `,
+      onSave: ()=>{
+        u.name = document.getElementById("eu_name").value.trim();
+        u.role = document.getElementById("eu_role").value;
+        u.team = document.getElementById("eu_team").value.trim();
+        toast("Actualizado", "Usuario guardado.");
+      }
+    });
+    return;
+  }
+
+  if(delU){
+    const idx = DB.users.findIndex(x=>x.id===delU);
+    if(idx<0) return;
+    const name = DB.users[idx].name;
+
+    // Clean references
+    DB.projects.forEach(p=>{ if(p.leaderId===delU) p.leaderId = DB.users[0]?.id || ""; });
+    DB.deliverables.forEach(d=>{ if(d.assigneeId===delU) d.assigneeId = DB.users[0]?.id || ""; });
+    DB.routines.forEach(r=>{ if(r.assigneeId===delU) r.assigneeId = DB.users[0]?.id || ""; });
+    DB.routineRuns.forEach(rr=>{ if(rr.assigneeId===delU) rr.assigneeId = DB.users[0]?.id || ""; });
+    DB.incidents.forEach(i=>{ if(i.ownerId===delU) i.ownerId = DB.users[0]?.id || ""; });
+    DB.checkins = DB.checkins.filter(c=>c.userId!==delU);
+
+    DB.users.splice(idx,1);
+
+    saveDB();
+    renderAll();
+    toast("Eliminado", name);
+    return;
+  }
+});
+
+/** ---------------------------
+ *  Botones extra
+ *  -------------------------- */
+document.getElementById("btnRunRoutines").addEventListener("click", ()=>{
+  ensureRoutineRunsForToday();
+  // Open edit list? MVP: mark all pending for current day as completed? better: do nothing
+  toast("Listo", "Ya están cargadas las rutinas que tocan hoy.");
+  renderAll();
+});
+
+document.getElementById("btnSaveRules").addEventListener("click", ()=>{
+  DB.rules.yellowOverdue = +document.getElementById("ruleYellowOverdue").value || 0;
+  DB.rules.redOverdue = +document.getElementById("ruleRedOverdue").value || 0;
+  DB.rules.yellowBlockDays = +document.getElementById("ruleYellowBlockDays").value || 0;
+  DB.rules.redBlockDays = +document.getElementById("ruleRedBlockDays").value || 0;
+  DB.rules.yellowRoutinePending = +document.getElementById("ruleYellowRoutinePending").value || 0;
+  DB.rules.redRoutinePending = +document.getElementById("ruleRedRoutinePending").value || 0;
+  saveDB();
+  renderAll();
+  toast("Guardado", "Reglas del semáforo actualizadas.");
+});
+
+document.getElementById("btnReset").addEventListener("click", ()=>{
+  if(!confirm("Esto borrará los datos guardados en este navegador. ¿Continuar?")) return;
+  localStorage.removeItem(LS_KEY);
+  DB = loadDB();
+  renderAll();
+  toast("Reset", "Datos reiniciados a ejemplo.");
+});
+
+document.getElementById("btnAddUser").addEventListener("click", ()=>{
+  openEdit({
+    title:"Agregar usuario",
+    sub:"Crea un nuevo miembro del equipo.",
+    bodyHTML: `
+      <div class="formGrid">
+        <div>
+          <label>Nombre</label>
+          <input class="input" id="nu_name" placeholder="Ej: Israel">
+        </div>
+        <div>
+          <label>Rol</label>
+          <select class="input" id="nu_role">
+            <option>Admin</option><option selected>Líder</option><option>Colaborador</option>
+          </select>
+        </div>
+      </div>
+      <label>Equipo</label>
+      <input class="input" id="nu_team" placeholder="Ej: Ingeniería">
+    `,
+    onSave: ()=>{
+      const name = document.getElementById("nu_name").value.trim();
+      if(!name) return toast("Falta dato", "Nombre requerido.");
+      DB.users.push({id: uid("u"), name, role: document.getElementById("nu_role").value, team: document.getElementById("nu_team").value.trim()});
+      toast("Usuario creado", name);
+    }
+  });
+});
+
+document.getElementById("btnExportAll").addEventListener("click", ()=>{
+  const rows = [
+    ["Tipo","Nombre/Título","Proyecto","Responsable","Estado","Fecha","Notas"]
+  ];
+  DB.projects.forEach(p=>{
+    rows.push(["Proyecto", p.name, "", userName(p.leaderId), p.status, `${p.start}..${p.end}`, p.notes||""]);
+  });
+  DB.deliverables.forEach(d=>{
+    rows.push(["Entregable", d.title, projectName(d.projectId), userName(d.assigneeId), d.status, d.due||"", d.notes||""]);
+  });
+  DB.routines.forEach(r=>{
+    rows.push(["Rutina", r.name, "", userName(r.assigneeId), r.frequency, "", (r.checklist||[]).join(" | ")]);
+  });
+  DB.incidents.forEach(i=>{
+    rows.push(["Incidencia", i.title, "", userName(i.ownerId), i.status, i.due||"", `${i.severity} · ${i.category} · ${i.actions||""}`]);
+  });
+  downloadCSV("control_equipo_export.csv", rows);
+  toast("Exportado", "Se descargó control_equipo_export.csv");
+});
+
+document.getElementById("btnExportDeliverables").addEventListener("click", ()=>{
+  const rows = [["id","entregable","proyecto","responsable","estado","due","bloqueado","blockSince","evidence","notes","completedAt"]];
+  DB.deliverables.forEach(d=>{
+    rows.push([d.id,d.title,projectName(d.projectId),userName(d.assigneeId),d.status,d.due||"",d.blocked?"Sí":"No",d.blockSince||"",d.evidence||"",d.notes||"",d.completedAt||""]);
+  });
+  downloadCSV("entregables.csv", rows);
+  toast("Exportado","entregables.csv");
+});
+
+document.getElementById("btnExportIncidents").addEventListener("click", ()=>{
+  const rows = [["id","incidencia","categoria","severidad","responsable","estatus","due","notes","actions"]];
+  DB.incidents.forEach(i=>{
+    rows.push([i.id,i.title,i.category||"",i.severity||"",userName(i.ownerId),i.status||"",i.due||"",i.notes||"",i.actions||""]);
+  });
+  downloadCSV("incidencias.csv", rows);
+  toast("Exportado","incidencias.csv");
+});
+
+/** ---------------------------
+ *  Inputs que re-renderizan
+ *  -------------------------- */
+[
+  "filterAssignee",
+  "projFilterStatus","projFilterPriority","projSearch",
+  "delSearch","delFilterProject","delFilterStatus","delFilterAssignee",
+  "incSearch","incFilterSeverity","incFilterStatus","incFilterOwner"
+].forEach(id=>{
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.addEventListener("input", renderAll);
+  el.addEventListener("change", renderAll);
+});
+
+/** ---------------------------
+ *  Seguridad para inputs en modales
+ *  -------------------------- */
+function escapeHtml(str){
+  return (str ?? "").toString()
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+/** ---------------------------
+ *  Init
+ *  -------------------------- */
+(function init(){
+  document.getElementById("todayLabel").textContent = fmtDate(todayISO());
+  initLogo();
+  qaRender();
+  renderAll();
+
+  // Acceso rápido: Ctrl/Cmd + K abre quick add
+  window.addEventListener("keydown", (e)=>{
+    const isMac = navigator.platform.toLowerCase().includes("mac");
+    const mod = isMac ? e.metaKey : e.ctrlKey;
+    if(mod && e.key.toLowerCase()==="k"){
+      e.preventDefault();
+      qaType.value="deliverable";
+      qaRender();
+      openDialog(dlgQuickAdd);
+    }
+  });
+})();
+</script>
+</body>
+</html>
