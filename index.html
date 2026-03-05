@@ -1385,7 +1385,10 @@ function renderPeople(){
     const c = complianceForUser(u.id);
     const complianceLevel = c.pct>=85 ? "ok" : (c.pct>=70 ? "warn" : "bad");
     const pillClass = s.level==="ok" ? "ok" : s.level==="warn" ? "warn" : "bad";
-    const scoreColor = complianceLevel==="ok"?"var(--ok)":complianceLevel==="warn"?"var(--warn)":"var(--bad)";
+    const penalties = (DB.deliverables||[]).filter(d=>d.assigneeId===u.id&&d.scorePenalty).reduce((a,d)=>a+(d.scorePenalty||0),0);
+    const adjustedPct = Math.max(0, c.pct - penalties);
+    const adjLevel = adjustedPct>=85?"ok":adjustedPct>=70?"warn":"bad";
+    const scoreColor = adjLevel==="ok"?"var(--ok)":adjLevel==="warn"?"var(--warn)":"var(--bad)";
     return `
       <div class="card personCard" style="padding:12px" onclick="togglePersonDetail('${u.id}')">
         <div class="flex between wrap" style="gap:8px; align-items:center">
@@ -1396,11 +1399,12 @@ function renderPeople(){
               <span class="pill ${pillClass}" style="padding:3px 8px; font-size:11px"><span class="s"></span>${s.label}</span>
             </div>
             <div style="display:flex; align-items:center; gap:8px">
-              <div class="progress ${complianceLevel}" style="flex:1; height:8px">
-                <span style="width:${c.pct}%"></span>
+              <div class="progress ${adjLevel}" style="flex:1; height:8px">
+                <span style="width:${adjustedPct}%"></span>
               </div>
-              <span style="font-size:12px; font-weight:700; color:${scoreColor}; min-width:36px">${c.pct}%</span>
+              <span style="font-size:12px; font-weight:700; color:${scoreColor}; min-width:36px">${adjustedPct}%</span>
             </div>
+            ${penalties>0?`<div class="small" style="color:var(--bad); margin-top:3px">Penalizacion por seguimiento: -${penalties}%</div>`:""}
           </div>
           <span style="color:var(--muted); font-size:14px" id="chev-${u.id}">&#9654;</span>
         </div>
@@ -2173,10 +2177,17 @@ document.body.addEventListener("click", (e)=>{
           </div>
           <div>
             <label>Compromiso</label>
-            <input class="input" type="date" id="ed_due" value="${d.due||t}">
+            <input class="input" type="date" id="ed_due" value="${d.due||t}" onchange="const r=document.getElementById('ed_reason_row'); r.style.display=this.value!=='${d.due||t}'?'block':'none'">
           </div>
         </div>
-        <div class="formGrid">
+        <div id="ed_reason_row" style="display:none; padding:10px; background:rgba(220,38,38,.06); border:1px solid rgba(220,38,38,.2); border-radius:10px; margin-top:4px">
+          <label style="color:var(--bad); font-weight:600">Motivo del cambio de fecha</label>
+          <select class="input" id="ed_due_reason">
+            <option value="externo">Factor externo — no afecta score</option>
+            <option value="seguimiento">Falta de seguimiento — penaliza -5% al score</option>
+          </select>
+        </div>
+        <div class="formGrid" style="margin-top:10px">
           <div>
             <label>Estado</label>
             <select class="input" id="ed_status">
@@ -2199,10 +2210,12 @@ document.body.addEventListener("click", (e)=>{
       onSave: ()=>{
         const newStatus = document.getElementById("ed_status").value;
         const blocked = document.getElementById("ed_blocked").value==="yes" || newStatus==="Bloqueado";
+        const oldDue = d.due;
+        const newDue = document.getElementById("ed_due").value;
         d.title = document.getElementById("ed_title").value.trim();
         d.projectId = document.getElementById("ed_project").value;
         d.assigneeId = document.getElementById("ed_assignee").value;
-        d.due = document.getElementById("ed_due").value;
+        d.due = newDue;
         d.status = newStatus;
         d.blocked = blocked;
         if(blocked && !d.blockSince) d.blockSince = todayISO();
@@ -2214,7 +2227,20 @@ document.body.addEventListener("click", (e)=>{
           d.blocked = false;
           d.blockSince = null;
         }
-        toast("Actualizado", "Entregable guardado.");
+        // Score penalty for date change
+        if(newDue && oldDue && newDue !== oldDue){
+          const reason = document.getElementById("ed_due_reason")?.value;
+          if(!d.dueDateHistory) d.dueDateHistory = [];
+          d.dueDateHistory.push({from:oldDue, to:newDue, reason:reason||"externo", date:todayISO()});
+          if(reason === "seguimiento"){
+            d.scorePenalty = (d.scorePenalty||0) + 5;
+            toast("Fecha cambiada", "Penalizacion de -5% aplicada al score por falta de seguimiento.");
+          } else {
+            toast("Fecha cambiada", "Sin penalizacion — factor externo registrado.");
+          }
+        } else {
+          toast("Actualizado", "Entregable guardado.");
+        }
       }
     });
     return;
