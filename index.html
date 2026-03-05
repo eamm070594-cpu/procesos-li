@@ -329,6 +329,33 @@
 
     .hidden{display:none !important}
 
+    /* PERSON CARD COLLAPSIBLE */
+    .personCard{cursor:pointer; transition:.15s ease;}
+    .personCard:hover{box-shadow:0 4px 16px rgba(15,23,42,.08);}
+    .personDetail{display:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--line);}
+    .personDetail.open{display:block;}
+
+    /* CALENDAR */
+    .calGrid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+    .calDay{min-height:70px; border:1px solid var(--line); border-radius:10px; padding:6px; background:var(--panel); cursor:pointer; transition:.12s ease; font-size:11px;}
+    .calDay:hover{border-color:rgba(37,99,235,.35); background:rgba(37,99,235,.04);}
+    .calDay.today{border-color:var(--accent); background:rgba(37,99,235,.06);}
+    .calDay.other-month{opacity:.35;}
+    .calDay .day-num{font-weight:700; font-size:13px; margin-bottom:3px;}
+    .calDay .ev{font-size:10px; padding:2px 5px; border-radius:5px; margin-bottom:2px; background:rgba(37,99,235,.10); color:var(--accent); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .calDay .ev.warn{background:rgba(217,119,6,.10); color:#92400e;}
+    .calDay .ev.bad{background:rgba(220,38,38,.10); color:#991b1b;}
+    .calDay .ev.ok{background:rgba(22,163,74,.10); color:#065f46;}
+    .calHeader{display:flex; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap;}
+    .calHeader h3{margin:0; font-size:17px; flex:1;}
+    .calDayNames{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:4px;}
+    .calDayNames span{text-align:center; font-size:11px; color:var(--muted); font-weight:600; padding:4px 0;}
+
+    /* AUTO SYNC BAR */
+    #autoSyncBar{position:fixed; bottom:0; left:0; right:0; height:3px; background:var(--accent); transform:scaleX(0); transform-origin:left; z-index:9998; transition:transform 30s linear;}
+    #autoSyncBar.running{transform:scaleX(1);}
+
+
     dialog{
       border:none;
       padding:0;
@@ -387,6 +414,7 @@
   </style>
 </head>
 <body>
+<div id="autoSyncBar"></div>
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
@@ -406,6 +434,7 @@
       <button data-view="deliverables"><span class="dot"></span> Entregables</button>
       <button data-view="routines"><span class="dot"></span> Rutinas</button>
       <button data-view="incidents"><span class="dot"></span> Incidencias</button>
+      <button data-view="calendar"><span class="dot"></span> Calendario</button>
       <button data-view="reports"><span class="dot"></span> Reportes</button>
       <button data-view="settings"><span class="dot"></span> Configuración</button>
     </nav>
@@ -700,10 +729,34 @@
         <div class="actions">
           <button class="btn" id="btnExportDeliverables">Exportar entregables (CSV)</button>
           <button class="btn" id="btnExportIncidents">Exportar incidencias (CSV)</button>
+          <button class="btn primary" id="btnMonthClose">Cierre de mes</button>
         </div>
       </div>
 
       <div class="card" id="weeklyReport"></div>
+    </section>
+
+
+    <!-- CALENDAR -->
+    <section id="view-calendar" class="hidden">
+      <div class="topbar">
+        <div class="title">
+          <h2>Calendario</h2>
+          <p>Actividades y entregables del mes.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="calHeader">
+          <button class="btn small" id="calPrev">&#9664;</button>
+          <h3 id="calTitle">-</h3>
+          <button class="btn small" id="calNext">&#9654;</button>
+          <button class="btn small primary" id="calToday">Hoy</button>
+        </div>
+        <div class="calDayNames">
+          <span>Lun</span><span>Mar</span><span>Mie</span><span>Jue</span><span>Vie</span><span>Sab</span><span>Dom</span>
+        </div>
+        <div class="calGrid" id="calGrid"></div>
+      </div>
     </section>
 
     <!-- SETTINGS -->
@@ -792,6 +845,40 @@
 
   </main>
 </div>
+
+
+<!-- CALENDAR DAY MODAL -->
+<dialog id="dlgCalDay">
+  <div class="modal">
+    <header>
+      <div>
+        <h3 id="calDayTitle">Actividades del dia</h3>
+        <p id="calDayDate" class="muted"></p>
+      </div>
+      <button class="btn small ghost" data-close>X</button>
+    </header>
+    <div class="content" id="calDayContent"></div>
+    <footer><button class="btn" data-close>Cerrar</button></footer>
+  </div>
+</dialog>
+
+<!-- MONTH CLOSE MODAL -->
+<dialog id="dlgMonthClose">
+  <div class="modal">
+    <header>
+      <div>
+        <h3>Cierre de mes</h3>
+        <p class="muted">Guarda el resumen mensual y reinicia penalizaciones.</p>
+      </div>
+      <button class="btn small ghost" data-close>X</button>
+    </header>
+    <div class="content" id="monthCloseContent"></div>
+    <footer>
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn primary" id="btnConfirmMonthClose">Confirmar cierre</button>
+    </footer>
+  </div>
+</dialog>
 
 <!-- QUICK ADD MODAL -->
 <dialog id="dlgQuickAdd">
@@ -1296,47 +1383,60 @@ function renderPeople(){
   const cards = DB.users.map(u=>{
     const s = semaforoForUser(u.id);
     const c = complianceForUser(u.id);
-
     const complianceLevel = c.pct>=85 ? "ok" : (c.pct>=70 ? "warn" : "bad");
-    const complianceTag = complianceLevel==="ok" ? "ok" : (complianceLevel==="warn" ? "warn" : "bad");
-
     const pillClass = s.level==="ok" ? "ok" : s.level==="warn" ? "warn" : "bad";
-
-    const approvedInfo = c.approvedTotal
-      ? ` · Aprobados a tiempo: <b style="color:var(--text)">${c.approvedPct}%</b> (${c.approvedOnTime}/${c.approvedTotal})`
-      : ``;
-
+    const scoreColor = complianceLevel==="ok"?"var(--ok)":complianceLevel==="warn"?"var(--warn)":"var(--bad)";
     return `
-      <div class="card" style="padding:12px">
-        <div class="flex between wrap" style="gap:12px">
-          <div style="min-width:260px; flex:1">
-            <div class="metric">
-              <div>
-                <b>${u.name}</b> <span class="small muted">· ${u.role} · ${u.team}</span>
+      <div class="card personCard" style="padding:12px" onclick="togglePersonDetail('${u.id}')">
+        <div class="flex between wrap" style="gap:8px; align-items:center">
+          <div style="flex:1; min-width:180px">
+            <div class="flex" style="gap:8px; align-items:center; margin-bottom:6px">
+              <b>${u.name}</b>
+              <span class="small muted">· ${u.role}</span>
+              <span class="pill ${pillClass}" style="padding:3px 8px; font-size:11px"><span class="s"></span>${s.label}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px">
+              <div class="progress ${complianceLevel}" style="flex:1; height:8px">
+                <span style="width:${c.pct}%"></span>
               </div>
-              <span class="tag ${complianceTag}">${c.pct}% cumplimiento</span>
-            </div>
-
-            <div class="small muted" style="margin:6px 0 8px">
-              Entregables (con fecha): <b style="color:var(--text)">${c.total}</b> · Cumplidos: <b style="color:var(--text)">${c.compliant}</b> · Vencidos: <b style="color:var(--text)">${c.overdue}</b>${approvedInfo}
-            </div>
-
-            <div class="progress ${complianceLevel}">
-              <span style="width:${c.pct}%"></span>
-            </div>
-
-            <div class="small muted" style="margin-top:8px">
-              Vencidos (activos): <b style="color:var(--text)">${s.overdue}</b> · Bloqueo máx: <b style="color:var(--text)">${s.maxBlockDays}</b>d · Rutinas pend. hoy: <b style="color:var(--text)">${s.pendingRoutines}</b>
+              <span style="font-size:12px; font-weight:700; color:${scoreColor}; min-width:36px">${c.pct}%</span>
             </div>
           </div>
-
-          <span class="pill ${pillClass}"><span class="s"></span>${s.label}</span>
+          <span style="color:var(--muted); font-size:14px" id="chev-${u.id}">&#9654;</span>
+        </div>
+        <div class="personDetail" id="detail-${u.id}">
+          <div class="grid" style="grid-template-columns:1fr 1fr 1fr; gap:8px; margin:10px 0 8px">
+            <div style="background:var(--panel2); border-radius:10px; padding:10px; border:1px solid var(--line); text-align:center">
+              <div class="small muted">Total</div>
+              <div style="font-size:18px; font-weight:800">${c.total}</div>
+            </div>
+            <div style="background:var(--panel2); border-radius:10px; padding:10px; border:1px solid var(--line); text-align:center">
+              <div class="small muted">Cumplidos</div>
+              <div style="font-size:18px; font-weight:800; color:var(--ok)">${c.compliant}</div>
+            </div>
+            <div style="background:var(--panel2); border-radius:10px; padding:10px; border:1px solid var(--line); text-align:center">
+              <div class="small muted">Vencidos</div>
+              <div style="font-size:18px; font-weight:800; color:var(--bad)">${c.overdue}</div>
+            </div>
+          </div>
+          <div class="small muted">
+            Aprobados a tiempo: <b style="color:var(--text)">${c.approvedPct}%</b> (${c.approvedOnTime}/${c.approvedTotal}) ·
+            Bloqueo max: <b style="color:var(--text)">${s.maxBlockDays}d</b> ·
+            Rutinas pend.: <b style="color:var(--text)">${s.pendingRoutines}</b>
+          </div>
         </div>
       </div>
     `;
   }).join("");
-
   container.innerHTML = cards || `<div class="muted small">No hay usuarios.</div>`;
+}
+
+function togglePersonDetail(userId){
+  const detail = document.getElementById("detail-"+userId);
+  const chev = document.getElementById("chev-"+userId);
+  if(!detail) return;
+  detail.classList.toggle("open");
+  if(chev) chev.innerHTML = detail.classList.contains("open") ? "&#9660;" : "&#9654;";
 }
 
 function renderHotTable(){
@@ -2687,6 +2787,122 @@ function initGsUI(){
 // Auto-sync every 30 seconds
 setInterval(()=>{ if(GS_URL && !_syncInProgress) gsPull(); }, 30000);
 
+
+/** =========================================================
+ *  CALENDARIO
+ *  ========================================================= */
+const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+
+function renderCalendar(){
+  const title = document.getElementById("calTitle");
+  const grid = document.getElementById("calGrid");
+  if(!title || !grid) return;
+  title.textContent = MONTHS_ES[calMonth] + " " + calYear;
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const startOffset = (firstDay + 6) % 7;
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const daysInPrev = new Date(calYear, calMonth, 0).getDate();
+  const today = todayISO();
+
+  const evMap = {};
+  const addEv = (dateISO, ev) => {
+    if(!dateISO) return;
+    if(!evMap[dateISO]) evMap[dateISO] = [];
+    evMap[dateISO].push(ev);
+  };
+  DB.deliverables.forEach(d=>{ if(d.due) addEv(d.due, {title:d.title, type:"entregable", status:d.status, assignee:userName(d.assigneeId)}); });
+  DB.incidents.forEach(i=>{ if(i.due) addEv(i.due, {title:i.title, type:"incidencia", severity:i.severity}); });
+
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+  let cells = "";
+  for(let i=0; i<totalCells; i++){
+    let day, month, year, otherMonth=false;
+    if(i < startOffset){ day=daysInPrev-startOffset+i+1; month=calMonth-1; year=calYear; if(month<0){month=11;year--;} otherMonth=true; }
+    else if(i >= startOffset+daysInMonth){ day=i-startOffset-daysInMonth+1; month=calMonth+1; year=calYear; if(month>11){month=0;year++;} otherMonth=true; }
+    else { day=i-startOffset+1; month=calMonth; year=calYear; }
+    const isoDate = year+"-"+String(month+1).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+    const isToday = isoDate===today;
+    const evs = evMap[isoDate]||[];
+    const evHTML = evs.slice(0,3).map(ev=>{
+      let cls="";
+      if(ev.type==="entregable") cls=ev.status==="Aprobado"?"ok":(isoDate<today&&ev.status!=="Aprobado"?"bad":"");
+      else if(ev.type==="incidencia") cls="warn";
+      return '<div class="ev '+cls+'" title="'+ev.title+'">'+ev.title+'</div>';
+    }).join("");
+    const more = evs.length>3 ? '<div class="ev" style="opacity:.6">+'+( evs.length-3)+' mas</div>' : "";
+    cells += '<div class="calDay'+(otherMonth?" other-month":"")+(isToday?" today":"")+'" data-cal-date="'+isoDate+'"><div class="day-num">'+day+'</div>'+evHTML+more+'</div>';
+  }
+  grid.innerHTML = cells;
+  grid.querySelectorAll(".calDay[data-cal-date]").forEach(el=>{
+    el.addEventListener("click", ()=> openCalDay(el.dataset.calDate, evMap[el.dataset.calDate]||[]));
+  });
+}
+
+function openCalDay(dateISO, evs){
+  const dlg = document.getElementById("dlgCalDay");
+  document.getElementById("calDayTitle").textContent = "Actividades - " + fmtDate(dateISO);
+  document.getElementById("calDayDate").textContent = evs.length ? evs.length+" actividad(es)" : "Sin actividades";
+  document.getElementById("calDayContent").innerHTML = evs.length ? evs.map(ev=>`
+    <div style="padding:10px; border:1px solid var(--line); border-radius:10px; margin-bottom:8px; background:var(--panel2)">
+      <div style="font-weight:600">${ev.title}</div>
+      <div class="small muted">${ev.type==="entregable"?"Entregable · "+ev.assignee:ev.type==="incidencia"?"Incidencia · Severidad: "+ev.severity:"Otro"}</div>
+      ${ev.status?'<div class="small muted">Estado: '+ev.status+'</div>':""}
+    </div>
+  `).join("") : '<div class="muted small">No hay actividades para este dia.</div>';
+  openDialog(dlg);
+}
+
+document.getElementById("calPrev").addEventListener("click", ()=>{ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); });
+document.getElementById("calNext").addEventListener("click", ()=>{ calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); });
+document.getElementById("calToday").addEventListener("click", ()=>{ calYear=new Date().getFullYear(); calMonth=new Date().getMonth(); renderCalendar(); });
+
+/** =========================================================
+ *  CIERRE MENSUAL
+ *  ========================================================= */
+document.getElementById("btnMonthClose").addEventListener("click", ()=>{
+  const t = new Date();
+  const monthName = MONTHS_ES[t.getMonth()] + " " + t.getFullYear();
+  const summary = DB.users.map(u=>{
+    const c = complianceForUser(u.id);
+    return '<tr><td><b>'+u.name+'</b></td><td>'+c.total+'</td><td>'+c.compliant+'</td><td>'+c.overdue+'</td><td><b>'+c.pct+'%</b></td></tr>';
+  }).join("");
+  document.getElementById("monthCloseContent").innerHTML =
+    '<p>Mes a cerrar: <b>'+monthName+'</b></p>'+
+    '<p class="small muted">Se guardara este resumen en Google Sheets.</p>'+
+    '<div style="overflow:auto"><table><thead><tr><th>Persona</th><th>Total</th><th>Cumplidos</th><th>Vencidos</th><th>Score</th></tr></thead><tbody>'+summary+'</tbody></table></div>';
+  openDialog(document.getElementById("dlgMonthClose"));
+});
+
+document.getElementById("btnConfirmMonthClose").addEventListener("click", ()=>{
+  const t = new Date();
+  const monthKey = t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0");
+  const monthName = MONTHS_ES[t.getMonth()]+" "+t.getFullYear();
+  if(!DB.monthlyHistory) DB.monthlyHistory={};
+  DB.monthlyHistory[monthKey] = {
+    month:monthName, closedAt:todayISO(),
+    summary: DB.users.map(u=>{ const c=complianceForUser(u.id); return {name:u.name, total:c.total, compliant:c.compliant, overdue:c.overdue, pct:c.pct}; })
+  };
+  saveDB();
+  closeDialog(document.getElementById("dlgMonthClose"));
+  renderAll();
+  toast("Mes cerrado", "Historial guardado en Google Sheets.");
+});
+
+/** =========================================================
+ *  AUTO-SYNC CADA 30 SEGUNDOS
+ *  ========================================================= */
+function startAutoSync(){
+  setInterval(()=>{
+    if(!GS_URL || _syncInProgress) return;
+    gsPull();
+  }, 30000);
+  const bar = document.getElementById("autoSyncBar");
+  if(bar){ setTimeout(()=>{ bar.classList.add("running"); }, 500); }
+}
+
 /** ---------------------------
  *  Init
  *  -------------------------- */
@@ -2697,6 +2913,8 @@ setInterval(()=>{ if(GS_URL && !_syncInProgress) gsPull(); }, 30000);
   initGsUI();
   gsPull();
   renderAll();
+  renderCalendar();
+  startAutoSync();
 
   // Acceso rápido: Ctrl/Cmd + K abre quick add
   window.addEventListener("keydown", (e)=>{
