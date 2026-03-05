@@ -1,9 +1,9 @@
- <!doctype html>
+<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Ingeniería de procesos — Control de equipo (LI)</title>
+  <title>Ingeniería de procesos — Control de equipo (LI) — Red</title>
   <style>
     :root{
       --bg:#f5f7fb;
@@ -396,7 +396,7 @@
       <input type="file" id="logoInput" accept="image/*" hidden />
       <div>
         <h1>Ingeniería de procesos</h1>
-        <p>Línea Italia · Control de equipo (MVP local)</p>
+        <p>Línea Italia · Control de equipo (Red compartida)</p>
       </div>
     </div>
 
@@ -413,7 +413,7 @@
     <div class="sidepanel" id="sideStats">
       <div class="flex between wrap">
         <span class="pill gray"><span class="s"></span>Hoy: <b id="todayLabel" style="color:var(--text);font-weight:800"></b></span>
-        <span class="pill gray"><span class="s"></span>Datos: <span class="kbd">localStorage</span></span>
+        <span class="pill gray"><span class="s" id="syncDot"></span>Sync: <span id="syncLabel" style="color:var(--text);font-weight:800">—</span></span>
       </div>
       <div class="hr"></div>
       <div class="row"><span>Entregables vencidos</span><b id="sideOverdue">0</b></div>
@@ -425,7 +425,7 @@
         <button class="btn small danger" id="btnReset">Reset</button>
       </div>
       <p class="small muted" style="margin:10px 0 0; line-height:1.35">
-        Tip: prueba rápido con <span class="kbd">Agregar</span> y actualiza estados. Todo se guarda en tu navegador.
+        Los datos se sincronizan con Google Sheets. Todos en tu equipo ven los mismos datos en tiempo real.
       </p>
     </div>
   </aside>
@@ -711,10 +711,44 @@
       <div class="topbar">
         <div class="title">
           <h2>Configuración</h2>
-          <p>Usuarios, reglas del semáforo y datos de ejemplo.</p>
+          <p>Usuarios, reglas del semáforo y sincronización en red.</p>
         </div>
         <div class="actions">
           <button class="btn" id="btnAddUser">Agregar usuario</button>
+        </div>
+      </div>
+
+      <!-- GOOGLE SHEETS SYNC PANEL -->
+      <div class="card" style="margin-bottom:12px; border: 1.5px solid rgba(37,99,235,.30); background: rgba(37,99,235,.04)">
+        <div class="flex between wrap">
+          <div>
+            <b>🔗 Sincronización con Google Sheets (Red compartida)</b>
+            <div class="small muted" style="margin-top:4px">Conecta tu app con Google Sheets para que todo tu equipo comparta los mismos datos en tiempo real.</div>
+          </div>
+          <span id="syncStatusBadge" class="tag gray">Sin configurar</span>
+        </div>
+        <div class="hr"></div>
+        <label>URL de tu Google Apps Script (Web App)</label>
+        <div class="flex" style="gap:10px">
+          <input class="input" id="gsScriptUrl" placeholder="https://script.google.com/macros/s/XXXXX/exec" style="flex:1" />
+          <button class="btn primary" id="btnSaveGsUrl">Guardar URL</button>
+        </div>
+        <div id="gsTestResult" style="margin-top:10px; font-size:12px; color:var(--muted)"></div>
+        <div class="hr"></div>
+        <div class="flex wrap" style="gap:10px; align-items:center">
+          <button class="btn" id="btnSyncNow">⬆ Subir datos ahora</button>
+          <button class="btn" id="btnPullNow">⬇ Descargar datos del equipo</button>
+          <span class="small muted">Última sync: <span id="lastSyncTime">nunca</span></span>
+        </div>
+        <div style="margin-top:12px; padding:12px; background:var(--panel2); border-radius:10px; border:1px solid var(--line)">
+          <b style="font-size:12px">📋 Cómo configurar — 5 pasos simples:</b>
+          <ol style="font-size:12px; color:var(--muted); margin:8px 0 0; padding-left:18px; line-height:1.9">
+            <li>Ve a <a href="https://sheets.google.com" target="_blank" style="color:var(--accent)">sheets.google.com</a> y crea una hoja nueva.</li>
+            <li>En el menú: <b>Extensiones → Apps Script</b>.</li>
+            <li>Borra el código que aparece y pega el código del archivo <b>apps_script.gs</b> que descargaste junto con esta app.</li>
+            <li>Haz clic en <b>Implementar → Nueva implementación</b>. Tipo: <i>App web</i>. Acceso: <i>Cualquier persona</i>. Copia la URL.</li>
+            <li>Pega esa URL arriba y haz clic en <b>Guardar URL</b>. ¡Listo!</li>
+          </ol>
         </div>
       </div>
 
@@ -2554,6 +2588,139 @@ function escapeHtml(str){
     .replaceAll("'","&#039;");
 }
 
+/** =========================================================
+ *  SINCRONIZACIÓN GOOGLE SHEETS
+ *  ========================================================= */
+const LS_GS_URL   = "li_gs_script_url_v1";
+const LS_LAST_SYNC = "li_gs_last_sync_v1";
+let GS_URL = localStorage.getItem(LS_GS_URL) || "";
+let _syncInProgress = false;
+
+function syncDotUpdate(state){
+  const dot   = document.getElementById("syncDot");
+  const label = document.getElementById("syncLabel");
+  const badge = document.getElementById("syncStatusBadge");
+  if(!dot || !label) return;
+  if(state === "ok"){
+    dot.style.background = "var(--ok)";
+    label.textContent = "Sincronizado";
+    if(badge){ badge.className="tag ok"; badge.textContent="Conectado ✓"; }
+  } else if(state === "syncing"){
+    dot.style.background = "var(--warn)";
+    label.textContent = "Sincronizando…";
+    if(badge){ badge.className="tag warn"; badge.textContent="Sincronizando…"; }
+  } else if(state === "error"){
+    dot.style.background = "var(--bad)";
+    label.textContent = "Error de sync";
+    if(badge){ badge.className="tag bad"; badge.textContent="Error de conexión"; }
+  } else {
+    dot.style.background = "rgba(15,23,42,.18)";
+    label.textContent = "Sin configurar";
+    if(badge){ badge.className="tag gray"; badge.textContent="Sin configurar"; }
+  }
+}
+
+async function gsPush(){
+  if(!GS_URL){ toast("Sin URL", "Configura la URL de Google Apps Script en Configuración."); return; }
+  if(_syncInProgress) return;
+  _syncInProgress = true;
+  syncDotUpdate("syncing");
+  try{
+    const payload = JSON.stringify({ action:"save", data: DB });
+    const res = await fetch(GS_URL, {
+      method:"POST",
+      headers:{"Content-Type":"text/plain"},
+      body: payload
+    });
+    const json = await res.json();
+    if(json.ok){
+      const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
+      localStorage.setItem(LS_LAST_SYNC, now);
+      const el = document.getElementById("lastSyncTime");
+      if(el) el.textContent = now;
+      syncDotUpdate("ok");
+      toast("Datos subidos ✓", "Tu equipo puede ver los cambios.");
+    } else {
+      throw new Error(json.error || "Error desconocido");
+    }
+  } catch(err){
+    syncDotUpdate("error");
+    toast("Error de sync", "Revisa la URL en Configuración. Detalle: " + err.message);
+  } finally {
+    _syncInProgress = false;
+  }
+}
+
+async function gsPull(){
+  if(!GS_URL){ toast("Sin URL", "Configura la URL de Google Apps Script en Configuración."); return; }
+  if(_syncInProgress) return;
+  _syncInProgress = true;
+  syncDotUpdate("syncing");
+  try{
+    const res = await fetch(GS_URL + "?action=load");
+    const json = await res.json();
+    if(json.ok && json.data){
+      DB = json.data;
+      saveDB();
+      renderAll();
+      const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
+      localStorage.setItem(LS_LAST_SYNC, now);
+      const el = document.getElementById("lastSyncTime");
+      if(el) el.textContent = now;
+      syncDotUpdate("ok");
+      toast("Datos descargados ✓", "Los datos del equipo están actualizados.");
+    } else {
+      throw new Error(json.error || "Sin datos en el servidor");
+    }
+  } catch(err){
+    syncDotUpdate("error");
+    toast("Error al descargar", "Revisa la URL en Configuración. Detalle: " + err.message);
+  } finally {
+    _syncInProgress = false;
+  }
+}
+
+// Patch saveDB to also push to Google Sheets
+const _origSaveDB = saveDB;
+function saveDB(){
+  localStorage.setItem(LS_KEY, JSON.stringify(DB));
+  if(GS_URL) {
+    // Debounce: push 1.5s after last save
+    clearTimeout(saveDB._t);
+    saveDB._t = setTimeout(gsPush, 1500);
+  }
+}
+
+// Auto-pull on load (if URL configured)
+async function gsAutoPull(){
+  if(!GS_URL) return;
+  await gsPull();
+}
+
+function initGsUI(){
+  const urlInput = document.getElementById("gsScriptUrl");
+  if(urlInput){
+    urlInput.value = GS_URL;
+    if(GS_URL) syncDotUpdate("ok"); else syncDotUpdate("none");
+  }
+  const lastSync = localStorage.getItem(LS_LAST_SYNC);
+  const el = document.getElementById("lastSyncTime");
+  if(el && lastSync) el.textContent = lastSync;
+
+  document.getElementById("btnSaveGsUrl")?.addEventListener("click", ()=>{
+    const val = (document.getElementById("gsScriptUrl")?.value||"").trim();
+    if(!val){ toast("URL vacía", "Pega la URL de tu Apps Script."); return; }
+    GS_URL = val;
+    localStorage.setItem(LS_GS_URL, GS_URL);
+    syncDotUpdate("ok");
+    toast("URL guardada ✓", "Probando conexión…");
+    gsPull();
+  });
+
+  document.getElementById("btnSyncNow")?.addEventListener("click", gsPush);
+  document.getElementById("btnPullNow")?.addEventListener("click", gsPull);
+}
+
 /** ---------------------------
  *  Init
  *  -------------------------- */
@@ -2562,6 +2729,8 @@ function escapeHtml(str){
   initLogo();
   qaRender();
   renderAll();
+  initGsUI();
+  gsAutoPull();
 
   // Acceso rápido: Ctrl/Cmd + K abre quick add
   window.addEventListener("keydown", (e)=>{
