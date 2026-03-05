@@ -455,22 +455,6 @@
   </style>
 </head>
 <body>
-<!-- LOGIN SCREEN -->
-<div id="loginScreen">
-  <div class="loginBox">
-    <div class="loginLogo">LI</div>
-    <h2>Ingeniería de Procesos</h2>
-    <p>Línea Italia · Inicia sesión para continuar</p>
-    <label>Usuario</label>
-    <input class="input" type="email" id="loginEmail" placeholder="adrian, ramon, francisco, alexis..." style="margin-bottom:10px">
-    <label>Contraseña</label>
-    <input class="input" type="password" id="loginPassword" placeholder="••••••••" style="margin-bottom:14px">
-    <div class="loginErr" id="loginErr">Correo o contraseña incorrectos.</div>
-    <button class="btn primary" id="btnLogin" style="width:100%; margin-top:8px; padding:12px">Iniciar sesión</button>
-  </div>
-</div>
-
-<!-- AUTO SYNC BAR -->
 <div id="autoSyncBar"></div>
 
 <div class="app">
@@ -3413,11 +3397,24 @@ function initGsUI(){
     startAutoSync();
   });
 
-  // Restore session if exists
-  const savedSession = localStorage.getItem("li_session");
-  if(savedSession){
-    try{
-      CURRENT_USER = JSON.parse(savedSession);
-      document.getElementById("loginScreen").style.display = "none";
-      applyRoleUI();
-      document.getElementById("sideUserName").textContent = CURRENT_USER.name + " (" + (C
+  // Auto-login as admin (login desactivado temporalmente)
+  CURRENT_USER = { email:"admin@lineaitalia.com", userId: DB.users[0]?.id, role:"admin", name: DB.users[0]?.name || "Admin" };
+  document.getElementById("loginScreen").style.display = "none";
+  applyRoleUI();
+  const sideUser = document.getElementById("sideUserName");
+  if(sideUser) sideUser.textContent = "Admin";
+  // Acceso rápido: Ctrl/Cmd + K
+  window.addEventListener("keydown", (e)=>{
+    const isMac = navigator.platform.toLowerCase().includes("mac");
+    const mod = isMac ? e.metaKey : e.ctrlKey;
+    if(mod && e.key.toLowerCase()==="k"){
+      e.preventDefault();
+      qaType.value="deliverable";
+      qaRender();
+      openDialog(dlgQuickAdd);
+    }
+  });
+})();
+</script>
+</body>
+</html>
