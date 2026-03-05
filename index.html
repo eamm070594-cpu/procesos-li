@@ -2627,12 +2627,12 @@ async function gsPush(){
   syncDotUpdate("syncing");
   try{
     const payload = JSON.stringify({ action:"save", data: DB });
-    const res = await fetch(GS_URL, {
-      method:"POST",
-      headers:{"Content-Type":"text/plain"},
-      body: payload
-    });
-    const json = await res.json();
+    // Encode data as URL parameter to avoid CORS preflight
+    const encodedData = encodeURIComponent(payload);
+    const url = GS_URL + "?method=post&body=" + encodedData;
+    const res = await fetch(url, { redirect: "follow" });
+    const text = await res.text();
+    const json = JSON.parse(text);
     if(json.ok){
       const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
       localStorage.setItem(LS_LAST_SYNC, now);
@@ -2657,11 +2657,12 @@ async function gsPull(){
   _syncInProgress = true;
   syncDotUpdate("syncing");
   try{
-    const res = await fetch(GS_URL + "?action=load");
-    const json = await res.json();
+    const res = await fetch(GS_URL + "?action=load", { redirect: "follow" });
+    const text = await res.text();
+    const json = JSON.parse(text);
     if(json.ok && json.data){
       DB = json.data;
-      saveDB();
+      localStorage.setItem(LS_KEY, JSON.stringify(DB));
       renderAll();
       const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
       localStorage.setItem(LS_LAST_SYNC, now);
@@ -2669,6 +2670,13 @@ async function gsPull(){
       if(el) el.textContent = now;
       syncDotUpdate("ok");
       toast("Datos descargados ✓", "Los datos del equipo están actualizados.");
+    } else if(json.ok && !json.data){
+      // No data yet, push local data
+      syncDotUpdate("ok");
+      toast("Sin datos remotos", "Subiendo tus datos locales al servidor…");
+      _syncInProgress = false;
+      await gsPush();
+      return;
     } else {
       throw new Error(json.error || "Sin datos en el servidor");
     }
