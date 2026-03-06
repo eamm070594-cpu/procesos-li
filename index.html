@@ -1603,7 +1603,7 @@ function renderHotTable(){
           <td class="right">
             <span data-admin><button class="btn small" data-edit-del="${d.id}">Editar</button>
             <button class="btn small" data-approve-del="${d.id}">Aprobar</button></span>
-            ${SESSION && SESSION.role==="user" && d.assigneeId===SESSION.userId && d.status!=="Aprobado" && d.status!=="En revision" ? '<button class="btn small primary" data-submit-del="'+d.id+'">Marcar terminado</button>' : ""}
+            ${SESSION && SESSION.role==="user" && (d.assigneeId===SESSION.userId || DB.users.find(u=>(u.id===d.assigneeId)&&(u.name===SESSION.name||u.name===SESSION.dbName))) && d.status!=="Aprobado" && d.status!=="En revision" ? '<button class="btn small primary" data-submit-del="'+d.id+'">Marcar terminado</button>' : ""}
           </td>
         </tr>
       `;
@@ -1666,7 +1666,7 @@ function renderDeliverables(){
           <td class="right">
             <span data-admin><button class="btn small" data-edit-del="${d.id}">Editar</button>
             <button class="btn small" data-approve-del="${d.id}">Aprobar</button></span>
-            ${SESSION && SESSION.role==="user" && d.assigneeId===SESSION.userId && d.status!=="Aprobado" && d.status!=="En revision" ? '<button class="btn small primary" data-submit-del="'+d.id+'">Marcar terminado</button>' : ""}
+            ${SESSION && SESSION.role==="user" && (d.assigneeId===SESSION.userId || DB.users.find(u=>(u.id===d.assigneeId)&&(u.name===SESSION.name||u.name===SESSION.dbName))) && d.status!=="Aprobado" && d.status!=="En revision" ? '<button class="btn small primary" data-submit-del="'+d.id+'">Marcar terminado</button>' : ""}
             <button class="btn small danger" data-del-del="${d.id}">Eliminar</button>
           </td>
         </tr>
@@ -3140,9 +3140,20 @@ function renderValidar(){
  *  ========================================================= */
 function renderMiActividad(){
   if(!SESSION || SESSION.role !== "user") return;
-  const userId = SESSION.userId;
-  const user = DB.users.find(u=>u.id===userId);
+  
+  // Find user by userId first, then by name as fallback
+  let user = DB.users.find(u=>u.id===SESSION.userId);
+  if(!user) user = DB.users.find(u=>u.name===SESSION.name || u.name===SESSION.dbName);
+  if(!user && SESSION.name) user = DB.users.find(u=>u.name.toLowerCase()===SESSION.name.toLowerCase());
+  
+  // Update SESSION.userId if we found user by name
+  if(user && user.id !== SESSION.userId){
+    SESSION.userId = user.id;
+    sessionStorage.setItem("li_session", JSON.stringify(SESSION));
+  }
+  
   if(!user) return;
+  const userId = user.id;
 
   document.getElementById("miActTitle").textContent = "Mis Actividades - " + user.name;
   document.getElementById("miActSubtitle").textContent = user.role + " · " + user.team;
