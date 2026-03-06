@@ -1,4 +1,4 @@
-<!doctype html> 
+<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -329,6 +329,39 @@
 
     .hidden{display:none !important}
 
+    /* LOGIN */
+    #loginScreen{
+      position:fixed; inset:0; z-index:10000;
+      background: radial-gradient(1200px 800px at 20% 10%, rgba(37,99,235,.15), transparent 60%),
+                  radial-gradient(900px 600px at 80% 30%, rgba(22,163,74,.10), transparent 55%),
+                  var(--bg);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .loginBox{
+      background:var(--panel); border:1px solid var(--line);
+      border-radius:20px; padding:32px; width:min(400px,92vw);
+      box-shadow: 0 20px 60px rgba(15,23,42,.12);
+    }
+    .loginBox h2{margin:0 0 4px; font-size:22px;}
+    .loginBox p{margin:0 0 20px; color:var(--muted); font-size:13px;}
+    .loginLogo{
+      width:52px; height:52px; border-radius:14px;
+      background:rgba(37,99,235,.10); border:1px solid rgba(37,99,235,.20);
+      display:grid; place-items:center; margin-bottom:16px;
+      font-size:24px; font-weight:800; color:var(--accent);
+    }
+    .loginErr{color:var(--bad); font-size:12px; margin-top:8px; display:none;}
+    .roleBadge{
+      position:fixed; top:12px; right:12px; z-index:9999;
+      padding:6px 14px; border-radius:999px;
+      font-size:12px; font-weight:600; cursor:pointer;
+    }
+    .roleBadge.admin{background:rgba(37,99,235,.12); border:1px solid rgba(37,99,235,.3); color:var(--accent);}
+    .roleBadge.user{background:rgba(217,119,6,.12); border:1px solid rgba(217,119,6,.3); color:#92400e;}
+    .admin-only{} 
+    .hidden-for-user{display:none !important;}
+
+
     /* PERSON CARD COLLAPSIBLE */
     .personCard{cursor:pointer; transition:.15s ease;}
     .personCard:hover{box-shadow:0 4px 16px rgba(15,23,42,.08);}
@@ -415,6 +448,22 @@
 </head>
 <body>
 <div id="autoSyncBar"></div>
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="loginBox">
+    <div class="loginLogo">LI</div>
+    <h2>Ingenieria de Procesos</h2>
+    <p>Linea Italia - Inicia sesion para continuar</p>
+    <label>Usuario</label>
+    <input class="input" id="loginUser" placeholder="Ej: ramon, francisco, alexis..." style="margin-bottom:10px">
+    <label>Contrasena</label>
+    <input class="input" type="password" id="loginPass" placeholder="Contrasena" style="margin-bottom:14px">
+    <div class="loginErr" id="loginErr">Usuario o contrasena incorrectos.</div>
+    <button class="btn primary" id="btnLogin" style="width:100%; margin-top:8px; padding:12px">Iniciar sesion</button>
+  </div>
+</div>
+<div id="roleBadge" class="roleBadge" style="display:none"></div>
+
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
@@ -450,8 +499,8 @@
       <div class="row"><span>Rutinas pendientes hoy</span><b id="sideRoutines">0</b></div>
       <div class="hr"></div>
       <div class="flex between">
-        <button class="btn small ghost" id="btnExportAll">Exportar CSV</button>
-        <button class="btn small danger" id="btnReset">Reset</button>
+        <button class="btn small ghost" id="btnExportAll" data-admin>Exportar CSV</button>
+        <button class="btn small danger" id="btnReset" data-admin>Reset</button>
       </div>
       <p class="small muted" style="margin:10px 0 0; line-height:1.35">
         Los datos se sincronizan con Google Sheets compartido.
@@ -468,7 +517,7 @@
           <p>Semáforo, KPIs y focos rojos del día.</p>
         </div>
         <div class="actions">
-          <button class="btn" id="btnCheckIn">Check-in diario</button>
+          <button class="btn" id="btnCheckIn" data-admin>Check-in diario</button>
           <button class="btn primary" id="btnQuickAdd">Agregar (Proyecto/Entregable/Rutina/Incidencia)</button>
         </div>
       </div>
@@ -528,7 +577,7 @@
           <p>Organiza por entregables, prioridad y estatus.</p>
         </div>
         <div class="actions">
-          <button class="btn primary" id="btnAddProject">Agregar proyecto</button>
+          <button class="btn primary" id="btnAddProject" data-admin>Agregar proyecto</button>
         </div>
       </div>
 
@@ -579,7 +628,7 @@
           <p>Lista filtrable, estados, bloqueos y evidencias.</p>
         </div>
         <div class="actions">
-          <button class="btn primary" id="btnAddDeliverable">Agregar entregable</button>
+          <button class="btn primary" id="btnAddDeliverable" data-admin>Agregar entregable</button>
         </div>
       </div>
 
@@ -627,7 +676,7 @@
         </div>
         <div class="actions">
           <button class="btn" id="btnRunRoutines">Completar rutinas de hoy</button>
-          <button class="btn primary" id="btnAddRoutine">Agregar rutina</button>
+          <button class="btn primary" id="btnAddRoutine" data-admin>Agregar rutina</button>
         </div>
       </div>
 
@@ -681,7 +730,7 @@
           <p>Registro y seguimiento (acciones correctivas).</p>
         </div>
         <div class="actions">
-          <button class="btn primary" id="btnAddIncident">Agregar incidencia</button>
+          <button class="btn primary" id="btnAddIncident" data-admin>Agregar incidencia</button>
         </div>
       </div>
 
@@ -729,7 +778,7 @@
         <div class="actions">
           <button class="btn" id="btnExportDeliverables">Exportar entregables (CSV)</button>
           <button class="btn" id="btnExportIncidents">Exportar incidencias (CSV)</button>
-          <button class="btn primary" id="btnMonthClose">Cierre de mes</button>
+          <button class="btn primary" id="btnMonthClose" data-admin>Cierre de mes</button>
         </div>
       </div>
 
@@ -767,7 +816,7 @@
           <p>Usuarios, reglas del semáforo y datos de ejemplo.</p>
         </div>
         <div class="actions">
-          <button class="btn" id="btnAddUser">Agregar usuario</button>
+          <button class="btn" id="btnAddUser" data-admin>Agregar usuario</button>
         </div>
       </div>
 
@@ -1473,8 +1522,9 @@ function renderHotTable(){
           <td>${d.due ? `${fmtDate(d.due)} <div class="small muted">${dateHint}</div>` : "—"}</td>
           <td>${d.blocked ? `<span class="tag bad">Sí · ${d.blockSince? daysBetween(d.blockSince,t):0}d</span>` : `<span class="tag gray">No</span>`}</td>
           <td class="right">
-            <button class="btn small" data-edit-del="${d.id}">Editar</button>
-            <button class="btn small" data-approve-del="${d.id}">Aprobar</button>
+            <span data-admin><button class="btn small" data-edit-del="${d.id}">Editar</button>
+            <button class="btn small" data-approve-del="${d.id}">Aprobar</button></span>
+            ${SESSION && SESSION.role==="user" && d.assigneeId===SESSION.userId && d.status!=="Aprobado" && d.status!=="En revision" ? '<button class="btn small primary" data-submit-del="'+d.id+'">Marcar terminado</button>' : ""}
           </td>
         </tr>
       `;
@@ -1535,8 +1585,9 @@ function renderDeliverables(){
           <td>${d.due ? fmtDate(d.due) : "—"}</td>
           <td>${block}</td>
           <td class="right">
-            <button class="btn small" data-edit-del="${d.id}">Editar</button>
-            <button class="btn small" data-approve-del="${d.id}">Aprobar</button>
+            <span data-admin><button class="btn small" data-edit-del="${d.id}">Editar</button>
+            <button class="btn small" data-approve-del="${d.id}">Aprobar</button></span>
+            ${SESSION && SESSION.role==="user" && d.assigneeId===SESSION.userId && d.status!=="Aprobado" && d.status!=="En revision" ? '<button class="btn small primary" data-submit-del="'+d.id+'">Marcar terminado</button>' : ""}
             <button class="btn small danger" data-del-del="${d.id}">Eliminar</button>
           </td>
         </tr>
@@ -2145,6 +2196,20 @@ document.getElementById("editSave").addEventListener("click", ()=>{
  *  -------------------------- */
 document.body.addEventListener("click", (e)=>{
   // Deliverable actions
+
+  // Submit deliverable as done (user action - goes to "En revision")
+  const submitDel = e.target.closest("[data-submit-del]")?.dataset.submitDel;
+  if(submitDel){
+    const d = byId(DB.deliverables, submitDel);
+    if(!d) return;
+    d.status = "En revision";
+    d.submittedAt = todayISO();
+    d.submittedBy = SESSION?.userId;
+    saveDB();
+    renderAll();
+    toast("Enviado para revision", d.title + " - El admin lo validara.");
+    return;
+  }
   const editDel = e.target.closest("[data-edit-del]")?.dataset.editDel;
   const approveDel = e.target.closest("[data-approve-del]")?.dataset.approveDel;
   const delDel = e.target.closest("[data-del-del]")?.dataset.delDel;
@@ -2781,11 +2846,12 @@ async function gsPull(){
 }
 
 const _origSaveDB = saveDB;
+let _lastSaveTime = 0;
 function saveDB(){
   localStorage.setItem(LS_KEY, JSON.stringify(DB));
   if(GS_URL){
     clearTimeout(saveDB._t);
-    saveDB._t = setTimeout(gsPush, 1500);
+    saveDB._t = setTimeout(gsPush, 300);
   }
 }
 
@@ -2811,7 +2877,7 @@ function initGsUI(){
 }
 
 // Auto-sync every 30 seconds
-setInterval(()=>{ if(GS_URL && !_syncInProgress) gsPull(); }, 30000);
+setInterval(()=>{ if(GS_URL && !_syncInProgress && (Date.now()-(_lastSaveTime||0))>10000) gsPull(); }, 30000);
 
 
 /** =========================================================
@@ -2929,6 +2995,75 @@ function startAutoSync(){
   if(bar){ setTimeout(()=>{ bar.classList.add("running"); }, 500); }
 }
 
+
+/** =========================================================
+ *  AUTENTICACION
+ *  ========================================================= */
+const ADMIN_USER = "amartinez";
+const ADMIN_PASS = "Lineaitalia.1";
+const DEFAULT_USER_PASS = "LI2025";
+
+let SESSION = null; // {userId, name, role: "admin"|"user"}
+
+function getLoginUsers(){
+  // Admin
+  const users = [{username: ADMIN_USER, password: ADMIN_PASS, role:"admin", name:"Admin", userId:null}];
+  // Team members from DB
+  (DB.users||[]).forEach(u=>{
+    const username = u.name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g,".");
+    const pass = u.loginPassword || DEFAULT_USER_PASS;
+    users.push({username, password: pass, role:"user", name:u.name, userId:u.id});
+  });
+  return users;
+}
+
+function doLogin(){
+  const inputUser = document.getElementById("loginUser").value.trim().toLowerCase();
+  const inputPass = document.getElementById("loginPass").value;
+  const users = getLoginUsers();
+  const found = users.find(u => u.username === inputUser && u.password === inputPass);
+  if(!found){
+    document.getElementById("loginErr").style.display = "block";
+    return;
+  }
+  SESSION = {userId: found.userId, name: found.name, role: found.role};
+  sessionStorage.setItem("li_session", JSON.stringify(SESSION));
+  document.getElementById("loginScreen").style.display = "none";
+  applyRoleUI();
+  toast("Bienvenido", found.name);
+  renderAll();
+}
+
+function applyRoleUI(){
+  if(!SESSION) return;
+  const badge = document.getElementById("roleBadge");
+  if(badge){
+    badge.style.display = "block";
+    badge.className = "roleBadge " + SESSION.role;
+    badge.textContent = SESSION.role === "admin" ? ("Admin: " + SESSION.name) : SESSION.name;
+    badge.onclick = ()=>{ if(confirm("Cerrar sesion?")){ SESSION=null; sessionStorage.removeItem("li_session"); location.reload(); } };
+  }
+
+  const isAdmin = SESSION.role === "admin";
+
+  // Hide admin-only buttons for regular users
+  document.querySelectorAll("[data-admin]").forEach(el=>{
+    el.style.display = isAdmin ? "" : "none";
+  });
+
+  // Show only user-relevant nav
+  if(!isAdmin){
+    document.querySelectorAll("#nav button[data-view]").forEach(btn=>{
+      const allowed = ["dashboard","calendar"];
+      btn.style.display = allowed.includes(btn.dataset.view) ? "" : "none";
+    });
+  }
+}
+
+document.getElementById("btnLogin").addEventListener("click", doLogin);
+document.getElementById("loginUser").addEventListener("keydown", e=>{ if(e.key==="Enter") document.getElementById("loginPass").focus(); });
+document.getElementById("loginPass").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
+
 /** ---------------------------
  *  Init
  *  -------------------------- */
@@ -2941,6 +3076,16 @@ function startAutoSync(){
   renderAll();
   renderCalendar();
   startAutoSync();
+
+  // Check existing session
+  const savedSession = sessionStorage.getItem("li_session");
+  if(savedSession){
+    try{
+      SESSION = JSON.parse(savedSession);
+      document.getElementById("loginScreen").style.display = "none";
+      applyRoleUI();
+    } catch(e){ SESSION = null; }
+  }
 
   // Acceso rápido: Ctrl/Cmd + K abre quick add
   window.addEventListener("keydown", (e)=>{
