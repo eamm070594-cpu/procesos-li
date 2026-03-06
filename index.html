@@ -872,6 +872,9 @@
         <div id="miActDelsSection">
           <div class="hr"></div>
           <div class="flex wrap" style="gap:8px; margin-bottom:10px">
+            <select class="input" id="miActFilterName" style="min-width:180px">
+              <option value="">Todos los responsables</option>
+            </select>
             <select class="input" id="miActFilterStatus" style="min-width:160px">
               <option value="">Todos los estados</option>
               <option>Pendiente</option>
@@ -3187,8 +3190,113 @@ function renderMiActividad(){
 
   const myName = SESSION.name;
   const t = todayISO();
-  const allMyDels = DB.deliverables.filter(d => userName(d.assigneeId) === myName);
+
+  // Show ALL deliverables but pre-filter by user name
   const user = DB.users.find(u=>u.name===myName);
+  document.getElementById("miActTitle").textContent = "Mis Actividades - " + myName;
+  document.getElementById("miActSubtitle").textContent = user ? (user.role + " · " + user.team) : "";
+
+  // Populate name filter if empty
+  const nameSel = document.getElementById("miActFilterName");
+  if(nameSel && nameSel.options.length <= 1){
+    DB.users.forEach(u=>{
+      const opt = document.createElement("option");
+      opt.value = u.name; opt.textContent = u.name;
+      if(u.name === myName) opt.selected = true;
+      nameSel.appendChild(opt);
+    });
+  } else if(nameSel && !nameSel.value){
+    // Pre-select current user
+    for(let i=0; i<nameSel.options.length; i++){
+      if(nameSel.options[i].value === myName){ nameSel.selectedIndex = i; break; }
+    }
+  }
+
+  const nameFilter = document.getElementById("miActFilterName")?.value || myName;
+  const statusFilter = document.getElementById("miActFilterStatus")?.value || "";
+  const projFilter = document.getElementById("miActFilterProject")?.value || "";
+
+  // Populate project filter
+  const projSel = document.getElementById("miActFilterProject");
+  if(projSel && projSel.options.length <= 1){
+    DB.projects.forEach(p=>{
+      const opt = document.createElement("option");
+      opt.value = p.id; opt.textContent = p.name;
+      projSel.appendChild(opt);
+    });
+  }
+
+  const filtered = DB.deliverables
+    .filter(d => !nameFilter || userName(d.assigneeId) === nameFilter)
+    .filter(d => !statusFilter || d.status === statusFilter)
+    .filter(d => !projFilter || d.projectId === projFilter)
+    .sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"));
+
+  // KPIs based on filtered list
+  const approved = filtered.filter(d=>d.status==="Aprobado").length;
+  const overdue = filtered.filter(d=>d.status!=="Aprobado"&&d.due&&d.due<t).length;
+  const pending = filtered.filter(d=>d.status!=="Aprobado"&&d.status!=="En revision").length;
+  const inReview = filtered.filter(d=>d.status==="En revision").length;
+  const pct = filtered.length ? Math.round((approved/filtered.length)*100) : 0;
+  const level = pct>=85?"ok":pct>=70?"warn":"bad";
+
+  document.getElementById("miActKpis").innerHTML = `
+    <div class="card kpi ${level}"><div class="label">Mi cumplimiento</div><div class="value">${pct}%</div></div>
+    <div class="card kpi ${pending>0?"warn":"ok"}"><div class="label">Pendientes</div><div class="value">${pending}</div></div>
+    <div class="card kpi ${inReview>0?"ok":"gray"}"><div class="label">En revision</div><div class="value">${inReview}</div></div>
+    <div class="card kpi ${overdue>0?"bad":"ok"}"><div class="label">Vencidos</div><div class="value">${overdue}</div></div>
+  `;
+
+  // TOP VENCIDOS
+  const hotRows = filtered
+    .filter(d=>d.status!=="Aprobado" && d.due && daysBetween(d.due, t)>0)
+    .slice(0,5)
+    .map(d=>{
+      const days = daysBetween(d.due, t);
+      const canSubmit = d.status!=="En revision";
+      return `<tr>
+        <td>${statusTag(d.status,d.due)}</td>
+        <td><b>${d.title}</b></td>
+        <td>${projectName(d.projectId)}</td>
+        <td>${fmtDate(d.due)}<div class="small muted">Vencido ${days}d</div></td>
+        <td>${d.blocked?`<span class="tag bad">Si</span>`:`<span class="tag gray">No</span>`}</td>
+        <td class="right">${canSubmit?`<button class="btn small primary" data-submit-del="${d.id}">Marcar terminado</button>`:""}</td>
+      </tr>`;
+    }).join("");
+  document.getElementById("tableMiHot").innerHTML = hotRows || `<tr><td colspan="6" class="muted small">Sin entregables vencidos.</td></tr>`;
+
+  // ALL DELIVERABLES
+  const delRows = filtered.map(d=>{
+    const canSubmit = d.status!=="Aprobado"&&d.status!=="En revision";
+    return `<tr>
+      <td>${statusTag(d.status,d.due)}</td>
+      <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,60)}</div></td>
+      <td>${projectName(d.projectId)}</td>
+      <td>${d.due?fmtDate(d.due):"—"}</td>
+      <td class="right">
+        ${canSubmit?`<button class="btn small primary" data-submit-del="${d.id}">Marcar terminado</button>`:""}
+        ${d.status==="En revision"?`<span class="tag blue">Pendiente validacion</span>`:""}
+        ${d.status==="Aprobado"?`<span class="tag ok">Aprobado</span>`:""}
+      </td>
+    </tr>`;
+  }).join("");
+  document.getElementById("tableMiDels").innerHTML = delRows || `<tr><td colspan="5" class="muted small">No hay entregables.</td></tr>`;
+
+  // RUTINAS
+  const myRuns = DB.routineRuns.filter(r=>r.date===t && userName(r.assigneeId)===myName);
+  const rutRows = myRuns.map(rr=>{
+    const r = DB.routines.find(x=>x.id===rr.routineId);
+    if(!r) return "";
+    const done = rr.status==="Completada";
+    return `<tr>
+      <td><b>${r.name}</b></td>
+      <td><span class="tag gray">${r.frequency}</span></td>
+      <td>${done?`<span class="tag ok">Completada</span>`:`<span class="tag warn">Pendiente</span>`}</td>
+      <td class="right">${!done?`<button class="btn small primary" data-run-r="${r.id}">Marcar completada</button>`:""}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("tableMiRut").innerHTML = rutRows || `<tr><td colspan="4" class="muted small">Sin rutinas para hoy.</td></tr>`;
+}
 
   document.getElementById("miActTitle").textContent = "Mis Actividades - " + myName;
   document.getElementById("miActSubtitle").textContent = user ? (user.role + " · " + user.team) : "";
@@ -3449,7 +3557,7 @@ document.getElementById("loginUser").addEventListener("keydown", e=>{ if(e.key==
 document.getElementById("loginPass").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
 
 // Filters for Mi Actividad
-["miActFilterStatus","miActFilterProject"].forEach(id=>{
+["miActFilterStatus","miActFilterProject","miActFilterName"].forEach(id=>{
   const el = document.getElementById(id);
   if(el){ el.addEventListener("change", renderMiActividad); }
 });
