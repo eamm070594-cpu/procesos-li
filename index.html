@@ -3140,16 +3140,62 @@ function renderValidar(){
  *  ========================================================= */
 function renderMiActividad(){
   if(!SESSION || SESSION.role !== "user") return;
-  
-  // Find user by name (most reliable)
-  const user = DB.users.find(u=>u.name===SESSION.name) || DB.users.find(u=>u.name.toLowerCase()===SESSION.name.toLowerCase());
-  if(!user){ 
-    document.getElementById("miActKpis").innerHTML = '<div class="card kpi warn"><div class="label">Error</div><div class="value small">Usuario no encontrado en BD</div></div>';
-    document.getElementById("tableMiDels").innerHTML = '<tr><td colspan="5" class="muted small">No se encontro tu usuario en la base de datos. Contacta al admin.</td></tr>';
-    return; 
-  }
-  
-  const userId = user.id;
+
+  // Filter deliverables by assignee name matching session name
+  const myDels = DB.deliverables.filter(d => userName(d.assigneeId) === SESSION.name);
+  const myRutinas = DB.routines.filter(r => userName(r.assigneeId) === SESSION.name);
+  const t = todayISO();
+
+  const user = DB.users.find(u=>u.name===SESSION.name);
+  document.getElementById("miActTitle").textContent = "Mis Actividades - " + SESSION.name;
+  document.getElementById("miActSubtitle").textContent = user ? (user.role + " · " + user.team) : "";
+
+  const approved = myDels.filter(d=>d.status==="Aprobado").length;
+  const overdue = myDels.filter(d=>d.status!=="Aprobado"&&d.due&&d.due<t).length;
+  const pending = myDels.filter(d=>d.status!=="Aprobado"&&d.status!=="En revision").length;
+  const inReview = myDels.filter(d=>d.status==="En revision").length;
+  const pct = myDels.length ? Math.round((approved/myDels.length)*100) : 0;
+  const level = pct>=85?"ok":pct>=70?"warn":"bad";
+
+  document.getElementById("miActKpis").innerHTML = `
+    <div class="card kpi ${level}"><div class="label">Mi cumplimiento</div><div class="value">${pct}%</div></div>
+    <div class="card kpi ${pending>0?"warn":"ok"}"><div class="label">Pendientes</div><div class="value">${pending}</div></div>
+    <div class="card kpi ${inReview>0?"ok":"gray"}"><div class="label">En revision</div><div class="value">${inReview}</div></div>
+    <div class="card kpi ${overdue>0?"bad":"ok"}"><div class="label">Vencidos</div><div class="value">${overdue}</div></div>
+  `;
+
+  const delRows = myDels
+    .sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"))
+    .map(d=>{
+      const canSubmit = d.status!=="Aprobado" && d.status!=="En revision";
+      return `<tr>
+        <td>${statusTag(d.status, d.due)}</td>
+        <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,60)}</div></td>
+        <td>${projectName(d.projectId)}</td>
+        <td>${d.due?fmtDate(d.due):"—"}</td>
+        <td class="right">
+          ${canSubmit?`<button class="btn small primary" data-submit-del="${d.id}">Marcar terminado</button>`:""}
+          ${d.status==="En revision"?`<span class="tag blue">Pendiente validacion</span>`:""}
+          ${d.status==="Aprobado"?`<span class="tag ok">Aprobado</span>`:""}
+        </td>
+      </tr>`;
+    }).join("");
+  document.getElementById("tableMiDels").innerHTML = delRows || `<tr><td colspan="5" class="muted small">No tienes entregables asignados.</td></tr>`;
+
+  const myRuns = DB.routineRuns.filter(r=>r.date===t && userName(r.assigneeId)===SESSION.name);
+  const rutRows = myRuns.map(rr=>{
+    const r = DB.routines.find(x=>x.id===rr.routineId);
+    if(!r) return "";
+    const done = rr.status==="Completada";
+    return `<tr>
+      <td><b>${r.name}</b></td>
+      <td><span class="tag gray">${r.frequency}</span></td>
+      <td>${done?`<span class="tag ok">Completada</span>`:`<span class="tag warn">Pendiente</span>`}</td>
+      <td class="right">${!done?`<button class="btn small primary" data-run-r="${r.id}">Marcar completada</button>`:""}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("tableMiRut").innerHTML = rutRows || `<tr><td colspan="4" class="muted small">Sin rutinas para hoy.</td></tr>`;
+}
 
   document.getElementById("miActTitle").textContent = "Mis Actividades - " + user.name;
   document.getElementById("miActSubtitle").textContent = user.role + " · " + user.team;
