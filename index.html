@@ -2195,6 +2195,13 @@ document.getElementById("editSave").addEventListener("click", ()=>{
  *  Acciones en tablas (event delegation)
  *  -------------------------- */
 document.body.addEventListener("click", (e)=>{
+  // Block all destructive actions for non-admin users
+  const isAdminAction = e.target.closest("[data-edit-proj],[data-del-proj],[data-edit-r],[data-del-r],[data-run-r],[data-edit-i],[data-close-i],[data-del-i],[data-edit-user],[data-del-user]");
+  if(isAdminAction && SESSION && SESSION.role !== "admin"){
+    toast("Sin permiso", "Solo el administrador puede realizar esta accion.");
+    return;
+  }
+
   // Deliverable actions
 
   // Submit deliverable as done (user action - goes to "En revision")
@@ -2213,6 +2220,12 @@ document.body.addEventListener("click", (e)=>{
   const editDel = e.target.closest("[data-edit-del]")?.dataset.editDel;
   const approveDel = e.target.closest("[data-approve-del]")?.dataset.approveDel;
   const delDel = e.target.closest("[data-del-del]")?.dataset.delDel;
+
+  // Block non-admins from edit/delete/approve
+  if((editDel || approveDel || delDel) && SESSION && SESSION.role !== "admin"){
+    toast("Sin permiso", "Solo el administrador puede realizar esta accion.");
+    return;
+  }
 
   if(editDel){
     const d = byId(DB.deliverables, editDel);
