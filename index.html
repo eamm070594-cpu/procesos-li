@@ -526,45 +526,51 @@
 
       <div class="row2">
         <div class="card">
-          <div class="flex between wrap">
+          <div class="flex between wrap" style="cursor:pointer" onclick="toggleSection('hotSection','hotChev')">
             <div>
               <b>Top vencidos / en riesgo</b>
-              <div class="small muted">Entregables próximos o vencidos (prioridad alta primero).</div>
+              <div class="small muted">Entregables proximos o vencidos (prioridad alta primero).</div>
             </div>
-            <div class="flex">
-              <select class="input" id="filterAssignee" style="min-width:220px">
-                <option value="">Filtrar por responsable (todos)</option>
+            <div class="flex" style="align-items:center; gap:10px">
+              <select class="input" id="filterAssignee" style="min-width:180px" onclick="event.stopPropagation()">
+                <option value="">Todos los responsables</option>
               </select>
+              <span id="hotChev" style="color:var(--muted); font-size:16px">&#9660;</span>
             </div>
           </div>
-          <div class="hr"></div>
-          <div style="overflow:auto">
-            <table>
-              <thead>
-                <tr>
-                  <th>Estado</th>
-                  <th>Entregable</th>
-                  <th>Proyecto</th>
-                  <th>Responsable</th>
-                  <th>Fecha</th>
-                  <th>Bloqueo</th>
-                  <th class="right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="tableHot"></tbody>
-            </table>
+          <div id="hotSection">
+            <div class="hr"></div>
+            <div style="overflow:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Estado</th>
+                    <th>Entregable</th>
+                    <th>Proyecto</th>
+                    <th>Responsable</th>
+                    <th>Fecha</th>
+                    <th>Bloqueo</th>
+                    <th class="right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tableHot"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="flex between wrap">
+          <div class="flex between wrap" style="cursor:pointer" onclick="toggleSection('peopleSection','peopleChev')">
             <div>
-              <b>Semáforo por persona</b>
-              <div class="small muted">Verde: ok · Amarillo: riesgo · Rojo: crítico</div>
+              <b>Semaforo por persona</b>
+              <div class="small muted">Verde: ok · Amarillo: riesgo · Rojo: critico</div>
             </div>
+            <span id="peopleChev" style="color:var(--muted); font-size:16px">&#9660;</span>
           </div>
-          <div class="hr"></div>
-          <div id="peopleList" class="grid" style="grid-template-columns:1fr; gap:10px;"></div>
+          <div id="peopleSection">
+            <div class="hr"></div>
+            <div id="peopleList" class="grid" style="grid-template-columns:1fr; gap:10px;"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -1457,27 +1463,7 @@ function renderPeople(){
           </div>
           <span style="color:var(--muted); font-size:14px" id="chev-${u.id}">&#9654;</span>
         </div>
-        <div class="personDetail" id="detail-${u.id}">
-          <div class="grid" style="grid-template-columns:1fr 1fr 1fr; gap:8px; margin:10px 0 8px">
-            <div style="background:var(--panel2); border-radius:10px; padding:10px; border:1px solid var(--line); text-align:center">
-              <div class="small muted">Total</div>
-              <div style="font-size:18px; font-weight:800">${c.total}</div>
-            </div>
-            <div style="background:var(--panel2); border-radius:10px; padding:10px; border:1px solid var(--line); text-align:center">
-              <div class="small muted">Cumplidos</div>
-              <div style="font-size:18px; font-weight:800; color:var(--ok)">${c.compliant}</div>
-            </div>
-            <div style="background:var(--panel2); border-radius:10px; padding:10px; border:1px solid var(--line); text-align:center">
-              <div class="small muted">Vencidos</div>
-              <div style="font-size:18px; font-weight:800; color:var(--bad)">${c.overdue}</div>
-            </div>
-          </div>
-          <div class="small muted">
-            Aprobados a tiempo: <b style="color:var(--text)">${c.approvedPct}%</b> (${c.approvedOnTime}/${c.approvedTotal}) ·
-            Bloqueo max: <b style="color:var(--text)">${s.maxBlockDays}d</b> ·
-            Rutinas pend.: <b style="color:var(--text)">${s.pendingRoutines}</b>
-          </div>
-        </div>
+        <div class="personDetail" id="detail-${u.id}">${personStatsHTML(u.id)}</div>
       </div>
     `;
   }).join("");
@@ -3008,6 +2994,89 @@ function startAutoSync(){
   if(bar){ setTimeout(()=>{ bar.classList.add("running"); }, 500); }
 }
 
+
+
+/** =========================================================
+ *  TOGGLE DASHBOARD SECTIONS
+ *  ========================================================= */
+function toggleSection(sectionId, chevId){
+  const sec = document.getElementById(sectionId);
+  const chev = document.getElementById(chevId);
+  if(!sec) return;
+  const isOpen = sec.style.display !== "none";
+  sec.style.display = isOpen ? "none" : "";
+  if(chev) chev.innerHTML = isOpen ? "&#9654;" : "&#9660;";
+}
+
+function getWeekRange(){
+  const t = new Date(todayISO()+"T00:00:00");
+  const weekStart = new Date(t);
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay()+6)%7));
+  const ws = todayISO(weekStart);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate()+6);
+  const we = todayISO(weekEnd);
+  return {ws, we};
+}
+
+function getMonthRange(){
+  const t = new Date();
+  const ms = t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-01";
+  const lastDay = new Date(t.getFullYear(), t.getMonth()+1, 0).getDate();
+  const me = t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(lastDay).padStart(2,"0");
+  return {ms, me};
+}
+
+function personStatsHTML(userId){
+  const {ws, we} = getWeekRange();
+  const {ms, me} = getMonthRange();
+
+  // Weekly
+  const weekDels = DB.deliverables.filter(d=>d.assigneeId===userId && d.due && d.due>=ws && d.due<=we);
+  const weekApproved = weekDels.filter(d=>d.status==="Aprobado").length;
+  const weekOverdue = weekDels.filter(d=>d.status!=="Aprobado" && d.due<todayISO()).length;
+  const weekPct = weekDels.length ? Math.round((weekApproved/weekDels.length)*100) : 0;
+
+  // Monthly
+  const monthDels = DB.deliverables.filter(d=>d.assigneeId===userId && d.due && d.due>=ms && d.due<=me);
+  const monthApproved = monthDels.filter(d=>d.status==="Aprobado").length;
+  const monthOverdue = monthDels.filter(d=>d.status!=="Aprobado" && d.due<todayISO()).length;
+  const monthPct = monthDels.length ? Math.round((monthApproved/monthDels.length)*100) : 0;
+
+  const weekLevel = weekPct>=85?"ok":weekPct>=70?"warn":"bad";
+  const monthLevel = monthPct>=85?"ok":monthPct>=70?"warn":"bad";
+  const weekColor = weekLevel==="ok"?"var(--ok)":weekLevel==="warn"?"var(--warn)":"var(--bad)";
+  const monthColor = monthLevel==="ok"?"var(--ok)":monthLevel==="warn"?"var(--warn)":"var(--bad)";
+
+  // Penalties
+  const penalties = (DB.deliverables||[]).filter(d=>d.assigneeId===userId&&d.scorePenalty).reduce((a,d)=>a+(d.scorePenalty||0),0);
+
+  return `
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0 8px">
+      <div style="background:var(--panel2); border-radius:10px; padding:12px; border:1px solid var(--line)">
+        <div class="small muted" style="margin-bottom:6px; font-weight:600">Esta semana</div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px">
+          <div class="progress ${weekLevel}" style="flex:1; height:6px"><span style="width:${weekPct}%"></span></div>
+          <span style="font-size:13px; font-weight:800; color:${weekColor}">${weekPct}%</span>
+        </div>
+        <div class="small muted">${weekDels.length} entregables · ${weekApproved} aprobados · ${weekOverdue} vencidos</div>
+      </div>
+      <div style="background:var(--panel2); border-radius:10px; padding:12px; border:1px solid var(--line)">
+        <div class="small muted" style="margin-bottom:6px; font-weight:600">Este mes</div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px">
+          <div class="progress ${monthLevel}" style="flex:1; height:6px"><span style="width:${monthPct}%"></span></div>
+          <span style="font-size:13px; font-weight:800; color:${monthColor}">${monthPct}%</span>
+        </div>
+        <div class="small muted">${monthDels.length} entregables · ${monthApproved} aprobados · ${monthOverdue} vencidos</div>
+      </div>
+    </div>
+    ${penalties>0?`<div class="small" style="color:var(--bad)">Penalizacion acumulada: -${penalties}%</div>`:""}
+    <div class="small muted" style="margin-top:6px">
+      Bloqueo max activo: <b style="color:var(--text)">${semaforoForUser(userId).maxBlockDays}d</b> ·
+      Rutinas pend. hoy: <b style="color:var(--text)">${semaforoForUser(userId).pendingRoutines}</b>
+    </div>
+  `;
+}
 
 /** =========================================================
  *  AUTENTICACION
