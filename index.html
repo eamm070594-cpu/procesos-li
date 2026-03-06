@@ -3141,18 +3141,14 @@ function renderValidar(){
 function renderMiActividad(){
   if(!SESSION || SESSION.role !== "user") return;
   
-  // Find user by userId first, then by name as fallback
-  let user = DB.users.find(u=>u.id===SESSION.userId);
-  if(!user) user = DB.users.find(u=>u.name===SESSION.name || u.name===SESSION.dbName);
-  if(!user && SESSION.name) user = DB.users.find(u=>u.name.toLowerCase()===SESSION.name.toLowerCase());
-  
-  // Update SESSION.userId if we found user by name
-  if(user && user.id !== SESSION.userId){
-    SESSION.userId = user.id;
-    sessionStorage.setItem("li_session", JSON.stringify(SESSION));
+  // Find user by name (most reliable)
+  const user = DB.users.find(u=>u.name===SESSION.name) || DB.users.find(u=>u.name.toLowerCase()===SESSION.name.toLowerCase());
+  if(!user){ 
+    document.getElementById("miActKpis").innerHTML = '<div class="card kpi warn"><div class="label">Error</div><div class="value small">Usuario no encontrado en BD</div></div>';
+    document.getElementById("tableMiDels").innerHTML = '<tr><td colspan="5" class="muted small">No se encontro tu usuario en la base de datos. Contacta al admin.</td></tr>';
+    return; 
   }
   
-  if(!user) return;
   const userId = user.id;
 
   document.getElementById("miActTitle").textContent = "Mis Actividades - " + user.name;
