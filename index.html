@@ -3115,7 +3115,7 @@ function renderValidar(){
 
   const pending = DB.deliverables.filter(d=>d.status==="En revision");
   const countEl = document.getElementById("validarCount");
-  if(countEl) countEl.textContent = pending.length;
+  if(countEl) countEl.textContent = pending.length + " pendiente(s)";
 
   if(pending.length === 0){ card.style.display="none"; return; }
   card.style.display = "block";
@@ -3294,9 +3294,13 @@ function getLoginUsers(){
   const users = [{username: ADMIN_USER, password: ADMIN_PASS, role:"admin", name:"Admin", userId:null}];
   // Team members from DB
   (DB.users||[]).forEach(u=>{
-    const username = u.name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g,".");
+    // Remove accents and convert to lowercase with dots
+    const normalized = u.name.toLowerCase()
+      .replace(/á/g,"a").replace(/é/g,"e").replace(/í/g,"i").replace(/ó/g,"o").replace(/ú/g,"u")
+      .replace(/ñ/g,"n").replace(/ü/g,"u")
+      .replace(/\s+/g,".");
     const pass = u.loginPassword || DEFAULT_USER_PASS;
-    users.push({username, password: pass, role:"user", name:u.name, userId:u.id});
+    users.push({username: normalized, password: pass, role:"user", name:u.name, userId:u.id});
   });
   return users;
 }
@@ -3310,7 +3314,9 @@ function doLogin(){
     document.getElementById("loginErr").style.display = "block";
     return;
   }
-  SESSION = {userId: found.userId, name: found.name, role: found.role};
+  // Make sure userId is the actual DB user id
+  const dbUser = found.userId ? DB.users.find(u=>u.id===found.userId) : null;
+  SESSION = {userId: found.userId, name: found.name, role: found.role, dbName: dbUser?.name || found.name};
   sessionStorage.setItem("li_session", JSON.stringify(SESSION));
   document.getElementById("loginScreen").style.display = "none";
   applyRoleUI();
