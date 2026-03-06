@@ -483,6 +483,7 @@
       <button data-view="deliverables"><span class="dot"></span> Entregables</button>
       <button data-view="routines"><span class="dot"></span> Rutinas</button>
       <button data-view="incidents"><span class="dot"></span> Incidencias</button>
+      <button data-view="miactividad" id="navMiActividad" style="display:none"><span class="dot"></span> Mis Actividades</button>
       <button data-view="calendar"><span class="dot"></span> Calendario</button>
       <button data-view="reports"><span class="dot"></span> Reportes</button>
       <button data-view="settings"><span class="dot"></span> Configuración</button>
@@ -523,6 +524,32 @@
       </div>
 
       <div class="grid kpis" id="kpiGrid"></div>
+
+      <!-- PENDIENTES DE VALIDAR (solo admin) -->
+      <div class="card" id="validarCard" style="margin-bottom:12px; border:1.5px solid rgba(37,99,235,.3); display:none">
+        <div class="flex between wrap">
+          <div>
+            <b>⏳ Pendientes de validar</b>
+            <div class="small muted">Entregables marcados como terminados por tu equipo.</div>
+          </div>
+          <span id="validarCount" class="tag blue">0</span>
+        </div>
+        <div class="hr"></div>
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Entregable</th>
+                <th>Responsable</th>
+                <th>Proyecto</th>
+                <th>Enviado</th>
+                <th class="right">Accion</th>
+              </tr>
+            </thead>
+            <tbody id="tableValidar"></tbody>
+          </table>
+        </div>
+      </div>
 
       <div class="row2">
         <div class="card">
@@ -791,6 +818,72 @@
       <div class="card" id="weeklyReport"></div>
     </section>
 
+
+
+    <!-- USER DASHBOARD (vista personal para usuarios) -->
+    <section id="view-miactividad" class="hidden">
+      <div class="topbar">
+        <div class="title">
+          <h2 id="miActTitle">Mis Actividades</h2>
+          <p id="miActSubtitle">Tu resumen personal</p>
+        </div>
+      </div>
+
+      <div class="grid kpis" id="miActKpis" style="margin-bottom:12px"></div>
+
+      <div class="card" style="margin-bottom:12px">
+        <div class="flex between wrap" style="cursor:pointer" onclick="toggleSection('miActDelsSection','miActDelsChev')">
+          <div>
+            <b>Mis entregables</b>
+            <div class="small muted">Todos los entregables asignados a ti.</div>
+          </div>
+          <span id="miActDelsChev" style="color:var(--muted); font-size:16px">&#9660;</span>
+        </div>
+        <div id="miActDelsSection">
+          <div class="hr"></div>
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Entregable</th>
+                  <th>Proyecto</th>
+                  <th>Fecha</th>
+                  <th class="right">Accion</th>
+                </tr>
+              </thead>
+              <tbody id="tableMiDels"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex between wrap" style="cursor:pointer" onclick="toggleSection('miActRutSection','miActRutChev')">
+          <div>
+            <b>Mis rutinas de hoy</b>
+            <div class="small muted">Rutinas asignadas a ti para hoy.</div>
+          </div>
+          <span id="miActRutChev" style="color:var(--muted); font-size:16px">&#9660;</span>
+        </div>
+        <div id="miActRutSection">
+          <div class="hr"></div>
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rutina</th>
+                  <th>Frecuencia</th>
+                  <th>Estado hoy</th>
+                  <th class="right">Accion</th>
+                </tr>
+              </thead>
+              <tbody id="tableMiRut"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- CALENDAR -->
     <section id="view-calendar" class="hidden">
@@ -2190,7 +2283,7 @@ document.body.addEventListener("click", (e)=>{
 
   // Deliverable actions
 
-  // Submit deliverable as done (user action - goes to "En revision")
+  // Submit deliverable as done (user action)
   const submitDel = e.target.closest("[data-submit-del]")?.dataset.submitDel;
   if(submitDel){
     const d = byId(DB.deliverables, submitDel);
@@ -2200,7 +2293,21 @@ document.body.addEventListener("click", (e)=>{
     d.submittedBy = SESSION?.userId;
     saveDB();
     renderAll();
-    toast("Enviado para revision", d.title + " - El admin lo validara.");
+    toast("Enviado para validacion", d.title + " - El admin lo revisara.");
+    return;
+  }
+
+  // Reject deliverable (admin sends back to En progreso)
+  const rejectDel = e.target.closest("[data-reject-del]")?.dataset.rejectDel;
+  if(rejectDel){
+    const d = byId(DB.deliverables, rejectDel);
+    if(!d) return;
+    d.status = "En progreso";
+    d.submittedAt = null;
+    d.submittedBy = null;
+    saveDB();
+    renderAll();
+    toast("Regresado", d.title + " - Regresado a En progreso.");
     return;
   }
   const editDel = e.target.closest("[data-edit-del]")?.dataset.editDel;
@@ -2996,6 +3103,101 @@ function startAutoSync(){
 
 
 
+
+
+/** =========================================================
+ *  RENDER PENDIENTES DE VALIDAR (admin)
+ *  ========================================================= */
+function renderValidar(){
+  const card = document.getElementById("validarCard");
+  if(!card) return;
+  if(!SESSION || SESSION.role !== "admin"){ card.style.display="none"; return; }
+
+  const pending = DB.deliverables.filter(d=>d.status==="En revision");
+  const countEl = document.getElementById("validarCount");
+  if(countEl) countEl.textContent = pending.length;
+
+  if(pending.length === 0){ card.style.display="none"; return; }
+  card.style.display = "block";
+
+  const rows = pending.map(d=>`
+    <tr>
+      <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,60)}</div></td>
+      <td>${userName(d.assigneeId)}</td>
+      <td>${projectName(d.projectId)}</td>
+      <td>${d.submittedAt ? fmtDate(d.submittedAt) : "—"}</td>
+      <td class="right">
+        <button class="btn small primary" data-approve-del="${d.id}">Aprobar</button>
+        <button class="btn small danger" data-reject-del="${d.id}">Regresar</button>
+      </td>
+    </tr>
+  `).join("");
+  document.getElementById("tableValidar").innerHTML = rows;
+}
+
+/** =========================================================
+ *  RENDER MI ACTIVIDAD (vista usuario)
+ *  ========================================================= */
+function renderMiActividad(){
+  if(!SESSION || SESSION.role !== "user") return;
+  const userId = SESSION.userId;
+  const user = DB.users.find(u=>u.id===userId);
+  if(!user) return;
+
+  document.getElementById("miActTitle").textContent = "Mis Actividades - " + user.name;
+  document.getElementById("miActSubtitle").textContent = user.role + " · " + user.team;
+
+  const myDels = DB.deliverables.filter(d=>d.assigneeId===userId);
+  const approved = myDels.filter(d=>d.status==="Aprobado").length;
+  const overdue = myDels.filter(d=>d.status!=="Aprobado"&&d.due&&d.due<todayISO()).length;
+  const pending = myDels.filter(d=>d.status!=="Aprobado"&&d.status!=="En revision").length;
+  const inReview = myDels.filter(d=>d.status==="En revision").length;
+  const pct = myDels.length ? Math.round((approved/myDels.length)*100) : 0;
+  const level = pct>=85?"ok":pct>=70?"warn":"bad";
+
+  document.getElementById("miActKpis").innerHTML = `
+    <div class="card kpi ${level}"><div class="label">Mi cumplimiento</div><div class="value">${pct}%</div></div>
+    <div class="card kpi ${pending>0?"warn":"ok"}"><div class="label">Pendientes</div><div class="value">${pending}</div></div>
+    <div class="card kpi ${inReview>0?"ok":"gray"}"><div class="label">En revision</div><div class="value">${inReview}</div></div>
+    <div class="card kpi ${overdue>0?"bad":"ok"}"><div class="label">Vencidos</div><div class="value">${overdue}</div></div>
+  `;
+
+  // Deliverables table
+  const t = todayISO();
+  const delRows = myDels
+    .sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"))
+    .map(d=>{
+      const canSubmit = d.status!=="Aprobado" && d.status!=="En revision";
+      return `<tr>
+        <td>${statusTag(d.status, d.due)}</td>
+        <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,60)}</div></td>
+        <td>${projectName(d.projectId)}</td>
+        <td>${d.due?fmtDate(d.due):"—"}</td>
+        <td class="right">
+          ${canSubmit?`<button class="btn small primary" data-submit-del="${d.id}">Marcar terminado</button>`:""}
+          ${d.status==="En revision"?`<span class="tag blue">Enviado - pendiente validacion</span>`:""}
+          ${d.status==="Aprobado"?`<span class="tag ok">Aprobado</span>`:""}
+        </td>
+      </tr>`;
+    }).join("");
+  document.getElementById("tableMiDels").innerHTML = delRows || `<tr><td colspan="5" class="muted small">No tienes entregables asignados.</td></tr>`;
+
+  // Routines today
+  const myRuns = DB.routineRuns.filter(r=>r.date===t&&r.assigneeId===userId);
+  const rutRows = myRuns.map(rr=>{
+    const r = DB.routines.find(x=>x.id===rr.routineId);
+    if(!r) return "";
+    const done = rr.status==="Completada";
+    return `<tr>
+      <td><b>${r.name}</b></td>
+      <td><span class="tag gray">${r.frequency}</span></td>
+      <td>${done?`<span class="tag ok">Completada</span>`:`<span class="tag warn">Pendiente</span>`}</td>
+      <td class="right">${!done?`<button class="btn small primary" data-run-r="${r.id}">Marcar completada</button>`:""}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("tableMiRut").innerHTML = rutRows || `<tr><td colspan="4" class="muted small">Sin rutinas para hoy.</td></tr>`;
+}
+
 /** =========================================================
  *  TOGGLE DASHBOARD SECTIONS
  *  ========================================================= */
@@ -3134,11 +3336,17 @@ function applyRoleUI(){
   });
 
   // Show only user-relevant nav
+  const navMiAct = document.getElementById("navMiActividad");
   if(!isAdmin){
     document.querySelectorAll("#nav button[data-view]").forEach(btn=>{
-      const allowed = ["dashboard","calendar"];
+      const allowed = ["dashboard","calendar","miactividad"];
       btn.style.display = allowed.includes(btn.dataset.view) ? "" : "none";
     });
+    if(navMiAct) navMiAct.style.display = "";
+    // Auto-navigate to Mi Actividad
+    showView("miactividad");
+  } else {
+    if(navMiAct) navMiAct.style.display = "none";
   }
 }
 
