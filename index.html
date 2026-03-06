@@ -831,16 +831,59 @@
 
       <div class="grid kpis" id="miActKpis" style="margin-bottom:12px"></div>
 
+      <!-- TOP VENCIDOS / EN RIESGO -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="flex between wrap" style="cursor:pointer" onclick="toggleSection('miActHotSection','miActHotChev')">
+          <div>
+            <b>Top vencidos / en riesgo</b>
+            <div class="small muted">Tus entregables proximos o vencidos.</div>
+          </div>
+          <span id="miActHotChev" style="color:var(--muted); font-size:16px">&#9660;</span>
+        </div>
+        <div id="miActHotSection">
+          <div class="hr"></div>
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Entregable</th>
+                  <th>Proyecto</th>
+                  <th>Fecha</th>
+                  <th>Bloqueo</th>
+                  <th class="right">Accion</th>
+                </tr>
+              </thead>
+              <tbody id="tableMiHot"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TODOS MIS ENTREGABLES -->
       <div class="card" style="margin-bottom:12px">
         <div class="flex between wrap" style="cursor:pointer" onclick="toggleSection('miActDelsSection','miActDelsChev')">
           <div>
-            <b>Mis entregables</b>
-            <div class="small muted">Todos los entregables asignados a ti.</div>
+            <b>Todos mis entregables</b>
+            <div class="small muted">Lista completa de entregables asignados a ti.</div>
           </div>
           <span id="miActDelsChev" style="color:var(--muted); font-size:16px">&#9660;</span>
         </div>
         <div id="miActDelsSection">
           <div class="hr"></div>
+          <div class="flex wrap" style="gap:8px; margin-bottom:10px">
+            <select class="input" id="miActFilterStatus" style="min-width:160px">
+              <option value="">Todos los estados</option>
+              <option>Pendiente</option>
+              <option>En progreso</option>
+              <option>En revision</option>
+              <option>Aprobado</option>
+              <option>Bloqueado</option>
+            </select>
+            <select class="input" id="miActFilterProject" style="min-width:180px">
+              <option value="">Todos los proyectos</option>
+            </select>
+          </div>
           <div style="overflow:auto">
             <table>
               <thead>
@@ -858,6 +901,7 @@
         </div>
       </div>
 
+      <!-- MIS RUTINAS -->
       <div class="card">
         <div class="flex between wrap" style="cursor:pointer" onclick="toggleSection('miActRutSection','miActRutChev')">
           <div>
@@ -3141,22 +3185,21 @@ function renderValidar(){
 function renderMiActividad(){
   if(!SESSION || SESSION.role !== "user") return;
 
-  // Filter deliverables by assignee name matching session name
-  const myDels = DB.deliverables.filter(d => userName(d.assigneeId) === SESSION.name);
-  const myRutinas = DB.routines.filter(r => userName(r.assigneeId) === SESSION.name);
+  const myName = SESSION.name;
   const t = todayISO();
+  const allMyDels = DB.deliverables.filter(d => userName(d.assigneeId) === myName);
+  const user = DB.users.find(u=>u.name===myName);
 
-  const user = DB.users.find(u=>u.name===SESSION.name);
-  document.getElementById("miActTitle").textContent = "Mis Actividades - " + SESSION.name;
+  document.getElementById("miActTitle").textContent = "Mis Actividades - " + myName;
   document.getElementById("miActSubtitle").textContent = user ? (user.role + " · " + user.team) : "";
 
-  const approved = myDels.filter(d=>d.status==="Aprobado").length;
-  const overdue = myDels.filter(d=>d.status!=="Aprobado"&&d.due&&d.due<t).length;
-  const pending = myDels.filter(d=>d.status!=="Aprobado"&&d.status!=="En revision").length;
-  const inReview = myDels.filter(d=>d.status==="En revision").length;
-  const pct = myDels.length ? Math.round((approved/myDels.length)*100) : 0;
+  // KPIs
+  const approved = allMyDels.filter(d=>d.status==="Aprobado").length;
+  const overdue = allMyDels.filter(d=>d.status!=="Aprobado"&&d.due&&d.due<t).length;
+  const pending = allMyDels.filter(d=>d.status!=="Aprobado"&&d.status!=="En revision").length;
+  const inReview = allMyDels.filter(d=>d.status==="En revision").length;
+  const pct = allMyDels.length ? Math.round((approved/allMyDels.length)*100) : 0;
   const level = pct>=85?"ok":pct>=70?"warn":"bad";
-
   document.getElementById("miActKpis").innerHTML = `
     <div class="card kpi ${level}"><div class="label">Mi cumplimiento</div><div class="value">${pct}%</div></div>
     <div class="card kpi ${pending>0?"warn":"ok"}"><div class="label">Pendientes</div><div class="value">${pending}</div></div>
@@ -3164,25 +3207,71 @@ function renderMiActividad(){
     <div class="card kpi ${overdue>0?"bad":"ok"}"><div class="label">Vencidos</div><div class="value">${overdue}</div></div>
   `;
 
-  const delRows = myDels
-    .sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"))
-    .map(d=>{
-      const canSubmit = d.status!=="Aprobado" && d.status!=="En revision";
-      return `<tr>
-        <td>${statusTag(d.status, d.due)}</td>
-        <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,60)}</div></td>
-        <td>${projectName(d.projectId)}</td>
-        <td>${d.due?fmtDate(d.due):"—"}</td>
-        <td class="right">
-          ${canSubmit?`<button class="btn small primary" data-submit-del="${d.id}">Marcar terminado</button>`:""}
-          ${d.status==="En revision"?`<span class="tag blue">Pendiente validacion</span>`:""}
-          ${d.status==="Aprobado"?`<span class="tag ok">Aprobado</span>`:""}
-        </td>
-      </tr>`;
-    }).join("");
-  document.getElementById("tableMiDels").innerHTML = delRows || `<tr><td colspan="5" class="muted small">No tienes entregables asignados.</td></tr>`;
+  // TOP VENCIDOS / EN RIESGO
+  const active = allMyDels.filter(d=>d.status!=="Aprobado");
+  const hotScored = active.map(d=>{
+    const overdueDays = d.due ? Math.max(0, daysBetween(d.due, t)) : 0;
+    const dueIn = d.due ? daysBetween(t, d.due) : 9999;
+    const risk = (overdueDays>0?1000+overdueDays:(dueIn>=0&&dueIn<=3?100-dueIn:0))+(d.blocked?500:0);
+    return {d, risk, overdueDays, dueIn};
+  }).filter(x=>x.risk>0).sort((a,b)=>b.risk-a.risk).slice(0,8);
 
-  const myRuns = DB.routineRuns.filter(r=>r.date===t && userName(r.assigneeId)===SESSION.name);
+  const hotRows = hotScored.map(x=>{
+    const d = x.d;
+    const dateHint = d.due ? (x.overdueDays>0?`Vencido ${x.overdueDays}d`:`En ${x.dueIn}d`) : "—";
+    const canSubmit = d.status!=="Aprobado"&&d.status!=="En revision";
+    return `<tr>
+      <td>${statusTag(d.status,d.due)}</td>
+      <td><b>${d.title}</b></td>
+      <td>${projectName(d.projectId)}</td>
+      <td>${d.due?`${fmtDate(d.due)}<div class="small muted">${dateHint}</div>`:"—"}</td>
+      <td>${d.blocked?`<span class="tag bad">Si</span>`:`<span class="tag gray">No</span>`}</td>
+      <td class="right">
+        ${canSubmit?`<button class="btn small primary" data-submit-del="${d.id}">Marcar terminado</button>`:""}
+        ${d.status==="En revision"?`<span class="tag blue">Pendiente validacion</span>`:""}
+      </td>
+    </tr>`;
+  }).join("");
+  document.getElementById("tableMiHot").innerHTML = hotRows || `<tr><td colspan="6" class="muted small">Sin entregables en riesgo.</td></tr>`;
+
+  // Populate project filter
+  const projSel = document.getElementById("miActFilterProject");
+  if(projSel && projSel.options.length<=1){
+    const myProjects = [...new Set(allMyDels.map(d=>d.projectId).filter(Boolean))];
+    myProjects.forEach(pid=>{
+      const opt = document.createElement("option");
+      opt.value = pid; opt.textContent = projectName(pid);
+      projSel.appendChild(opt);
+    });
+  }
+
+  // TODOS MIS ENTREGABLES with filters
+  const statusFilter = document.getElementById("miActFilterStatus")?.value || "";
+  const projFilter = document.getElementById("miActFilterProject")?.value || "";
+
+  const filtered = allMyDels
+    .filter(d=>!statusFilter||d.status===statusFilter)
+    .filter(d=>!projFilter||d.projectId===projFilter)
+    .sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"));
+
+  const delRows = filtered.map(d=>{
+    const canSubmit = d.status!=="Aprobado"&&d.status!=="En revision";
+    return `<tr>
+      <td>${statusTag(d.status,d.due)}</td>
+      <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,60)}</div></td>
+      <td>${projectName(d.projectId)}</td>
+      <td>${d.due?fmtDate(d.due):"—"}</td>
+      <td class="right">
+        ${canSubmit?`<button class="btn small primary" data-submit-del="${d.id}">Marcar terminado</button>`:""}
+        ${d.status==="En revision"?`<span class="tag blue">Pendiente validacion</span>`:""}
+        ${d.status==="Aprobado"?`<span class="tag ok">Aprobado</span>`:""}
+      </td>
+    </tr>`;
+  }).join("");
+  document.getElementById("tableMiDels").innerHTML = delRows || `<tr><td colspan="5" class="muted small">No hay entregables con ese filtro.</td></tr>`;
+
+  // RUTINAS
+  const myRuns = DB.routineRuns.filter(r=>r.date===t && userName(r.assigneeId)===myName);
   const rutRows = myRuns.map(rr=>{
     const r = DB.routines.find(x=>x.id===rr.routineId);
     if(!r) return "";
@@ -3358,6 +3447,12 @@ function applyRoleUI(){
 document.getElementById("btnLogin").addEventListener("click", doLogin);
 document.getElementById("loginUser").addEventListener("keydown", e=>{ if(e.key==="Enter") document.getElementById("loginPass").focus(); });
 document.getElementById("loginPass").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
+
+// Filters for Mi Actividad
+["miActFilterStatus","miActFilterProject"].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el){ el.addEventListener("change", renderMiActividad); }
+});
 
 /** ---------------------------
  *  Init
