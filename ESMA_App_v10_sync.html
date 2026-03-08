@@ -1,0 +1,1814 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ESMA Industrial · Proyectos</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b;
+    --border:#e5e7eb; --brand:#0b1220; --primary:#0f172a;
+    --shadow:0 10px 30px rgba(2,6,23,.10);
+    --radius:18px;
+    --btn:#0f172a; --btnText:#fff;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text); }
+  a{ color:inherit; text-decoration:none; }
+
+  .topbar{ position:sticky; top:0; z-index:30; background:rgba(255,255,255,.78); backdrop-filter: blur(10px); border-bottom:1px solid var(--border); }
+  .topin{ max-width:1560px; margin:0 auto; padding:12px 16px; display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+  .brand{ display:flex; gap:10px; align-items:center; min-width:260px; }
+  .brand .logo{ width:38px; height:38px; border-radius:12px; background:var(--brand); display:grid; place-items:center; color:#fff; font-weight:900; letter-spacing:.5px; }
+  .brand b{ display:block; font-size:14px; }
+  .brand span{ display:block; font-size:12px; color:var(--muted); margin-top:1px; }
+  .nav{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .rightbar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+  .pill{ display:inline-flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid var(--border); background:#fff; border-radius:999px; font-size:12px; color:var(--muted); }
+
+  .btn{ border:1px solid var(--border); background:#fff; color:var(--text); padding:9px 12px; border-radius:12px; cursor:pointer; font-weight:800; font-size:13px; display:inline-flex; align-items:center; gap:8px; }
+  .btn:hover{ box-shadow:0 6px 18px rgba(2,6,23,.08); }
+  .btn.primary{ background:var(--btn); color:var(--btnText); border-color:transparent; }
+  .btn.small{ padding:7px 10px; font-size:12px; border-radius:11px; }
+  .btn.danger{ background:#fff; border-color:#fecaca; color:#991b1b; }
+  .iconBtn{ width:34px; height:34px; border-radius:12px; border:1px solid var(--border); background:#fff; cursor:pointer; display:grid; place-items:center; font-weight:900; }
+  .iconBtn:hover{ box-shadow:0 6px 18px rgba(2,6,23,.08); }
+  .menu{ position:relative; }
+  details.menu > summary{ list-style:none; }
+  details.menu > summary::-webkit-details-marker{ display:none; }
+  .menuDrop{ position:absolute; right:0; top:44px; width:290px; background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:10px; display:flex; flex-direction:column; gap:8px; z-index:40; }
+  .menuTitle{ font-size:12px; color:var(--muted); font-weight:950; margin:2px 2px 4px; }
+
+  .wrap{ max-width:1560px; margin:0 auto; padding:14px 16px 26px; }
+  .grid{ display:grid; grid-template-columns: 360px 1fr; gap:14px; align-items:start; }
+  @media (max-width: 1100px){ .grid{ grid-template-columns: 1fr; } }
+
+  .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow: var(--shadow); }
+  .head{ padding:14px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .head b{ font-size:16px; }
+  .head .sub{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .pad{ padding:14px 16px; }
+  .muted{ color:var(--muted); }
+  .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .right{ margin-left:auto; }
+
+  .segbox{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; background:#f8fafc; border:1px solid var(--border); padding:8px; border-radius:16px; }
+  .seg{ text-align:center; padding:10px 8px; border-radius:12px; border:1px solid transparent; font-weight:950; font-size:12px; cursor:pointer; color:var(--muted); background:transparent; }
+  .seg.active{ background:#fff; border-color:var(--border); color:var(--text); box-shadow:0 6px 18px rgba(2,6,23,.06); }
+  .field{ display:flex; align-items:center; gap:8px; border:1px solid var(--border); border-radius:14px; padding:9px 10px; background:#fff; }
+  .field input, .field select{ border:0; outline:0; width:100%; font-size:13px; background:transparent; }
+  select{ border:1px solid var(--border); border-radius:12px; padding:9px 10px; font-weight:800; }
+  .list{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+  .proj{ border:1px solid var(--border); border-radius:14px; padding:10px 10px; display:flex; gap:10px; cursor:pointer; background:#fff; }
+  .proj:hover{ box-shadow:0 6px 18px rgba(2,6,23,.08); }
+  .dot{ width:10px; height:10px; border-radius:99px; margin-top:5px; }
+  .dot.ok{ background:#22c55e; } .dot.no{ background:#f59e0b; } .dot.done{ background:#64748b; }
+  .proj b{ font-size:13px; } .proj .meta{ font-size:12px; color:var(--muted); margin-top:2px; }
+
+  .tabs{ display:flex; gap:8px; flex-wrap:wrap; }
+  .tab{ padding:8px 10px; border-radius:999px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:950; font-size:12px; color:var(--muted); }
+  .tab.active{ background:#0f172a; color:#fff; border-color:transparent; }
+  .table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .table th,.table td{ border-bottom:1px solid var(--border); padding:10px 8px; vertical-align:top; }
+  .table th{ text-align:left; font-size:12px; color:var(--muted); letter-spacing:.02em; text-transform:uppercase; }
+  .table input,.table select,.table textarea{ width:100%; border:1px solid var(--border); border-radius:12px; padding:8px 10px; font-weight:750; font-size:13px; background:#fff; }
+  .table textarea{ resize:vertical; min-height:38px; }
+  .kpi{ display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:10px; }
+  @media (max-width: 900px){ .kpi{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  .kpi .box{ border:1px solid var(--border); border-radius:16px; padding:12px; background:#fff; }
+  .kpi .box .t{ font-size:12px; color:var(--muted); font-weight:900; }
+  .kpi .box .v{ font-size:18px; font-weight:950; margin-top:4px; }
+
+  .drawerOverlay{ position:fixed; inset:0; background:rgba(2,6,23,.35); display:none; align-items:stretch; justify-content:flex-end; z-index:50; }
+  .drawer{ width:520px; max-width:92vw; height:100vh; background:#fff; border-left:1px solid var(--border); box-shadow:-18px 0 45px rgba(2,6,23,.22); display:flex; flex-direction:column; }
+  .drawerHead{ padding:14px 14px; border-bottom:1px solid var(--border); display:flex; align-items:flex-start; gap:10px; }
+  .drawerHead b{ font-size:15px; display:block; } .drawerHead .sub{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .drawerBody{ padding:14px; overflow:auto; height:calc(100vh - 64px); }
+  .chips{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .chip{ padding:8px 10px; border-radius:999px; border:1px solid var(--border); background:#fff; cursor:pointer; font-weight:950; font-size:12px; color:var(--muted); }
+  .chip.active{ background:#0f172a; color:#fff; border-color:transparent; }
+
+  .calTop{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+  .calGrid{ display:grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap:8px; }
+  .calCell{ border:1px solid var(--border); border-radius:14px; padding:10px; background:#fff; min-height:78px; cursor:pointer; }
+  .calCell:hover{ box-shadow:0 6px 18px rgba(2,6,23,.08); }
+  .calCell .d{ font-weight:950; font-size:12px; color:var(--muted); }
+  .badge{ display:inline-flex; align-items:center; gap:6px; padding:4px 7px; border-radius:999px; border:1px solid var(--border); background:#fff; font-weight:900; font-size:11px; color:var(--muted); margin-top:6px; }
+  .badge.ok{ border-color:#bbf7d0; color:#14532d; background:#f0fdf4; }
+  .badge.warn{ border-color:#fed7aa; color:#7c2d12; background:#fff7ed; }
+  .badge.gray{ border-color:#e5e7eb; color:#334155; background:#f8fafc; }
+
+  .modal{ position:fixed; inset:0; background:rgba(2,6,23,.55); display:none; align-items:center; justify-content:center; z-index:60; }
+  .modal .box{ width:520px; max-width:92vw; background:#fff; border:1px solid var(--border); border-radius:22px; box-shadow:var(--shadow); padding:14px; }
+  .modal .box h2{ margin:6px 0 2px; font-size:18px; }
+  .modal .box p{ margin:0 0 12px; color:var(--muted); font-size:13px; }
+  .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+  @media (max-width: 560px){ .grid2{ grid-template-columns:1fr; } }
+
+  .drawer.full{ width:100vw; max-width:100vw; }
+  .drawer.full .drawerBody{ padding:16px 18px; }
+  .drawer.full .drawerHead{ padding:14px 18px; }
+  .drawer.full .drawerBody .card{ max-width:1200px; margin:0 auto; }
+  /* Mejor legibilidad en Operación */
+  #tbTasks textarea[data-f="title"], #tbInst textarea[data-f="title"], #tbPurch textarea[data-f="title"]{
+    min-width: 280px;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topin">
+    <div class="brand">
+      <div class="logo">E</div>
+      <div style="min-width:0;">
+        <b>Proyectos ESMA INDUSTRIAL</b>
+        <span>Proyectos · Compras · Instalaciones · Cotizador</span>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button class="btn small primary" id="navProjects">📁 Proyectos</button>
+      <button class="btn small" id="navOpenDrawer">🧩 Panel</button>
+    </div>
+
+    <div class="rightbar">
+      <span class="pill" id="whoami">—</span>
+      <button class="btn small" id="btnLogout">Salir</button>
+
+      <details class="menu" id="toolsMenu">
+        <summary class="btn small">☰ Herramientas</summary>
+        <div class="menuDrop">
+          <div class="menuTitle">Acciones</div>
+          <button class="btn small" id="btnEmails">✉ Correos</button>
+          <button class="btn small" id="btnReports">📊 Reportes</button>
+          <button class="btn small" id="btnExportQuote">🧾 Exportar cotización</button>
+          <div class="menuTitle">Sincronización Google Sheets</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <input id="gsUrlInput" placeholder="URL Apps Script..." style="flex:1;min-width:0;padding:7px 10px;border:1px solid var(--border);border-radius:10px;font-size:12px">
+            <button class="btn small primary" id="btnSaveGsUrl">Guardar</button>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn small" id="btnGsPush">⬆ Subir</button>
+            <button class="btn small" id="btnGsPull">⬇ Descargar</button>
+            <button class="btn small danger" id="btnResetSync" title="Borra datos locales y descarga desde Sheets">↺ Resetear</button>
+            <span id="syncStatus" style="font-size:11px;color:var(--muted);align-self:center"></span>
+          </div>
+          <div class="menuTitle">Datos</div>
+          <button class="btn small" id="btnBackup">⬇ Respaldo local</button>
+          <button class="btn small" id="btnRestore">⬆ Restaurar local</button>
+          <input type="file" id="restoreFile" accept="application/json" style="display:none">
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="grid">
+    <div class="card">
+      <div class="head">
+        <div>
+          <b>Proyectos</b>
+          <div class="sub">Filtra y selecciona.</div>
+        </div>
+      </div>
+      <div class="pad">
+        <div class="segbox">
+          <div class="seg active" id="segAuth">Autorizados</div>
+          <div class="seg" id="segNoAuth">No autorizados</div>
+          <div class="seg" id="segDone">Terminados</div>
+        </div>
+
+        <div style="height:10px;"></div>
+        <div class="row">
+          <select id="sortProjects" style="flex:1; min-width:200px;">
+            <option value="delivery">Orden: Entrega</option>
+            <option value="created">Orden: Creación</option>
+            <option value="name">Orden: Nombre</option>
+            <option value="cost">Orden: Total autorizado</option>
+          </select>
+          <button class="btn small" id="btnClearFilters">Limpiar</button>
+        </div>
+
+        <div style="height:10px;"></div>
+        <div class="field">
+          <span class="muted">🔎</span>
+          <input id="search" placeholder="Buscar proyecto..."/>
+        </div>
+
+        <div style="height:10px;"></div>
+        <button class="btn primary" style="width:100%;" id="btnNewProject">＋ Nuevo proyecto</button>
+
+        <div class="list" id="projectsList"></div>
+        <div class="muted" style="font-size:12px; margin-top:10px;">
+          Regla: “Autorizado” = tiene al menos una cotización autorizada.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="head">
+        <div>
+          <b id="mainTitle">Selecciona un proyecto</b>
+          <div class="sub" id="mainSub">Elige a la izquierda.</div>
+        </div>
+        <div class="row">
+          <button class="btn small" id="btnOpenDrawer">🧩 Panel</button>
+          <button class="btn small primary" id="btnNewQuote" style="display:none;">＋ Cotización</button>
+        </div>
+      </div>
+
+      <div class="pad">
+        <div class="tabs" id="mainTabs" style="display:none;">
+          <div class="tab active" data-tab="overview">Resumen</div>
+          <div class="tab" data-tab="quotes">Cotizador</div>
+          <div class="tab" data-tab="ops">Operación</div>
+        </div>
+        <div style="height:12px;"></div>
+
+        <div id="mainContent"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="drawerOverlay" id="drawerOverlay">
+  <div class="drawer" role="dialog" aria-modal="true">
+    <div class="drawerHead">
+      <div style="min-width:0;">
+        <b id="drawerTitle">Panel</b>
+        <div class="sub" id="drawerSub">Calendario · Ventas · Base de datos</div>
+      </div>
+      <div class="right"></div>
+      <button class="iconBtn" id="drawerClose" title="Cerrar">✕</button>
+    </div>
+    <div class="drawerBody">
+      <div class="chips">
+        <div class="chip active" data-chip="calendar">📅 Calendario</div>
+        <div class="chip" data-chip="sales">📈 Ventas</div>
+        <div class="chip" data-chip="db">🗄 Base de datos</div>
+        <div class="chip" data-chip="breakeven">⚖️ Punto de equilibrio</div>
+      </div>
+      <div id="drawerContent"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="loginModal">
+  <div class="box">
+    <h2>Iniciar sesión</h2>
+    <p>Acceso por cuenta. Admin puede gestionar usuarios y bases.</p>
+    <div class="grid2">
+      <div class="field"><span class="muted">📧</span><input id="loginEmail" placeholder="correo@empresa.com"></div>
+      <div class="field"><span class="muted">🔒</span><input id="loginPass" placeholder="contraseña" type="password"></div>
+    </div>
+    <div style="height:10px;"></div>
+    <div class="row">
+      <button class="btn primary" id="btnLogin">Entrar</button>
+      <span class="muted" id="loginMsg"></span>
+      <div class="right"></div>
+      <button class="btn" id="btnSeedDemo">Cargar demo</button>
+    </div>
+    <div class="muted" style="font-size:12px; margin-top:10px;">
+      Demo: <b>admin@esma</b> / <b>1234</b>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = "esma_app_b_v1";
+const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const DOW = ["L","M","M","J","V","S","D"];
+const $ = (id)=>document.getElementById(id);
+const on = (el, ev, fn)=> el && el.addEventListener(ev, fn);
+const money = (n)=> (Number(n||0)).toLocaleString("es-MX", {minimumFractionDigits:2, maximumFractionDigits:2});
+function uid(){ return Math.random().toString(16).slice(2)+Date.now().toString(16); }
+function todayISO(){ const d=new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10); }
+function parseISO(s){ if(!s) return null; const d=new Date(s+"T00:00:00"); return isNaN(d.getTime())? null : d; }
+
+function defaultDB(){
+  return {
+    settings:{
+      users:[{id:"u_admin", email:"esma@esma.com", pass:"Esma2025", role:"admin", name:"Administrador ESMA"}],
+      session:{ userId:"" },
+      emails:[{label:"Compras", to:"compras@esma", cc:"", bcc:""},{label:"Instalaciones", to:"instalaciones@esma", cc:"", bcc:""}],
+      routeDB:[{id:"rt_lm", name:"Ruta LM", type:"LM", costPerHour:350}],
+      materialDB:[{id:"m_mel19", desc:"Melamina 19mm", cost:980, vendor:"Proveedor", uom:"pza"}],
+      adminPercent: 12,
+      breakEven: {
+        month: (new Date().toISOString().slice(0,7)),
+        // Variables/Fijos manuales
+        varCosts: { thirdparty: 0, rawMaterial: 0, directLabor: 0, factoryIndirect: 0 },
+        salesVars: { commissions: 0, freight: 0, marketing: 0, serviceWarranty: 0, samples: 0, others: 0 },
+        opVars: { productWarranty: 0, prototypes: 0, liquidations: 0 },
+        fixedOp: { eng: 0, indirect: 0, logistics: 0, plantInst: 0, maintenance: 0, otherPlant: 0 },
+        fixedAdmin: { finance: 0, hr: 0, it: 0, adminInst: 0, otherAdmin: 0, direction: 0, depreciation: 0 }
+      },
+    },
+    projects:[], quotes:[], installs:[], purchases:[], tasks:[]
+  };
+}
+let db=null;
+function normalizeDB(){
+  db = db || defaultDB();
+  db.settings = db.settings || {};
+  db.settings.users = Array.isArray(db.settings.users)? db.settings.users : [];
+  db.settings.session = db.settings.session || {userId:""};
+  db.settings.emails = Array.isArray(db.settings.emails)? db.settings.emails : [];
+  db.settings.routeDB = Array.isArray(db.settings.routeDB)? db.settings.routeDB : [];
+  db.settings.materialDB = Array.isArray(db.settings.materialDB)? db.settings.materialDB : [];
+  db.settings.adminPercent = Number(db.settings.adminPercent ?? 12);
+  db.settings.breakEven = db.settings.breakEven || defaultDB().settings.breakEven;
+  db.projects = Array.isArray(db.projects)? db.projects : [];
+  db.quotes = Array.isArray(db.quotes)? db.quotes : [];
+  db.installs = Array.isArray(db.installs)? db.installs : [];
+  db.purchases = Array.isArray(db.purchases)? db.purchases : [];
+  db.tasks = Array.isArray(db.tasks)? db.tasks : [];
+  db.settings.routeDB.forEach(r=>{ r.costPerHour = Number(r.costPerHour||0); r.breakdown = r.breakdown || {renta:0, mod:0, moi:0, indirectos:0, luz:0, otros:0}; });
+  db.projects.forEach(p=>{ p.photos = p.photos||[]; });
+  db.settings.materialDB.forEach(m=>{ m.cost = Number(m.cost||0); });
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    db = raw ? JSON.parse(raw) : defaultDB();
+  }catch(e){ db=defaultDB(); }
+  normalizeDB();
+}
+// ============================================================
+//  GOOGLE SHEETS SYNC
+// ============================================================
+const GS_KEY = "esma_gs_url";
+let GS_URL = localStorage.getItem(GS_KEY) || "";
+let _syncInProgress = false;
+let _lastSaveTime = 0;
+
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  _lastSaveTime = Date.now();
+  if(GS_URL){ clearTimeout(save._t); save._t = setTimeout(gsPush, 300); }
+}
+
+function syncStatusUpdate(msg, color){
+  const el = document.getElementById("syncStatus");
+  if(el){ el.textContent = msg; el.style.color = color||"var(--muted)"; }
+}
+
+async function gsPush(){
+  if(!GS_URL || _syncInProgress) return;
+  _syncInProgress = true;
+  syncStatusUpdate("Sincronizando...", "orange");
+  try {
+    const payload = JSON.stringify({action:"save", data:db});
+    await fetch(GS_URL, {method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain"}, body:payload});
+    syncStatusUpdate("✓ Sync " + new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"}), "green");
+  } catch(e) {
+    syncStatusUpdate("⚠ Sin conexión", "orange");
+  } finally { _syncInProgress = false; }
+}
+
+async function gsPullOnBoot(){
+  if(!GS_URL) return;
+  _syncInProgress = true;
+  syncStatusUpdate("Descargando...", "orange");
+  try {
+    const res = await fetch(GS_URL + "?action=load");
+    const json = await res.json();
+    if(json.ok && json.data){
+      db = json.data;
+      normalizeDB();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+      renderProjectsList(); renderMain();
+      syncStatusUpdate("↓ Sincronizado", "green");
+    } else if(json.ok && !json.data){
+      syncStatusUpdate("✓ Conectado", "green");
+      _syncInProgress = false;
+      await gsPush();
+      return;
+    } else { throw new Error(json.error||"Error"); }
+  } catch(e) {
+    syncStatusUpdate("⚠ Error al descargar", "orange");
+  } finally { _syncInProgress = false; }
+}
+
+// Auto-sync every 30s if no recent save
+setInterval(()=>{ if(GS_URL && !_syncInProgress && (Date.now()-_lastSaveTime)>60000) gsPullOnBoot(); }, 30000);
+
+function currentUser(){
+  const id = db.settings.session?.userId;
+  return db.settings.users.find(u=>u.id===id) || null;
+}
+function login(email, pass){
+  const u = db.settings.users.find(x=>x.email.toLowerCase()===String(email||"").toLowerCase() && x.pass===String(pass||""));
+  if(!u) return null;
+  db.settings.session.userId = u.id; save(); return u;
+}
+function logout(){ db.settings.session.userId=""; save(); location.reload(); }
+
+let seg="auth", sortMode="delivery", searchTerm="", selectedProjectId="", mainTab="overview", drawerMode="calendar";
+let salesCursor=new Date(); salesCursor.setDate(1);
+let calCursor=new Date(); calCursor.setDate(1);
+let calSelectedDay="";
+let calFilter={delivery:true, install:true, purchase:true, task:true};
+
+
+function authorizedSalesByMonth(monthYYYYMM){
+  // monthYYYYMM: 'YYYY-MM'
+  const out={manufactured:0, thirdparty:0, services:0, net:0};
+  const inMonth = (d)=> typeof d==="string" && d.slice(0,7)===monthYYYYMM;
+  // Use project delivery date as the sales date (same criterio que Ventas). If no delivery, ignore.
+  db.quotes.filter(q=>q.status==="authorized").forEach(q=>{
+    const p=db.projects.find(x=>x.id===q.projectId);
+    const d=(p&&p.delivery)||q.delivery||"";
+    if(!inMonth(d)) return;
+    const t=(q.saleType||"manufactured");
+    const tot=quoteTotal(q);
+    if(t==="thirdparty") out.thirdparty+=tot;
+    else if(t==="services") out.services+=tot;
+    else out.manufactured+=tot;
+    out.net+=tot;
+  });
+  return out;
+}
+
+function quoteTotal(q){
+  const prod=(q.products||[]).reduce((s,r)=>s+Number(r.qty||0)*Number(r.unitPrice||0),0);
+  const routes=(q.routes||[]).reduce((s,r)=>s+Number(r.hours||0)*Number(r.rate||0),0);
+  const extras=(q.extras||[]).reduce((s,r)=>s+Number(r.amount||0),0);
+  return prod+routes+extras;
+}
+
+function quoteBreakdown(q){
+  const mp=(q.products||[]).reduce((s,r)=>s+Number(r.qty||0)*Number(r.unitPrice||0),0);
+  const ruta=(q.routes||[]).reduce((s,r)=>s+Number(r.hours||0)*Number(r.rate||0),0);
+  const extra=(q.extras||[]).reduce((s,r)=>s+Number(r.amount||0),0);
+  const total=mp+ruta+extra;
+  return {mp,ruta,extra,total};
+}
+function quoteSellTotals(q){
+  const b=quoteBreakdown(q);
+  const adminPct=Number(db.settings.adminPercent ?? 12);
+  const admin = b.total * (adminPct/100);
+  const costoConAdmin = b.total + admin;
+  const pct=Number(q.marginPct ?? 25);
+  const util = costoConAdmin * (pct/100);
+  const venta = costoConAdmin + util;
+  const retorno = venta - b.ruta - b.extra;
+  return {costo:b.total, mp:b.mp, ruta:b.ruta, extra:b.extra, admin, adminPct, costoConAdmin, pct, util, venta, retorno};
+}
+function renderQuoteBreakdown(q){
+  if(!$("qMarginPct")) return;
+  $("qMarginPct").value = Number(q.marginPct ?? 25);
+  const t = quoteSellTotals(q);
+  $("bdCosto").textContent = "$"+money(t.costo);
+  $("bdMP").textContent = "$"+money(t.mp);
+  $("bdRuta").textContent = "$"+money(t.ruta);
+  $("bdExtra").textContent = "$"+money(t.extra);
+  $("bdAdmin").textContent = "$"+money(t.admin)+" ("+t.adminPct+"%)";
+  $("bdCostoAdmin").textContent = "$"+money(t.costoConAdmin);
+  $("bdUtil").textContent = "$"+money(t.util);
+  $("bdVenta").textContent = "$"+money(t.venta);
+  $("bdRetorno").textContent = "$"+money(t.retorno);
+}
+
+
+function projectAuthorizedTotal(pid){
+  return db.quotes.filter(q=>q.projectId===pid && q.status==="authorized").reduce((s,q)=>s+quoteTotal(q),0);
+}
+function projectHasAuthorized(pid){ return db.quotes.some(q=>q.projectId===pid && q.status==="authorized"); }
+function projectIsDone(pid){
+  const p = db.projects.find(x=>x.id===pid);
+  const tasks=db.tasks.filter(t=>t.projectId===pid);
+  const allDone = tasks.length>0 && tasks.every(t=>!!t.done);
+  return projectHasAuthorized(pid) && (allDone || !!p?.manualDone);
+}
+
+function escapeHTML(s){ return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+function escapeAttr(s){ return String(s??"").replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+
+function setSeg(newSeg){
+  seg=newSeg;
+  ["segAuth","segNoAuth","segDone"].forEach(id=>$(id).classList.remove("active"));
+  if(seg==="auth") $("segAuth").classList.add("active");
+  if(seg==="noauth") $("segNoAuth").classList.add("active");
+  if(seg==="done") $("segDone").classList.add("active");
+  renderProjectsList();
+}
+
+function renderProjectsList(){
+  const box=$("projectsList");
+  const term=searchTerm.trim().toLowerCase();
+  const items=db.projects.map(p=>{
+    const auth=projectHasAuthorized(p.id);
+    const done=projectIsDone(p.id);
+    const pseg= done ? "done" : (auth ? "auth" : "noauth");
+    return {...p, __seg:pseg, __authTotal: projectAuthorizedTotal(p.id)};
+  }).filter(p=>{
+    if(seg==="auth" && p.__seg!=="auth") return false;
+    if(seg==="noauth" && p.__seg!=="noauth") return false;
+    if(seg==="done" && p.__seg!=="done") return false;
+    if(term && !(String(p.name||"").toLowerCase().includes(term) || String(p.client||"").toLowerCase().includes(term))) return false;
+    return true;
+  });
+
+  items.sort((a,b)=>{
+    if(sortMode==="name") return String(a.name||"").localeCompare(String(b.name||""));
+    if(sortMode==="created") return String(a.createdAt||"").localeCompare(String(b.createdAt||""));
+    if(sortMode==="cost") return (b.__authTotal - a.__authTotal);
+    return String(a.deliveryDate||"9999-12-31").localeCompare(String(b.deliveryDate||"9999-12-31"));
+  });
+
+  box.innerHTML = items.length ? items.map(p=>{
+    const dotClass = p.__seg==="auth" ? "ok" : (p.__seg==="done" ? "done" : "no");
+    const sub=[p.client?("Cliente: "+p.client):null, p.deliveryDate?("Entrega: "+p.deliveryDate):"Entrega: —", ("$"+money(p.__authTotal)+" autoriz.")].filter(Boolean).join(" · ");
+    return `<div class="proj" data-id="${p.id}"><div class="dot ${dotClass}"></div><div style="min-width:0;"><b>${escapeHTML(p.name||"Sin nombre")}</b><div class="meta">${escapeHTML(sub)}</div></div></div>`;
+  }).join("") : `<div class="muted" style="padding:10px 2px;">Sin proyectos aquí.</div>`;
+
+  box.querySelectorAll(".proj").forEach(el=>on(el,"click", ()=>{ selectedProjectId=el.dataset.id; mainTab="overview"; renderMain(); }));
+}
+
+function renderMain(){
+  const p=db.projects.find(x=>x.id===selectedProjectId)||null;
+  $("btnNewQuote").style.display = p ? "" : "none";
+  $("mainTabs").style.display = p ? "" : "none";
+
+  if(!p){
+    $("mainTitle").textContent="Selecciona un proyecto";
+    $("mainSub").textContent="Elige a la izquierda.";
+    $("mainContent").innerHTML=`<div class="muted">Crea un proyecto para empezar.</div><div style="height:10px;"></div><button class="btn primary" id="ctaNew">＋ Nuevo proyecto</button>`;
+    on($("ctaNew"),"click", createProject);
+    return;
+  }
+
+  $("mainTitle").textContent=p.name||"Proyecto";
+  $("mainSub").textContent = `${p.client?("Cliente: "+p.client+" · "):""}${p.deliveryDate?("Entrega: "+p.deliveryDate):"Entrega: —"}`;
+
+  $("mainTabs").querySelectorAll(".tab").forEach(t=>{
+    t.classList.toggle("active", t.dataset.tab===mainTab);
+    on(t,"click", ()=>{ mainTab=t.dataset.tab; renderMain(); });
+  });
+
+  if(mainTab==="overview") return renderOverview(p);
+  if(mainTab==="quotes") return renderQuotes(p);
+  if(mainTab==="ops") return renderOps(p);
+}
+
+function renderOverview(p){
+  const authTotal=projectAuthorizedTotal(p.id);
+  const quotes=db.quotes.filter(q=>q.projectId===p.id);
+  const tasks=db.tasks.filter(t=>t.projectId===p.id);
+  const doneCount=tasks.filter(t=>t.done).length;
+
+  $("mainContent").innerHTML=`
+    <div class="kpi">
+      <div class="box"><div class="t">Total autorizado</div><div class="v">$${money(authTotal)}</div></div>
+      <div class="box"><div class="t">Cotizaciones</div><div class="v">${quotes.length}</div></div>
+      <div class="box"><div class="t">Tareas completadas</div><div class="v">${doneCount}/${tasks.length||0}</div></div>
+      <div class="box"><div class="t">Estado</div><div class="v">${projectIsDone(p.id)?"Terminado":(projectHasAuthorized(p.id)?"Autorizado":"No autorizado")}</div></div>
+    </div>
+
+    <div style="height:14px;"></div>
+
+    <div class="row" style="align-items:flex-end;">
+      <div class="field" style="flex:1; min-width:260px;"><span class="muted">🏷️</span><input id="pName" value="${escapeAttr(p.name||"")}" placeholder="Nombre del proyecto"></div>
+      <div class="field" style="flex:1; min-width:260px;"><span class="muted">👤</span><input id="pClient" value="${escapeAttr(p.client||"")}" placeholder="Cliente"></div>
+      <div class="field" style="min-width:220px;"><span class="muted">📅</span><input id="pDelivery" value="${escapeAttr(p.deliveryDate||"")}" type="date"></div>
+    </div>
+
+    <div style="height:10px;"></div>
+    <div class="row">
+      <div class="field" style="flex:1;"><span class="muted">📝</span><input id="pNotes" value="${escapeAttr(p.notes||"")}" placeholder="Notas (opcional)"></div>
+      <button class="btn" id="btnSaveP">Guardar</button>
+      <button class="btn danger" id="btnDelP">Eliminar</button>
+    </div>
+
+    <div style="height:14px;"></div>
+
+    <div class="card" style="box-shadow:none;">
+      <div class="pad">
+        <div class="row" style="align-items:center; margin-bottom:10px;">
+          <b>📷 Fotos del lugar</b>
+          <div class="right"></div>
+          <label class="btn small" style="cursor:pointer;">＋ Agregar foto <input type="file" id="photoInput" accept="image/*" multiple style="display:none"></label>
+        </div>
+        <div id="photosGrid" style="display:flex; flex-wrap:wrap; gap:8px;">
+          ${(p.photos||[]).length === 0 ? '<div class="muted" style="font-size:12px;">Sin fotos aún.</div>' : (p.photos||[]).map((ph,i)=>`
+            <div style="position:relative;">
+              <img src="${ph.data}" title="${escapeAttr(ph.name||'')}" style="width:100px;height:100px;object-fit:cover;border-radius:10px;border:1px solid var(--border);cursor:pointer;" data-photo-idx="${i}">
+              <button data-del-photo="${i}" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div style="height:14px;"></div>
+    <div class="row">
+      <button class="btn" id="btnOpenCal">📅 Ver calendario</button>
+      <button class="btn" id="btnOpenSales">📈 Ver ventas</button>
+      <button class="btn" id="btnOpenDB">🗄 Base de datos</button>
+      <button class="btn" id="btnOpenBE">⚖️ Punto de equilibrio</button>
+      <div class="right"></div>
+      <button class="btn primary" id="btnQuickQuote">＋ Cotización</button>
+      <button class="btn" id="btnMarkDone">✅ Marcar terminado</button>
+    </div>
+  `;
+
+  on($("btnSaveP"),"click", ()=>{
+    p.name=$("pName").value.trim()||p.name;
+    p.client=$("pClient").value.trim();
+    p.deliveryDate=$("pDelivery").value||"";
+    p.notes=$("pNotes").value.trim();
+    save(); renderProjectsList(); renderMain();
+  });
+
+  on($("btnDelP"),"click", ()=>{
+    if(!confirm("¿Eliminar el proyecto? Se borrarán cotizaciones y tareas asociadas.")) return;
+    db.projects=db.projects.filter(x=>x.id!==p.id);
+    db.quotes=db.quotes.filter(x=>x.projectId!==p.id);
+    db.tasks=db.tasks.filter(x=>x.projectId!==p.id);
+    db.installs=db.installs.filter(x=>x.projectId!==p.id);
+    db.purchases=db.purchases.filter(x=>x.projectId!==p.id);
+    save(); selectedProjectId=""; renderProjectsList(); renderMain();
+  });
+
+  on($("btnQuickQuote"),"click", ()=>openQuoteEditor(createQuote(p.id)));
+  on($("btnMarkDone"),"click", ()=>{
+    const t = db.tasks.filter(x=>x.projectId===p.id);
+    if(t.length===0){ db.tasks.push({id:uid(), projectId:p.id, date:todayISO(), title:"Cierre de proyecto", done:true}); }
+    db.tasks.filter(x=>x.projectId===p.id).forEach(x=>x.done=true);
+    p.manualDone = true;
+    save(); renderProjectsList(); renderMain();
+    alert("Listo: tareas en OK. Recuerda autorizar al menos una cotización para que aparezca como Terminado.");
+  });
+  on($("btnOpenCal"),"click", ()=>openDrawer("calendar"));
+  on($("btnOpenSales"),"click", ()=>openDrawer("sales"));
+  on($("btnOpenDB"),"click", ()=>openDrawer("db"));
+  on($("btnOpenBE"),"click", ()=>openDrawer("breakeven"));
+}
+
+function renderQuotes(p){
+  const quotes=db.quotes.filter(q=>q.projectId===p.id).sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
+  $("mainContent").innerHTML=`
+    <div class="row">
+      <button class="btn primary" id="btnAddQuote">＋ Nueva cotización</button>
+      <div class="right"></div>
+      <span class="pill">Autorizadas: <b>${quotes.filter(q=>q.status==="authorized").length}</b></span>
+    </div>
+    <div style="height:12px;"></div>
+    <div class="card" style="box-shadow:none;">
+      <div class="pad">
+        <table class="table">
+          <thead><tr><th>Fecha</th><th>Estatus</th><th style="text-align:right;">Total</th><th style="width:160px; text-align:right;">Acciones</th></tr></thead>
+          <tbody>
+            ${quotes.length ? quotes.map(q=>`
+              <tr>
+                <td>${escapeHTML(q.createdAt||"")}</td>
+                <td>${q.status==="authorized"?"<b>Autorizada</b>":"Borrador"}</td>
+                <td style="text-align:right;"><b>$${money(quoteSellTotals(q).venta)}</b></td>
+                <td style="text-align:right;">
+                  <button class="btn small" data-act="edit" data-id="${q.id}">Editar</button>
+                  <button class="btn small ${q.status==="authorized"?"danger":""}" data-act="toggle" data-id="${q.id}">${q.status==="authorized"?"Desautorizar":"Autorizar"}</button>
+                </td>
+              </tr>
+            `).join("") : `<tr><td colspan="4" class="muted" style="padding:14px;">Aún no hay cotizaciones.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  on($("btnAddQuote"),"click", ()=>openQuoteEditor(createQuote(p.id)));
+  $("mainContent").querySelectorAll("button[data-act]").forEach(b=>on(b,"click", ()=>{
+    const q=db.quotes.find(x=>x.id===b.dataset.id); if(!q) return;
+    if(b.dataset.act==="edit") openQuoteEditor(q);
+    if(b.dataset.act==="toggle"){ q.status=(q.status==="authorized")?"draft":"authorized"; save(); renderProjectsList(); renderMain(); }
+  }));
+}
+
+function renderOps(p){
+  const tasks=db.tasks.filter(t=>t.projectId===p.id);
+  const installs=db.installs.filter(t=>t.projectId===p.id);
+  const purchases=db.purchases.filter(t=>t.projectId===p.id);
+
+  const quotes=db.quotes.filter(q=>q.projectId===p.id).sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
+  const quoteCards = quotes.map(q=>{
+    const t=quoteSellTotals(q);
+    const folio = (q.code||q.id.slice(0,8)).toUpperCase();
+    const desc = [
+      ...(q.products||[]).map(r=>r.desc||r.material||r.matPick).filter(Boolean),
+      ...(q.routes||[]).map(r=>r.routeName||r.name).filter(Boolean),
+      ...(q.extras||[]).map(r=>r.label||r.desc).filter(Boolean)
+    ].filter(Boolean).slice(0,3).join(" · ");
+    return `<details class="box" style="margin:8px 0;">
+      <summary style="cursor:pointer; display:flex; gap:10px; align-items:center;">
+        <span class="pill">Folio: <b>${escapeHTML(folio)}</b></span>
+        <span class="pill">${q.status==="authorized"?"Autorizada":"Borrador"}</span>
+        <span class="right"></span>
+        <b>$${money(t.venta)}</b>
+      </summary>
+      <div class="muted" style="font-size:12px; margin-top:8px;">${escapeHTML(desc||"—")}</div>
+      <div style="height:8px;"></div>
+      <div class="row">
+        <button class="btn small" data-act="opsEditQuote" data-id="${q.id}">Abrir</button>
+        <button class="btn small" data-act="opsPDF" data-id="${q.id}">PDF</button>
+      </div>
+    </details>`;
+  }).join("") || `<div class="muted" style="padding:10px;">Sin cotizaciones.</div>`;
+
+  $("mainContent").innerHTML=`
+    <div class="card" style="box-shadow:none;">
+      <div class="pad">
+        <div class="row" style="align-items:flex-end;">
+          <div>
+            <b style="font-size:13px;">Cotizaciones (resumen)</b>
+            <div class="muted" style="font-size:12px;">Folio · Total · Descripción</div>
+          </div>
+          <div class="right"></div>
+          <button class="btn small" id="opsNewQuote">＋ Nueva</button>
+        </div>
+        <div style="height:10px;"></div>
+        ${quoteCards}
+      </div>
+    </div>
+
+    <div style="height:14px;"></div>
+
+    <div class="row">
+      <button class="btn" id="addTask">＋ Tarea</button>
+      <button class="btn" id="addInstall">＋ Instalación</button>
+      <button class="btn" id="addPurchase">＋ Compra</button>
+    </div>
+
+    <div style="height:12px;"></div>
+
+    <div class="row" style="align-items:flex-start;">
+      <div style="flex:1; min-width:260px;">
+        <b style="font-size:13px;">Tareas</b>
+        <div class="muted" style="font-size:12px;">Operación interna.</div>
+        <div style="height:8px;"></div>
+        <table class="table"><thead><tr><th style="width:34px;"></th><th>Tarea</th><th style="width:90px;"></th></tr></thead><tbody id="tbTasks"></tbody></table>
+      </div>
+      <div style="flex:1; min-width:260px;">
+        <b style="font-size:13px;">Instalaciones</b>
+        <div class="muted" style="font-size:12px;">Eventos en calendario.</div>
+        <div style="height:8px;"></div>
+        <table class="table"><thead><tr><th style="width:130px;">Fecha</th><th>Detalle</th><th style="width:90px;"></th></tr></thead><tbody id="tbInst"></tbody></table>
+      </div>
+      <div style="flex:1; min-width:260px;">
+        <b style="font-size:13px;">Compras</b>
+        <div class="muted" style="font-size:12px;">Eventos en calendario.</div>
+        <div style="height:8px;"></div>
+        <table class="table"><thead><tr><th style="width:130px;">Fecha</th><th>Detalle</th><th style="width:90px;"></th></tr></thead><tbody id="tbPurch"></tbody></table>
+      </div>
+    </div>
+  `;
+
+  // handlers
+  on($("opsNewQuote"),"click", ()=>openQuoteEditor(createQuote(p.id)));
+  $("mainContent").querySelectorAll("button[data-act]").forEach(b=>on(b,"click", ()=>{
+    const q=db.quotes.find(x=>x.id===b.dataset.id); if(!q) return;
+    if(b.dataset.act==="opsEditQuote") openQuoteEditor(q);
+    if(b.dataset.act==="opsPDF") downloadQuotePDF(q, p); // uses iframe print
+  }));
+
+  renderOpsTables(p.id);
+  on($("addTask"),"click", ()=>{ db.tasks.push({id:uid(), projectId:p.id, date:todayISO(), title:"Nueva tarea", done:false}); save(); renderOps(p); });
+  on($("addInstall"),"click", ()=>{ db.installs.push({id:uid(), projectId:p.id, date:p.delivery||todayISO(), title:"Instalación"}); save(); renderOps(p); });
+  on($("addPurchase"),"click", ()=>{ db.purchases.push({id:uid(), projectId:p.id, date:todayISO(), title:"Compra"}); save(); renderOps(p); });
+}
+function renderOpsTables(pid){
+  const tasks=db.tasks.filter(t=>t.projectId===pid).sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
+  const installs=db.installs.filter(t=>t.projectId===pid).sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
+  const purchases=db.purchases.filter(t=>t.projectId===pid).sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
+
+  $("tbTasks").innerHTML = tasks.length ? tasks.map(t=>`
+    <tr data-id="${t.id}">
+      <td><input type="date" data-f="date" value="${escapeAttr(t.date||"")}"></td>
+      <td><textarea data-f="title" placeholder="Detalle...">${escapeHTML(t.title||"")}</textarea></td>
+      <td style="text-align:center;"><input type="checkbox" data-f="done" ${t.done?"checked":""}></td>
+      <td style="text-align:right;"><button class="btn small danger" data-act="del">Eliminar</button></td>
+    </tr>`).join("") : `<tr><td colspan="4" class="muted" style="padding:14px;">Sin tareas.</td></tr>`;
+
+  $("tbInst").innerHTML = installs.length ? installs.map(t=>`
+    <tr data-id="${t.id}">
+      <td><input type="date" data-f="date" value="${escapeAttr(t.date||"")}"></td>
+      <td><textarea data-f="title" placeholder="Detalle...">${escapeHTML(t.title||"")}</textarea></td>
+      <td style="text-align:right;"><button class="btn small danger" data-act="del">Eliminar</button></td>
+    </tr>`).join("") : `<tr><td colspan="3" class="muted" style="padding:14px;">Sin instalaciones.</td></tr>`;
+
+  $("tbPurch").innerHTML = purchases.length ? purchases.map(t=>`
+    <tr data-id="${t.id}">
+      <td><input type="date" data-f="date" value="${escapeAttr(t.date||"")}"></td>
+      <td><textarea data-f="title" placeholder="Detalle...">${escapeHTML(t.title||"")}</textarea></td>
+      <td style="text-align:right;"><button class="btn small danger" data-act="del">Eliminar</button></td>
+    </tr>`).join("") : `<tr><td colspan="3" class="muted" style="padding:14px;">Sin compras.</td></tr>`;
+
+  bindInlineTable("tbTasks", db.tasks);
+  bindInlineTable("tbInst", db.installs);
+  bindInlineTable("tbPurch", db.purchases);
+}
+function bindInlineTable(tbodyId, arr){
+  const tb=$(tbodyId);
+  tb.querySelectorAll("tr").forEach(tr=>{
+    const id=tr.dataset.id;
+    tr.querySelectorAll("input").forEach(inp=>{
+      on(inp,"input", ()=>{
+        const obj=arr.find(x=>x.id===id); if(!obj) return;
+        const f=inp.dataset.f;
+        obj[f] = (inp.type==="checkbox") ? !!inp.checked : inp.value;
+        save(); renderProjectsList();
+      });
+      on(inp,"change", ()=>inp.dispatchEvent(new Event("input")));
+    });
+    tr.querySelectorAll("button[data-act=del]").forEach(btn=>on(btn,"click", ()=>{
+      if(!confirm("¿Eliminar?")) return;
+      const idx=arr.findIndex(x=>x.id===id);
+      if(idx>=0) arr.splice(idx,1);
+      save(); renderProjectsList(); renderMain();
+    }));
+  });
+}
+
+function createProject(){
+  const name=prompt("Nombre del proyecto:", "Proyecto nuevo");
+  if(name===null) return;
+  const p={id:uid(), name:name.trim()||"Proyecto", createdAt:todayISO(), deliveryDate:"", client:"", notes:""};
+  db.projects.unshift(p); save();
+  selectedProjectId=p.id; mainTab="overview";
+  renderProjectsList(); renderMain();
+}
+function createQuote(projectId){
+  const q={id:uid(), projectId, status:"draft", saleType:"manufactured", marginPct:25, createdAt:todayISO(), products:[], routes:[], extras:[]};
+  db.quotes.unshift(q); save(); return q;
+}
+function routeByName(name){ return (db.settings.routeDB||[]).find(r=>r.name===name)||null; }
+function materialByDesc(desc){ return (db.settings.materialDB||[]).find(m=>(m.desc||"")===desc)||null; }
+
+function openQuoteEditor(q){
+  const p=db.projects.find(x=>x.id===q.projectId); if(!p) return;
+  mainTab="quotes";
+  const routeOpts=(db.settings.routeDB||[]).map(r=>`<option value="${escapeAttr(r.name)}">${escapeHTML(r.name)} · ${escapeHTML(r.type||"")} · $${money(r.costPerHour||0)}/h</option>`).join("");
+  const matOpts=(db.settings.materialDB||[]).map(m=>`<option value="${escapeAttr(m.desc)}">${escapeHTML(m.desc)}${m.uom?(" · "+escapeHTML(m.uom)):""}</option>`).join("");
+
+  $("mainContent").innerHTML=`
+    <div class="row">
+      <span class="pill">Cotización: <b>${escapeHTML(q.id.slice(-6).toUpperCase())}</b></span>
+      <span class="pill">Estado: <b>${q.status==="authorized"?"Autorizada":"Borrador"}</b></span>
+      <div class="right"></div>
+      <button class="btn ${q.status==="authorized"?"danger":"primary"}" id="btnToggleAuth">${q.status==="authorized"?"Desautorizar":"Autorizar"}</button>
+      <button class="btn" id="btnBackQuotes">Volver</button>
+    </div>
+
+    <div style="height:12px;"></div>
+
+    <div class="card" style="box-shadow:none;">
+      <div class="pad">
+        <b>Productos</b>
+        <div class="muted" style="font-size:12px;">Selecciona material para auto-cargar costo.</div>
+        <div style="height:8px;"></div>
+        <table class="table">
+          <thead><tr><th style="width:220px;">Material</th><th>Descripción</th><th style="width:120px;">Cantidad</th><th style="width:150px;">Costo unit.</th><th style="width:150px; text-align:right;">Importe</th><th style="width:90px;"></th></tr></thead>
+          <tbody id="tbProd"></tbody>
+        </table>
+        <div style="height:8px;"></div>
+        <button class="btn small" id="addProd">＋ Producto</button>
+
+        <div style="height:16px;"></div>
+
+        <b>Ruta / Mano de obra</b>
+        <div class="muted" style="font-size:12px;">Selecciona ruta para auto-cargar $/hora.</div>
+        <div style="height:8px;"></div>
+        <table class="table">
+          <thead><tr><th style="width:260px;">Ruta</th><th style="width:140px;">Horas</th><th style="width:160px;">$/hora</th><th style="width:150px; text-align:right;">Importe</th><th style="width:90px;"></th></tr></thead>
+          <tbody id="tbRoutes"></tbody>
+        </table>
+        <div style="height:8px;"></div>
+        <button class="btn small" id="addRoute">＋ Ruta</button>
+
+        <div style="height:16px;"></div>
+
+        <b>Extras</b>
+        <div style="height:8px;"></div>
+        <table class="table">
+          <thead><tr><th>Concepto</th><th style="width:200px;">Importe</th><th style="width:90px;"></th></tr></thead>
+          <tbody id="tbExtras"></tbody>
+        </table>
+        <div style="height:8px;"></div>
+        <button class="btn small" id="addExtra">＋ Extra</button>
+
+        <div style="height:12px;"></div>
+        <div class="row" style="justify-content:flex-end;">
+          <span class="pill">Total: <b id="qTotal">$0.00</b></span>
+          <span class="pill" style="margin-left:10px;">Utilidad %</span>
+          <input id="qMarginPct" type="number" step="0.1" style="width:90px; margin-left:8px;" />
+
+
+        <div style="height:12px;"></div>
+        <b>Desglose</b>
+        <div class="muted" style="font-size:12px;">Costo total + utilidad + total venta + retorno</div>
+        <div style="height:8px;"></div>
+        <table class="table" id="quoteBreakdown">
+          <tbody>
+            <tr><td><b>Costo directo</b></td><td style="text-align:right;"><b id="bdCosto">$0.00</b></td></tr>
+            <tr><td style="padding-left:16px; color:var(--muted)">MP</td><td style="text-align:right;" id="bdMP">$0.00</td></tr>
+            <tr><td style="padding-left:16px; color:var(--muted)">Ruta</td><td style="text-align:right;" id="bdRuta">$0.00</td></tr>
+            <tr><td style="padding-left:16px; color:var(--muted)">Extras</td><td style="text-align:right;" id="bdExtra">$0.00</td></tr>
+            <tr>
+              <td>Gastos admin <input id="adminPctInput" type="number" step="0.1" style="width:60px; margin-left:6px;" title="% sobre costo directo"> %</td>
+              <td style="text-align:right;" id="bdAdmin">$0.00</td>
+            </tr>
+            <tr><td><b>Costo total</b></td><td style="text-align:right;"><b id="bdCostoAdmin">$0.00</b></td></tr>
+            <tr><td>Utilidad %</td><td style="text-align:right;" id="bdUtil">$0.00</td></tr>
+            <tr><td><b>Precio de venta</b></td><td style="text-align:right; color:var(--ok);"><b id="bdVenta">$0.00</b></td></tr>
+            <tr><td style="color:var(--muted)">Retorno neto</td><td style="text-align:right;" id="bdRetorno">$0.00</td></tr>
+          </tbody>
+        </table>
+
+      </div>
+    </div>
+  `;
+
+
+  function renderLines(){
+    const prod=q.products||[];
+    $("tbProd").innerHTML = prod.length ? prod.map(r=>`
+      <tr data-id="${r.id}">
+        <td><select data-f="matPick"><option value="">—</option>${matOpts}</select></td>
+        <td><input data-f="desc" value="${escapeAttr(r.desc||"")}" placeholder="Descripción..."></td>
+        <td><input data-f="qty" type="number" step="0.01" value="${Number(r.qty||0)}"></td>
+        <td><input data-f="unitPrice" type="number" step="0.01" value="${Number(r.unitPrice||0)}"></td>
+        <td style="text-align:right;"><b>$${money(Number(r.qty||0)*Number(r.unitPrice||0))}</b></td>
+        <td style="text-align:right;"><button class="btn small danger" data-act="delProd">X</button></td>
+      </tr>`).join("") : `<tr><td colspan="6" class="muted" style="padding:14px;">Agrega productos.</td></tr>`;
+    $("tbProd").querySelectorAll("tr").forEach(tr=>{ const r=prod.find(x=>x.id===tr.dataset.id); const sel=tr.querySelector('select[data-f="matPick"]'); if(sel) sel.value=r.matPick||""; });
+
+    const routes=q.routes||[];
+    $("tbRoutes").innerHTML = routes.length ? routes.map(r=>`
+      <tr data-id="${r.id}">
+        <td><select data-f="routeName"><option value="">—</option>${routeOpts}</select></td>
+        <td><input data-f="hours" type="number" step="0.01" value="${Number(r.hours||0)}"></td>
+        <td><input data-f="rate" type="number" step="0.01" value="${Number(r.rate||0)}"></td>
+        <td style="text-align:right;"><b>$${money(Number(r.hours||0)*Number(r.rate||0))}</b></td>
+        <td style="text-align:right;"><button class="btn small danger" data-act="delRoute">X</button></td>
+      </tr>`).join("") : `<tr><td colspan="5" class="muted" style="padding:14px;">Agrega rutas.</td></tr>`;
+    $("tbRoutes").querySelectorAll("tr").forEach(tr=>{ const r=routes.find(x=>x.id===tr.dataset.id); const sel=tr.querySelector('select[data-f="routeName"]'); if(sel) sel.value=r.routeName||""; });
+
+    const extras=q.extras||[];
+    $("tbExtras").innerHTML = extras.length ? extras.map(r=>`
+      <tr data-id="${r.id}">
+        <td><input data-f="label" value="${escapeAttr(r.label||"")}" placeholder="Concepto..."></td>
+        <td><input data-f="amount" type="number" step="0.01" value="${Number(r.amount||0)}"></td>
+        <td style="text-align:right;"><button class="btn small danger" data-act="delExtra">X</button></td>
+      </tr>`).join("") : `<tr><td colspan="3" class="muted" style="padding:14px;">Agrega extras.</td></tr>`;
+
+    bindQuoteTable("tbProd","prod");
+    bindQuoteTable("tbRoutes","routes");
+    bindQuoteTable("tbExtras","extras");
+    $("qTotal").textContent="$"+money(quoteTotal(q));
+    renderQuoteBreakdown(q);
+  }
+
+  function bindQuoteTable(tbodyId, kind){
+    const tb=$(tbodyId);
+    // Guardamos sin re-render en cada tecla (evita perder foco)
+    tb.querySelectorAll("tr").forEach(tr=>{
+      const id=tr.dataset.id;
+
+      tr.querySelectorAll("input, select").forEach(el=>{
+        const commit = ()=>{
+          const f=el.dataset.f;
+          const arr = (kind==="prod")? q.products : (kind==="routes")? q.routes : q.extras;
+          const row = arr.find(x=>x.id===id); if(!row) return;
+
+          if(kind==="prod"){
+            if(f==="matPick"){
+              row.matPick=el.value;
+              const mm=materialByDesc(row.matPick);
+              if(mm){ row.unitPrice=Number(mm.cost||0); if(!row.desc) row.desc=mm.desc; }
+            }else if(el.type==="number"){ row[f]=Number(el.value||0); }
+            else{ row[f]=el.value; }
+          }else if(kind==="routes"){
+            if(f==="routeName"){
+              row.routeName=el.value;
+              const rm=routeByName(row.routeName);
+              if(rm) row.rate=Number(rm.costPerHour||0);
+            }else if(el.type==="number"){ row[f]=Number(el.value||0); }
+            else{ row[f]=el.value; }
+          }else{
+            if(el.type==="number") row[f]=Number(el.value||0);
+            else row[f]=el.value;
+          }
+          save();
+          // Re-render solo al salir/cambiar el campo
+          renderLines();
+  renderQuoteBreakdown(q);
+          renderProjectsList();
+        };
+
+        if(el.tagName==="SELECT"){
+          on(el,"change", commit);
+        }else{
+          on(el,"blur", commit);
+          on(el,"keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); el.blur(); }});
+        }
+      });
+
+      tr.querySelectorAll("button[data-act]").forEach(btn=>on(btn,"click", ()=>{
+        if(btn.dataset.act==="delProd") q.products=q.products.filter(x=>x.id!==id);
+        if(btn.dataset.act==="delRoute") q.routes=q.routes.filter(x=>x.id!==id);
+        if(btn.dataset.act==="delExtra") q.extras=q.extras.filter(x=>x.id!==id);
+        save(); renderLines(); renderProjectsList();
+      }));
+    });
+  }
+
+  on($("addProd"),"click", ()=>{ q.products=q.products||[]; q.products.push({id:uid(), matPick:"", desc:"", qty:1, unitPrice:0}); save(); renderLines(); });
+  on($("addRoute"),"click", ()=>{ q.routes=q.routes||[]; const first=db.settings.routeDB[0]?.name||""; const rate=first?(routeByName(first)?.costPerHour||0):0; q.routes.push({id:uid(), routeName:first, hours:1, rate:Number(rate||0)}); save(); renderLines(); });
+  on($("addExtra"),"click", ()=>{ q.extras=q.extras||[]; q.extras.push({id:uid(), label:"", amount:0}); save(); renderLines(); });
+
+  on($("btnToggleAuth"),"click", ()=>{ q.status=(q.status==="authorized")?"draft":"authorized"; save(); renderProjectsList(); renderMain(); });
+  on($("btnBackQuotes"),"click", ()=>{ mainTab="quotes"; renderMain(); });
+  on($("btnQuotePDF"),"click", ()=>{
+    // Generación "sin popups": iframe oculto + print => Guardar como PDF
+    const iframe = document.createElement("iframe");
+    iframe.style.position="fixed";
+    iframe.style.right="0";
+    iframe.style.bottom="0";
+    iframe.style.width="0";
+    iframe.style.height="0";
+    iframe.style.border="0";
+    document.body.appendChild(iframe);
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(buildQuotePDFHTML(db.projects.find(x=>x.id===q.projectId)||{name:""}, q));
+    doc.close();
+    iframe.onload = ()=>{ try{ iframe.contentWindow.focus(); iframe.contentWindow.print(); } finally { setTimeout(()=>iframe.remove(), 1000); } };
+    // fallback (algunos navegadores no disparan onload por document.write)
+    setTimeout(()=>{ try{ iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch(e){} }, 450);
+  });
+
+  if($("qMarginPct")){
+    $("qMarginPct").value = Number(q.marginPct ?? 25);
+    on($("qMarginPct"),"blur", ()=>{ q.marginPct = Number($("qMarginPct").value||0); save(); renderLines(); });
+    on($("qMarginPct"),"keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); $("qMarginPct").blur(); }});
+  }
+
+  if($("adminPctInput")){
+    $("adminPctInput").value = Number(db.settings.adminPercent ?? 12);
+    on($("adminPctInput"),"blur", ()=>{ db.settings.adminPercent = Number($("adminPctInput").value||0); save(); renderQuoteBreakdown(q); });
+    on($("adminPctInput"),"keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); $("adminPctInput").blur(); }});
+  }
+
+  renderLines();
+  renderQuoteBreakdown(q);
+}
+
+function openDrawer(mode){ drawerMode=mode||"calendar"; $("drawerOverlay").style.display="flex"; renderDrawer(); }
+function closeDrawer(){ $("drawerOverlay").style.display="none"; }
+function renderDrawer(){
+  // Calendario en pantalla completa
+  const drawerEl = document.querySelector(".drawer");
+  if(drawerEl){ drawerEl.classList.toggle("full", (drawerMode==="calendar"||drawerMode==="sales"||drawerMode==="db"||drawerMode==="breakeven")); }
+  $("drawerOverlay").querySelectorAll(".chip").forEach(ch=>ch.classList.toggle("active", ch.dataset.chip===drawerMode));
+  if(drawerMode==="calendar"){ $("drawerTitle").textContent="Calendario"; $("drawerSub").textContent="Entregas · Instalaciones · Compras · Tareas"; renderCalendarPanel(); }
+  if(drawerMode==="sales"){ $("drawerTitle").textContent="Ventas"; $("drawerSub").textContent="Resumen mensual (autorizados)"; renderSalesPanel(); }
+  if(drawerMode==="db"){ $("drawerTitle").textContent="Base de datos"; $("drawerSub").textContent="Ruta/LM · Materiales"; renderDBPanel(); }
+  if(drawerMode==="breakeven"){ $("drawerTitle").textContent="Punto de equilibrio"; $("drawerSub").textContent="Ventas (conectadas) · Variables/Fijos (manual)"; renderBreakEvenPanel(); }
+}
+
+function calendarEventsForDay(iso){
+  const out=[];
+  if(calFilter.delivery) db.projects.forEach(p=>{ if(p.deliveryDate===iso) out.push({type:"delivery", title:`Entrega: ${p.name}`, projectId:p.id}); });
+  if(calFilter.install) db.installs.forEach(x=>{ if(x.date===iso){ const p=db.projects.find(p=>p.id===x.projectId); out.push({type:"install", title:`Instalación: ${x.title}${p?" · "+p.name:""}`, projectId:x.projectId}); }});
+  if(calFilter.purchase) db.purchases.forEach(x=>{ if(x.date===iso){ const p=db.projects.find(p=>p.id===x.projectId); out.push({type:"purchase", title:`Compra: ${x.title}${p?" · "+p.name:""}`, projectId:x.projectId}); }});
+  if(calFilter.task) db.tasks.forEach(x=>{ if(x.date===iso){ const p=db.projects.find(p=>p.id===x.projectId); out.push({type:"task", title:`Tarea: ${x.title}${p?" · "+p.name:""}`, projectId:x.projectId, done:!!x.done}); }});
+  return out;
+}
+function renderCalendarPanel(){
+  const y=calCursor.getFullYear(), m=calCursor.getMonth();
+  const first=new Date(y,m,1), last=new Date(y,m+1,0);
+  const dow=(first.getDay()+6)%7;
+  const daysInMonth=last.getDate();
+  const cells=[];
+  for(let i=0;i<42;i++){
+    const dayNum=i-dow+1;
+    if(dayNum<1||dayNum>daysInMonth) cells.push({blank:true});
+    else{
+      const iso=new Date(y,m,dayNum).toISOString().slice(0,10);
+      const ev=calendarEventsForDay(iso);
+      const counts={delivery:ev.filter(e=>e.type==="delivery").length, install:ev.filter(e=>e.type==="install").length, purchase:ev.filter(e=>e.type==="purchase").length, task:ev.filter(e=>e.type==="task").length};
+      cells.push({iso, dayNum, counts});
+    }
+  }
+  const dayList = calSelectedDay ? calendarEventsForDay(calSelectedDay) : [];
+  $("drawerContent").innerHTML=`
+    <div class="calTop">
+      <button class="iconBtn" id="calPrev">←</button><b>${MONTHS[m]} ${y}</b><button class="iconBtn" id="calNext">→</button>
+      <div class="right"></div><button class="btn small" id="calToday">Hoy</button>
+    </div>
+    <div class="row" style="gap:10px; align-items:center;">
+      <label class="pill"><input type="checkbox" id="fDelivery" ${calFilter.delivery?"checked":""}/> Entregas</label>
+      <label class="pill"><input type="checkbox" id="fInstall" ${calFilter.install?"checked":""}/> Instalaciones</label>
+      <label class="pill"><input type="checkbox" id="fPurchase" ${calFilter.purchase?"checked":""}/> Compras</label>
+      <label class="pill"><input type="checkbox" id="fTask" ${calFilter.task?"checked":""}/> Tareas</label>
+    </div>
+    <div style="height:10px;"></div>
+    <div class="calGrid" style="margin-bottom:8px;">${DOW.map(d=>`<div class="muted" style="font-weight:950; font-size:12px; padding:0 6px;">${d}</div>`).join("")}</div>
+    <div class="calGrid">
+      ${cells.map(c=>{
+        if(c.blank) return `<div style="min-height:78px;"></div>`;
+        const hasAny=(c.counts.delivery+c.counts.install+c.counts.purchase+c.counts.task)>0;
+        const badges=[];
+        if(c.counts.delivery) badges.push(`<div class="badge warn">📦 ${c.counts.delivery}</div>`);
+        if(c.counts.install) badges.push(`<div class="badge ok">🛠️ ${c.counts.install}</div>`);
+        if(c.counts.purchase) badges.push(`<div class="badge gray">🛒 ${c.counts.purchase}</div>`);
+        if(c.counts.task) badges.push(`<div class="badge gray">✅ ${c.counts.task}</div>`);
+        return `<div class="calCell" data-iso="${c.iso}" style="${c.iso===calSelectedDay?'outline:2px solid #0f172a;':''}">
+          <div class="d">${c.dayNum}</div>${hasAny?badges.join(""):`<div class="muted" style="font-size:11px; margin-top:8px;">—</div>`}
+        </div>`;
+      }).join("")}
+    </div>
+    <div style="height:14px;"></div>
+    <div class="card" style="box-shadow:none;">
+      <div class="pad">
+        <b>Eventos del día</b>
+        <div class="muted" style="font-size:12px;">${calSelectedDay?calSelectedDay:"Selecciona un día."}</div>
+        <div style="height:8px;"></div>
+        ${dayList.length ? dayList.map(e=>{
+          const tag=e.type==="delivery"?"📦 Entrega":e.type==="install"?"🛠️ Instalación":e.type==="purchase"?"🛒 Compra":"✅ Tarea";
+          const extra=(e.type==="task")?(e.done?" · (OK)":" · (pend.)"):"";
+          return `<div class="row" style="justify-content:space-between; border:1px solid var(--border); border-radius:14px; padding:10px; margin-bottom:8px; background:#fff;">
+            <div style="min-width:0;"><b style="font-size:13px;">${tag}</b><div class="muted" style="font-size:12px;">${escapeHTML(e.title)}${escapeHTML(extra)}</div></div>
+            <button class="btn small" data-open="${e.projectId}">Abrir</button>
+          </div>`;
+        }).join("") : `<div class="muted">Sin eventos.</div>`}
+      </div>
+    </div>
+  `;
+  on($("calPrev"),"click", ()=>{ calCursor.setMonth(calCursor.getMonth()-1); renderDrawer(); });
+  on($("calNext"),"click", ()=>{ calCursor.setMonth(calCursor.getMonth()+1); renderDrawer(); });
+  on($("calToday"),"click", ()=>{ calCursor=new Date(); calCursor.setDate(1); renderDrawer(); });
+  ["fDelivery","fInstall","fPurchase","fTask"].forEach(id=>on($(id),"change", ()=>{
+    calFilter.delivery=$("fDelivery").checked; calFilter.install=$("fInstall").checked; calFilter.purchase=$("fPurchase").checked; calFilter.task=$("fTask").checked;
+    renderDrawer();
+  }));
+  $("drawerContent").querySelectorAll(".calCell").forEach(cell=>on(cell,"click", ()=>{ calSelectedDay=cell.dataset.iso; renderDrawer(); }));
+  
+  // Render KPI weekly cards
+  const kpiBox = $("wkKpis");
+  if(kpiBox){
+    if(!wkCards.length){
+      kpiBox.innerHTML = `<div class="muted">Sin ventas para calcular semanas.</div>`;
+    }else{
+      kpiBox.innerHTML = wkCards.map(w=>`
+        <div class="box">
+          <div class="t">${escapeHTML(w.label)}</div>
+          <div class="v">$${money(w.v)}</div>
+          <div class="muted" style="font-size:12px; margin-top:4px;">${escapeHTML(w.dTxt)}</div>
+        </div>
+      `).join("");
+    }
+  }
+
+$("drawerContent").querySelectorAll("button[data-open]").forEach(b=>on(b,"click", ()=>{ selectedProjectId=b.dataset.open; mainTab="overview"; closeDrawer(); renderProjectsList(); renderMain(); }));
+}
+
+function renderSalesPanel(){
+  const y=salesCursor.getFullYear(), m=salesCursor.getMonth();
+  const start=new Date(y,m,1), end=new Date(y,m+1,1);
+  const rows=[]; let total=0;
+  db.projects.forEach(p=>{
+    const d=parseISO(p.deliveryDate); if(!d) return;
+    if(!(d>=start && d<end)) return;
+    const t=projectAuthorizedTotal(p.id); if(t<=0) return;
+    total+=t; rows.push({projectId:p.id, name:p.name, client:p.client, delivery:p.deliveryDate, total:t});
+  });
+  
+rows.sort((a,b)=>String(a.delivery||"").localeCompare(String(b.delivery||"")));
+
+function weekKey(d){
+  const dt=new Date(d+"T00:00:00");
+  const day=(dt.getDay()+6)%7; // Monday=0
+  const monday=new Date(dt); monday.setDate(dt.getDate()-day);
+  return monday.toISOString().slice(0,10);
+}
+const wkMap=new Map();
+rows.forEach(r=>{
+  const k=weekKey(r.delivery);
+  wkMap.set(k,(wkMap.get(k)||0)+r.total);
+});
+const wkKeys=[...wkMap.keys()].sort();
+const wkCards = wkKeys.map((k,i)=>{
+  const v=wkMap.get(k)||0;
+  const prev=i>0?(wkMap.get(wkKeys[i-1])||0):0;
+  const delta = i>0 ? ((v-prev)/Math.max(prev,1))*100 : 0;
+  const label="Semana "+(i+1)+" · "+k;
+  const dTxt = i>0 ? ( (v>=prev?"+":"") + delta.toFixed(1)+"% vs ant.") : "—";
+  return {label, v, dTxt};
+});
+
+  $("drawerContent").innerHTML=`
+    <div class="row">
+      <button class="iconBtn" id="salesPrev">←</button><b>${MONTHS[m]} ${y}</b><button class="iconBtn" id="salesNext">→</button>
+      <div class="right"></div><button class="btn small" id="salesToday">Hoy</button>
+    </div>
+    
+    <div style="height:10px;"></div>
+    <div class="card" style="box-shadow:none;">
+      <div class="pad">
+        <b>Indicador semanal (por fecha de entrega)</b>
+        <div class="muted" style="font-size:12px;">Suma de ingresos autorizados agrupados por semana dentro del mes.</div>
+        <div style="height:10px;"></div>
+        <div class="kpi" id="wkKpis"></div>
+      </div>
+    </div>
+
+<div style="height:10px;"></div>
+    <div class="card" style="box-shadow:none;">
+      <div class="pad">
+        <table class="table">
+          <thead><tr><th>Proyecto</th><th style="width:140px;">Entrega</th><th style="width:180px; text-align:right;">Total autorizado</th><th style="width:90px;"></th></tr></thead>
+          <tbody>
+            ${rows.length ? rows.map(r=>`
+              <tr>
+                <td><b>${escapeHTML(r.name)}</b><div class="muted" style="font-size:12px;">${escapeHTML(r.client||"")}</div></td>
+                <td>${escapeHTML(r.delivery||"")}</td>
+                <td style="text-align:right;"><b>$${money(r.total)}</b></td>
+                <td style="text-align:right;"><button class="btn small" data-open="${r.projectId}">Abrir</button></td>
+              </tr>`).join("") : `<tr><td colspan="4" class="muted" style="padding:14px;">Sin ventas autorizadas en este mes.</td></tr>`}
+          </tbody>
+        </table>
+        <div class="row" style="justify-content:flex-end; margin-top:10px;"><span class="pill">Total mes: <b>$${money(total)}</b></span></div>
+      </div>
+    </div>
+  `;
+  on($("salesPrev"),"click", ()=>{ salesCursor.setMonth(salesCursor.getMonth()-1); renderDrawer(); });
+  on($("salesNext"),"click", ()=>{ salesCursor.setMonth(salesCursor.getMonth()+1); renderDrawer(); });
+  on($("salesToday"),"click", ()=>{ salesCursor=new Date(); salesCursor.setDate(1); renderDrawer(); });
+  
+  // Render KPI weekly cards
+  const kpiBox = $("wkKpis");
+  if(kpiBox){
+    if(!wkCards.length){
+      kpiBox.innerHTML = `<div class="muted">Sin ventas para calcular semanas.</div>`;
+    }else{
+      kpiBox.innerHTML = wkCards.map(w=>`
+        <div class="box">
+          <div class="t">${escapeHTML(w.label)}</div>
+          <div class="v">$${money(w.v)}</div>
+          <div class="muted" style="font-size:12px; margin-top:4px;">${escapeHTML(w.dTxt)}</div>
+        </div>
+      `).join("");
+    }
+  }
+
+$("drawerContent").querySelectorAll("button[data-open]").forEach(b=>on(b,"click", ()=>{ selectedProjectId=b.dataset.open; mainTab="overview"; closeDrawer(); renderProjectsList(); renderMain(); }));
+}
+
+function renderDBPanel(){
+  const u=currentUser(); const isAdmin=u && u.role==="admin";
+  if(!isAdmin){ $("drawerContent").innerHTML=`<div class="muted">Solo Admin puede editar la base de datos.</div>`; return; }
+  const routes=db.settings.routeDB||[], mats=db.settings.materialDB||[];
+  $("drawerContent").innerHTML=`
+    <div class="row">
+      <button class="btn small" id="dbAddRoute">＋ Ruta</button>
+      <button class="btn small" id="dbAddMat">＋ Material</button>
+      <div class="right"></div>
+      <span class="pill">Rutas: <b>${routes.length}</b></span>
+      <span class="pill">Materiales: <b>${mats.length}</b></span>
+    </div>
+    <div style="height:12px;"></div>
+    <div class="card" style="box-shadow:none;">
+      <div class="pad">
+        <b>Base de datos: Ruta / LM</b>
+        <div class="muted" style="font-size:12px;">Ligadas al cotizador (auto-carga $/hora).</div>
+        <div style="height:10px;"></div>
+        <table class="table">
+          <thead><tr><th style="width:200px;">Ruta</th><th style="width:120px;">Tipo</th><th style="width:100px;">Renta/h</th><th style="width:100px;">MOD/h</th><th style="width:100px;">MOI/h</th><th style="width:100px;">Indirectos/h</th><th style="width:80px;">Luz/h</th><th style="width:80px;">Otros/h</th><th style="width:120px;">Total/h</th><th style="width:80px;"></th></tr></thead>
+          <tbody id="dbRoutesBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div style="height:12px;"></div>
+    <div class="card" style="box-shadow:none;">
+      <div class="pad">
+        <b>Base de datos de materiales</b>
+        <div class="muted" style="font-size:12px;">Se selecciona en el cotizador para auto-cargar costo.</div>
+        <div style="height:10px;"></div>
+        <table class="table">
+          <thead><tr><th>Descripción</th><th style="width:140px;">Costo</th><th style="width:220px;">Proveedor</th><th style="width:140px;">Unidad</th><th style="width:100px;"></th></tr></thead>
+          <tbody id="dbMatsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  function draw(){
+    const routes=db.settings.routeDB||[], mats=db.settings.materialDB||[];
+    $("dbRoutesBody").innerHTML = routes.length ? routes.map(r=>{
+      const b = r.breakdown || {renta:0,mod:0,moi:0,indirectos:0,luz:0,otros:0};
+      const total = Object.values(b).reduce((a,v)=>a+Number(v||0),0);
+      return `<tr data-id="${r.id}">
+        <td><input data-f="name" value="${escapeAttr(r.name||"")}"></td>
+        <td><select data-f="type"><option value="LM">LM</option><option value="Ruta">Ruta</option><option value="Servicio">Servicio</option></select></td>
+        <td><input data-f="b_renta" type="number" step="0.01" value="${Number(b.renta||0)}" title="Renta por hora"></td>
+        <td><input data-f="b_mod" type="number" step="0.01" value="${Number(b.mod||0)}" title="Mano de obra directa por hora"></td>
+        <td><input data-f="b_moi" type="number" step="0.01" value="${Number(b.moi||0)}" title="Mano de obra indirecta por hora"></td>
+        <td><input data-f="b_indirectos" type="number" step="0.01" value="${Number(b.indirectos||0)}" title="Indirectos de fabricación por hora"></td>
+        <td><input data-f="b_luz" type="number" step="0.01" value="${Number(b.luz||0)}" title="Luz por hora"></td>
+        <td><input data-f="b_otros" type="number" step="0.01" value="${Number(b.otros||0)}" title="Otros por hora"></td>
+        <td style="font-weight:800; color:var(--text);">$${money(total)}/h</td>
+        <td style="text-align:right;"><button class="btn small danger" data-act="delRoute">Eliminar</button></td>
+      </tr>`;
+    }).join("") : `<tr><td colspan="10" class="muted" style="padding:14px;">Agrega tu primera ruta.</td></tr>`;
+    $("dbRoutesBody").querySelectorAll("tr").forEach(tr=>{ const rr=routes.find(x=>x.id===tr.dataset.id); const sel=tr.querySelector('select[data-f="type"]'); if(sel&&rr) sel.value=rr.type||"LM"; });
+
+    $("dbMatsBody").innerHTML = mats.length ? mats.map(m=>`
+      <tr data-id="${m.id}">
+        <td><input data-f="desc" value="${escapeAttr(m.desc||"")}"></td>
+        <td><input data-f="cost" type="number" step="0.01" value="${Number(m.cost||0)}"></td>
+        <td><input data-f="vendor" value="${escapeAttr(m.vendor||"")}"></td>
+        <td><input data-f="uom" value="${escapeAttr(m.uom||"")}"></td>
+        <td style="text-align:right;"><button class="btn small danger" data-act="delMat">Eliminar</button></td>
+      </tr>`).join("") : `<tr><td colspan="5" class="muted" style="padding:14px;">Agrega tu primer material.</td></tr>`;
+
+    $("dbRoutesBody").querySelectorAll("input, select, button").forEach(el=>{
+      const tr=el.closest("tr"); const id=tr?.dataset.id;
+      if(el.tagName==="BUTTON"){
+        on(el,"click", ()=>{ if(!confirm("¿Eliminar ruta?")) return; db.settings.routeDB=db.settings.routeDB.filter(x=>x.id!==id); save(); renderDrawer(); });
+        return;
+      }
+      on(el,"input", ()=>{
+        const rr=db.settings.routeDB.find(x=>x.id===id); if(!rr) return;
+        const f=el.dataset.f;
+        if(f && f.startsWith("b_")){
+          if(!rr.breakdown) rr.breakdown={renta:0,mod:0,moi:0,indirectos:0,luz:0,otros:0};
+          const key=f.slice(2);
+          rr.breakdown[key]=Number(el.value||0);
+          rr.costPerHour=Object.values(rr.breakdown).reduce((a,v)=>a+Number(v||0),0);
+          const totalCell=tr.querySelector("td:nth-child(9)");
+          if(totalCell) totalCell.textContent="$"+money(rr.costPerHour)+"/h";
+        } else {
+          rr[f]=(el.type==="number")?Number(el.value||0):el.value;
+        }
+        save();
+      });
+      on(el,"change", ()=>el.dispatchEvent(new Event("input")));
+    });
+    $("dbMatsBody").querySelectorAll("input, button").forEach(el=>{
+      const tr=el.closest("tr"); const id=tr?.dataset.id;
+      if(el.tagName==="BUTTON"){
+        on(el,"click", ()=>{ if(!confirm("¿Eliminar material?")) return; db.settings.materialDB=db.settings.materialDB.filter(x=>x.id!==id); save(); renderDrawer(); });
+        return;
+      }
+      on(el,"input", ()=>{ const mm=db.settings.materialDB.find(x=>x.id===id); if(!mm) return; const f=el.dataset.f; mm[f]=(el.type==="number")?Number(el.value||0):el.value; save(); });
+    });
+  }
+  on($("dbAddRoute"),"click", ()=>{ db.settings.routeDB.push({id:uid(), name:"Nueva ruta", type:"LM", costPerHour:0}); save(); renderDrawer(); });
+  on($("dbAddMat"),"click", ()=>{ db.settings.materialDB.push({id:uid(), desc:"Nuevo material", cost:0, vendor:"", uom:""}); save(); renderDrawer(); });
+  draw();
+}
+
+
+function renderBreakEvenPanel(){
+  const u=currentUser(); const isAdmin=u && u.role==="admin";
+  const be = db.settings.breakEven || defaultDB().settings.breakEven;
+  const sales = authorizedSalesByMonth(be.month || new Date().toISOString().slice(0,7));
+
+  const val = (n)=>Number(n||0);
+  const fmt = (n)=> "$"+money(n);
+
+  const ventasNetas = val(sales.net);
+  const ventasMan = val(sales.manufactured);
+  const ventasTer = val(sales.thirdparty);
+  const ventasSrv = val(sales.services);
+
+  const costoTotalFab = val(be.varCosts.thirdparty)+val(be.varCosts.rawMaterial)+val(be.varCosts.directLabor)+val(be.varCosts.factoryIndirect);
+  const varsVentas = val(be.salesVars.commissions)+val(be.salesVars.freight)+val(be.salesVars.marketing)+val(be.salesVars.serviceWarranty)+val(be.salesVars.samples)+val(be.salesVars.others);
+  const varsOp = val(be.opVars.productWarranty)+val(be.opVars.prototypes)+val(be.opVars.liquidations);
+  const totalVariables = costoTotalFab + varsVentas + varsOp;
+
+  const utilidadBruta = ventasNetas - totalVariables;
+
+  const fixedOp = Object.values(be.fixedOp||{}).reduce((s,x)=>s+val(x),0);
+  const fixedAdmin = Object.values(be.fixedAdmin||{}).reduce((s,x)=>s+val(x),0);
+  const totalFijos = fixedOp + fixedAdmin;
+
+  const utilidadOperacion = utilidadBruta - totalFijos;
+
+  const cmRatio = ventasNetas>0 ? (utilidadBruta/ventasNetas) : 0;
+  const pe = cmRatio>0 ? (totalFijos/cmRatio) : 0;
+
+  $("drawerContent").innerHTML=`
+    <div class="row">
+      <span class="pill">Mes: <b>${escapeHTML(be.month||"")}</b></span>
+      <div class="right"></div>
+      <button class="btn small" id="beMonth">${isAdmin?"Cambiar mes":"Ver otro mes"}</button>
+      ${isAdmin?`<button class="btn small" id="beReset">Reset</button>`:""}
+    </div>
+
+    <div style="height:12px;"></div>
+
+    <div class="card" style="box-shadow:none;">
+      <div class="pad">
+        <b>PUNTO DE EQUILIBRIO</b>
+        <div class="muted" style="font-size:12px;">Ventas conectadas a tus cotizaciones autorizadas. Variables y fijos capturados manualmente.</div>
+
+        <div style="height:12px;"></div>
+
+        <div class="row" style="align-items:flex-start;">
+          <div style="flex:1; min-width:280px;">
+            <b style="font-size:13px;">Ventas (conectadas)</b>
+            <div class="muted" style="font-size:12px;">Se toman de cotizaciones autorizadas por fecha de entrega.</div>
+            <div style="height:8px;"></div>
+            <table class="table">
+              <tbody>
+                <tr><td>Ventas Prod. Manufacturado</td><td style="text-align:right; width:240px;"><b>${fmt(ventasMan)}</b></td></tr>
+                <tr><td>Ventas Productos de terceros</td><td style="text-align:right;"><b>${fmt(ventasTer)}</b></td></tr>
+                <tr><td>Ventas de Servicios</td><td style="text-align:right;"><b>${fmt(ventasSrv)}</b></td></tr>
+                <tr><td><b>Ventas Netas</b></td><td style="text-align:right;"><b>${fmt(ventasNetas)}</b></td></tr>
+              </tbody>
+            </table>
+            <div class="muted" style="font-size:12px;">Tip: en cada cotización, selecciona el <b>Tipo</b> (Manufacturado / Terceros / Servicios).</div>
+          </div>
+
+          <div style="flex:1; min-width:280px;">
+            <b style="font-size:13px;">Costos Variables de Fábrica (manual)</b>
+            <div style="height:8px;"></div>
+            <table class="table">
+              <tbody>
+                <tr><td>Productos de terceros</td><td style="width:240px;"><input type="number" step="0.01" data-be="varCosts.thirdparty" value="${val(be.varCosts.thirdparty)}"></td></tr>
+                <tr><td>Materia Prima</td><td><input type="number" step="0.01" data-be="varCosts.rawMaterial" value="${val(be.varCosts.rawMaterial)}"></td></tr>
+                <tr><td>Mano de Obra Directa</td><td><input type="number" step="0.01" data-be="varCosts.directLabor" value="${val(be.varCosts.directLabor)}"></td></tr>
+                <tr><td>Costos Ind. de Fábrica</td><td><input type="number" step="0.01" data-be="varCosts.factoryIndirect" value="${val(be.varCosts.factoryIndirect)}"></td></tr>
+                <tr><td><b>Costo total</b></td><td style="text-align:right;"><b>${fmt(costoTotalFab)}</b></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="height:12px;"></div>
+
+        <div class="row" style="align-items:flex-start;">
+          <div style="flex:1; min-width:280px;">
+            <b style="font-size:13px;">Variables de Ventas (manual)</b>
+            <div style="height:8px;"></div>
+            <table class="table">
+              <tbody>
+                <tr><td>Comisiones (u otro)</td><td style="width:240px;"><input type="number" step="0.01" data-be="salesVars.commissions" value="${val(be.salesVars.commissions)}"></td></tr>
+                <tr><td>Fletes</td><td><input type="number" step="0.01" data-be="salesVars.freight" value="${val(be.salesVars.freight)}"></td></tr>
+                <tr><td>Publicidad y Marketing</td><td><input type="number" step="0.01" data-be="salesVars.marketing" value="${val(be.salesVars.marketing)}"></td></tr>
+                <tr><td>Garantías de Servicio</td><td><input type="number" step="0.01" data-be="salesVars.serviceWarranty" value="${val(be.salesVars.serviceWarranty)}"></td></tr>
+                <tr><td>Muestras para Clientes</td><td><input type="number" step="0.01" data-be="salesVars.samples" value="${val(be.salesVars.samples)}"></td></tr>
+                <tr><td>Otros</td><td><input type="number" step="0.01" data-be="salesVars.others" value="${val(be.salesVars.others)}"></td></tr>
+                <tr><td><b>Total Variables de Ventas</b></td><td style="text-align:right;"><b>${fmt(varsVentas)}</b></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="flex:1; min-width:280px;">
+            <b style="font-size:13px;">Variables de Operación (manual)</b>
+            <div style="height:8px;"></div>
+            <table class="table">
+              <tbody>
+                <tr><td>Garantías de Producto</td><td style="width:240px;"><input type="number" step="0.01" data-be="opVars.productWarranty" value="${val(be.opVars.productWarranty)}"></td></tr>
+                <tr><td>Prototipos</td><td><input type="number" step="0.01" data-be="opVars.prototypes" value="${val(be.opVars.prototypes)}"></td></tr>
+                <tr><td>Liquidaciones</td><td><input type="number" step="0.01" data-be="opVars.liquidations" value="${val(be.opVars.liquidations)}"></td></tr>
+                <tr><td><b>Total Variables de Operación</b></td><td style="text-align:right;"><b>${fmt(varsOp)}</b></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="height:12px;"></div>
+
+        <div class="kpi">
+          <div class="box"><div class="t">Total Variables</div><div class="v">${fmt(totalVariables)}</div></div>
+          <div class="box"><div class="t">Utilidad bruta</div><div class="v">${fmt(utilidadBruta)}</div></div>
+          <div class="box"><div class="t">Margen de contribución</div><div class="v">${(cmRatio*100).toFixed(2)}%</div></div>
+          <div class="box"><div class="t">Utilidad de Operación</div><div class="v">${fmt(utilidadOperacion)}</div></div>
+        </div>
+
+        <div style="height:14px;"></div>
+
+        <div class="row" style="align-items:flex-start;">
+          <div style="flex:1; min-width:280px;">
+            <b style="font-size:13px;">Gastos Fijos · Operación (manual)</b>
+            <div style="height:8px;"></div>
+            <table class="table">
+              <tbody>
+                <tr><td>Sueldos Ingeniería</td><td style="width:240px;"><input type="number" step="0.01" data-be="fixedOp.eng" value="${val(be.fixedOp.eng)}"></td></tr>
+                <tr><td>Sueldos Personal Indirecto</td><td><input type="number" step="0.01" data-be="fixedOp.indirect" value="${val(be.fixedOp.indirect)}"></td></tr>
+                <tr><td>Sueldos Logística</td><td><input type="number" step="0.01" data-be="fixedOp.logistics" value="${val(be.fixedOp.logistics)}"></td></tr>
+                <tr><td>Instalaciones de planta</td><td><input type="number" step="0.01" data-be="fixedOp.plantInst" value="${val(be.fixedOp.plantInst)}"></td></tr>
+                <tr><td>Mantenimiento y Herramientas</td><td><input type="number" step="0.01" data-be="fixedOp.maintenance" value="${val(be.fixedOp.maintenance)}"></td></tr>
+                <tr><td>Otros gastos de planta</td><td><input type="number" step="0.01" data-be="fixedOp.otherPlant" value="${val(be.fixedOp.otherPlant)}"></td></tr>
+                <tr><td><b>Total fijos de Operación</b></td><td style="text-align:right;"><b>${fmt(fixedOp)}</b></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="flex:1; min-width:280px;">
+            <b style="font-size:13px;">Gastos Fijos · Administración y Dirección (manual)</b>
+            <div style="height:8px;"></div>
+            <table class="table">
+              <tbody>
+                <tr><td>Sueldos Finanzas</td><td style="width:240px;"><input type="number" step="0.01" data-be="fixedAdmin.finance" value="${val(be.fixedAdmin.finance)}"></td></tr>
+                <tr><td>Sueldos RH</td><td><input type="number" step="0.01" data-be="fixedAdmin.hr" value="${val(be.fixedAdmin.hr)}"></td></tr>
+                <tr><td>Sueldos TI</td><td><input type="number" step="0.01" data-be="fixedAdmin.it" value="${val(be.fixedAdmin.it)}"></td></tr>
+                <tr><td>Instalaciones Administrativas</td><td><input type="number" step="0.01" data-be="fixedAdmin.adminInst" value="${val(be.fixedAdmin.adminInst)}"></td></tr>
+                <tr><td>Otros gastos de Admin</td><td><input type="number" step="0.01" data-be="fixedAdmin.otherAdmin" value="${val(be.fixedAdmin.otherAdmin)}"></td></tr>
+                <tr><td>Gastos Fijos Dirección</td><td><input type="number" step="0.01" data-be="fixedAdmin.direction" value="${val(be.fixedAdmin.direction)}"></td></tr>
+                <tr><td>Depreciación y Amortización</td><td><input type="number" step="0.01" data-be="fixedAdmin.depreciation" value="${val(be.fixedAdmin.depreciation)}"></td></tr>
+                <tr><td><b>Total Administración y Dirección</b></td><td style="text-align:right;"><b>${fmt(fixedAdmin)}</b></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="height:12px;"></div>
+
+        <div class="kpi">
+          <div class="box"><div class="t">Total Gastos Fijos</div><div class="v">${fmt(totalFijos)}</div></div>
+          <div class="box"><div class="t">Punto de equilibrio</div><div class="v">${fmt(pe)}</div></div>
+          <div class="box"><div class="t">% Admin sobre Fijos</div><div class="v">${totalFijos>0?((fixedAdmin/totalFijos)*100).toFixed(1):0}%</div></div>
+          <div class="box"><div class="t">% Operación sobre Fijos</div><div class="v">${totalFijos>0?((fixedOp/totalFijos)*100).toFixed(1):0}%</div></div>
+        </div>
+
+        <div class="muted" style="font-size:12px; margin-top:10px;">
+          Fórmula: Punto de equilibrio = Total Gastos Fijos / (Utilidad bruta / Ventas netas). Ventas netas conectadas al sistema.
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Bind manual inputs (solo admin edita)
+  $("drawerContent").querySelectorAll("input[data-be]").forEach(inp=>{
+    if(!isAdmin) inp.setAttribute("disabled","disabled");
+    on(inp,"blur", ()=>{
+      const path=inp.dataset.be.split(".");
+      let obj=be;
+      while(path.length>1){ const k=path.shift(); obj=obj[k]; }
+      obj[path[0]] = Number(inp.value||0);
+      db.settings.breakEven = be;
+      save();
+      renderDrawer();
+    });
+    on(inp,"keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); inp.blur(); }});
+  });
+
+  on($("beMonth"),"click", ()=>{
+    const v=prompt("Mes (YYYY-MM):", be.month||"");
+    if(v===null) return;
+    if(!/^\d{4}-\d{2}$/.test(v)) return alert("Formato inválido.");
+    be.month=v; db.settings.breakEven=be; save(); renderDrawer();
+  });
+
+  if(isAdmin && $("beReset")){
+    on($("beReset"),"click", ()=>{
+      if(!confirm("¿Resetear variables y fijos manuales del punto de equilibrio?")) return;
+      const keepMonth = be.month;
+      db.settings.breakEven = defaultDB().settings.breakEven;
+      db.settings.breakEven.month = keepMonth;
+      save(); renderDrawer();
+    });
+  }
+}
+
+
+function buildQuotePDFHTML(p,q){
+  const t = quoteSellTotals(q);
+  const b = quoteBreakdown(q);
+  const dt = new Date().toISOString().slice(0,10);
+  const rowsProd = (q.products||[]).map(r=>`
+    <tr>
+      <td>${escapeHTML(r.desc||r.matPick||"")}</td>
+      <td style="text-align:right;">${Number(r.qty||0)}</td>
+      <td style="text-align:right;">$${money(Number(r.unitPrice||0))}</td>
+      <td style="text-align:right;">$${money(Number(r.qty||0)*Number(r.unitPrice||0))}</td>
+    </tr>`).join("");
+  const rowsRuta = (q.routes||[]).map(r=>`
+    <tr>
+      <td>${escapeHTML(r.routeName||"Ruta")}</td>
+      <td style="text-align:right;">${Number(r.hours||0)}</td>
+      <td style="text-align:right;">$${money(Number(r.rate||0))}</td>
+      <td style="text-align:right;">$${money(Number(r.hours||0)*Number(r.rate||0))}</td>
+    </tr>`).join("");
+  const rowsExtra = (q.extras||[]).map(r=>`
+    <tr>
+      <td>${escapeHTML(r.label||"Extra")}</td>
+      <td style="text-align:right;">—</td>
+      <td style="text-align:right;">—</td>
+      <td style="text-align:right;">$${money(Number(r.amount||0))}</td>
+    </tr>`).join("");
+
+  const bodyRows = (rowsProd+rowsRuta+rowsExtra) || `<tr><td colspan="4" style="padding:10px; color:#666;">Sin partidas.</td></tr>`;
+
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Cotización ${escapeAttr(q.id)}</title>
+<style>
+  @page{ size: letter; margin: 14mm; }
+  body{ font-family: Arial, Helvetica, sans-serif; color:#111; }
+  .top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .brand{ font-size:18px; font-weight:800; letter-spacing:.3px; }
+  .sub{ color:#444; font-size:12px; margin-top:2px; }
+  .box{ border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px; }
+  .meta{ font-size:12px; line-height:1.4; }
+  h2{ font-size:14px; margin:14px 0 8px; }
+  table{ width:100%; border-collapse:collapse; font-size:12px; }
+  th,td{ border-bottom:1px solid #eee; padding:8px 6px; vertical-align:top; }
+  th{ text-align:left; color:#333; background:#fafafa; }
+  .totals td{ border-bottom:none; padding:6px 6px; }
+  .right{ text-align:right; }
+  .grand{ font-size:14px; font-weight:800; }
+  .green{ color:#0a7a31; }
+  .foot{ margin-top:18px; font-size:11px; color:#555; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div>
+      <div class="brand">ESMA INDUSTRIAL</div>
+      <div class="sub">Cotización membretada</div>
+    </div>
+    <div class="box meta">
+      <div><b>Folio:</b> ${escapeHTML(q.id.slice(0,8).toUpperCase())}</div>
+      <div><b>Fecha:</b> ${escapeHTML(dt)}</div>
+      <div><b>Proyecto:</b> ${escapeHTML(p.name||"")}</div>
+    </div>
+  </div>
+
+  <h2>Partidas</h2>
+  <div class="box">
+    <table>
+      <thead>
+        <tr><th>Descripción</th><th class="right">Cant/Hrs</th><th class="right">Unitario</th><th class="right">Importe</th></tr>
+      </thead>
+      <tbody>
+        ${bodyRows}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Totales</h2>
+  <div class="box">
+    <table class="totals">
+      <tbody>
+        <tr><td><b>Total (costo)</b></td><td class="right"><b>$${money(t.costo)}</b></td></tr>
+        <tr><td>MP</td><td class="right">$${money(b.mp)}</td></tr>
+        <tr><td>Ruta</td><td class="right">$${money(b.ruta)}</td></tr>
+        <tr><td>Extras</td><td class="right">$${money(b.extra)}</td></tr>
+        <tr><td>Utilidad (${Number(t.pct||0).toFixed(1)}%)</td><td class="right">$${money(t.util)}</td></tr>
+        <tr><td class="grand">Total (venta)</td><td class="right grand green">$${money(t.venta)}</td></tr>
+        <tr><td>Retorno</td><td class="right">$${money(t.retorno)}</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="foot">
+    <div><b>Notas:</b> Este documento se genera desde el sistema ESMA. Valores sujetos a validación final.</div>
+  </div>
+</body>
+</html>`;
+}
+
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="ESMA_respaldo.json"; a.click(); URL.revokeObjectURL(a.href);
+}
+function restoreJSON(file){
+  const reader=new FileReader();
+  reader.onload=()=>{ try{ db=JSON.parse(reader.result); normalizeDB(); save(); location.reload(); }catch(e){ alert("Archivo inválido."); } };
+  reader.readAsText(file);
+}
+function downloadCSV(filename, rows){
+  const esc=(v)=> `"${String(v??"").replaceAll('"','""')}"`;
+  const csv=rows.map(r=>r.map(esc).join(",")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href);
+}
+function exportReportCSV(){
+  const rows=[["Proyecto","Cliente","Entrega","Total autorizado","Cotizaciones autorizadas"]];
+  db.projects.forEach(p=>{ const authQs=db.quotes.filter(q=>q.projectId===p.id && q.status==="authorized").length; rows.push([p.name||"",p.client||"",p.deliveryDate||"",String(projectAuthorizedTotal(p.id)),String(authQs)]); });
+  downloadCSV("ESMA_reporte_proyectos.csv", rows);
+}
+function exportAuthorizedQuotesCSV(){
+  const rows=[["Proyecto","Fecha cotización","Total"]];
+  db.quotes.filter(q=>q.status==="authorized").forEach(q=>{ const p=db.projects.find(p=>p.id===q.projectId); rows.push([p?.name||"",q.createdAt||"",String(quoteTotal(q))]); });
+  downloadCSV("ESMA_reporte_cotizaciones_autorizadas.csv", rows);
+}
+function openEmails(){ openDrawer("db"); alert("En esta versión solo guardas correos (admin). No se envían correos desde el HTML."); }
+
+function seedDemo(){
+  db=defaultDB();
+  const p1={id:uid(), name:"Showroom León", client:"Cliente X", createdAt:todayISO(), deliveryDate:todayISO(), notes:"Zona abierta + cabinas"};
+  const p2={id:uid(), name:"Oficinas corporativas", client:"Empresa Y", createdAt:todayISO(), deliveryDate:"", notes:"Propuesta 3 variantes"};
+  db.projects.push(p1,p2);
+  db.tasks.push({id:uid(), projectId:p1.id, date:todayISO(), title:"Confirmar medidas", done:false});
+  db.tasks.push({id:uid(), projectId:p1.id, date:todayISO(), title:"Enviar layout", done:true});
+  db.installs.push({id:uid(), projectId:p1.id, date:todayISO(), title:"Instalación parcial"});
+  db.purchases.push({id:uid(), projectId:p1.id, date:todayISO(), title:"Compra herrajes"});
+  const q={id:uid(), projectId:p1.id, status:"authorized", createdAt:todayISO(), products:[], routes:[], extras:[]};
+  q.products.push({id:uid(), matPick:"Melamina 19mm", desc:"Cubierta", qty:10, unitPrice:980});
+  q.routes.push({id:uid(), routeName:"Ruta LM", hours:4, rate:350});
+  q.extras.push({id:uid(), label:"Viáticos", amount:1200});
+  db.quotes.push(q);
+  save(); location.reload();
+}
+
+function boot(){
+  load();
+  // Pull from Sheets on startup only
+  gsPullOnBoot();
+  const u=currentUser();
+  $("whoami").textContent = u ? (u.name+" · "+u.role.toUpperCase()) : "No autenticado";
+  $("btnLogout").style.display = u ? "" : "none";
+  $("loginModal").style.display = u ? "none" : "flex";
+
+  on($("btnLogin"),"click", ()=>{
+    const email=$("loginEmail").value.trim(); const pass=$("loginPass").value;
+    const u=login(email, pass);
+    if(!u){ $("loginMsg").textContent="Usuario o contraseña incorrectos."; return; }
+    $("loginMsg").textContent=""; $("loginModal").style.display="none";
+    $("whoami").textContent=u.name+" · "+u.role.toUpperCase();
+    $("btnLogout").style.display="";
+    renderProjectsList(); renderMain();
+  });
+  on($("btnSeedDemo"),"click", seedDemo);
+  on($("btnLogout"),"click", logout);
+
+  on($("segAuth"),"click", ()=>setSeg("auth"));
+  on($("segNoAuth"),"click", ()=>setSeg("noauth"));
+  on($("segDone"),"click", ()=>setSeg("done"));
+
+  on($("sortProjects"),"change", ()=>{ sortMode=$("sortProjects").value; renderProjectsList(); });
+  on($("search"),"input", ()=>{ searchTerm=$("search").value; renderProjectsList(); });
+  on($("btnClearFilters"),"click", ()=>{ $("search").value=""; searchTerm=""; $("sortProjects").value="delivery"; sortMode="delivery"; renderProjectsList(); });
+
+  on($("btnNewProject"),"click", createProject);
+  on($("btnNewQuote"),"click", ()=>{ const p=db.projects.find(x=>x.id===selectedProjectId); if(!p) return; openQuoteEditor(createQuote(p.id)); renderProjectsList(); });
+
+  on($("btnOpenDrawer"),"click", ()=>openDrawer(drawerMode));
+  on($("navOpenDrawer"),"click", ()=>openDrawer(drawerMode));
+  on($("drawerClose"),"click", closeDrawer);
+  on($("drawerOverlay"),"click", (e)=>{ if(e.target && e.target.id==="drawerOverlay") closeDrawer(); });
+  $("drawerOverlay").querySelectorAll(".chip").forEach(ch=>on(ch,"click", ()=>{ drawerMode=ch.dataset.chip; renderDrawer(); }));
+
+  on($("btnBackup"),"click", exportJSON);
+  on($("btnRestore"),"click", ()=>$("restoreFile").click());
+  on($("restoreFile"),"change", ()=>{ const f=$("restoreFile").files?.[0]; if(f) restoreJSON(f); });
+
+  on($("btnReports"),"click", ()=>{
+    const pick=prompt("Reportes:\n1) Proyectos (CSV)\n2) Cotizaciones autorizadas (CSV)\nEscribe 1 o 2:", "1");
+    if(pick==="2") exportAuthorizedQuotesCSV(); else exportReportCSV();
+  });
+  on($("btnExportQuote"),"click", ()=>{
+    const p=db.projects.find(x=>x.id===selectedProjectId); if(!p) return alert("Selecciona un proyecto.");
+    const latest=db.quotes.find(q=>q.projectId===p.id); if(!latest) return alert("No hay cotizaciones.");
+    const rows=[["Tipo","Concepto","Cantidad/Horas","Unitario","Importe"]];
+    (latest.products||[]).forEach(r=>rows.push(["Producto", r.desc||"", r.qty||0, r.unitPrice||0, (Number(r.qty||0)*Number(r.unitPrice||0))]));
+    (latest.routes||[]).forEach(r=>rows.push(["Ruta", r.routeName||"", r.hours||0, r.rate||0, (Number(r.hours||0)*Number(r.rate||0))]));
+    (latest.extras||[]).forEach(r=>rows.push(["Extra", r.label||"", "", "", r.amount||0]));
+    rows.push(["","","","TOTAL", quoteTotal(latest)]);
+    downloadCSV("ESMA_cotizacion_"+(p.name||"proyecto").replaceAll(" ","_")+".csv", rows);
+  });
+  on($("btnEmails"),"click", openEmails);
+
+  renderProjectsList();
+  renderMain();
+}
+document.addEventListener("DOMContentLoaded", boot);
+
+function downloadQuotePDF(){ alert('Función PDF no encontrada en esta versión.'); }
+// Google Sheets sync UI
+(function initGsUI(){
+  const urlInput = document.getElementById("gsUrlInput");
+  if(urlInput && GS_URL) urlInput.value = GS_URL;
+
+  document.getElementById("btnSaveGsUrl")?.addEventListener("click", ()=>{
+    const val = (document.getElementById("gsUrlInput")?.value||"").trim();
+    if(!val){ alert("Pega la URL de tu Apps Script"); return; }
+    GS_URL = val;
+    localStorage.setItem(GS_KEY, GS_URL);
+    const el = document.getElementById("syncStatus");
+    if(el){ el.textContent = "✓ URL guardada"; el.style.color="green"; }
+  });
+
+  document.getElementById("btnGsPush")?.addEventListener("click", gsPush);
+  document.getElementById("btnGsPull")?.addEventListener("click", gsPullOnBoot);
+  document.getElementById("btnResetSync")?.addEventListener("click", async ()=>{
+    if(!GS_URL){ alert("Primero guarda la URL de Apps Script"); return; }
+    if(!confirm("¿Borrar datos locales y descargar todo desde Google Sheets?")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    db = defaultDB();
+    syncStatusUpdate("Descargando...", "orange");
+    await gsPullOnBoot();
+  });
+})();
+
+</script>
+</body>
+</html>
