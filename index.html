@@ -1726,11 +1726,19 @@ function renderHotTable(){
 }
 
 function renderProjects(){
+  const isAdmin = SESSION?.role === "admin";
   const statusFilter = document.getElementById("projFilterStatus").value;
   const priorityFilter = document.getElementById("projFilterPriority").value;
   const q = document.getElementById("projSearch").value.trim().toLowerCase();
 
+  // For users: only projects where they have deliverables or are leader
+  const myProjIds = isAdmin ? null : new Set([
+    ...DB.deliverables.filter(d=>userName(d.assigneeId)===SESSION?.name).map(d=>d.projectId),
+    ...DB.projects.filter(p=>userName(p.leaderId)===SESSION?.name).map(p=>p.id)
+  ]);
+
   const filtered = DB.projects
+    .filter(p => isAdmin || myProjIds.has(p.id))
     .filter(p => !statusFilter || p.status===statusFilter)
     .filter(p => !priorityFilter || p.priority===priorityFilter)
     .filter(p => !q || p.name.toLowerCase().includes(q) || (p.notes||"").toLowerCase().includes(q));
@@ -1830,6 +1838,7 @@ function renderProjects(){
 }
 
 function renderDeliverables(){
+  const isAdmin = SESSION?.role === "admin";
   const q = document.getElementById("delSearch").value.trim().toLowerCase();
   const proj = document.getElementById("delFilterProject").value;
   const status = document.getElementById("delFilterStatus").value;
@@ -1837,6 +1846,7 @@ function renderDeliverables(){
   const t = todayISO();
 
   const rows = DB.deliverables
+    .filter(d => isAdmin || userName(d.assigneeId) === SESSION?.name)
     .filter(d => !q || d.title.toLowerCase().includes(q) || (d.notes||"").toLowerCase().includes(q))
     .filter(d => !proj || d.projectId===proj)
     .filter(d => !status || d.status===status)
@@ -1844,6 +1854,7 @@ function renderDeliverables(){
     .sort((a,b)=> (a.due||"9999-12-31").localeCompare(b.due||"9999-12-31"))
     .map(d=>{
       const block = d.blocked ? `<span class="tag bad">Sí · ${d.blockSince? daysBetween(d.blockSince,t):0}d</span>` : `<span class="tag gray">No</span>`;
+      const canSubmit = SESSION?.role==="user" && userName(d.assigneeId)===SESSION?.name && d.status!=="Aprobado" && d.status!=="En revision";
       return `
         <tr>
           <td>${statusTag(d.status, d.due)}</td>
@@ -1855,7 +1866,7 @@ function renderDeliverables(){
           <td class="right">
             <span data-admin><button class="btn small" data-edit-del="${d.id}">Editar</button>
             <button class="btn small" data-approve-del="${d.id}">Aprobar</button></span>
-            ${SESSION && SESSION.role==="user" && (d.assigneeId===SESSION.userId || DB.users.find(u=>(u.id===d.assigneeId)&&(u.name===SESSION.name||u.name===SESSION.dbName))) && d.status!=="Aprobado" && d.status!=="En revision" ? '<button class="btn small primary" data-submit-del="'+d.id+'">Marcar terminado</button>' : ""}
+            ${canSubmit ? `<button class="btn small primary" data-submit-del="${d.id}">Marcar terminado</button>` : ""}
             <button class="btn small danger" data-del-del="${d.id}">Eliminar</button>
           </td>
         </tr>
@@ -1866,8 +1877,11 @@ function renderDeliverables(){
 }
 
 function renderRoutines(){
+  const isAdmin = SESSION?.role === "admin";
   const t = todayISO();
-  const rows = DB.routines.map(r=>{
+  const rows = DB.routines
+    .filter(r => isAdmin || userName(r.assigneeId) === SESSION?.name)
+    .map(r=>{
     const touches = routineTouchesToday(r, t);
     return `
       <tr>
@@ -3897,7 +3911,8 @@ function renderGantt(){
   if(!container) return;
 
   // Gather all deliverables with due dates across all projects
-  const allDels = DB.deliverables.filter(d=>d.due);
+  const isAdmin = SESSION?.role === "admin";
+  const allDels = DB.deliverables.filter(d => d.due && (isAdmin || userName(d.assigneeId) === SESSION?.name));
   if(!allDels.length){ container.innerHTML=`<div class="muted small" style="padding:20px">No hay entregables con fecha.</div>`; return; }
 
   const today = todayISO();
@@ -3932,8 +3947,9 @@ function renderGantt(){
   const todayLine = todayOff>=0&&todayOff<=totalDays
     ? `<div style="position:absolute;left:${todayOff*scale}px;top:0;width:2px;height:100%;background:var(--accent);opacity:.5;z-index:1"></div>` : "";
 
-  // Group by project
-  const projBlocks = DB.projects.map(p=>{
+  // Group by project — only projects that have matching deliverables
+  const myProjIds = new Set(allDels.map(d=>d.projectId));
+  const projBlocks = DB.projects.filter(p=>myProjIds.has(p.id)).map(p=>{
     const pDels = allDels.filter(d=>d.projectId===p.id);
     if(!pDels.length) return "";
     const sorted = [...pDels].sort((a,b)=>a.due.localeCompare(b.due));
