@@ -1733,8 +1733,8 @@ function renderProjects(){
 
   // For users: only projects where they have deliverables or are leader
   const myProjIds = isAdmin ? null : new Set([
-    ...DB.deliverables.filter(d=>userName(d.assigneeId)===SESSION?.name).map(d=>d.projectId),
-    ...DB.projects.filter(p=>userName(p.leaderId)===SESSION?.name).map(p=>p.id)
+    ...DB.deliverables.filter(d=>d.assigneeId===SESSION?.userId).map(d=>d.projectId),
+    ...DB.projects.filter(p=>p.leaderId===SESSION?.userId).map(p=>p.id)
   ]);
 
   const filtered = DB.projects
@@ -1846,7 +1846,7 @@ function renderDeliverables(){
   const t = todayISO();
 
   const rows = DB.deliverables
-    .filter(d => isAdmin || userName(d.assigneeId) === SESSION?.name)
+    .filter(d => isAdmin || d.assigneeId === SESSION?.userId)
     .filter(d => !q || d.title.toLowerCase().includes(q) || (d.notes||"").toLowerCase().includes(q))
     .filter(d => !proj || d.projectId===proj)
     .filter(d => !status || d.status===status)
@@ -1854,7 +1854,7 @@ function renderDeliverables(){
     .sort((a,b)=> (a.due||"9999-12-31").localeCompare(b.due||"9999-12-31"))
     .map(d=>{
       const block = d.blocked ? `<span class="tag bad">Sí · ${d.blockSince? daysBetween(d.blockSince,t):0}d</span>` : `<span class="tag gray">No</span>`;
-      const canSubmit = SESSION?.role==="user" && userName(d.assigneeId)===SESSION?.name && d.status!=="Aprobado" && d.status!=="En revision";
+      const canSubmit = SESSION?.role==="user" && d.assigneeId===SESSION?.userId && d.status!=="Aprobado" && d.status!=="En revision";
       return `
         <tr>
           <td>${statusTag(d.status, d.due)}</td>
@@ -1880,7 +1880,7 @@ function renderRoutines(){
   const isAdmin = SESSION?.role === "admin";
   const t = todayISO();
   const rows = DB.routines
-    .filter(r => isAdmin || userName(r.assigneeId) === SESSION?.name)
+    .filter(r => isAdmin || r.assigneeId === SESSION?.userId)
     .map(r=>{
     const touches = routineTouchesToday(r, t);
     return `
@@ -3731,9 +3731,9 @@ function renderMisProyectos(){
   const myName = SESSION.name;
 
   // Projects where user has deliverables
-  const myDelProjIds = [...new Set(DB.deliverables.filter(d=>userName(d.assigneeId)===myName).map(d=>d.projectId))];
+  const myDelProjIds = [...new Set(DB.deliverables.filter(d=>d.assigneeId===SESSION.userId).map(d=>d.projectId))];
   // Also projects where user is leader
-  const myLeadProjs = DB.projects.filter(p=>userName(p.leaderId)===myName).map(p=>p.id);
+  const myLeadProjs = DB.projects.filter(p=>p.leaderId===SESSION.userId).map(p=>p.id);
   const allMyProjIds = [...new Set([...myDelProjIds, ...myLeadProjs])];
   const myProjects = DB.projects.filter(p=>allMyProjIds.includes(p.id));
 
@@ -3743,7 +3743,7 @@ function renderMisProyectos(){
       blocksEl.innerHTML = `<div class="card muted small">No tienes proyectos asignados.</div>`;
     } else {
       blocksEl.innerHTML = myProjects.map(p=>{
-        const myDels = DB.deliverables.filter(d=>d.projectId===p.id && userName(d.assigneeId)===myName);
+        const myDels = DB.deliverables.filter(d=>d.projectId===p.id && d.assigneeId===SESSION.userId);
         const approved = myDels.filter(d=>d.status==="Aprobado").length;
         const pct = myDels.length ? Math.round((approved/myDels.length)*100) : 0;
         const level = pct>=85?"ok":pct>=70?"warn":"bad";
@@ -3789,7 +3789,7 @@ function renderMisProjGantt(projIds){
   const container = document.getElementById("misProjGantt");
   if(!container) return;
   const myName = SESSION?.name;
-  const allDels = DB.deliverables.filter(d=>projIds.includes(d.projectId) && d.due && userName(d.assigneeId)===myName);
+  const allDels = DB.deliverables.filter(d=>projIds.includes(d.projectId) && d.due && d.assigneeId===SESSION.userId);
   if(!allDels.length){ container.innerHTML=`<div class="muted small" style="padding:20px">Sin entregables con fecha.</div>`; return; }
 
   const today = todayISO();
@@ -3882,7 +3882,7 @@ function renderTareas(){
 
   if(!isAdmin){
     // User sees only their own tasks
-    tareas = tareas.filter(t => t.userId === SESSION.userId || t.userId === undefined && t.ownerName === SESSION.name);
+    tareas = tareas.filter(t => t.userId === SESSION.userId);
     if(subtitle) subtitle.textContent = "Mis tareas pendientes.";
   } else {
     if(filterUserId) tareas = tareas.filter(t => t.userId === filterUserId);
@@ -3912,7 +3912,7 @@ function renderGantt(){
 
   // Gather all deliverables with due dates across all projects
   const isAdmin = SESSION?.role === "admin";
-  const allDels = DB.deliverables.filter(d => d.due && (isAdmin || userName(d.assigneeId) === SESSION?.name));
+  const allDels = DB.deliverables.filter(d => d.due && (isAdmin || d.assigneeId === SESSION?.userId));
   if(!allDels.length){ container.innerHTML=`<div class="muted small" style="padding:20px">No hay entregables con fecha.</div>`; return; }
 
   const today = todayISO();
