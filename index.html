@@ -2566,11 +2566,11 @@ document.body.addEventListener("click", (e)=>{
           </div>
           <div>
             <label>Compromiso</label>
-            <input class="input" type="date" id="ed_due" value="${d.due||t}" ${SESSION?.role!=='admin'?'disabled title="Solo admin puede cambiar la fecha"':''} onchange="const r=document.getElementById('ed_reason_row'); r.style.display=this.value!=='${d.due||t}'?'block':'none'">
+            <input class="input" type="date" id="ed_due" value="${d.due||t}" ${SESSION?.role!=='admin'?'disabled title="Solo admin puede cambiar la fecha"':''}>
           </div>
         </div>
-        <div id="ed_reason_row" style="display:none; padding:10px; background:rgba(220,38,38,.06); border:1px solid rgba(220,38,38,.2); border-radius:10px; margin-top:4px">
-          <label style="color:var(--bad); font-weight:600">Motivo del cambio de fecha</label>
+        <div id="ed_reason_row" style="padding:10px; background:rgba(220,38,38,.06); border:1px solid rgba(220,38,38,.2); border-radius:10px; margin-top:4px">
+          <label style="color:var(--bad); font-weight:600">Motivo del cambio de fecha (si aplica)</label>
           <select class="input" id="ed_due_reason">
             <option value="externo">Factor externo — no afecta score</option>
             <option value="seguimiento">Falta de seguimiento — penaliza -5% al score</option>
@@ -2791,11 +2791,11 @@ document.body.addEventListener("click", (e)=>{
           </div>
           <div>
             <label>Fin</label>
-            <input class="input" type="date" id="ep_end" value="${p.end||todayISO()}" onchange="const r=document.getElementById('ep_reason_row'); r.style.display=this.value!=='${p.end||todayISO()}'?'block':'none'">
+            <input class="input" type="date" id="ep_end" value="${p.end||todayISO()}">
           </div>
         </div>
-        <div id="ep_reason_row" style="display:none; padding:10px; background:rgba(220,38,38,.06); border:1px solid rgba(220,38,38,.2); border-radius:10px; margin-top:4px">
-          <label style="color:var(--bad); font-weight:600">Motivo del cambio de fecha</label>
+        <div style="padding:10px; background:rgba(220,38,38,.06); border:1px solid rgba(220,38,38,.2); border-radius:10px; margin-top:4px">
+          <label style="color:var(--bad); font-weight:600">Motivo del cambio de fecha fin (si aplica)</label>
           <select class="input" id="ep_end_reason">
             <option value="externo">Factor externo — no afecta score</option>
             <option value="seguimiento">Falta de seguimiento — penaliza -5% al score</option>
