@@ -1440,6 +1440,17 @@ let DB = loadDB();
  *  -------------------------- */
 const byId = (arr, id) => arr.find(x=>x.id===id) || null;
 
+
+function fmtDueWithOriginal(due, originalDue){
+  if(!due) return "—";
+  if(!originalDue || originalDue === due) return fmtDate(due);
+  return `${fmtDate(due)} <span style="font-size:10px;background:rgba(220,38,38,.1);color:var(--bad);padding:1px 5px;border-radius:4px;white-space:nowrap" title="Fecha pactada original: ${fmtDate(originalDue)}">↑ pactada: ${fmtDate(originalDue)}</span>`;
+}
+function fmtEndWithOriginal(end, originalEnd){
+  if(!end) return "—";
+  if(!originalEnd || originalEnd === end) return fmtDate(end);
+  return `${fmtDate(end)} <span style="font-size:10px;background:rgba(220,38,38,.1);color:var(--bad);padding:1px 5px;border-radius:4px;white-space:nowrap" title="Fecha pactada original: ${fmtDate(originalEnd)}">↑ pactada: ${fmtDate(originalEnd)}</span>`;
+}
 function userName(id){
   const u = byId(DB.users, id);
   return u ? u.name : "—";
@@ -1727,7 +1738,7 @@ function renderHotTable(){
           <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,80)}</div></td>
           <td>${proj}</td>
           <td>${ass}</td>
-          <td>${d.due ? `${fmtDate(d.due)} <div class="small muted">${dateHint}</div>` : "—"}</td>
+          <td>${d.due ? `${fmtDueWithOriginal(d.due, d.originalDue)}<div class="small muted">${dateHint}</div>` : "—"}</td>
           <td>${d.blocked ? `<span class="tag bad">Sí · ${d.blockSince? daysBetween(d.blockSince,t):0}d</span>` : `<span class="tag gray">No</span>`}</td>
           <td class="right">
             <span data-admin><button class="btn small" data-edit-del="${d.id}">Editar</button>
@@ -1792,7 +1803,7 @@ function renderProjects(){
           <td><b>${p.name}</b><div class="small muted">${(p.notes||"").slice(0,80)}</div></td>
           <td>${priorityTag(p.priority)}</td>
           <td>${statusTag2}</td>
-          <td>${fmtDate(p.start)} → ${fmtDate(p.end)}</td>
+          <td>${fmtDate(p.start)} → ${fmtEndWithOriginal(p.end, p.originalEnd)}</td>
           <td><span class="small muted">${done}/${dels.length} entregables</span></td>
           <td class="right">
             <button class="btn small" data-open-proj="${p.id}">Ver</button>
@@ -1872,7 +1883,7 @@ function renderDeliverables(){
           <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,80)}</div></td>
           <td>${projectName(d.projectId)}</td>
           <td>${userName(d.assigneeId)}</td>
-          <td>${d.due ? fmtDate(d.due) : "—"}</td>
+          <td>${fmtDueWithOriginal(d.due, d.originalDue)}</td>
           <td>${block}</td>
           <td class="right">
             <span data-admin><button class="btn small" data-edit-del="${d.id}">Editar</button>
@@ -2332,6 +2343,7 @@ document.getElementById("qaSave").addEventListener("click", ()=>{
       status: document.getElementById("qa_p_status").value,
       start: document.getElementById("qa_p_start").value || t,
       end: document.getElementById("qa_p_end").value || t,
+      originalEnd: document.getElementById("qa_p_end").value || t,
       notes: document.getElementById("qa_p_notes").value.trim()
     });
     saveDB();
@@ -2352,6 +2364,7 @@ document.getElementById("qaSave").addEventListener("click", ()=>{
       projectId: document.getElementById("qa_d_project").value,
       assigneeId: document.getElementById("qa_d_assignee").value,
       due: document.getElementById("qa_d_due").value || t,
+      originalDue: document.getElementById("qa_d_due").value || t,
       status,
       blocked,
       blockSince: blocked ? t : null,
@@ -2603,12 +2616,14 @@ document.body.addEventListener("click", (e)=>{
           d.blocked = false;
           d.blockSince = null;
         }
-        // Score penalty for date change
+        // Score penalty and original date tracking
         if(newDue && oldDue && newDue !== oldDue){
           const reason = document.getElementById("ed_due_reason")?.value;
           if(!d.dueDateHistory) d.dueDateHistory = [];
           d.dueDateHistory.push({from:oldDue, to:newDue, reason:reason||"externo", date:todayISO()});
           if(reason === "seguimiento"){
+            // Save original date only on first seguimiento change
+            if(!d.originalDue) d.originalDue = oldDue;
             d.scorePenalty = (d.scorePenalty||0) + 5;
             toast("Fecha cambiada", "Penalizacion de -5% aplicada al score por falta de seguimiento.");
           } else {
@@ -2776,21 +2791,42 @@ document.body.addEventListener("click", (e)=>{
           </div>
           <div>
             <label>Fin</label>
-            <input class="input" type="date" id="ep_end" value="${p.end||todayISO()}">
+            <input class="input" type="date" id="ep_end" value="${p.end||todayISO()}" onchange="const r=document.getElementById('ep_reason_row'); r.style.display=this.value!=='${p.end||todayISO()}'?'block':'none'">
           </div>
+        </div>
+        <div id="ep_reason_row" style="display:none; padding:10px; background:rgba(220,38,38,.06); border:1px solid rgba(220,38,38,.2); border-radius:10px; margin-top:4px">
+          <label style="color:var(--bad); font-weight:600">Motivo del cambio de fecha</label>
+          <select class="input" id="ep_end_reason">
+            <option value="externo">Factor externo — no afecta score</option>
+            <option value="seguimiento">Falta de seguimiento — penaliza -5% al score</option>
+          </select>
         </div>
         <label>Notas</label>
         <textarea class="input" id="ep_notes">${escapeHtml(p.notes||"")}</textarea>
       `,
       onSave: ()=>{
+        const oldEnd = p.end;
+        const newEnd = document.getElementById("ep_end").value;
         p.name = document.getElementById("ep_name").value.trim();
         p.leaderId = document.getElementById("ep_leader").value;
         p.priority = document.getElementById("ep_priority").value;
         p.status = document.getElementById("ep_status").value;
         p.start = document.getElementById("ep_start").value;
-        p.end = document.getElementById("ep_end").value;
+        p.end = newEnd;
         p.notes = document.getElementById("ep_notes").value.trim();
-        toast("Actualizado", "Proyecto guardado.");
+        if(newEnd && oldEnd && newEnd !== oldEnd){
+          const reason = document.getElementById("ep_end_reason")?.value;
+          if(!p.endDateHistory) p.endDateHistory = [];
+          p.endDateHistory.push({from:oldEnd, to:newEnd, reason:reason||"externo", date:todayISO()});
+          if(reason === "seguimiento"){
+            if(!p.originalEnd) p.originalEnd = oldEnd;
+            toast("Fecha cambiada", "Proyecto: fecha pactada guardada, nueva fecha marcada.");
+          } else {
+            toast("Fecha cambiada", "Sin penalizacion — factor externo registrado.");
+          }
+        } else {
+          toast("Actualizado", "Proyecto guardado.");
+        }
       }
     });
     return;
@@ -3751,7 +3787,7 @@ function renderMisProyectos(){
           <div class="flex between wrap">
             <div>
               <b>${p.name}</b>
-              <div class="small muted">${p.status} · ${fmtDate(p.start)} → ${fmtDate(p.end)}</div>
+              <div class="small muted">${p.status} · ${fmtDate(p.start)} → ${fmtEndWithOriginal(p.end, p.originalEnd)}</div>
             </div>
             <div style="text-align:right">
               <div style="font-size:20px;font-weight:800;color:${color}">${pct}%</div>
