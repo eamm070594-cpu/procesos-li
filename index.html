@@ -351,6 +351,7 @@
       font-size:24px; font-weight:800; color:var(--accent);
     }
     .loginErr{color:var(--bad); font-size:12px; margin-top:8px; display:none;}
+    .nav-sub{ font-size:13px; padding:6px 10px; }
     .roleBadge{
       position:fixed; top:12px; right:12px; z-index:9999;
       padding:6px 14px; border-radius:999px;
@@ -479,14 +480,19 @@
 
     <nav class="nav" id="nav">
       <button class="active" data-view="dashboard"><span class="dot"></span> Dashboard</button>
-      <button data-view="projects"><span class="dot"></span> Proyectos</button>
-      <button data-view="deliverables"><span class="dot"></span> Entregables</button>
-      <button data-view="routines"><span class="dot"></span> Rutinas</button>
-      <button data-view="incidents"><span class="dot"></span> Incidencias</button>
-      <button data-view="mistareas" id="navMisTareas" style="display:none"><span class="dot"></span> Gantt</button>
+      <div style="display:flex; align-items:center">
+        <button data-view="projects" id="navProjects" style="flex:1"><span class="dot"></span> Proyectos</button>
+        <button onclick="toggleProjSub(event)" style="background:none;border:none;cursor:pointer;padding:4px 8px;color:var(--muted);font-size:11px" id="projSubChev">▶</button>
+      </div>
+      <div id="navProjectsSub" style="display:none; padding-left:16px; border-left:2px solid var(--accent); margin-left:8px">
+        <button data-view="deliverables" class="nav-sub"><span class="dot"></span> Entregables</button>
+        <button data-view="routines" class="nav-sub"><span class="dot"></span> Rutinas</button>
+        <button data-view="mistareas" id="navMisTareas" class="nav-sub"><span class="dot"></span> Gantt</button>
+        <button data-view="reports" id="navReportsSub" class="nav-sub"><span class="dot"></span> Reportes</button>
+      </div>
       <button data-view="miactividad" id="navMiActividad" style="display:none"><span class="dot"></span> Mis Actividades</button>
+      <button data-view="misproyectos" id="navMisProyectos" style="display:none"><span class="dot"></span> Mis Proyectos</button>
       <button data-view="calendar"><span class="dot"></span> Calendario</button>
-      <button data-view="reports"><span class="dot"></span> Reportes</button>
       <button data-view="settings"><span class="dot"></span> Configuración</button>
     </nav>
 
@@ -963,6 +969,24 @@
       </div>
     </section>
 
+    <!-- MIS PROYECTOS (usuario) -->
+    <section id="view-misproyectos" class="hidden">
+      <div class="topbar">
+        <div class="title">
+          <h2 id="misProjTitle">Mis Proyectos</h2>
+          <p>Proyectos asignados a ti y su Gantt.</p>
+        </div>
+      </div>
+      <div id="misProjBlocks" style="margin-bottom:12px"></div>
+      <div class="card">
+        <b>Gantt de mis proyectos</b>
+        <div class="hr"></div>
+        <div id="misProjGantt" style="overflow-x:auto; min-height:80px">
+          <div class="muted small" style="padding:20px">Cargando...</div>
+        </div>
+      </div>
+    </section>
+
     <!-- CALENDAR -->
     <section id="view-calendar" class="hidden">
       <div class="topbar">
@@ -994,6 +1018,7 @@
         </div>
         <div class="actions">
           <button class="btn" id="btnAddUser" data-admin>Agregar usuario</button>
+          <button class="btn danger" id="btnLogout">Cerrar sesion</button>
         </div>
       </div>
 
@@ -2060,10 +2085,10 @@ function renderAll(){
   renderValidar();
   renderMiActividad();
   renderMisTareas();
+  renderMisProyectos();
   renderProjects();
   renderDeliverables();
   renderRoutines();
-  renderIncidents();
   renderReports();
   renderUsers();
 }
@@ -3192,6 +3217,7 @@ const _origSaveDB = saveDB;
 let _lastSaveTime = 0;
 function saveDB(){
   localStorage.setItem(LS_KEY, JSON.stringify(DB));
+  _lastSaveTime = Date.now();
   if(GS_URL){
     clearTimeout(saveDB._t);
     saveDB._t = setTimeout(gsPush, 300);
@@ -3219,8 +3245,8 @@ function initGsUI(){
   document.getElementById("btnPullNow").addEventListener("click", gsPull);
 }
 
-// Auto-sync every 30 seconds
-setInterval(()=>{ if(GS_URL && !_syncInProgress && (Date.now()-(_lastSaveTime||0))>10000) gsPull(); }, 30000);
+// Auto-sync every 30 seconds, but skip if saved within last 60 seconds
+setInterval(()=>{ if(GS_URL && !_syncInProgress && (Date.now()-(_lastSaveTime||0))>60000) gsPull(); }, 30000);
 
 
 /** =========================================================
@@ -3331,7 +3357,7 @@ document.getElementById("btnConfirmMonthClose").addEventListener("click", ()=>{
  *  ========================================================= */
 function startAutoSync(){
   setInterval(()=>{
-    if(!GS_URL || _syncInProgress) return;
+    if(!GS_URL || _syncInProgress || (Date.now()-(_lastSaveTime||0))<60000) return;
     gsPull();
   }, 30000);
   const bar = document.getElementById("autoSyncBar");
@@ -3569,6 +3595,17 @@ function personStatsHTML(userId){
   `;
 }
 
+// Projects submenu toggle
+function toggleProjSub(e){
+  e.stopPropagation();
+  const sub = document.getElementById("navProjectsSub");
+  const chev = document.getElementById("projSubChev");
+  if(!sub) return;
+  const open = sub.style.display !== "none";
+  sub.style.display = open ? "none" : "";
+  if(chev) chev.textContent = open ? "▶" : "▼";
+}
+
 /** =========================================================
  *  AUTENTICACION
  *  ========================================================= */
@@ -3620,31 +3657,168 @@ function applyRoleUI(){
     badge.style.display = "block";
     badge.className = "roleBadge " + SESSION.role;
     badge.textContent = SESSION.role === "admin" ? ("Admin: " + SESSION.name) : SESSION.name;
-    badge.onclick = ()=>{ if(confirm("Cerrar sesion?")){ SESSION=null; sessionStorage.removeItem("li_session"); location.reload(); } };
+    badge.onclick = null;
   }
 
   const isAdmin = SESSION.role === "admin";
 
-  // Hide admin-only buttons for regular users
   document.querySelectorAll("[data-admin]").forEach(el=>{
     el.style.display = isAdmin ? "" : "none";
   });
 
-  // Show only user-relevant nav
   const navMiAct = document.getElementById("navMiActividad");
+  const navMisProyectos = document.getElementById("navMisProyectos");
+  const navProjectsSub = document.getElementById("navProjectsSub");
   const navMisTareas = document.getElementById("navMisTareas");
+  const navReportsSub = document.getElementById("navReportsSub");
+
   if(!isAdmin){
-    document.querySelectorAll("#nav button[data-view]").forEach(btn=>{
-      const allowed = ["dashboard","calendar","miactividad"];
+    // User nav: Dashboard, Mis Actividades, Mis Proyectos, Calendario, Configuracion
+    document.querySelectorAll("#nav > button[data-view]").forEach(btn=>{
+      const allowed = ["dashboard","calendar","miactividad","misproyectos","settings"];
       btn.style.display = allowed.includes(btn.dataset.view) ? "" : "none";
     });
+    if(navProjectsSub) navProjectsSub.style.display = "none";
     if(navMiAct) navMiAct.style.display = "";
-    if(navMisTareas) navMisTareas.style.display = "none";
+    if(navMisProyectos) navMisProyectos.style.display = "";
     showView("miactividad");
   } else {
+    // Admin nav: show all, hide user-only
+    document.querySelectorAll("#nav > button[data-view]").forEach(btn=>{
+      btn.style.display = "";
+    });
+    if(navProjectsSub) navProjectsSub.style.display = "none";
     if(navMiAct) navMiAct.style.display = "none";
+    if(navMisProyectos) navMisProyectos.style.display = "none";
     if(navMisTareas) navMisTareas.style.display = "";
+    if(navReportsSub) navReportsSub.style.display = "";
   }
+}
+
+// Logout button in settings
+document.getElementById("btnLogout")?.addEventListener("click", ()=>{
+  if(confirm("Cerrar sesion?")){ SESSION=null; sessionStorage.removeItem("li_session"); location.reload(); }
+});
+
+/** =========================================================
+ *  MIS PROYECTOS (usuario)
+ *  ========================================================= */
+function renderMisProyectos(){
+  if(!SESSION || SESSION.role !== "user") return;
+  const myName = SESSION.name;
+
+  // Projects where user has deliverables
+  const myDelProjIds = [...new Set(DB.deliverables.filter(d=>userName(d.assigneeId)===myName).map(d=>d.projectId))];
+  // Also projects where user is leader
+  const myLeadProjs = DB.projects.filter(p=>userName(p.leaderId)===myName).map(p=>p.id);
+  const allMyProjIds = [...new Set([...myDelProjIds, ...myLeadProjs])];
+  const myProjects = DB.projects.filter(p=>allMyProjIds.includes(p.id));
+
+  const blocksEl = document.getElementById("misProjBlocks");
+  if(blocksEl){
+    if(!myProjects.length){
+      blocksEl.innerHTML = `<div class="card muted small">No tienes proyectos asignados.</div>`;
+    } else {
+      blocksEl.innerHTML = myProjects.map(p=>{
+        const myDels = DB.deliverables.filter(d=>d.projectId===p.id && userName(d.assigneeId)===myName);
+        const approved = myDels.filter(d=>d.status==="Aprobado").length;
+        const pct = myDels.length ? Math.round((approved/myDels.length)*100) : 0;
+        const level = pct>=85?"ok":pct>=70?"warn":"bad";
+        const color = level==="ok"?"var(--ok)":level==="warn"?"var(--warn)":"var(--bad)";
+        return `<div class="card" style="margin-bottom:10px">
+          <div class="flex between wrap">
+            <div>
+              <b>${p.name}</b>
+              <div class="small muted">${p.status} · ${fmtDate(p.start)} → ${fmtDate(p.end)}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:20px;font-weight:800;color:${color}">${pct}%</div>
+              <div class="small muted">${approved}/${myDels.length} entregables</div>
+            </div>
+          </div>
+          ${myDels.length?`<div class="hr"></div>
+          <div style="overflow:auto"><table>
+            <thead><tr><th>Estado</th><th>Entregable</th><th>Fecha</th><th class="right">Accion</th></tr></thead>
+            <tbody>${myDels.sort((a,b)=>(a.due||"").localeCompare(b.due||"")).map(d=>{
+              const canSubmit = d.status!=="Aprobado"&&d.status!=="En revision";
+              return `<tr>
+                <td>${statusTag(d.status,d.due)}</td>
+                <td><b>${d.title}</b></td>
+                <td>${d.due?fmtDate(d.due):"—"}</td>
+                <td class="right">
+                  ${canSubmit?`<button class="btn small primary" data-submit-del="${d.id}">Marcar terminado</button>`:""}
+                  ${d.status==="En revision"?`<span class="tag blue">En revision</span>`:""}
+                  ${d.status==="Aprobado"?`<span class="tag ok">Aprobado</span>`:""}
+                </td>
+              </tr>`;
+            }).join("")}</tbody>
+          </table></div>`:""}
+        </div>`;
+      }).join("");
+    }
+  }
+
+  // Gantt for user's projects only
+  renderMisProjGantt(allMyProjIds);
+}
+
+function renderMisProjGantt(projIds){
+  const container = document.getElementById("misProjGantt");
+  if(!container) return;
+  const myName = SESSION?.name;
+  const allDels = DB.deliverables.filter(d=>projIds.includes(d.projectId) && d.due && userName(d.assigneeId)===myName);
+  if(!allDels.length){ container.innerHTML=`<div class="muted small" style="padding:20px">Sin entregables con fecha.</div>`; return; }
+
+  const today = todayISO();
+  const allDates = allDels.map(d=>d.due).sort();
+  const minD = new Date(allDates[0]+"T00:00:00");
+  const maxD = new Date(allDates[allDates.length-1]+"T00:00:00");
+  const totalDays = Math.max(14, Math.round((maxD-minD)/(1000*60*60*24)))+7;
+  const todayOff = Math.round((new Date(today+"T00:00:00")-minD)/(1000*60*60*24));
+  const scale = 22; const labelW = 160;
+
+  let headerCells = "";
+  for(let i=0;i<=totalDays;i+=7){
+    const d=new Date(minD); d.setDate(d.getDate()+i);
+    headerCells+=`<div style="position:absolute;left:${i*scale}px;top:0;font-size:10px;color:var(--muted);white-space:nowrap">${d.toLocaleDateString("es-MX",{day:"2-digit",month:"short"})}</div>`;
+  }
+  const header=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+    <div style="min-width:${labelW}px"></div>
+    <div style="position:relative;height:18px;flex:1;min-width:${(totalDays+2)*scale}px">
+      ${headerCells}
+      ${todayOff>=0&&todayOff<=totalDays?`<div style="position:absolute;left:${todayOff*scale}px;top:0;font-size:10px;color:var(--accent);font-weight:700">│Hoy</div>`:""}
+    </div>
+  </div>`;
+
+  let ticks="";
+  for(let i=0;i<=totalDays;i+=7) ticks+=`<div style="position:absolute;left:${i*scale}px;top:0;width:1px;height:100%;background:var(--line);opacity:.3"></div>`;
+  const todayLine=todayOff>=0&&todayOff<=totalDays?`<div style="position:absolute;left:${todayOff*scale}px;top:0;width:2px;height:100%;background:var(--accent);opacity:.5;z-index:1"></div>`:"";
+
+  const projBlocks = projIds.map(pid=>{
+    const p = DB.projects.find(x=>x.id===pid);
+    const pDels = allDels.filter(d=>d.projectId===pid);
+    if(!pDels.length) return "";
+    const rows = [...pDels].sort((a,b)=>a.due.localeCompare(b.due)).map(d=>{
+      const offset=Math.round((new Date(d.due+"T00:00:00")-minD)/(1000*60*60*24));
+      const color=d.status==="Aprobado"?"var(--ok)":d.due<today?"var(--bad)":d.status==="En revision"?"var(--accent)":"var(--warn)";
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="min-width:${labelW}px;max-width:${labelW}px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:10px;color:var(--muted)">↳ ${d.title}</div>
+        <div style="position:relative;height:20px;flex:1;min-width:${(totalDays+2)*scale}px">${ticks}${todayLine}
+          <div style="position:absolute;left:${offset*scale}px;top:2px;width:16px;height:16px;background:${color};border-radius:50%;border:2px solid var(--bg);z-index:2" title="${d.title} · ${fmtDate(d.due)}"></div>
+        </div>
+        <div style="min-width:75px;font-size:10px;color:var(--muted)">${fmtDate(d.due)}</div>
+      </div>`;
+    }).join("");
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+        <div style="min-width:${labelW}px;font-size:12px;font-weight:700">${p?.name||""}</div>
+        <div style="position:relative;height:4px;flex:1;background:var(--line);border-radius:2px;min-width:${(totalDays+2)*scale}px">${ticks}${todayLine}</div>
+        <div style="min-width:75px"></div>
+      </div>${rows}
+    </div>`;
+  }).join("");
+
+  container.innerHTML=`<div style="padding:12px"><div style="min-width:${labelW+(totalDays+4)*scale}px">${header}${projBlocks}</div></div>`;
 }
 
 /** =========================================================
