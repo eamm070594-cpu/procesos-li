@@ -1744,7 +1744,7 @@ function renderHotTable(){
           <td class="right">
             <span data-admin><button class="btn small" data-edit-del="${d.id}">Editar</button>
             <button class="btn small" data-approve-del="${d.id}">Aprobar</button></span>
-            ${SESSION && SESSION.role==="user" && (d.assigneeId===SESSION.userId || DB.users.find(u=>(u.id===d.assigneeId)&&(u.name===SESSION.name||u.name===SESSION.dbName))) && d.status!=="Aprobado" && d.status!=="En revision" ? '<button class="btn small primary" data-submit-del="'+d.id+'">Marcar terminado</button>' : ""}
+            ${SESSION?.role==="user" && d.assigneeId===SESSION.userId && d.status!=="Aprobado" && d.status!=="En revision" ? '<button class="btn small primary" data-submit-del="'+d.id+'">Marcar terminado</button>' : ""}
           </td>
         </tr>
       `;
@@ -1877,7 +1877,7 @@ function renderDeliverables(){
     .sort((a,b)=> (a.due||"9999-12-31").localeCompare(b.due||"9999-12-31"))
     .map(d=>{
       const block = d.blocked ? `<span class="tag bad">Sí · ${d.blockSince? daysBetween(d.blockSince,t):0}d</span>` : `<span class="tag gray">No</span>`;
-      const canSubmit = SESSION?.role==="user" && d.status!=="Aprobado" && d.status!=="En revision";
+      const canSubmit = SESSION?.role==="user" && d.assigneeId===SESSION?.userId && d.status!=="Aprobado" && d.status!=="En revision";
       return `
         <tr>
           <td>${statusTag(d.status, d.due)}</td>
@@ -2719,7 +2719,7 @@ document.body.addEventListener("click", (e)=>{
     const dels = DB.deliverables.filter(d=>d.projectId===openProj);
     const canEdit = SESSION?.role==="admin";
     const rows = dels.map(d=>{
-      const canSubmit = SESSION?.role==="user" && d.status!=="Aprobado" && d.status!=="En revision";
+      const canSubmit = SESSION?.role==="user" && d.assigneeId===SESSION?.userId && d.status!=="Aprobado" && d.status!=="En revision";
       return `<tr>
         <td>${statusTag(d.status,d.due)}</td>
         <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,60)}</div></td>
@@ -3527,7 +3527,7 @@ function renderMiActividad(){
     .sort((a,b)=>a.due.localeCompare(b.due))
     .slice(0,8).map(d=>{
       const days = daysBetween(d.due,t);
-      const canSubmit = d.status!=="En revision";
+      const canSubmit = d.assigneeId===SESSION?.userId && d.status!=="En revision";
       return `<tr>
         <td>${statusTag(d.status,d.due)}</td>
         <td><b>${d.title}</b></td>
@@ -3541,7 +3541,7 @@ function renderMiActividad(){
 
   // TODOS MIS ENTREGABLES
   const delRows = filtered.map(d=>{
-    const canSubmit = d.status!=="Aprobado"&&d.status!=="En revision";
+    const canSubmit = d.assigneeId===SESSION?.userId && d.status!=="Aprobado" && d.status!=="En revision";
     return `<tr>
       <td>${statusTag(d.status,d.due)}</td>
       <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,60)}</div></td>
@@ -3808,7 +3808,7 @@ function renderMisProyectos(){
           <div style="overflow:auto"><table>
             <thead><tr><th>Estado</th><th>Entregable</th><th>Fecha</th><th class="right">Accion</th></tr></thead>
             <tbody>${myDels.sort((a,b)=>(a.due||"").localeCompare(b.due||"")).map(d=>{
-              const canSubmit = d.status!=="Aprobado"&&d.status!=="En revision";
+              const canSubmit = d.assigneeId===SESSION?.userId && d.status!=="Aprobado" && d.status!=="En revision";
               return `<tr>
                 <td>${statusTag(d.status,d.due)}</td>
                 <td><b>${d.title}</b></td>
