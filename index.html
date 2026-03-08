@@ -1044,6 +1044,7 @@
         </div>
         <div class="actions">
           <button class="btn" id="btnAddUser" data-admin>Agregar usuario</button>
+          <button class="btn" id="btnMigrateDates" data-admin title="Guarda la fecha actual como fecha pactada original en todos los registros sin ella">Fijar fechas pactadas</button>
           <button class="btn danger" id="btnLogout">Cerrar sesion</button>
         </div>
       </div>
@@ -2723,7 +2724,7 @@ document.body.addEventListener("click", (e)=>{
         <td>${statusTag(d.status,d.due)}</td>
         <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,60)}</div></td>
         <td>${userName(d.assigneeId)}</td>
-        <td>${d.due?fmtDate(d.due):"—"}</td>
+        <td>${fmtDueWithOriginal(d.due, d.originalDue)}</td>
         <td>${d.link?`<a href="${d.link}" target="_blank" class="btn small ghost">🔗 Ver link</a>`:"—"}</td>
         <td class="right">
           ${canEdit?`<button class="btn small" data-edit-del="${d.id}">Editar</button>`:""}
@@ -3531,7 +3532,7 @@ function renderMiActividad(){
         <td>${statusTag(d.status,d.due)}</td>
         <td><b>${d.title}</b></td>
         <td>${projectName(d.projectId)}</td>
-        <td>${fmtDate(d.due)}<div class="small muted">Vencido ${days}d</div></td>
+        <td>${fmtDueWithOriginal(d.due, d.originalDue)}<div class="small muted">Vencido ${days}d</div></td>
         <td>${d.blocked?`<span class="tag bad">Si</span>`:`<span class="tag gray">No</span>`}</td>
         <td class="right">${canSubmit?`<button class="btn small primary" data-submit-del="${d.id}">Marcar terminado</button>`:""}</td>
       </tr>`;
@@ -3545,7 +3546,7 @@ function renderMiActividad(){
       <td>${statusTag(d.status,d.due)}</td>
       <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,60)}</div></td>
       <td>${projectName(d.projectId)}</td>
-      <td>${d.due?fmtDate(d.due):"—"}</td>
+      <td>${fmtDueWithOriginal(d.due, d.originalDue)}</td>
       <td class="right">
         ${canSubmit?`<button class="btn small primary" data-submit-del="${d.id}">Marcar terminado</button>`:""}
         ${d.status==="En revision"?`<span class="tag blue">Pendiente validacion</span>`:""}
@@ -3758,6 +3759,15 @@ document.getElementById("btnLogout")?.addEventListener("click", ()=>{
   if(confirm("Cerrar sesion?")){ SESSION=null; sessionStorage.removeItem("li_session"); location.reload(); }
 });
 
+// Migrate existing dates — set originalDue/originalEnd for records that don't have it
+document.getElementById("btnMigrateDates")?.addEventListener("click", ()=>{
+  let count = 0;
+  DB.deliverables.forEach(d=>{ if(!d.originalDue && d.due){ d.originalDue = d.due; count++; } });
+  DB.projects.forEach(p=>{ if(!p.originalEnd && p.end){ p.originalEnd = p.end; count++; } });
+  saveDB();
+  toast("Fechas fijadas", `${count} registros actualizados. Ahora puedes cambiar fechas y se marcará la original.`);
+});
+
 /** =========================================================
  *  MIS PROYECTOS (usuario)
  *  ========================================================= */
@@ -3802,7 +3812,7 @@ function renderMisProyectos(){
               return `<tr>
                 <td>${statusTag(d.status,d.due)}</td>
                 <td><b>${d.title}</b></td>
-                <td>${d.due?fmtDate(d.due):"—"}</td>
+                <td>${fmtDueWithOriginal(d.due, d.originalDue)}</td>
                 <td class="right">
                   ${canSubmit?`<button class="btn small primary" data-submit-del="${d.id}">Marcar terminado</button>`:""}
                   ${d.status==="En revision"?`<span class="tag blue">En revision</span>`:""}
@@ -3862,9 +3872,9 @@ function renderMisProjGantt(projIds){
       return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
         <div style="min-width:${labelW}px;max-width:${labelW}px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:10px;color:var(--muted)">↳ ${d.title}</div>
         <div style="position:relative;height:20px;flex:1;min-width:${(totalDays+2)*scale}px">${ticks}${todayLine}
-          <div style="position:absolute;left:${offset*scale}px;top:2px;width:16px;height:16px;background:${color};border-radius:50%;border:2px solid var(--bg);z-index:2" title="${d.title} · ${fmtDate(d.due)}"></div>
+          <div style="position:absolute;left:${offset*scale}px;top:2px;width:16px;height:16px;background:${color};border-radius:50%;border:2px solid var(--bg);z-index:2" title="${d.title} · ${fmtDate(d.due)}${d.originalDue&&d.originalDue!==d.due?' (pactada: '+fmtDate(d.originalDue)+')':''}" style="border:${d.originalDue&&d.originalDue!==d.due?'2px solid var(--bad)':'2px solid var(--bg)'}"></div>
         </div>
-        <div style="min-width:75px;font-size:10px;color:var(--muted)">${fmtDate(d.due)}</div>
+        <div style="min-width:75px;font-size:10px;color:${d.originalDue&&d.originalDue!==d.due?'var(--bad)':' var(--muted)'}">${fmtDueWithOriginal(d.due, d.originalDue)}</div>
       </div>`;
     }).join("");
     return `<div style="margin-bottom:10px">
@@ -3996,9 +4006,9 @@ function renderGantt(){
         <div style="min-width:${labelW}px;max-width:${labelW}px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:12px;color:var(--muted)" title="${d.title} · ${assignee}">↳ ${d.title}</div>
         <div style="position:relative;height:20px;flex:1;min-width:${(totalDays+2)*scale}px">
           ${ticks}${todayLine}
-          <div style="position:absolute;left:${offset*scale}px;top:2px;width:16px;height:16px;background:${color};border-radius:50%;border:2px solid var(--bg);z-index:2" title="${d.title} · ${fmtDate(d.due)} · ${assignee}"></div>
+          <div style="position:absolute;left:${offset*scale}px;top:2px;width:16px;height:16px;background:${color};border-radius:50%;border:2px solid var(--bg);z-index:2" title="${d.title} · ${fmtDate(d.due)}${d.originalDue&&d.originalDue!==d.due?' (pactada: '+fmtDate(d.originalDue)+')':''} · ${assignee}" style="border:${d.originalDue&&d.originalDue!==d.due?'2px solid var(--bad)':'2px solid var(--bg)'}"></div>
         </div>
-        <div style="min-width:80px;font-size:10px;color:var(--muted)">${fmtDate(d.due)}</div>
+        <div style="min-width:80px;font-size:10px;color:${d.originalDue&&d.originalDue!==d.due?'var(--bad)':' var(--muted)'}">${fmtDueWithOriginal(d.due, d.originalDue)}</div>
       </div>`;
     }).join("");
 
