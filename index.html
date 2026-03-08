@@ -483,7 +483,7 @@
       <button data-view="deliverables"><span class="dot"></span> Entregables</button>
       <button data-view="routines"><span class="dot"></span> Rutinas</button>
       <button data-view="incidents"><span class="dot"></span> Incidencias</button>
-      <button data-view="mistareas" id="navMisTareas" style="display:none"><span class="dot"></span> Mis Tareas</button>
+      <button data-view="mistareas" id="navMisTareas" style="display:none"><span class="dot"></span> Gantt</button>
       <button data-view="miactividad" id="navMiActividad" style="display:none"><span class="dot"></span> Mis Actividades</button>
       <button data-view="calendar"><span class="dot"></span> Calendario</button>
       <button data-view="reports"><span class="dot"></span> Reportes</button>
@@ -518,7 +518,10 @@
           <h2>Dashboard</h2>
           <p>Semáforo, KPIs y focos rojos del día.</p>
         </div>
-<div class="actions"></div>
+        <div class="actions">
+          <button class="btn" id="btnCheckIn" data-admin style="display:none">Check-in diario</button>
+          <button class="btn primary" id="btnQuickAdd" style="display:none">Agregar (Proyecto/Entregable/Rutina/Incidencia)</button>
+        </div>
       </div>
 
       <div class="grid kpis" id="kpiGrid"></div>
@@ -915,49 +918,47 @@
       </div>
     </section>
 
-
     <!-- MIS TAREAS (admin) -->
     <section id="view-mistareas" class="hidden">
       <div class="topbar">
         <div class="title">
-          <h2>Mis Tareas</h2>
-          <p>Pendientes personales y Gantt por proyecto.</p>
+          <h2>Gantt</h2>
+          <p>Todos los proyectos y sus entregables en linea de tiempo.</p>
         </div>
         <div class="actions">
-          <button class="btn primary" id="btnAddTarea">+ Agregar tarea</button>
+          <button class="btn primary" id="btnAddTarea">+ Tarea personal</button>
         </div>
       </div>
 
       <div class="card" style="margin-bottom:12px">
-        <b>Mis pendientes personales</b>
-        <div class="hr"></div>
-        <div style="overflow:auto">
-          <table id="tableTareas">
-            <thead>
-              <tr>
-                <th style="width:30px"></th>
-                <th>Tarea</th>
-                <th>Prioridad</th>
-                <th>Fecha limite</th>
-                <th>Notas</th>
-                <th class="right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="tableTareasBody"></tbody>
-          </table>
+        <div class="flex between wrap" style="cursor:pointer" onclick="toggleSection('tareasSection','tareasChev')">
+          <b>Mis pendientes personales</b>
+          <span id="tareasChev" style="color:var(--muted);font-size:16px">&#9660;</span>
+        </div>
+        <div id="tareasSection">
+          <div class="hr"></div>
+          <div style="overflow:auto">
+            <table id="tableTareas">
+              <thead>
+                <tr>
+                  <th style="width:30px"></th>
+                  <th>Tarea</th>
+                  <th>Prioridad</th>
+                  <th>Fecha limite</th>
+                  <th class="right">Eliminar</th>
+                </tr>
+              </thead>
+              <tbody id="tableTareasBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       <div class="card">
-        <div class="flex between wrap" style="margin-bottom:10px">
-          <b>Gantt por proyecto</b>
-          <select class="input" id="ganttProjSel" style="min-width:200px">
-            <option value="">Selecciona un proyecto...</option>
-          </select>
-        </div>
+        <b>Gantt — todos los proyectos</b>
         <div class="hr"></div>
-        <div id="ganttContainer" style="overflow-x:auto; min-height:100px">
-          <div class="muted small" style="padding:20px">Selecciona un proyecto para ver el Gantt.</div>
+        <div id="ganttContainer" style="overflow-x:auto; min-height:80px">
+          <div class="muted small" style="padding:20px">Cargando...</div>
         </div>
       </div>
     </section>
@@ -1742,6 +1743,7 @@ function renderProjects(){
           <td><span class="small muted">${done}/${dels.length} entregables</span></td>
           <td class="right">
             <button class="btn small" data-open-proj="${p.id}">Ver</button>
+            <button class="btn small primary" data-add-del-proj="${p.id}" data-admin>+ Entregable</button>
             <button class="btn small" data-edit-proj="${p.id}" data-admin>Editar</button>
             <button class="btn small danger" data-del-proj="${p.id}" data-admin>Eliminar</button>
           </td>
@@ -2599,16 +2601,61 @@ document.body.addEventListener("click", (e)=>{
   }
 
   // Project actions
+  const addDelProj = e.target.closest("[data-add-del-proj]")?.dataset.addDelProj;
   const editProj = e.target.closest("[data-edit-proj]")?.dataset.editProj;
   const delProj = e.target.closest("[data-del-proj]")?.dataset.delProj;
   const openProj = e.target.closest("[data-open-proj]")?.dataset.openProj;
 
+  if(addDelProj){
+    const p = DB.projects.find(x=>x.id===addDelProj);
+    const userOptions = DB.users.map(u=>`<option value="${u.id}">${u.name}</option>`).join("");
+    openEdit({
+      title: "Nuevo entregable",
+      sub: p ? "Proyecto: " + p.name : "",
+      bodyHTML: `
+        <label>Titulo *</label>
+        <input class="input" id="nd_title" style="width:100%;margin-bottom:8px" placeholder="Nombre del entregable">
+        <label>Responsable</label>
+        <select class="input" id="nd_assignee" style="width:100%;margin-bottom:8px"><option value="">Sin asignar</option>${userOptions}</select>
+        <label>Fecha limite *</label>
+        <input class="input" id="nd_due" type="date" style="width:100%;margin-bottom:8px" value="${p?.end||''}">
+        <label>Prioridad</label>
+        <select class="input" id="nd_priority" style="width:100%;margin-bottom:8px">
+          <option value="Alta">Alta</option><option value="Media" selected>Media</option><option value="Baja">Baja</option>
+        </select>
+        <label>Notas</label>
+        <textarea class="input" id="nd_notes" style="width:100%" placeholder="Descripcion o criterios..."></textarea>`,
+      onSave: ()=>{
+        const title = document.getElementById("nd_title")?.value.trim();
+        if(!title){ toast("Requerido","Escribe un titulo"); return false; }
+        const due = document.getElementById("nd_due")?.value;
+        if(!due){ toast("Requerido","Selecciona una fecha"); return false; }
+        DB.deliverables.push({
+          id: uid("d"),
+          title,
+          projectId: addDelProj,
+          assigneeId: document.getElementById("nd_assignee")?.value || "",
+          due,
+          status: "Pendiente",
+          priority: document.getElementById("nd_priority")?.value || "Media",
+          notes: document.getElementById("nd_notes")?.value.trim() || "",
+          blocked: false,
+          createdAt: todayISO()
+        });
+        saveDB();
+        renderAll();
+        toast("Entregable agregado", title);
+      }
+    });
+    return;
+  }
+
   if(openProj){
-    // Toggle inline deliverables panel under the project row
     const existing = document.getElementById("projDels_"+openProj);
     if(existing){ existing.remove(); return; }
     const p = DB.projects.find(x=>x.id===openProj);
     const dels = DB.deliverables.filter(d=>d.projectId===openProj);
+    const canEdit = SESSION?.role==="admin";
     const rows = dels.map(d=>{
       const canSubmit = SESSION?.role==="user" && d.status!=="Aprobado" && d.status!=="En revision";
       return `<tr>
@@ -2616,9 +2663,9 @@ document.body.addEventListener("click", (e)=>{
         <td><b>${d.title}</b><div class="small muted">${(d.notes||"").slice(0,60)}</div></td>
         <td>${userName(d.assigneeId)}</td>
         <td>${d.due?fmtDate(d.due):"—"}</td>
-        <td>${d.link?`<a href="${d.link}" target="_blank" class="btn small ghost">🔗 Link</a>`:"—"}</td>
+        <td>${d.link?`<a href="${d.link}" target="_blank" class="btn small ghost">🔗 Ver link</a>`:"—"}</td>
         <td class="right">
-          ${SESSION?.role==="admin"?`<button class="btn small" data-edit-del="${d.id}">Editar</button>`:""}
+          ${canEdit?`<button class="btn small" data-edit-del="${d.id}">Editar</button>`:""}
           ${canSubmit?`<button class="btn small primary" data-submit-del="${d.id}">Marcar terminado</button>`:""}
           ${d.status==="En revision"?`<span class="tag blue">En revision</span>`:""}
           ${d.status==="Aprobado"?`<span class="tag ok">Aprobado</span>`:""}
@@ -2630,16 +2677,15 @@ document.body.addEventListener("click", (e)=>{
     panel.style.cssText = "margin-top:10px; border:1px solid var(--line); border-radius:10px; overflow:hidden";
     panel.innerHTML = `
       <div style="padding:10px 14px; background:var(--panel2); font-weight:600; display:flex; justify-content:space-between; align-items:center">
-        <span>Entregables de: ${p?.name||""}</span>
-        <button class="btn small danger" onclick="this.closest('#projDels_${openProj}').remove()">✕ Cerrar</button>
+        <span>Entregables: ${p?.name||""}</span>
+        <button class="btn small danger" onclick="document.getElementById('projDels_${openProj}').remove()">✕ Cerrar</button>
       </div>
       <div style="overflow:auto">
         <table>
           <thead><tr><th>Estado</th><th>Entregable</th><th>Responsable</th><th>Fecha</th><th>Link</th><th class="right">Acciones</th></tr></thead>
-          <tbody>${rows || `<tr><td colspan="6" class="muted small">Sin entregables en este proyecto.</td></tr>`}</tbody>
+          <tbody>${rows||`<tr><td colspan="6" class="muted small">Sin entregables.</td></tr>`}</tbody>
         </table>
       </div>`;
-    // Insert after the clicked row's card
     const card = e.target.closest(".card");
     if(card) card.appendChild(panel);
     return;
@@ -3524,129 +3570,6 @@ function personStatsHTML(userId){
 }
 
 /** =========================================================
- *  MIS TAREAS (admin personal tasks + Gantt)
- *  ========================================================= */
-if(!DB.tareas) DB.tareas = [];
-
-function renderMisTareas(){
-  if(!SESSION || SESSION.role !== "admin") return;
-
-  // Populate Gantt project selector
-  const ganttSel = document.getElementById("ganttProjSel");
-  if(ganttSel && ganttSel.options.length <= 1){
-    DB.projects.forEach(p=>{
-      const opt = document.createElement("option");
-      opt.value = p.id; opt.textContent = p.name;
-      ganttSel.appendChild(opt);
-    });
-  }
-
-  // Render tareas table
-  const tbody = document.getElementById("tableTareasBody");
-  if(!tbody) return;
-  const rows = DB.tareas.map(t=>{
-    const done = t.done;
-    return `<tr style="${done?"opacity:.5;text-decoration:line-through":""}">
-      <td><input type="checkbox" ${done?"checked":""} data-toggle-tarea="${t.id}"></td>
-      <td><b>${t.title}</b>${t.notes?`<div class="small muted">${t.notes}</div>`:""}</td>
-      <td>${priorityTag(t.priority||"Media")}</td>
-      <td>${t.due?fmtDate(t.due):"—"}</td>
-      <td>${t.notes||"—"}</td>
-      <td class="right"><button class="btn small danger" data-del-tarea="${t.id}">✕</button></td>
-    </tr>`;
-  }).join("");
-  tbody.innerHTML = rows || `<tr><td colspan="6" class="muted small">Sin tareas. Agrega una.</td></tr>`;
-}
-
-function renderGantt(projectId){
-  const container = document.getElementById("ganttContainer");
-  if(!container) return;
-  if(!projectId){ container.innerHTML = `<div class="muted small" style="padding:20px">Selecciona un proyecto.</div>`; return; }
-
-  const dels = DB.deliverables.filter(d=>d.projectId===projectId && d.due);
-  if(!dels.length){ container.innerHTML = `<div class="muted small" style="padding:20px">Sin entregables con fecha en este proyecto.</div>`; return; }
-
-  const dates = dels.map(d=>d.due).sort();
-  const minD = new Date(dates[0]+"T00:00:00");
-  const maxD = new Date(dates[dates.length-1]+"T00:00:00");
-  const totalDays = Math.max(1, Math.round((maxD-minD)/(1000*60*60*24)))+1;
-
-  const today = todayISO();
-  const todayOffset = Math.round((new Date(today+"T00:00:00")-minD)/(1000*60*60*24));
-
-  const barWidth = Math.max(800, totalDays * 20);
-  const rows = dels.map((d,i)=>{
-    const startD = new Date(dates[0]+"T00:00:00");
-    const dueD = new Date(d.due+"T00:00:00");
-    const offset = Math.round((dueD-startD)/(1000*60*60*24));
-    const w = Math.max(24, 20);
-    const left = offset * 20;
-    const color = d.status==="Aprobado"?"var(--ok)": d.due<today&&d.status!=="Aprobado"?"var(--bad)": d.status==="En revision"?"var(--accent)":"var(--warn)";
-    return `
-      <div style="display:flex; align-items:center; margin-bottom:6px; gap:8px">
-        <div style="min-width:160px; max-width:160px; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${d.title}">${d.title}</div>
-        <div style="position:relative; width:${barWidth}px; height:24px; background:var(--panel2); border-radius:4px; flex-shrink:0">
-          <div style="position:absolute; left:${left}px; top:4px; width:16px; height:16px; background:${color}; border-radius:50%; border:2px solid #fff" title="${d.title} · ${fmtDate(d.due)}"></div>
-          ${todayOffset>=0&&todayOffset<=totalDays?`<div style="position:absolute; left:${todayOffset*20}px; top:0; width:2px; height:24px; background:var(--accent); opacity:.5"></div>`:""}
-        </div>
-        <div style="min-width:80px; font-size:11px; color:var(--muted)">${fmtDate(d.due)}</div>
-      </div>`;
-  }).join("");
-
-  container.innerHTML = `<div style="padding:10px; overflow-x:auto"><div style="min-width:${barWidth+260}px">${rows}</div></div>`;
-}
-
-document.getElementById("ganttProjSel")?.addEventListener("change", e=>renderGantt(e.target.value));
-
-document.getElementById("btnAddTarea")?.addEventListener("click", ()=>{
-  openEdit({
-    title:"Nueva tarea personal",
-    sub:"Solo visible para ti",
-    bodyHTML:`
-      <label>Tarea *</label><input class="input" id="ef_title" style="width:100%" placeholder="Descripcion de la tarea">
-      <label style="margin-top:8px">Fecha limite</label><input class="input" id="ef_due" type="date" style="width:100%">
-      <label style="margin-top:8px">Prioridad</label>
-      <select class="input" id="ef_priority" style="width:100%">
-        <option value="Alta">Alta</option>
-        <option value="Media" selected>Media</option>
-        <option value="Baja">Baja</option>
-      </select>
-      <label style="margin-top:8px">Notas</label><input class="input" id="ef_notes" style="width:100%" placeholder="Notas adicionales">
-    `,
-    onSave: ()=>{
-      const title = document.getElementById("ef_title").value.trim();
-      if(!title){ toast("Campo requerido","Escribe una tarea"); return false; }
-      if(!DB.tareas) DB.tareas = [];
-      DB.tareas.push({
-        id: uid("tarea"),
-        title,
-        due: document.getElementById("ef_due").value || "",
-        priority: document.getElementById("ef_priority").value,
-        notes: document.getElementById("ef_notes").value.trim(),
-        done: false,
-        createdAt: todayISO()
-      });
-      saveDB();
-      renderMisTareas();
-    }
-  });
-});
-
-document.getElementById("tableTareas")?.addEventListener("click", e=>{
-  const toggleId = e.target.dataset.toggleTarea;
-  if(toggleId){
-    const t = DB.tareas.find(x=>x.id===toggleId);
-    if(t){ t.done = !t.done; saveDB(); renderMisTareas(); }
-    return;
-  }
-  const delId = e.target.dataset.delTarea;
-  if(delId && confirm("Eliminar tarea?")){
-    DB.tareas = DB.tareas.filter(x=>x.id!==delId);
-    saveDB(); renderMisTareas();
-  }
-});
-
-/** =========================================================
  *  AUTENTICACION
  *  ========================================================= */
 const ADMIN_USER = "amartinez";
@@ -3723,6 +3646,205 @@ function applyRoleUI(){
     if(navMisTareas) navMisTareas.style.display = "";
   }
 }
+
+/** =========================================================
+ *  MIS TAREAS (admin)
+ *  ========================================================= */
+if(!DB.tareas) DB.tareas = [];
+
+function renderMisTareas(){
+  if(!SESSION || SESSION.role !== "admin") return;
+  const tbody = document.getElementById("tableTareasBody");
+  if(tbody){
+    const rows = (DB.tareas||[]).map(t=>`
+      <tr style="${t.done?"opacity:.5;text-decoration:line-through":""}">
+        <td><input type="checkbox" ${t.done?"checked":""} data-toggle-tarea="${t.id}"></td>
+        <td><b>${t.title}</b>${t.notes?`<div class="small muted">${t.notes}</div>`:""}</td>
+        <td>${priorityTag(t.priority||"Media")}</td>
+        <td>${t.due?fmtDate(t.due):"—"}</td>
+        <td class="right"><button class="btn small danger" data-del-tarea="${t.id}">✕</button></td>
+      </tr>`).join("");
+    tbody.innerHTML = rows || `<tr><td colspan="5" class="muted small">Sin tareas personales.</td></tr>`;
+  }
+  renderGantt();
+}
+
+function renderGantt(){
+  const container = document.getElementById("ganttContainer");
+  if(!container) return;
+
+  // Gather all deliverables with due dates across all projects
+  const allDels = DB.deliverables.filter(d=>d.due);
+  if(!allDels.length){ container.innerHTML=`<div class="muted small" style="padding:20px">No hay entregables con fecha.</div>`; return; }
+
+  const today = todayISO();
+  const allDates = allDels.map(d=>d.due).sort();
+  const minD = new Date(allDates[0]+"T00:00:00");
+  const maxD = new Date(allDates[allDates.length-1]+"T00:00:00");
+  const totalDays = Math.max(14, Math.round((maxD-minD)/(1000*60*60*24)))+7;
+  const todayOff = Math.round((new Date(today+"T00:00:00")-minD)/(1000*60*60*24));
+  const scale = 22;
+  const labelW = 170;
+
+  // Date header — weekly
+  let headerCells = "";
+  for(let i=0; i<=totalDays; i+=7){
+    const d = new Date(minD); d.setDate(d.getDate()+i);
+    const lbl = d.toLocaleDateString("es-MX",{day:"2-digit",month:"short"});
+    headerCells += `<div style="position:absolute;left:${i*scale}px;top:0;font-size:10px;color:var(--muted);white-space:nowrap">${lbl}</div>`;
+  }
+  const header = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;position:sticky;top:0;background:var(--card);z-index:2;padding-bottom:2px">
+    <div style="min-width:${labelW}px"></div>
+    <div style="position:relative;height:18px;flex:1;min-width:${(totalDays+2)*scale}px">
+      ${headerCells}
+      ${todayOff>=0&&todayOff<=totalDays?`<div style="position:absolute;left:${todayOff*scale}px;top:0;font-size:10px;color:var(--accent);font-weight:700">│Hoy</div>`:""}
+    </div>
+  </div>`;
+
+  // Tick marks
+  let ticks = "";
+  for(let i=0; i<=totalDays; i+=7){
+    ticks += `<div style="position:absolute;left:${i*scale}px;top:0;width:1px;height:100%;background:var(--line);opacity:.3"></div>`;
+  }
+  const todayLine = todayOff>=0&&todayOff<=totalDays
+    ? `<div style="position:absolute;left:${todayOff*scale}px;top:0;width:2px;height:100%;background:var(--accent);opacity:.5;z-index:1"></div>` : "";
+
+  // Group by project
+  const projBlocks = DB.projects.map(p=>{
+    const pDels = allDels.filter(d=>d.projectId===p.id);
+    if(!pDels.length) return "";
+    const sorted = [...pDels].sort((a,b)=>a.due.localeCompare(b.due));
+    const delRows = sorted.map(d=>{
+      const offset = Math.round((new Date(d.due+"T00:00:00")-minD)/(1000*60*60*24));
+      const color = d.status==="Aprobado"?"var(--ok)":d.due<today?"var(--bad)":d.status==="En revision"?"var(--accent)":"var(--warn)";
+      const assignee = userName(d.assigneeId);
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="min-width:${labelW}px;max-width:${labelW}px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:12px;color:var(--muted)" title="${d.title} · ${assignee}">↳ ${d.title}</div>
+        <div style="position:relative;height:20px;flex:1;min-width:${(totalDays+2)*scale}px">
+          ${ticks}${todayLine}
+          <div style="position:absolute;left:${offset*scale}px;top:2px;width:16px;height:16px;background:${color};border-radius:50%;border:2px solid var(--bg);z-index:2" title="${d.title} · ${fmtDate(d.due)} · ${assignee}"></div>
+        </div>
+        <div style="min-width:80px;font-size:10px;color:var(--muted)">${fmtDate(d.due)}</div>
+      </div>`;
+    }).join("");
+
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+        <div style="min-width:${labelW}px;max-width:${labelW}px;font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.name}">${p.name}</div>
+        <div style="position:relative;height:4px;flex:1;background:var(--line);border-radius:2px;min-width:${(totalDays+2)*scale}px">
+          ${ticks}${todayLine}
+        </div>
+        <div style="min-width:80px"></div>
+      </div>
+      ${delRows}
+    </div>`;
+  }).join("");
+
+  const legend = `<div style="display:flex;gap:14px;margin-top:14px;font-size:11px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px">
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--ok);margin-right:4px"></span>Aprobado</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--warn);margin-right:4px"></span>Pendiente</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--bad);margin-right:4px"></span>Vencido</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--accent);margin-right:4px"></span>En revision</span>
+  </div>`;
+
+  container.innerHTML = `<div style="padding:12px"><div style="min-width:${labelW+(totalDays+4)*scale}px">${header}${projBlocks}${legend}</div></div>`;
+}
+
+function renderGantt(projectId){
+  const container = document.getElementById("ganttContainer");
+  if(!container) return;
+  if(!projectId){ container.innerHTML = `<div class="muted small" style="padding:20px">Selecciona un proyecto.</div>`; return; }
+  const dels = DB.deliverables.filter(d=>d.projectId===projectId && d.due);
+  if(!dels.length){ container.innerHTML = `<div class="muted small" style="padding:20px">Sin entregables con fecha.</div>`; return; }
+  const sorted = [...dels].sort((a,b)=>a.due.localeCompare(b.due));
+  const minD = new Date(sorted[0].due+"T00:00:00");
+  const maxD = new Date(sorted[sorted.length-1].due+"T00:00:00");
+  const totalDays = Math.max(7, Math.round((maxD-minD)/(1000*60*60*24)))+4;
+  const today = todayISO();
+  const todayOff = Math.round((new Date(today+"T00:00:00")-minD)/(1000*60*60*24));
+  const scale = 28;
+  const labelW = 160;
+
+  // Build date header — one label per week
+  let headerCells = "";
+  for(let i=0; i<=totalDays; i+=7){
+    const d = new Date(minD); d.setDate(d.getDate()+i);
+    const lbl = d.toLocaleDateString("es-MX",{day:"2-digit",month:"short"});
+    headerCells += `<div style="position:absolute;left:${i*scale}px;top:0;font-size:10px;color:var(--muted);white-space:nowrap">${lbl}</div>`;
+  }
+  const header = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <div style="min-width:${labelW}px"></div>
+      <div style="position:relative;height:18px;flex:1;min-width:${(totalDays+2)*scale}px">
+        ${headerCells}
+        ${todayOff>=0&&todayOff<=totalDays?`<div style="position:absolute;left:${todayOff*scale+8}px;top:0;font-size:10px;color:var(--accent);font-weight:700">Hoy</div>`:""}
+      </div>
+    </div>`;
+
+  // Tick marks row
+  let ticks = "";
+  for(let i=0; i<=totalDays; i+=7){
+    ticks += `<div style="position:absolute;left:${i*scale+8}px;top:0;width:1px;height:100%;background:var(--line);opacity:.4"></div>`;
+  }
+
+  const rows = sorted.map(d=>{
+    const dueD = new Date(d.due+"T00:00:00");
+    const offset = Math.round((dueD-minD)/(1000*60*60*24));
+    const color = d.status==="Aprobado"?"var(--ok)":d.due<today?"var(--bad)":d.status==="En revision"?"var(--accent)":"var(--warn)";
+    const assignee = userName(d.assigneeId);
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+      <div style="min-width:${labelW}px;max-width:${labelW}px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.title} · ${assignee}">${d.title}</div>
+      <div style="position:relative;height:24px;flex:1;background:var(--panel2);border-radius:4px;min-width:${(totalDays+2)*scale}px">
+        ${ticks}
+        ${todayOff>=0&&todayOff<=totalDays?`<div style="position:absolute;left:${todayOff*scale+8}px;top:0;width:2px;height:24px;background:var(--accent);opacity:.5"></div>`:""}
+        <div style="position:absolute;left:${offset*scale}px;top:4px;width:16px;height:16px;background:${color};border-radius:50%;border:2px solid var(--bg);cursor:pointer;z-index:1" title="${d.title} · ${fmtDate(d.due)} · ${assignee}"></div>
+      </div>
+      <div style="min-width:80px;font-size:11px;color:var(--muted)">${fmtDate(d.due)}</div>
+    </div>`;
+  }).join("");
+
+  // Legend
+  const legend = `<div style="display:flex;gap:14px;margin-top:12px;font-size:11px;flex-wrap:wrap">
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--ok);margin-right:4px"></span>Aprobado</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--warn);margin-right:4px"></span>Pendiente</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--bad);margin-right:4px"></span>Vencido</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--accent);margin-right:4px"></span>En revision</span>
+    <span><span style="display:inline-block;width:2px;height:10px;background:var(--accent);margin-right:4px;vertical-align:middle"></span>Hoy</span>
+  </div>`;
+
+  container.innerHTML = `<div style="padding:12px;overflow-x:auto"><div style="min-width:${labelW+(totalDays+4)*scale}px">${header}${rows}${legend}</div></div>`;
+}
+
+document.getElementById("btnAddTarea")?.addEventListener("click", ()=>{
+  openEdit({
+    title:"Nueva tarea personal", sub:"Solo visible para admin",
+    bodyHTML:`
+      <label>Tarea *</label>
+      <input class="input" id="ef_title" style="width:100%;margin-bottom:8px" placeholder="Descripcion de la tarea">
+      <label>Fecha limite</label>
+      <input class="input" id="ef_due" type="date" style="width:100%;margin-bottom:8px">
+      <label>Prioridad</label>
+      <select class="input" id="ef_priority" style="width:100%;margin-bottom:8px">
+        <option value="Alta">Alta</option><option value="Media" selected>Media</option><option value="Baja">Baja</option>
+      </select>
+      <label>Notas</label>
+      <input class="input" id="ef_notes" style="width:100%" placeholder="Notas adicionales">`,
+    onSave: ()=>{
+      const title = document.getElementById("ef_title")?.value.trim();
+      if(!title){ toast("Requerido","Escribe una tarea"); return false; }
+      if(!DB.tareas) DB.tareas = [];
+      DB.tareas.push({ id:uid("tarea"), title, due:document.getElementById("ef_due")?.value||"", priority:document.getElementById("ef_priority")?.value||"Media", notes:document.getElementById("ef_notes")?.value.trim()||"", done:false });
+      saveDB(); renderMisTareas();
+    }
+  });
+});
+
+document.getElementById("tableTareas")?.addEventListener("click", e=>{
+  const tid = e.target.dataset.toggleTarea;
+  if(tid){ const t=(DB.tareas||[]).find(x=>x.id===tid); if(t){t.done=!t.done;saveDB();renderMisTareas();} return; }
+  const did = e.target.dataset.delTarea;
+  if(did && confirm("Eliminar tarea?")){ DB.tareas=(DB.tareas||[]).filter(x=>x.id!==did); saveDB(); renderMisTareas(); }
+});
 
 document.getElementById("btnLogin").addEventListener("click", doLogin);
 document.getElementById("loginUser").addEventListener("keydown", e=>{ if(e.key==="Enter") document.getElementById("loginPass").focus(); });
