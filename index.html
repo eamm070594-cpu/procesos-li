@@ -2228,57 +2228,6 @@ const handlers={
       }
     });
   },
-function refreshAfterDelAction(){
-  saveDB();
-  renderValidarBlock();
-  renderHotTable();
-  renderKPIs();
-  if(currentView==='dashboard') renderDashboard();
-  else if(currentView==='proyectos'){
-    // Preserve which project panels are open before re-rendering
-    const openPanels=[];
-    document.querySelectorAll('[id^="proj-dels-"],[id^="proj-cmt-"]').forEach(el=>{
-      if(!el.classList.contains('hidden')) openPanels.push(el.id);
-    });
-    renderProyectos();
-    // Re-open panels that were open
-    openPanels.forEach(id=>{
-      const el=document.getElementById(id);
-      if(el) el.classList.remove('hidden');
-    });
-  }
-  else if(currentView==='entregables') renderEntregables();
-  else if(currentView==='hoy') renderHoy();
-}
-
-function renderValidarBlock(){
-  const vb=document.getElementById('validar-block');
-  if(!vb) return;
-  if(SESSION?.role!=='admin'){vb.classList.add('hidden');return;}
-  const pending=DB.deliverables.filter(d=>d.status==='En revisión');
-  if(!pending.length){vb.classList.add('hidden');return;}
-  vb.classList.remove('hidden');
-  vb.innerHTML=`<div class="card" style="margin-bottom:10px;border-color:rgba(212,98,42,.4)">
-    <div class="flex-between" style="margin-bottom:10px">
-      <div class="card-title" style="margin:0">⏳ Pendientes de validar</div>
-      <span class="tag blue">${pending.length}</span>
-    </div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>Entregable</th><th>Responsable</th><th>Proyecto</th><th class="right">Acción</th></tr></thead>
-      <tbody>${pending.map(d=>`<tr>
-        <td><b>${esc(d.title)}</b></td>
-        <td>${userName(d.assigneeId)}</td>
-        <td>${projName(d.projectId)}</td>
-        <td class="right">
-          <button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button>
-          <button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>
-          <button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>
-        </td>
-      </tr>`).join('')}</tbody>
-    </table></div>
-  </div>`;
-}
-
   approveDel(id){
     const d=byId(DB.deliverables,id);if(!d)return;
     d.status='Aprobado';d.completedAt=todayISO();d.blocked=false;d.blockSince=null;
@@ -2538,6 +2487,58 @@ function renderValidarBlock(){
     DB.users.splice(idx,1);saveDB();renderView(currentView);toast('Usuario eliminado');
   },
 };
+
+/* ══════════════════════════════════════════════════════
+   REFRESH HELPERS
+══════════════════════════════════════════════════════ */
+function refreshAfterDelAction(){
+  saveDB();
+  renderValidarBlock();
+  renderHotTable();
+  renderKPIs();
+  if(currentView==='dashboard') renderDashboard();
+  else if(currentView==='proyectos'){
+    const openPanels=[];
+    document.querySelectorAll('[id^="proj-dels-"],[id^="proj-cmt-"]').forEach(el=>{
+      if(!el.classList.contains('hidden')) openPanels.push(el.id);
+    });
+    renderProyectos();
+    openPanels.forEach(pid=>{
+      const el=document.getElementById(pid);
+      if(el) el.classList.remove('hidden');
+    });
+  }
+  else if(currentView==='entregables') renderEntregables();
+  else if(currentView==='hoy') renderHoy();
+}
+
+function renderValidarBlock(){
+  const vb=document.getElementById('validar-block');
+  if(!vb) return;
+  if(SESSION?.role!=='admin'){vb.classList.add('hidden');return;}
+  const pending=DB.deliverables.filter(d=>d.status==='En revisión');
+  if(!pending.length){vb.classList.add('hidden');return;}
+  vb.classList.remove('hidden');
+  vb.innerHTML=`<div class="card" style="margin-bottom:10px;border-color:rgba(212,98,42,.4)">
+    <div class="flex-between" style="margin-bottom:10px">
+      <div class="card-title" style="margin:0">⏳ Pendientes de validar</div>
+      <span class="tag blue">${pending.length}</span>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Entregable</th><th>Responsable</th><th>Proyecto</th><th class="right">Acción</th></tr></thead>
+      <tbody>${pending.map(d=>`<tr>
+        <td><b>${esc(d.title)}</b></td>
+        <td>${userName(d.assigneeId)}</td>
+        <td>${projName(d.projectId)}</td>
+        <td class="right">
+          <button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button>
+          <button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>
+          <button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div>`;
+}
 
 // Person detail popup
 function openPersonDetail(userId){
