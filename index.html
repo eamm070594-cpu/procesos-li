@@ -566,7 +566,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
       <button class="snav-btn" data-view="calendario"><span class="icon">🗓</span> Calendario</button>
       <div class="snav-section admin-only">Equipo</div>
       <button class="snav-btn admin-only" data-view="evaluacion"><span class="icon">🏆</span> Evaluación mensual</button>
-      <button class="snav-btn admin-only" data-view="equipo"><span class="icon">👥</span> Equipo</button>
+      <button class="snav-btn" data-view="equipo"><span class="icon">👥</span> Equipo</button>
       <div class="snav-section">Sistema</div>
       <button class="snav-btn" data-view="ajustes"><span class="icon">⚙️</span> Ajustes</button>
       <button class="snav-btn" id="sb-logout" style="margin-top:4px"><span class="icon">🚪</span> Cerrar sesión</button>
@@ -608,11 +608,12 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
       <div class="pad">
         <!-- Mini KPIs -->
         <div class="kpi-grid" id="hoy-kpis" style="margin-bottom:16px"></div>
+        <!-- Logro del día -->
+        <div id="hoy-logro-block"></div>
         <!-- Entregables vencidos -->
         <div id="hoy-overdue-block"></div>
         <!-- Entregables próximos -->
         <div id="hoy-upcoming-block"></div>
-
       </div>
     </div>
 
@@ -1271,6 +1272,38 @@ function renderHoy(){
     ub.innerHTML='';
   }
 
+  // ── Logro del día ──
+  // Proyectos cerrados hoy (closedAt = today) o proyectos marcados cerrados
+  const logroBlock=document.getElementById('hoy-logro-block');
+  const proyectosHoy=DB.projects.filter(p=>p.status==='Cerrado'&&(p.closedAt===t||p.end===t));
+  if(proyectosHoy.length){
+    logroBlock.innerHTML=`
+      <div style="background:linear-gradient(135deg,rgba(30,158,94,.12),rgba(30,158,94,.05));border:1.5px solid rgba(30,158,94,.35);border-radius:var(--r2);padding:16px;margin-bottom:16px;animation:fadeIn .3s ease">
+        <div style="font-size:13px;font-weight:700;color:var(--ok);margin-bottom:10px">🎉 ¡Proyecto terminado hoy!</div>
+        ${proyectosHoy.map(p=>{
+          const involved=[...new Set([p.leaderId,...DB.deliverables.filter(d=>d.projectId===p.id).map(d=>d.assigneeId)])].filter(Boolean);
+          const avatars=involved.slice(0,4).map(uid=>{
+            const u=byId(DB.users,uid);if(!u)return'';
+            const photo=userPhotoURL(u.email);
+            const ini=u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+            return photo
+              ?`<img src="${photo}" title="${esc(u.name)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid #fff;margin-right:-8px" onerror="this.outerHTML='<div title=\\'${esc(u.name)}\\' style=\\'width:32px;height:32px;border-radius:50%;background:var(--ok-bg);border:2px solid #fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--ok);margin-right:-8px\\'>${ini}</div>'">`
+              :`<div title="${esc(u.name)}" style="width:32px;height:32px;border-radius:50%;background:var(--ok-bg);border:2px solid #fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--ok);margin-right:-8px">${ini}</div>`;
+          }).join('');
+          return`<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+            <div style="font-size:28px">🏆</div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:15px">${esc(p.name)}</div>
+              <div style="font-size:12px;color:var(--muted)">Liderado por ${userName(p.leaderId)}</div>
+            </div>
+            <div style="display:flex;align-items:center;padding-right:8px">${avatars}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  } else {
+    logroBlock.innerHTML='';
+  }
+
   // fin renderHoy
 }
 
@@ -1409,14 +1442,13 @@ function renderHotTable(){
    COMENTARIOS — helpers
 ══════════════════════════════════════════════════════ */
 function commentsHTML(entity, entityId){
-  // entity = 'project' | 'deliverable'
   if(!DB.comments) DB.comments={};
   const key=entity+'_'+entityId;
   const list=DB.comments[key]||[];
   const canComment=!!SESSION;
   return`<div class="comments-block" id="cmts-${key}">
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">
-      💬 Comentarios (${list.length})
+      💬 Comentarios (<span class="cmt-count">${list.length}</span>)
     </div>
     <div id="cmts-list-${key}">
       ${list.length ? list.map(c=>`
@@ -1459,12 +1491,27 @@ function addComment(entity, entityId){
   if(!DB.comments[key]) DB.comments[key]=[];
   DB.comments[key].push(comment);
   saveDB();
-  // Re-render the comments block in place
-  const block=document.getElementById('cmts-'+key);
-  if(block){
-    const parent=block.parentElement;
-    if(parent) parent.innerHTML=commentsHTML(entity,entityId);
+
+  // Solo actualiza la lista de comentarios — NO re-renderiza toda la vista
+  const listEl=document.getElementById('cmts-list-'+key);
+  if(listEl){
+    const list=DB.comments[key];
+    listEl.innerHTML=list.map(c=>`
+      <div style="padding:10px 12px;background:var(--surface2);border-radius:var(--r);margin-bottom:6px;border-left:3px solid ${c.role==='admin'?'var(--accent)':'var(--border)'}">
+        <div class="flex-between" style="margin-bottom:4px">
+          <span style="font-weight:700;font-size:13px">${esc(c.author)}</span>
+          <span class="small muted">${fmtDate(c.date)} ${c.time||''}</span>
+        </div>
+        <div style="font-size:13px">${esc(c.text)}</div>
+        ${c.link?`<a href="${esc(c.link)}" target="_blank" style="font-size:11px;color:var(--accent);margin-top:4px;display:inline-block">🔗 Ver evidencia</a>`:''}
+      </div>`).join('');
+    // Update comment count
+    const countEl=listEl.closest('.comments-block')?.querySelector('.cmt-count');
+    if(countEl) countEl.textContent=list.length;
   }
+  // Clear inputs without re-rendering
+  if(textEl) textEl.value='';
+  if(linkEl) linkEl.value='';
   toast('Comentario agregado ✓');
 }
 
@@ -1477,6 +1524,14 @@ function renderProyectos(){
   const q=(document.getElementById('proj-search')?.value||'').trim().toLowerCase();
   const isAdmin=SESSION?.role==='admin';
 
+  // Preserve which groups are currently open before re-render
+  const openGroups={
+    'proj-group-activos':  !document.getElementById('proj-group-activos') || document.getElementById('proj-group-activos').style.display!=='none',
+    'proj-group-aprobar':  document.getElementById('proj-group-aprobar')?.style.display!=='none',
+    'proj-group-riesgo':   document.getElementById('proj-group-riesgo')?.style.display!=='none',
+    'proj-group-cerrados': document.getElementById('proj-group-cerrados')?.style.display!=='none',
+  };
+
   let all=DB.projects
     .filter(p=>!pf||p.priority===pf)
     .filter(p=>!q||p.name.toLowerCase().includes(q));
@@ -1487,11 +1542,7 @@ function renderProyectos(){
   const cerrados   = all.filter(p=>p.status==='Cerrado');
   const activos    = all.filter(p=>!['En revisión','Por aprobar','En riesgo','Detenido','Cerrado'].includes(p.status));
 
-  // If status filter active, only show that group
-  const filtered = sf ? all.filter(p=>p.status===sf) : all;
-
   const container=document.getElementById('proj-list');
-  if(!filtered.length){container.innerHTML='<div class="empty">No hay proyectos.</div>';return}
 
   function projCard(p){
     const dels=DB.deliverables.filter(d=>d.projectId===p.id);
@@ -1527,37 +1578,37 @@ function renderProyectos(){
     </div>`;
   }
 
-  // Render with collapsible groups when no status filter
-  if(!sf){
-    let html='';
-
-    // Proyectos por aprobar
-    if(porAprobar.length){
-      html+=collapsibleGroup('Por aprobar',porAprobar.length,'blue',
-        'proj-group-aprobar', porAprobar.map(projCard).join(''));
-    }
-    // En riesgo
-    if(enRiesgo.length){
-      html+=collapsibleGroup('En riesgo / Detenidos',enRiesgo.length,'warn',
-        'proj-group-riesgo', enRiesgo.map(projCard).join(''));
-    }
-    // Activos
-    if(activos.length){
-      html+=collapsibleGroup('Activos',activos.length,'ok',
-        'proj-group-activos', activos.map(projCard).join(''), true);
-    }
-    // Cerrados — con stats por ingeniero
-    if(cerrados.length){
-      const statsHTML=terminadosPorIngeniero(cerrados);
-      html+=collapsibleGroup('Terminados',cerrados.length,'gray',
-        'proj-group-cerrados',
-        statsHTML + cerrados.map(projCard).join(''));
-    }
-
-    container.innerHTML=html||'<div class="empty">No hay proyectos.</div>';
-  } else {
-    container.innerHTML=filtered.map(projCard).join('');
+  // With status filter — flat list
+  if(sf){
+    const filtered=all.filter(p=>p.status===sf);
+    container.innerHTML=filtered.length?filtered.map(projCard).join(''):'<div class="empty">No hay proyectos con ese filtro.</div>';
+    return;
   }
+
+  // Without filter — 4 collapsible groups
+  if(!all.length){container.innerHTML='<div class="empty">No hay proyectos.</div>';return}
+
+  let html='';
+
+  if(activos.length){
+    const open=openGroups['proj-group-activos']!==false;
+    html+=collapsibleGroup('Activos',activos.length,'ok','proj-group-activos',activos.map(projCard).join(''),open);
+  }
+  if(porAprobar.length){
+    const open=!!openGroups['proj-group-aprobar'];
+    html+=collapsibleGroup('Por aprobar',porAprobar.length,'blue','proj-group-aprobar',porAprobar.map(projCard).join(''),open);
+  }
+  if(enRiesgo.length){
+    const open=!!openGroups['proj-group-riesgo'];
+    html+=collapsibleGroup('En riesgo / Detenidos',enRiesgo.length,'warn','proj-group-riesgo',enRiesgo.map(projCard).join(''),open);
+  }
+  if(cerrados.length){
+    const open=!!openGroups['proj-group-cerrados'];
+    html+=collapsibleGroup('Terminados',cerrados.length,'gray','proj-group-cerrados',
+      terminadosPorIngeniero(cerrados)+cerrados.map(projCard).join(''),open);
+  }
+
+  container.innerHTML=html;
 }
 
 function collapsibleGroup(label, count, tagCls, id, innerHTML, open=false){
@@ -1575,27 +1626,48 @@ function collapsibleGroup(label, count, tagCls, id, innerHTML, open=false){
 
 function terminadosPorIngeniero(cerrados){
   if(!cerrados.length) return '';
-  // Count per user
   const counts={};
   cerrados.forEach(p=>{
-    // Count all users who have deliverables in this project
     const involved=[...new Set(DB.deliverables.filter(d=>d.projectId===p.id).map(d=>d.assigneeId))];
-    involved.forEach(uid=>{
+    // Also include leader
+    if(p.leaderId) involved.push(p.leaderId);
+    [...new Set(involved)].forEach(uid=>{
       if(!counts[uid]) counts[uid]={total:0,projects:[]};
-      counts[uid].total++;
-      counts[uid].projects.push(p.name);
+      if(!counts[uid].projects.includes(p.name)){
+        counts[uid].total++;
+        counts[uid].projects.push(p.name);
+      }
     });
   });
   if(!Object.keys(counts).length) return '';
-  return`<div class="card" style="margin-bottom:10px;border-color:rgba(30,158,94,.3)">
-    <div class="card-title">🏆 Proyectos terminados por ingeniero</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:6px">
-      ${Object.entries(counts).map(([uid,data])=>`
-        <div style="padding:10px 12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border2)">
-          <div style="font-weight:700;font-size:13px">${userName(uid)}</div>
-          <div style="font-size:24px;font-weight:800;color:var(--ok);font-family:var(--font-display)">${data.total}</div>
-          <div style="font-size:11px;color:var(--muted)">${data.projects.slice(0,3).map(n=>esc(n)).join(', ')}${data.projects.length>3?'…':''}</div>
-        </div>`).join('')}
+
+  const medals=['🥇','🥈','🥉'];
+  const sorted=Object.entries(counts).sort((a,b)=>b[1].total-a[1].total);
+
+  return`<div style="margin-bottom:16px">
+    <div style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+      🏆 <span>Metas cumplidas</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+      ${sorted.map(([uid,data],i)=>{
+        const u=byId(DB.users,uid);
+        const photo=userPhotoURL(u?.email);
+        const initials=(u?.name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+        const medal=medals[i]||'⭐';
+        return`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:16px;text-align:center;position:relative;overflow:hidden">
+          <div style="position:absolute;top:8px;right:10px;font-size:20px">${medal}</div>
+          ${photo
+            ?`<img src="${photo}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:3px solid var(--ok);margin:0 auto 8px;display:block"
+                onerror="this.outerHTML='<div style=\\'width:52px;height:52px;border-radius:50%;background:var(--ok-bg);border:3px solid var(--ok);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--ok);margin:0 auto 8px\\'>${initials}</div>'"/>`
+            :`<div style="width:52px;height:52px;border-radius:50%;background:var(--ok-bg);border:3px solid var(--ok);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--ok);margin:0 auto 8px">${initials}</div>`
+          }
+          <div style="font-weight:700;font-size:14px">${esc(u?.name||'—')}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${u?.role||'—'}</div>
+          <div style="font-family:var(--font-display);font-size:36px;font-weight:800;color:var(--ok);line-height:1">${data.total}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">proyecto${data.total!==1?'s':''} terminado${data.total!==1?'s':''}</div>
+          <div style="font-size:10px;color:var(--muted);line-height:1.4">${data.projects.slice(0,3).map(n=>`<span style="display:inline-block;background:var(--ok-bg);color:var(--ok);border-radius:4px;padding:1px 5px;margin:1px">${esc(n)}</span>`).join('')}${data.projects.length>3?`<span style="color:var(--muted)">+${data.projects.length-3} más</span>`:''}</div>
+        </div>`;
+      }).join('')}
     </div>
   </div>`;
 }
@@ -1858,16 +1930,20 @@ function avatarHTML(u, size=42){
 function renderEquipo(){
   const container = document.getElementById('equipo-cards');
   if(!container) return;
-  container.innerHTML = DB.users.map(u=>{
+
+  // ── Metas cumplidas (proyectos cerrados) ──
+  const cerrados = DB.projects.filter(p=>p.status==='Cerrado');
+  const metasHTML = cerrados.length ? terminadosPorIngeniero(cerrados) : '';
+
+  // ── Tarjetas del equipo ──
+  const equipoHTML = DB.users.map(u=>{
     const dgp = u.dgp || {};
     const photo = userPhotoURL(u.email);
     const initials = u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
     const ms = getCurrentMonthScores().find(x=>x.userId===u.id);
     const sc = ms?.score;
     const lvl = sc===null?'gray':sc>=85?'ok':sc>=70?'warn':'bad';
-    const scoreColor = lvl==='ok'?'var(--ok)':lvl==='warn'?'var(--warn)':lvl==='bad'?'var(--bad)':'var(--muted)';
     return`<div class="card" style="display:flex;gap:16px;align-items:flex-start;margin-bottom:10px">
-      <!-- Foto -->
       <div style="flex:0 0 64px;display:flex;flex-direction:column;align-items:center;gap:6px">
         ${photo
           ? `<img src="${photo}" alt="${esc(u.name)}"
@@ -1878,7 +1954,6 @@ function renderEquipo(){
         }
         <span class="tag ${lvl}" style="font-size:10px;padding:2px 7px">${sc!==null?sc+'%':'—'}</span>
       </div>
-      <!-- Info -->
       <div style="flex:1;min-width:0">
         <div class="flex-between flex-wrap" style="gap:6px;margin-bottom:4px">
           <div>
@@ -1886,8 +1961,8 @@ function renderEquipo(){
             <div class="small muted">${u.role} · ${u.team||'—'}</div>
           </div>
           <div class="flex" style="gap:6px">
-            <button class="btn xs" data-edit-u="${u.id}">Editar</button>
-            <button class="btn xs danger" data-del-u="${u.id}">✕</button>
+            ${SESSION?.role==='admin'?`<button class="btn xs" data-edit-u="${u.id}">Editar</button>
+            <button class="btn xs danger" data-del-u="${u.id}">✕</button>`:''}
           </div>
         </div>
         ${dgp.puesto||dgp.area||dgp.responsabilidades ? `
@@ -1899,10 +1974,15 @@ function renderEquipo(){
           ${u.email?`<div><span class="muted">Correo: </span><b>${esc(u.email)}</b></div>`:''}
         </div>
         ${dgp.responsabilidades?`<div style="margin-top:6px;font-size:12px"><span class="muted">Responsabilidades: </span>${esc(dgp.responsabilidades)}</div>`:''}
-        ` : `<div class="small muted" style="margin-top:4px">Sin DGP capturado — haz clic en Editar para agregar.</div>`}
+        ` : `<div class="small muted" style="margin-top:4px">Sin DGP — haz clic en Editar para agregar.</div>`}
       </div>
     </div>`;
   }).join('') || `<div class="empty">Sin usuarios.</div>`;
+
+  container.innerHTML =
+    (metasHTML ? `<div class="card" style="margin-bottom:16px;border-color:rgba(30,158,94,.25);background:rgba(30,158,94,.03)">${metasHTML}</div>` : '') +
+    `<div style="font-family:var(--font-display);font-size:14px;font-weight:700;margin-bottom:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">👥 Miembros del equipo</div>` +
+    equipoHTML;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1938,7 +2018,11 @@ function openDlg({title,sub='',body,onSave}){
 function closeDlg(){document.getElementById('dlg-edit').close();_dlgSave=null}
 document.getElementById('dlg-save').addEventListener('click',()=>{
   if(_dlgSave&&_dlgSave()===false)return;
-  saveDB();renderView(currentView);closeDlg();
+  saveDB();
+  // If on projects view, only re-render projects to preserve group state
+  if(currentView==='proyectos') renderProyectos();
+  else renderView(currentView);
+  closeDlg();
 });
 
 /* ══════════════════════════════════════════════════════
@@ -2081,7 +2165,7 @@ const handlers={
   approveDel(id){
     const d=byId(DB.deliverables,id);if(!d)return;
     d.status='Aprobado';d.completedAt=todayISO();d.blocked=false;d.blockSince=null;
-    saveDB();renderView(currentView);toast(`✓ Aprobado: ${d.title}`);
+    saveDB();if(currentView==='proyectos')renderProyectos();else renderView(currentView);toast(`✓ Aprobado: ${d.title}`);
   },
   delDel(id){
     const idx=DB.deliverables.findIndex(x=>x.id===id);if(idx<0)return;
@@ -2091,12 +2175,12 @@ const handlers={
   submitDel(id){
     const d=byId(DB.deliverables,id);if(!d)return;
     d.status='En revisión';d.submittedAt=todayISO();d.submittedBy=SESSION?.userId;
-    saveDB();renderView(currentView);toast('Enviado para validación ✓');
+    saveDB();if(currentView==='proyectos')renderProyectos();else renderView(currentView);toast('Enviado para validación ✓');
   },
   rejectDel(id){
     const d=byId(DB.deliverables,id);if(!d)return;
     d.status='En progreso';d.submittedAt=null;d.submittedBy=null;
-    saveDB();renderView(currentView);toast('Regresado a En progreso');
+    saveDB();if(currentView==='proyectos')renderProyectos();else renderView(currentView);toast('Regresado a En progreso');
   },
   runR(id){
     const r=byId(DB.routines,id);if(!r)return;
@@ -2142,7 +2226,9 @@ const handlers={
         p.name=document.getElementById('ep-name').value.trim();
         p.leaderId=document.getElementById('ep-leader').value;
         p.priority=document.getElementById('ep-pri').value;
-        p.status=document.getElementById('ep-status').value;
+        const newStatus=document.getElementById('ep-status').value;
+        if(newStatus==='Cerrado'&&p.status!=='Cerrado') p.closedAt=todayISO();
+        p.status=newStatus;
         const ne=document.getElementById('ep-end').value;
         if(ne&&ne!==p.end){if(!p.originalEnd)p.originalEnd=p.end;p.end=ne;}
         p.notes=document.getElementById('ep-notes').value.trim();
@@ -2412,7 +2498,12 @@ document.getElementById('btn-add-user')?.addEventListener('click',()=>{
 });
 
 // Filters
-['proj-f-status','proj-f-priority','proj-search','del-search','del-f-proj','del-f-status','del-f-ass','dash-filter-ass','rut-f-ass','gantt-f-ass'].forEach(id=>{
+// Filters — project filters only re-render projects, not the whole view
+['proj-f-status','proj-f-priority','proj-search'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('input',()=>renderProyectos());
+  document.getElementById(id)?.addEventListener('change',()=>renderProyectos());
+});
+['del-search','del-f-proj','del-f-status','del-f-ass','dash-filter-ass','gantt-f-ass'].forEach(id=>{
   document.getElementById(id)?.addEventListener('input',()=>renderView(currentView));
   document.getElementById(id)?.addEventListener('change',()=>renderView(currentView));
 });
