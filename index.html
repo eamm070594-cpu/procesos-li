@@ -1273,7 +1273,6 @@ function renderHoy(){
 
   // fin renderHoy
 }
-}
 
 function delCard(d,t,isOverdue){
   const days=d.due?Math.abs(daysBetween(d.due,t)):0;
@@ -1986,7 +1985,7 @@ document.getElementById('qa-save').addEventListener('click',()=>{
     if(!title)return toast('Falta nombre del entregable');
     const due=document.getElementById('qa-due')?.value||t;
     const status=document.getElementById('qa-status')?.value||'Pendiente';
-    DB.deliverables.push({id:uid('d'),title,projectId:document.getElementById('qa-proj')?.value||'',assigneeId:document.getElementById('qa-ass')?.value||'',due,originalDue:due,status,blocked:status==='Bloqueado',blockSince:status==='Bloqueado'?t:null,evidence:'',notes:(document.getElementById('qa-notes')?.value||'').trim(),completedAt:null,scorePenalty:0}););
+    DB.deliverables.push({id:uid('d'),title,projectId:document.getElementById('qa-proj')?.value||'',assigneeId:document.getElementById('qa-ass')?.value||'',due,originalDue:due,status,blocked:status==='Bloqueado',blockSince:status==='Bloqueado'?t:null,evidence:'',notes:(document.getElementById('qa-notes')?.value||'').trim(),completedAt:null,scorePenalty:0});
   }
   saveDB();
   document.getElementById('dlg-qa').close();
