@@ -652,8 +652,8 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
       <div class="pad">
         <div class="kpi-grid" id="dash-kpis" style="margin-bottom:16px"></div>
 
-        <!-- Pendientes validar (admin) -->
-        <div id="validar-block" class="hidden"></div>
+        <!-- POR REVISAR — sección dedicada admin -->
+        <div id="validar-block" class="hidden" style="margin-bottom:16px"></div>
 
         <!-- Semáforo por persona -->
         <div class="section-block" style="margin-left:0;margin-right:0">
@@ -1364,7 +1364,7 @@ function delCard(d,t,isOverdue){
     </div>
     <div class="del-actions">
       ${canSubmit?`<button class="btn xs primary" data-submit-del="${d.id}">Marcar terminado</button>`:''}
-      ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button>${d.status==='En revisión'?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:''}<button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>`:''}
+      ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>`:''}
       ${d.status==='En revisión'?'<span class="tag blue">Pendiente validación</span>':''}
     </div>
   </div>`;
@@ -1449,7 +1449,7 @@ function renderHotTable(){
     <td>${userName(d.assigneeId)}</td>
     <td>${d.due?`${fmtDate(d.due)}<div class="small muted">${ov>0?'Vencido '+ov+'d':'En '+din+'d'}</div>`:'—'}</td>
     <td class="right">
-      ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button>${d.status==='En revisión'?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:''}<button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>`:''}
+      ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>`:''}
       ${SESSION?.role==='user'&&d.assigneeId===SESSION?.userId&&d.status!=='En revisión'?`<button class="btn xs primary" data-submit-del="${d.id}">Terminado</button>`:''}
     </td>
   </tr>`).join('')||`<tr><td colspan="6" class="empty">Sin entregables activos.</td></tr>`;
@@ -1743,11 +1743,7 @@ function renderEntregables(){
       <td>${d.blocked?`<span class="tag bad">Sí·${d.blockSince?daysBetween(d.blockSince,t):0}d</span>`:`<span class="tag gray">No</span>`}</td>
       <td class="right">
         <button class="btn xs" data-open-del-cmt="${d.id}">💬</button>
-        ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button>
-              ${d.status==='En revisión'?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button>
-              <button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:''}
-              <button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>
-              <button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}
+        ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button><button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}
         ${SESSION?.role==='user'&&d.assigneeId===SESSION?.userId&&d.status!=='Aprobado'&&d.status!=='En revisión'?`<button class="btn xs primary" data-submit-del="${d.id}">Terminado</button>`:''}
       </td>
     </tr>
@@ -2414,7 +2410,7 @@ const handlers={
         <td>${userName(d.assigneeId)}</td>
         <td>${fmtDueFull(d.due,d.originalDue)}</td>
         <td class="right">
-          ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button>${d.status==='En revisión'?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:''}<button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button><button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}
+          ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button><button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}
           ${SESSION?.role==='user'&&d.assigneeId===SESSION?.userId&&d.status!=='Aprobado'&&d.status!=='En revisión'?`<button class="btn xs primary" data-submit-del="${d.id}">Terminado</button>`:''}
         </td>
       </tr>`).join('')||`<tr><td colspan="5" class="empty">Sin entregables.</td></tr>`}</tbody>
@@ -2516,28 +2512,69 @@ function renderValidarBlock(){
   const vb=document.getElementById('validar-block');
   if(!vb) return;
   if(SESSION?.role!=='admin'){vb.classList.add('hidden');return;}
+
   const pending=DB.deliverables.filter(d=>d.status==='En revisión');
-  if(!pending.length){vb.classList.add('hidden');return;}
+
+  if(!pending.length){
+    vb.classList.add('hidden');
+    return;
+  }
+
   vb.classList.remove('hidden');
-  vb.innerHTML=`<div class="card" style="margin-bottom:10px;border-color:rgba(212,98,42,.4)">
-    <div class="flex-between" style="margin-bottom:10px">
-      <div class="card-title" style="margin:0">⏳ Pendientes de validar</div>
-      <span class="tag blue">${pending.length}</span>
-    </div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>Entregable</th><th>Responsable</th><th>Proyecto</th><th class="right">Acción</th></tr></thead>
-      <tbody>${pending.map(d=>`<tr>
-        <td><b>${esc(d.title)}</b></td>
-        <td>${userName(d.assigneeId)}</td>
-        <td>${projName(d.projectId)}</td>
-        <td class="right">
-          <button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button>
-          <button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>
-          <button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>
-        </td>
-      </tr>`).join('')}</tbody>
-    </table></div>
-  </div>`;
+
+  const cards=pending.map(d=>{
+    const u=byId(DB.users,d.assigneeId);
+    const p=byId(DB.projects,d.projectId);
+    const photo=userPhotoURL(u?.email);
+    const ini=(u?.name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    const avatarEl=photo
+      ?`<img src="${photo}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);flex:0 0 36px"
+          onerror="this.outerHTML='<div style=\\'width:36px;height:36px;border-radius:50%;background:var(--accent-bg);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--accent);flex:0 0 36px\\'>${ini}</div>'">`
+      :`<div style="width:36px;height:36px;border-radius:50%;background:var(--accent-bg);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--accent);flex:0 0 36px">${ini}</div>`;
+
+    // Show last comment if any
+    const key='deliverable_'+d.id;
+    const cmts=(DB.comments?.[key]||[]);
+    const lastCmt=cmts.filter(c=>c.role!=='admin').slice(-1)[0];
+
+    return`<div style="background:var(--surface);border:1px solid var(--border2);border-left:3px solid var(--accent);border-radius:var(--r2);padding:14px;display:flex;gap:12px;align-items:flex-start">
+      ${avatarEl}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:14px;margin-bottom:2px">${esc(d.title)}</div>
+        <div class="flex flex-wrap" style="gap:6px;margin-bottom:8px">
+          <span class="tag blue">En revisión</span>
+          <span class="small muted">${esc(u?.name||'—')}</span>
+          <span class="small muted">·</span>
+          <span class="small muted">${esc(p?.name||'—')}</span>
+          ${d.submittedAt?`<span class="small muted">· Enviado ${fmtDate(d.submittedAt)}</span>`:''}
+        </div>
+        ${lastCmt?`<div style="font-size:12px;color:var(--muted);background:var(--surface2);border-radius:var(--r);padding:6px 10px;margin-bottom:8px">💬 ${esc(lastCmt.text)}</div>`:''}
+        <div class="flex flex-wrap" style="gap:6px">
+          <button class="btn sm ok" data-approve-del="${d.id}">✓ Aprobar</button>
+          <button class="btn sm danger" data-reject-del="${d.id}">✕ Rechazar</button>
+          <button class="btn sm" data-next-phase="${d.id}">➡️ Siguiente fase</button>
+          <button class="btn sm ghost" data-open-del-cmt="${d.id}" style="font-size:12px">💬 Ver comentarios</button>
+        </div>
+        <div id="del-cmt-row-${d.id}" style="display:none;margin-top:8px">
+          ${commentsHTML('deliverable',d.id)}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  vb.innerHTML=`
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);overflow:hidden">
+      <div style="padding:12px 16px;background:var(--accent-bg);border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-family:var(--font-display);font-weight:700;font-size:15px">📋 Por revisar</div>
+          <div class="small muted">El equipo marcó estos entregables como terminados</div>
+        </div>
+        <span style="background:var(--accent);color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px">${pending.length}</span>
+      </div>
+      <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">
+        ${cards}
+      </div>
+    </div>`;
 }
 
 // Person detail popup
