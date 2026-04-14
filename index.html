@@ -708,42 +708,18 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
         </div>
       </div>
       <div class="pad">
-        <!-- Menú de pestañas -->
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="proj-tabs">
-          <button class="proj-tab active" data-tab="">
-            <span class="tab-icon">📋</span> Todos
-            <span class="tab-count" id="tc-all">0</span>
-          </button>
-          <button class="proj-tab" data-tab="Activo">
-            <span class="tab-icon">🟢</span> Activos
-            <span class="tab-count" id="tc-activo">0</span>
-          </button>
-          <button class="proj-tab" data-tab="Por aprobar">
-            <span class="tab-icon">🔵</span> Por aprobar
-            <span class="tab-count" id="tc-aprobar">0</span>
-          </button>
-          <button class="proj-tab" data-tab="En riesgo">
-            <span class="tab-icon">🟡</span> En riesgo
-            <span class="tab-count" id="tc-riesgo">0</span>
-          </button>
-          <button class="proj-tab" data-tab="Detenido">
-            <span class="tab-icon">🔴</span> Detenidos
-            <span class="tab-count" id="tc-detenido">0</span>
-          </button>
-          <button class="proj-tab" data-tab="Cerrado">
-            <span class="tab-icon">✅</span> Terminados
-            <span class="tab-count" id="tc-cerrado">0</span>
-          </button>
-        </div>
-        <!-- Búsqueda y prioridad -->
+        <!-- Filtros: líder + búsqueda -->
         <div class="card" style="margin-bottom:12px;padding:10px 14px">
           <div class="flex flex-wrap" style="gap:8px">
+            <select class="select-input" id="proj-f-leader" style="flex:1;min-width:160px">
+              <option value="">Líder (todos)</option>
+            </select>
             <input class="input" id="proj-search" placeholder="Buscar proyecto…" style="flex:2;min-width:180px"/>
-            <select class="select-input" id="proj-f-priority" style="flex:1;min-width:130px"><option value="">Prioridad (todas)</option><option>Alta</option><option>Media</option><option>Baja</option></select>
           </div>
         </div>
-        <!-- Hidden status filter kept for JS compat -->
+        <!-- Hidden filters for JS compat -->
         <select id="proj-f-status" style="display:none"></select>
+        <select id="proj-f-priority" style="display:none"></select>
         <div id="proj-list"></div>
       </div>
     </div>
@@ -759,14 +735,25 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
         </div>
       </div>
       <div class="pad">
-        <div class="card" style="margin-bottom:12px">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <input class="input" id="del-search" placeholder="Buscar…" style="grid-column:1/-1"/>
-            <select class="select-input" id="del-f-proj"><option value="">Proyecto (todos)</option></select>
-            <select class="select-input" id="del-f-status"><option value="">Estado (todos)</option><option>Pendiente</option><option>En progreso</option><option>En revisión</option><option>Aprobado</option><option>Bloqueado</option></select>
-            <select class="select-input" id="del-f-ass"><option value="">Responsable (todos)</option></select>
+        <!-- Pestañas de estado -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="del-tabs">
+          <button class="proj-tab active" data-del-tab=""><span class="tab-icon">📋</span> Todos <span class="tab-count" id="dtc-all">0</span></button>
+          <button class="proj-tab" data-del-tab="Pendiente"><span class="tab-icon">⏳</span> Pendientes <span class="tab-count" id="dtc-pendiente">0</span></button>
+          <button class="proj-tab" data-del-tab="En progreso"><span class="tab-icon">▶</span> En progreso <span class="tab-count" id="dtc-progreso">0</span></button>
+          <button class="proj-tab" data-del-tab="En revisión"><span class="tab-icon">🔵</span> En revisión <span class="tab-count" id="dtc-revision">0</span></button>
+          <button class="proj-tab" data-del-tab="Bloqueado"><span class="tab-icon">🚫</span> Bloqueados <span class="tab-count" id="dtc-bloqueado">0</span></button>
+          <button class="proj-tab" data-del-tab="Aprobado"><span class="tab-icon">✅</span> Aprobados <span class="tab-count" id="dtc-aprobado">0</span></button>
+        </div>
+        <!-- Filtros secundarios -->
+        <div class="card" style="margin-bottom:12px;padding:10px 14px">
+          <div class="flex flex-wrap" style="gap:8px">
+            <input class="input" id="del-search" placeholder="Buscar entregable…" style="flex:2;min-width:160px"/>
+            <select class="select-input" id="del-f-proj" style="flex:1;min-width:150px"><option value="">Proyecto (todos)</option></select>
+            <select class="select-input" id="del-f-ass" style="flex:1;min-width:150px"><option value="">Responsable (todos)</option></select>
           </div>
         </div>
+        <!-- Hidden status filter for JS compat -->
+        <select id="del-f-status" style="display:none"></select>
         <div class="card">
           <div class="tbl-wrap">
             <table>
@@ -1321,14 +1308,20 @@ function renderHoy(){
   }
 
   // ── Logro del día ──
-  // Proyectos cerrados hoy (closedAt = today) o proyectos marcados cerrados
   const logroBlock=document.getElementById('hoy-logro-block');
-  const proyectosHoy=DB.projects.filter(p=>p.status==='Cerrado'&&(p.closedAt===t||p.end===t));
-  if(proyectosHoy.length){
+  const hace7=new Date(t+'T00:00:00');hace7.setDate(hace7.getDate()-7);
+  const hace7ISO=todayISO(hace7);
+  const proyectosRecientes=DB.projects.filter(p=>
+    p.status==='Cerrado'&&(
+      (p.closedAt&&p.closedAt>=hace7ISO) ||
+      (p.end&&p.end>=hace7ISO&&p.end<=t)
+    )
+  );
+  if(proyectosRecientes.length){
     logroBlock.innerHTML=`
-      <div style="background:linear-gradient(135deg,rgba(30,158,94,.12),rgba(30,158,94,.05));border:1.5px solid rgba(30,158,94,.35);border-radius:var(--r2);padding:16px;margin-bottom:16px;animation:fadeIn .3s ease">
-        <div style="font-size:13px;font-weight:700;color:var(--ok);margin-bottom:10px">🎉 ¡Proyecto terminado hoy!</div>
-        ${proyectosHoy.map(p=>{
+      <div style="background:linear-gradient(135deg,rgba(30,158,94,.12),rgba(30,158,94,.05));border:1.5px solid rgba(30,158,94,.35);border-radius:var(--r2);padding:16px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--ok);margin-bottom:10px">🎉 ¡Proyecto${proyectosRecientes.length>1?'s':''} terminado${proyectosRecientes.length>1?'s':''} recientemente!</div>
+        ${proyectosRecientes.map(p=>{
           const involved=[...new Set([p.leaderId,...DB.deliverables.filter(d=>d.projectId===p.id).map(d=>d.assigneeId)])].filter(Boolean);
           const avatars=involved.slice(0,4).map(uid=>{
             const u=byId(DB.users,uid);if(!u)return'';
@@ -1342,7 +1335,7 @@ function renderHoy(){
             <div style="font-size:28px">🏆</div>
             <div style="flex:1">
               <div style="font-weight:700;font-size:15px">${esc(p.name)}</div>
-              <div style="font-size:12px;color:var(--muted)">Liderado por ${userName(p.leaderId)}</div>
+              <div style="font-size:12px;color:var(--muted)">Liderado por ${userName(p.leaderId)} · ${p.closedAt?fmtDate(p.closedAt):fmtDate(p.end)}</div>
             </div>
             <div style="display:flex;align-items:center;padding-right:8px">${avatars}</div>
           </div>`;
@@ -1371,7 +1364,7 @@ function delCard(d,t,isOverdue){
     </div>
     <div class="del-actions">
       ${canSubmit?`<button class="btn xs primary" data-submit-del="${d.id}">Marcar terminado</button>`:''}
-      ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button>`:''}
+      ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>`:''}
       ${d.status==='En revisión'?'<span class="tag blue">Pendiente validación</span>':''}
     </div>
   </div>`;
@@ -1415,7 +1408,7 @@ function renderDashboard(){
             <td>${projName(d.projectId)}</td>
             <td class="right">
               <button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button>
-              <button class="btn xs danger" data-reject-del="${d.id}">Regresar</button>
+              <button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>
             </td>
           </tr>`).join('')}</tbody>
         </table></div>
@@ -1480,7 +1473,7 @@ function renderHotTable(){
     <td>${userName(d.assigneeId)}</td>
     <td>${d.due?`${fmtDate(d.due)}<div class="small muted">${ov>0?'Vencido '+ov+'d':'En '+din+'d'}</div>`:'—'}</td>
     <td class="right">
-      ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button>`:''}
+      ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>`:''}
       ${SESSION?.role==='user'&&d.assigneeId===SESSION?.userId&&d.status!=='En revisión'?`<button class="btn xs primary" data-submit-del="${d.id}">Terminado</button>`:''}
     </td>
   </tr>`).join('')||`<tr><td colspan="6" class="empty">Sin entregables activos.</td></tr>`;
@@ -1567,9 +1560,8 @@ function addComment(entity, entityId){
    RENDER: PROYECTOS
 ══════════════════════════════════════════════════════ */
 function renderProyectos(){
-  updateProjTabCounts();
-  const sf=document.getElementById('proj-f-status')?.value||'';
-  const pf=document.getElementById('proj-f-priority')?.value||'';
+  fillSelect('proj-f-leader', DB.users, 'Líder (todos)');
+  const fl=document.getElementById('proj-f-leader')?.value||'';
   const q=(document.getElementById('proj-search')?.value||'').trim().toLowerCase();
   const isAdmin=SESSION?.role==='admin';
 
@@ -1582,19 +1574,8 @@ function renderProyectos(){
   };
 
   let all=DB.projects
-    .filter(p=>!pf||p.priority===pf)
+    .filter(p=>!fl||p.leaderId===fl)
     .filter(p=>!q||p.name.toLowerCase().includes(q));
-
-  // Update tab counts
-  const tcMap={
-    'tc-all':all.length,
-    'tc-activo':all.filter(p=>p.status==='Activo').length,
-    'tc-aprobar':all.filter(p=>p.status==='Por aprobar'||p.status==='En revisión').length,
-    'tc-riesgo':all.filter(p=>p.status==='En riesgo').length,
-    'tc-detenido':all.filter(p=>p.status==='Detenido').length,
-    'tc-cerrado':all.filter(p=>p.status==='Cerrado').length,
-  };
-  Object.entries(tcMap).forEach(([id,n])=>{const el=document.getElementById(id);if(el)el.textContent=n});
 
   // Groups
   const porAprobar = all.filter(p=>p.status==='En revisión'||p.status==='Por aprobar');
@@ -1658,14 +1639,7 @@ function renderProyectos(){
     </div>`;
   }
 
-  // With status filter — flat list
-  if(sf){
-    const filtered=all.filter(p=>p.status===sf);
-    container.innerHTML=filtered.length?filtered.map(projCard).join(''):'<div class="empty">No hay proyectos con ese filtro.</div>';
-    return;
-  }
-
-  // Without filter — 4 collapsible groups
+  // Always show collapsible groups
   if(!all.length){container.innerHTML='<div class="empty">No hay proyectos.</div>';return}
 
   let html='';
@@ -1766,6 +1740,18 @@ function renderEntregables(){
   const t=todayISO();
   const isAdmin=SESSION?.role==='admin';
 
+  // Update tab counts
+  const base=DB.deliverables.filter(d=>(!fp||d.projectId===fp)&&(!fa||d.assigneeId===fa));
+  const dtcMap={
+    'dtc-all':     base.length,
+    'dtc-pendiente':base.filter(d=>d.status==='Pendiente').length,
+    'dtc-progreso': base.filter(d=>d.status==='En progreso').length,
+    'dtc-revision': base.filter(d=>d.status==='En revisión').length,
+    'dtc-bloqueado':base.filter(d=>d.status==='Bloqueado').length,
+    'dtc-aprobado': base.filter(d=>d.status==='Aprobado').length,
+  };
+  Object.entries(dtcMap).forEach(([id,n])=>{const el=document.getElementById(id);if(el)el.textContent=n});
+
   const rows=DB.deliverables
     .filter(d=>!q||d.title.toLowerCase().includes(q)||(d.notes||'').toLowerCase().includes(q))
     .filter(d=>!fp||d.projectId===fp)
@@ -1781,7 +1767,7 @@ function renderEntregables(){
       <td>${d.blocked?`<span class="tag bad">Sí·${d.blockSince?daysBetween(d.blockSince,t):0}d</span>`:`<span class="tag gray">No</span>`}</td>
       <td class="right">
         <button class="btn xs" data-open-del-cmt="${d.id}">💬</button>
-        ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}
+        ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button><button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}
         ${SESSION?.role==='user'&&d.assigneeId===SESSION?.userId&&d.status!=='Aprobado'&&d.status!=='En revisión'?`<button class="btn xs primary" data-submit-del="${d.id}">Terminado</button>`:''}
       </td>
     </tr>
@@ -2172,7 +2158,7 @@ function fillSelect(id,arr,defaultLabel,valKey='id',labelKey='name'){
    EVENT DELEGATION — TABLE ACTIONS
 ══════════════════════════════════════════════════════ */
 document.body.addEventListener('click',e=>{
-  const btn=e.target.closest('[data-edit-del],[data-approve-del],[data-del-del],[data-submit-del],[data-reject-del],[data-run-r],[data-edit-r],[data-del-r],[data-edit-proj],[data-del-proj],[data-open-proj],[data-add-del-proj],[data-edit-u],[data-del-u],[data-open-del-cmt],[data-open-proj-cmt]');
+  const btn=e.target.closest('[data-edit-del],[data-approve-del],[data-del-del],[data-submit-del],[data-reject-del],[data-next-phase],[data-run-r],[data-edit-r],[data-del-r],[data-edit-proj],[data-del-proj],[data-open-proj],[data-add-del-proj],[data-edit-u],[data-del-u],[data-open-del-cmt],[data-open-proj-cmt]');
   if(!btn)return;
 
   // Comentarios — verificación explícita primero
@@ -2245,6 +2231,10 @@ const handlers={
   approveDel(id){
     const d=byId(DB.deliverables,id);if(!d)return;
     d.status='Aprobado';d.completedAt=todayISO();d.blocked=false;d.blockSince=null;
+    if(!DB.comments) DB.comments={};
+    const key='deliverable_'+id;
+    if(!DB.comments[key]) DB.comments[key]=[];
+    DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:'✅ Entregable aprobado.',link:''});
     saveDB();if(currentView==='proyectos')renderProyectos();else renderView(currentView);toast(`✓ Aprobado: ${d.title}`);
   },
   delDel(id){
@@ -2258,9 +2248,84 @@ const handlers={
     saveDB();if(currentView==='proyectos')renderProyectos();else renderView(currentView);toast('Enviado para validación ✓');
   },
   rejectDel(id){
+    if(SESSION?.role!=='admin'){toast('Solo el admin puede rechazar');return;}
     const d=byId(DB.deliverables,id);if(!d)return;
-    d.status='En progreso';d.submittedAt=null;d.submittedBy=null;
-    saveDB();if(currentView==='proyectos')renderProyectos();else renderView(currentView);toast('Regresado a En progreso');
+    const uOpts=DB.users.map(u=>`<option value="${u.id}"${u.id===d.assigneeId?' selected':''}>${esc(u.name)}</option>`).join('');
+    openDlg({
+      title:'Rechazar entregable',
+      sub:esc(d.title),
+      body:`
+        <div style="padding:10px 12px;background:var(--bad-bg);border:1px solid rgba(217,53,53,.25);border-radius:var(--r);margin-bottom:12px;font-size:13px">
+          ⚠️ El entregable regresará a <b>En progreso</b>.
+        </div>
+        <label class="lbl">Motivo del rechazo *</label>
+        <textarea class="input" id="rj-reason" placeholder="Explica qué debe corregirse…" style="min-height:80px"></textarea>
+        <label class="lbl" style="margin-top:12px">¿Afecta el score de nómina?</label>
+        <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r);flex:1;background:var(--surface2)">
+            <input type="radio" name="rj-score" value="no" checked style="accent-color:var(--ok)"/>
+            <span>No afecta — corrección normal</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r);flex:1;background:var(--surface2)">
+            <input type="radio" name="rj-score" value="yes" style="accent-color:var(--bad)"/>
+            <span>Sí afecta — penaliza -${DB.scoreRules.penaltyFollowUp}%</span>
+          </label>
+        </div>
+        <label class="lbl" style="margin-top:12px">Nueva fecha límite (opcional)</label>
+        <input class="input" type="date" id="rj-newdue" value="${d.due||todayISO()}"/>`,
+      onSave:()=>{
+        const reason=(document.getElementById('rj-reason')?.value||'').trim();
+        if(!reason){toast('Escribe el motivo del rechazo');return false;}
+        const affectsScore=document.querySelector('input[name="rj-score"]:checked')?.value==='yes';
+        const newDue=document.getElementById('rj-newdue')?.value||d.due;
+        const t=todayISO();
+        d.status='En progreso';d.submittedAt=null;d.submittedBy=null;
+        d.rejectedAt=t;d.rejectedBy=SESSION?.name;
+        if(newDue&&newDue!==d.due){if(!d.originalDue)d.originalDue=d.due;d.due=newDue;}
+        if(affectsScore){d.scorePenalty=(d.scorePenalty||0)+DB.scoreRules.penaltyFollowUp;}
+        if(!DB.comments) DB.comments={};
+        const key='deliverable_'+id;
+        if(!DB.comments[key]) DB.comments[key]=[];
+        DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:t,time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`❌ Rechazado: ${reason}${affectsScore?' · Penalización -'+DB.scoreRules.penaltyFollowUp+'%':''}`,link:''});
+        toast(`Rechazado${affectsScore?' · -'+DB.scoreRules.penaltyFollowUp+'% al score':' · sin penalización'}`);
+      }
+    });
+  },
+  nextPhase(id){
+    const d=byId(DB.deliverables,id);if(!d)return;
+    const p=byId(DB.projects,d.projectId);
+    const uOpts=DB.users.map(u=>`<option value="${u.id}"${u.id===d.assigneeId?' selected':''}>${esc(u.name)}</option>`).join('');
+    const phaseMatch=d.title.match(/fase\s*(\d+)/i);
+    const nextNum=phaseMatch?parseInt(phaseMatch[1])+1:2;
+    const suggestedTitle=phaseMatch?d.title.replace(/fase\s*\d+/i,`Fase ${nextNum}`):`${d.title} — Fase 2`;
+    openDlg({
+      title:'Crear siguiente fase',
+      sub:`Basado en: ${esc(d.title)}`,
+      body:`
+        <div style="padding:10px 12px;background:var(--accent-bg);border:1px solid rgba(212,98,42,.25);border-radius:var(--r);margin-bottom:12px;font-size:12px;color:var(--muted)">
+          Se creará un nuevo entregable en <b>${esc(p?.name||'—')}</b>
+        </div>
+        <label class="lbl">Nombre de la siguiente fase *</label>
+        <input class="input" id="nf-title" value="${esc(suggestedTitle)}"/>
+        <div class="form-row" style="margin-top:4px">
+          <div><label class="lbl">Responsable</label><select class="select-input" id="nf-ass">${uOpts}</select></div>
+          <div><label class="lbl">Nueva fecha límite *</label><input class="input" type="date" id="nf-due" value="${d.due||todayISO()}"/></div>
+        </div>
+        <label class="lbl">Notas / criterios de aceptación</label>
+        <textarea class="input" id="nf-notes" placeholder="Qué debe incluir esta fase…"></textarea>`,
+      onSave:()=>{
+        const title=(document.getElementById('nf-title')?.value||'').trim();
+        if(!title){toast('Falta nombre');return false;}
+        const due=document.getElementById('nf-due')?.value||todayISO();
+        const newDel={id:uid('d'),title,projectId:d.projectId,assigneeId:document.getElementById('nf-ass')?.value||d.assigneeId,due,originalDue:due,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:(document.getElementById('nf-notes')?.value||'').trim(),completedAt:null,scorePenalty:0,parentId:id};
+        DB.deliverables.push(newDel);
+        if(!DB.comments) DB.comments={};
+        const key='deliverable_'+id;
+        if(!DB.comments[key]) DB.comments[key]=[];
+        DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`➡️ Siguiente fase creada: "${title}" — fecha: ${fmtDate(due)}`,link:''});
+        toast(`Fase creada: ${title} ✓`);
+      }
+    });
   },
   runR(id){
     const r=byId(DB.routines,id);if(!r)return;
@@ -2335,7 +2400,7 @@ const handlers={
         <td>${userName(d.assigneeId)}</td>
         <td>${fmtDueFull(d.due,d.originalDue)}</td>
         <td class="right">
-          ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button>`:''}
+          ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>`:''}
           ${SESSION?.role==='user'&&d.assigneeId===SESSION?.userId&&d.status!=='Aprobado'&&d.status!=='En revisión'?`<button class="btn xs primary" data-submit-del="${d.id}">Terminado</button>`:''}
         </td>
       </tr>`).join('')||`<tr><td colspan="5" class="empty">Sin entregables.</td></tr>`}</tbody>
@@ -2573,6 +2638,17 @@ document.getElementById('btn-add-user')?.addEventListener('click',()=>{
 });
 
 // Project tabs
+// Entregables tabs
+document.getElementById('del-tabs')?.addEventListener('click',e=>{
+  const tab=e.target.closest('.proj-tab');
+  if(!tab)return;
+  document.querySelectorAll('#del-tabs .proj-tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  const sf=document.getElementById('del-f-status');
+  if(sf) sf.value=tab.dataset.delTab||'';
+  renderEntregables();
+});
+
 document.getElementById('proj-tabs')?.addEventListener('click',e=>{
   const tab=e.target.closest('.proj-tab');
   if(!tab)return;
@@ -2605,11 +2681,11 @@ function updateProjTabCounts(){
 
 // Filters
 // Filters — project filters only re-render projects, not the whole view
-['proj-f-status','proj-f-priority','proj-search'].forEach(id=>{
+['proj-f-leader','proj-search'].forEach(id=>{
   document.getElementById(id)?.addEventListener('input',()=>renderProyectos());
   document.getElementById(id)?.addEventListener('change',()=>renderProyectos());
 });
-['del-search','del-f-proj','del-f-status','del-f-ass','dash-filter-ass','gantt-f-ass'].forEach(id=>{
+['del-search','del-f-proj','del-f-ass','dash-filter-ass','gantt-f-ass'].forEach(id=>{
   document.getElementById(id)?.addEventListener('input',()=>renderView(currentView));
   document.getElementById(id)?.addEventListener('change',()=>renderView(currentView));
 });
