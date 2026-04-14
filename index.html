@@ -23,7 +23,7 @@
   --border:   #d8dde5;
   --border2:  #e4e8ee;
   --text:     #1a2233;
-  --muted:    #7a8699;
+  --muted:    #4a5568;
   --accent:   #d4622a;
   --accent2:  #b8501f;
   --ok:       #1e9e5e;
@@ -563,7 +563,6 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
       <button class="snav-btn" data-view="entregables"><span class="icon">✅</span> Entregables</button>
       <button class="snav-btn" data-view="gantt"><span class="icon">📅</span> Gantt</button>
       <div class="snav-section">Operacion</div>
-      <button class="snav-btn" data-view="rutinas"><span class="icon">🔁</span> Rutinas</button>
       <button class="snav-btn" data-view="calendario"><span class="icon">🗓</span> Calendario</button>
       <div class="snav-section admin-only">Equipo</div>
       <button class="snav-btn admin-only" data-view="evaluacion"><span class="icon">🏆</span> Evaluación mensual</button>
@@ -748,43 +747,6 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
       </div>
     </div>
 
-    <!-- ─── VIEW: RUTINAS ─── -->
-    <div class="view" id="view-rutinas">
-      <div class="page-header">
-        <div class="page-header-inner">
-          <div class="page-title"><h2>Rutinas</h2><p>Checklists recurrentes</p></div>
-          <div class="page-actions admin-only">
-            <button class="btn sm primary" id="btn-add-rutina">＋ Rutina</button>
-          </div>
-        </div>
-      </div>
-      <div class="pad">
-        <div class="card" style="margin-bottom:10px">
-          <select class="select-input" id="rut-f-ass" style="max-width:260px"><option value="">Responsable (todos)</option></select>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="card">
-            <div class="card-title">Rutinas programadas</div>
-            <div class="tbl-wrap">
-              <table>
-                <thead><tr><th>Rutina</th><th>Frec.</th><th>Responsable</th><th>Hoy</th><th class="right">Acción</th></tr></thead>
-                <tbody id="rut-tbody"></tbody>
-              </table>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-title">Historial 14 días</div>
-            <div class="tbl-wrap" style="max-height:400px;overflow-y:auto">
-              <table>
-                <thead><tr><th>Fecha</th><th>Rutina</th><th>Responsable</th><th>Estado</th></tr></thead>
-                <tbody id="rut-hist-tbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- ─── VIEW: CALENDARIO ─── -->
     <div class="view" id="view-calendario">
       <div class="page-header">
@@ -838,21 +800,14 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
     <div class="view" id="view-equipo">
       <div class="page-header">
         <div class="page-header-inner">
-          <div class="page-title"><h2>Equipo</h2><p>Usuarios y configuración de acceso</p></div>
+          <div class="page-title"><h2>Equipo</h2><p>Perfiles, DGP y acceso</p></div>
           <div class="page-actions admin-only">
             <button class="btn sm primary" id="btn-add-user">＋ Usuario</button>
           </div>
         </div>
       </div>
       <div class="pad">
-        <div class="card">
-          <div class="tbl-wrap">
-            <table>
-              <thead><tr><th>Nombre</th><th>Rol</th><th>Equipo</th><th class="right">Acciones</th></tr></thead>
-              <tbody id="users-tbody"></tbody>
-            </table>
-          </div>
-        </div>
+        <div id="equipo-cards"></div>
       </div>
     </div>
 
@@ -928,6 +883,24 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
             <button class="btn sm" id="btn-migrate">Fijar fechas pactadas</button>
           </div>
         </div>
+
+        <!-- Notificaciones -->
+        <div class="card admin-only" style="border-color:rgba(212,98,42,.3)">
+          <div class="card-title">🔔 Notificaciones por correo</div>
+          <div class="card-sub">El trigger diario se activa automáticamente a las 8am desde Apps Script.<br>Desde aquí puedes enviarlas manualmente cuando quieras.</div>
+          <div class="hr"></div>
+          <div class="flex flex-wrap" style="gap:8px">
+            <button class="btn sm primary" id="btn-notify-overdue">📧 Enviar vencidos ahora</button>
+          </div>
+          <div id="notify-result" style="margin-top:10px;font-size:12px;display:none"></div>
+          <div class="hr"></div>
+          <div class="card-sub" style="margin:0">
+            <b>Para activar el envío automático diario:</b><br>
+            1. Abre Apps Script → pega el nuevo <b>Codigo.gs</b><br>
+            2. Ejecuta la función <b>instalarTriggerDiario()</b> una sola vez<br>
+            3. Listo — llegará a las 8am cada día automáticamente
+          </div>
+        </div>
       </div>
     </div>
 
@@ -946,11 +919,11 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
     <button class="bnav-btn" data-view="proyectos">
       <span class="bicon">📁</span><span>Proyectos</span>
     </button>
-    <button class="bnav-btn" data-view="rutinas">
-      <span class="bicon">🔁</span><span>Rutinas</span>
+    <button class="bnav-btn" data-view="calendario">
+      <span class="bicon">🗓</span><span>Calendario</span>
     </button>
-    <button class="bnav-btn" data-view="ajustes">
-      <span class="bicon">⚙️</span><span>Ajustes</span>
+    <button class="bnav-btn" data-view="equipo">
+      <span class="bicon">👥</span><span>Equipo</span>
     </button>
   </div>
 </nav>
@@ -1000,7 +973,6 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
       <select class="select-input" id="qa-type" style="margin-bottom:12px">
         <option value="project">Proyecto</option>
         <option value="deliverable">Entregable</option>
-        <option value="routine">Rutina</option>
       </select>
       <div class="hr"></div>
       <div id="qa-form"></div>
@@ -1247,7 +1219,6 @@ function renderView(v){
     proyectos:renderProyectos,
     entregables:renderEntregables,
     gantt:renderGantt,
-    rutinas:renderRutinas,
     calendario:renderCalendar,
     evaluacion:renderEvaluacion,
     equipo:renderEquipo,
@@ -1413,8 +1384,16 @@ function renderDashboard(){
     const ms=getCurrentMonthScores().find(x=>x.userId===u.id);
     const sc=ms?.score;
     const scLevel=sc===null?'gray':sc>=85?'ok':sc>=70?'warn':'bad';
+    const initials=u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    const photo=userPhotoURL(u.email);
     return`<div class="person-card" onclick="openPersonDetail('${u.id}')">
-      <div class="person-avatar ${s.level}">${u.name.charAt(0)}</div>
+      <div style="position:relative;flex:0 0 42px">
+        ${photo
+          ? `<img src="${photo}" alt="${esc(u.name)}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid var(--border)" onerror="this.outerHTML='<div class=\\'person-avatar ${s.level}\\'>${initials}</div>'"/>`
+          : `<div class="person-avatar ${s.level}">${initials}</div>`
+        }
+        <span style="position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:var(--${s.level==='ok'?'ok':s.level==='warn'?'warn':'bad'});border:2px solid var(--surface)"></span>
+      </div>
       <div class="person-info">
         <div class="flex-between">
           <div class="person-name">${esc(u.name)}</div>
@@ -1606,40 +1585,6 @@ function renderGantt(){
 }
 
 /* ══════════════════════════════════════════════════════
-   RENDER: RUTINAS
-══════════════════════════════════════════════════════ */
-function renderRutinas(){
-  fillSelect('rut-f-ass',DB.users,'Responsable (todos)');
-  const fa=document.getElementById('rut-f-ass')?.value||'';
-  const t=todayISO();
-  const rows=DB.routines.filter(r=>!fa||r.assigneeId===fa).map(r=>`<tr>
-    <td><b>${esc(r.name)}</b><div class="small muted">${(r.checklist||[]).length} items</div></td>
-    <td><span class="tag gray">${r.frequency}</span></td>
-    <td>${userName(r.assigneeId)}</td>
-    <td>${routineTouchesToday(r,t)?'<span class="tag warn">Sí</span>':'<span class="tag gray">No</span>'}</td>
-    <td class="right">
-      <button class="btn xs ok" data-run-r="${r.id}">✓</button>
-      <button class="btn xs" data-edit-r="${r.id}">Editar</button>
-      <button class="btn xs danger" data-del-r="${r.id}">✕</button>
-    </td>
-  </tr>`).join('');
-  document.getElementById('rut-tbody').innerHTML=rows||`<tr><td colspan="5" class="empty">No hay rutinas.</td></tr>`;
-
-  const from=new Date(t+'T00:00:00');from.setDate(from.getDate()-13);
-  const fromISO=todayISO(from);
-  const histRows=DB.routineRuns.filter(rr=>rr.date>=fromISO).sort((a,b)=>b.date.localeCompare(a.date)).map(rr=>{
-    const r=byId(DB.routines,rr.routineId);
-    return`<tr>
-      <td>${fmtDate(rr.date)}</td>
-      <td>${r?esc(r.name):'—'}</td>
-      <td>${userName(rr.assigneeId)}</td>
-      <td>${rr.status==='Completada'?'<span class="tag ok">✓</span>':'<span class="tag warn">Pend.</span>'}</td>
-    </tr>`;
-  }).join('');
-  document.getElementById('rut-hist-tbody').innerHTML=histRows||`<tr><td colspan="4" class="empty">Sin historial.</td></tr>`;
-}
-
-/* ══════════════════════════════════════════════════════
    RENDER: CALENDARIO
 ══════════════════════════════════════════════════════ */
 let calY=new Date().getFullYear(),calM=new Date().getMonth();
@@ -1775,16 +1720,72 @@ function renderEvaluacion(){
 /* ══════════════════════════════════════════════════════
    RENDER: EQUIPO
 ══════════════════════════════════════════════════════ */
+function userPhotoURL(email){
+  if(!email) return null;
+  // Google Workspace public photo URL
+  return `https://lh3.googleusercontent.com/a/${email}`;
+}
+
+function avatarHTML(u, size=42){
+  const photo = userPhotoURL(u.email);
+  const initials = u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  if(photo){
+    return`<img src="${photo}" alt="${esc(u.name)}"
+      style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;border:2px solid var(--border2);flex:0 0 ${size}px"
+      onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+    <div class="person-avatar" style="display:none;width:${size}px;height:${size}px;font-size:${Math.round(size*.35)}px;flex:0 0 ${size}px">${initials}</div>`;
+  }
+  return`<div class="person-avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size*.35)}px;flex:0 0 ${size}px">${initials}</div>`;
+}
+
 function renderEquipo(){
-  document.getElementById('users-tbody').innerHTML=DB.users.map(u=>`<tr>
-    <td><b>${esc(u.name)}</b></td>
-    <td><span class="tag gray">${u.role}</span></td>
-    <td>${u.team||'—'}</td>
-    <td class="right">
-      <button class="btn xs" data-edit-u="${u.id}">Editar</button>
-      <button class="btn xs danger" data-del-u="${u.id}">✕</button>
-    </td>
-  </tr>`).join('')||`<tr><td colspan="4" class="empty">Sin usuarios.</td></tr>`;
+  const container = document.getElementById('equipo-cards');
+  if(!container) return;
+  container.innerHTML = DB.users.map(u=>{
+    const dgp = u.dgp || {};
+    const photo = userPhotoURL(u.email);
+    const initials = u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    const ms = getCurrentMonthScores().find(x=>x.userId===u.id);
+    const sc = ms?.score;
+    const lvl = sc===null?'gray':sc>=85?'ok':sc>=70?'warn':'bad';
+    const scoreColor = lvl==='ok'?'var(--ok)':lvl==='warn'?'var(--warn)':lvl==='bad'?'var(--bad)':'var(--muted)';
+    return`<div class="card" style="display:flex;gap:16px;align-items:flex-start;margin-bottom:10px">
+      <!-- Foto -->
+      <div style="flex:0 0 64px;display:flex;flex-direction:column;align-items:center;gap:6px">
+        ${photo
+          ? `<img src="${photo}" alt="${esc(u.name)}"
+              style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border)"
+              onerror="this.outerHTML='<div style=\\'width:64px;height:64px;border-radius:50%;background:var(--accent-bg);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--accent)\\'>${initials}</div>'"
+            />`
+          : `<div style="width:64px;height:64px;border-radius:50%;background:var(--accent-bg);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--accent)">${initials}</div>`
+        }
+        <span class="tag ${lvl}" style="font-size:10px;padding:2px 7px">${sc!==null?sc+'%':'—'}</span>
+      </div>
+      <!-- Info -->
+      <div style="flex:1;min-width:0">
+        <div class="flex-between flex-wrap" style="gap:6px;margin-bottom:4px">
+          <div>
+            <div style="font-weight:700;font-size:15px">${esc(u.name)}</div>
+            <div class="small muted">${u.role} · ${u.team||'—'}</div>
+          </div>
+          <div class="flex" style="gap:6px">
+            <button class="btn xs" data-edit-u="${u.id}">Editar</button>
+            <button class="btn xs danger" data-del-u="${u.id}">✕</button>
+          </div>
+        </div>
+        ${dgp.puesto||dgp.area||dgp.responsabilidades ? `
+        <div class="hr" style="margin:8px 0"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:12px">
+          ${dgp.puesto?`<div><span class="muted">Puesto: </span><b>${esc(dgp.puesto)}</b></div>`:''}
+          ${dgp.area?`<div><span class="muted">Área: </span><b>${esc(dgp.area)}</b></div>`:''}
+          ${dgp.nivel?`<div><span class="muted">Nivel: </span><b>${esc(dgp.nivel)}</b></div>`:''}
+          ${u.email?`<div><span class="muted">Correo: </span><b>${esc(u.email)}</b></div>`:''}
+        </div>
+        ${dgp.responsabilidades?`<div style="margin-top:6px;font-size:12px"><span class="muted">Responsabilidades: </span>${esc(dgp.responsabilidades)}</div>`:''}
+        ` : `<div class="small muted" style="margin-top:4px">Sin DGP capturado — haz clic en Editar para agregar.</div>`}
+      </div>
+    </div>`;
+  }).join('') || `<div class="empty">Sin usuarios.</div>`;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1864,7 +1865,11 @@ document.getElementById('qa-save').addEventListener('click',()=>{
   if(type==='project'){
     const name=(document.getElementById('qa-name')?.value||'').trim();
     if(!name)return toast('Falta nombre del proyecto');
-    DB.projects.push({id:uid('p'),name,leaderId:document.getElementById('qa-leader')?.value||'',priority:document.getElementById('qa-pri')?.value||'Media',status:document.getElementById('qa-st')?.value||'Activo',start:document.getElementById('qa-start')?.value||t,end:document.getElementById('qa-end')?.value||t,originalEnd:document.getElementById('qa-end')?.value||t,notes:(document.getElementById('qa-notes')?.value||'').trim()});
+    const newProj={id:uid('p'),name,leaderId:document.getElementById('qa-leader')?.value||'',priority:document.getElementById('qa-pri')?.value||'Media',status:document.getElementById('qa-st')?.value||'Activo',start:document.getElementById('qa-start')?.value||t,end:document.getElementById('qa-end')?.value||t,originalEnd:document.getElementById('qa-end')?.value||t,notes:(document.getElementById('qa-notes')?.value||'').trim()};
+    DB.projects.push(newProj);
+    // Notificar al líder automáticamente
+    const leader=byId(DB.users,newProj.leaderId);
+    if(leader?.email) sendProjectNotificationEmail(newProj,[leader]);
   } else if(type==='deliverable'){
     const title=(document.getElementById('qa-title')?.value||'').trim();
     if(!title)return toast('Falta nombre del entregable');
@@ -2067,15 +2072,38 @@ const handlers={
   },
   editU(id){
     const u=byId(DB.users,id);if(!u)return;
+    const dgp=u.dgp||{};
     openDlg({title:'Editar usuario',sub:esc(u.name),body:`
       <div class="form-row"><div><label class="lbl">Nombre</label><input class="input" id="eu-name" value="${esc(u.name)}"/></div>
       <div><label class="lbl">Rol</label><select class="select-input" id="eu-role">${['Admin','Líder','Colaborador'].map(r=>`<option${r===u.role?' selected':''}>${r}</option>`).join('')}</select></div></div>
-      <label class="lbl">Equipo</label><input class="input" id="eu-team" value="${esc(u.team||'')}"/>
-      <label class="lbl">Contraseña (dejar en blanco = ${DEFAULT_PASS})</label><input class="input" type="password" id="eu-pass" placeholder="Nueva contraseña"/>`,
+      <div class="form-row"><div><label class="lbl">Equipo</label><input class="input" id="eu-team" value="${esc(u.team||'')}"/></div>
+      <div><label class="lbl">Correo Gmail / Workspace</label><input class="input" id="eu-email" value="${esc(u.email||'')}" placeholder="nombre@empresa.com" type="email"/></div></div>
+      <div style="margin-top:2px;padding:10px;background:var(--accent-bg);border-radius:var(--r);font-size:11px;color:var(--muted)">
+        📷 La foto se carga automáticamente del correo de Google Workspace
+      </div>
+      <div class="hr"></div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:4px">DGP — Descripción General del Puesto</div>
+      <div class="form-row"><div><label class="lbl">Puesto</label><input class="input" id="eu-puesto" value="${esc(dgp.puesto||'')}" placeholder="Ej: Ingeniero de Procesos Sr."/></div>
+      <div><label class="lbl">Área</label><input class="input" id="eu-area" value="${esc(dgp.area||'')}" placeholder="Ej: Manufactura"/></div></div>
+      <div class="form-row"><div><label class="lbl">Nivel</label><input class="input" id="eu-nivel" value="${esc(dgp.nivel||'')}" placeholder="Ej: Senior, Junior, Lead"/></div>
+      <div><label class="lbl">Reporta a</label><input class="input" id="eu-reporta" value="${esc(dgp.reporta||'')}" placeholder="Ej: Gerente de Ingeniería"/></div></div>
+      <label class="lbl">Responsabilidades principales</label>
+      <textarea class="input" id="eu-resp" placeholder="Describe las responsabilidades clave del puesto…">${esc(dgp.responsabilidades||'')}</textarea>
+      <div class="hr"></div>
+      <label class="lbl">Contraseña (dejar vacío = sin cambio)</label>
+      <input class="input" type="password" id="eu-pass" placeholder="Nueva contraseña"/>`,
       onSave:()=>{
         u.name=document.getElementById('eu-name').value.trim();
         u.role=document.getElementById('eu-role').value;
         u.team=document.getElementById('eu-team').value.trim();
+        u.email=document.getElementById('eu-email').value.trim().toLowerCase();
+        u.dgp={
+          puesto:document.getElementById('eu-puesto').value.trim(),
+          area:document.getElementById('eu-area').value.trim(),
+          nivel:document.getElementById('eu-nivel').value.trim(),
+          reporta:document.getElementById('eu-reporta').value.trim(),
+          responsabilidades:document.getElementById('eu-resp').value.trim(),
+        };
         const p=document.getElementById('eu-pass').value;
         if(p)u.loginPassword=p;
         toast('Usuario actualizado ✓');
@@ -2174,24 +2202,85 @@ document.getElementById('btn-migrate')?.addEventListener('click',()=>{
   saveDB();toast(`${n} registros actualizados con fecha pactada`);
 });
 
+/* ══════════════════════════════════════════════════════
+   NOTIFICACIONES
+══════════════════════════════════════════════════════ */
+async function sendOverdueNow(){
+  if(!GS_URL){toast('Configura primero la URL de Apps Script');return}
+  const btn=document.getElementById('btn-notify-overdue');
+  const result=document.getElementById('notify-result');
+  if(btn){btn.disabled=true;btn.textContent='Enviando…'}
+  try{
+    const res=await fetch(GS_URL+'?action=notify_overdue');
+    const json=await res.json();
+    if(result){
+      result.style.display='block';
+      if(json.ok){
+        result.innerHTML=`<span style="color:var(--ok)">✓ Enviados: ${json.enviados} correo(s)${json.errores?.length?' · Errores: '+json.errores.join(', '):''}</span>`;
+        toast(`✓ ${json.enviados} notificaciones enviadas`);
+      } else {
+        result.innerHTML=`<span style="color:var(--bad)">Error: ${json.error}</span>`;
+        toast('Error al enviar notificaciones');
+      }
+    }
+  }catch(err){
+    if(result){result.style.display='block';result.innerHTML=`<span style="color:var(--bad)">Error de conexión: ${err.message}</span>`}
+    toast('Error de conexión');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='📧 Enviar vencidos ahora'}
+  }
+}
+
+async function sendProjectNotificationEmail(project, assignees){
+  if(!GS_URL) return;
+  try{
+    // Build payload: for each user with deliverables in this project
+    const payload={
+      action:'notify_project',
+      data:{
+        projectName: project.name,
+        leaderName:  userName(project.leaderId),
+        endDate:     project.end||'',
+        notes:       project.notes||'',
+        assignees:   assignees.map(u=>{
+          const dels=DB.deliverables.filter(d=>d.projectId===project.id&&d.assigneeId===u.id);
+          return{
+            name:u.name,
+            email:u.email||'',
+            deliverables:dels.map(d=>({title:d.title,due:d.due||''}))
+          };
+        }).filter(a=>a.email)
+      }
+    };
+    await fetch(GS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
+  }catch(err){
+    console.warn('Notificación de proyecto fallida:',err.message);
+  }
+}
+
+document.getElementById('btn-notify-overdue')?.addEventListener('click',sendOverdueNow);
+
 // Quick add buttons
 document.getElementById('btn-quickadd')?.addEventListener('click',()=>{document.getElementById('qa-type').value='project';qaRender();document.getElementById('dlg-qa').showModal()});
 document.getElementById('fab')?.addEventListener('click',()=>{document.getElementById('qa-type').value='deliverable';qaRender();document.getElementById('dlg-qa').showModal()});
 document.getElementById('btn-add-proj')?.addEventListener('click',()=>{document.getElementById('qa-type').value='project';qaRender();document.getElementById('dlg-qa').showModal()});
 document.getElementById('btn-add-del')?.addEventListener('click',()=>{document.getElementById('qa-type').value='deliverable';qaRender();document.getElementById('dlg-qa').showModal()});
-document.getElementById('btn-add-rutina')?.addEventListener('click',()=>{document.getElementById('qa-type').value='routine';qaRender();document.getElementById('dlg-qa').showModal()});
 document.getElementById('btn-add-user')?.addEventListener('click',()=>{
   const uOpts=DB.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
   openDlg({title:'Agregar usuario',body:`
     <div class="form-row"><div><label class="lbl">Nombre *</label><input class="input" id="nu-name" placeholder="Ej: Israel"/></div>
     <div><label class="lbl">Rol</label><select class="select-input" id="nu-role"><option>Admin</option><option selected>Líder</option><option>Colaborador</option></select></div></div>
-    <label class="lbl">Equipo</label><input class="input" id="nu-team" placeholder="Ej: Ingeniería"/>
+    <div class="form-row"><div><label class="lbl">Equipo</label><input class="input" id="nu-team" placeholder="Ej: Ingeniería"/></div>
+    <div><label class="lbl">Correo Gmail / Workspace</label><input class="input" id="nu-email" placeholder="nombre@empresa.com" type="email"/></div></div>
+    <div style="padding:8px 10px;background:var(--accent-bg);border-radius:var(--r);font-size:11px;color:var(--muted);margin-bottom:4px">
+      📷 La foto se carga automáticamente del correo de Google Workspace
+    </div>
     <label class="lbl">Contraseña (dejar en blanco = ${DEFAULT_PASS})</label><input class="input" type="password" id="nu-pass"/>`,
     onSave:()=>{
       const name=(document.getElementById('nu-name')?.value||'').trim();
       if(!name){toast('Falta nombre');return false}
       const p=document.getElementById('nu-pass')?.value||null;
-      DB.users.push({id:uid('u'),name,role:document.getElementById('nu-role').value,team:(document.getElementById('nu-team')?.value||'').trim(),loginPassword:p});
+      DB.users.push({id:uid('u'),name,role:document.getElementById('nu-role').value,team:(document.getElementById('nu-team')?.value||'').trim(),email:(document.getElementById('nu-email')?.value||'').trim().toLowerCase(),loginPassword:p,dgp:{}});
       toast('Usuario creado ✓');
     }
   });
