@@ -2178,9 +2178,31 @@ document.body.addEventListener('click',e=>{
     return;
   }
 
-  const k=Object.keys(btn.dataset)[0];
-  const id=btn.dataset[k];
-  handlers[k]&&handlers[k](id);
+  // Explicit attribute checks for all handlers
+  const attrMap=[
+    ['data-edit-del','editDel'],
+    ['data-approve-del','approveDel'],
+    ['data-del-del','delDel'],
+    ['data-submit-del','submitDel'],
+    ['data-reject-del','rejectDel'],
+    ['data-next-phase','nextPhase'],
+    ['data-run-r','runR'],
+    ['data-edit-r','editR'],
+    ['data-del-r','delR'],
+    ['data-edit-proj','editProj'],
+    ['data-del-proj','delProj'],
+    ['data-open-proj','openProj'],
+    ['data-add-del-proj','addDelProj'],
+    ['data-edit-u','editU'],
+    ['data-del-u','delU'],
+  ];
+  for(const [attr,fn] of attrMap){
+    if(btn.hasAttribute(attr)){
+      const id=btn.getAttribute(attr);
+      handlers[fn]&&handlers[fn](id);
+      return;
+    }
+  }
 });
 
 const handlers={
@@ -2319,11 +2341,19 @@ const handlers={
         const due=document.getElementById('nf-due')?.value||todayISO();
         const newDel={id:uid('d'),title,projectId:d.projectId,assigneeId:document.getElementById('nf-ass')?.value||d.assigneeId,due,originalDue:due,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:(document.getElementById('nf-notes')?.value||'').trim(),completedAt:null,scorePenalty:0,parentId:id};
         DB.deliverables.push(newDel);
+
+        // Marcar el original como Aprobado — ya no está pendiente ni vencido
+        d.status='Aprobado';
+        d.completedAt=todayISO();
+        d.blocked=false;
+        d.blockSince=null;
+        d.supersededBy=newDel.id;
+
         if(!DB.comments) DB.comments={};
         const key='deliverable_'+id;
         if(!DB.comments[key]) DB.comments[key]=[];
-        DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`➡️ Siguiente fase creada: "${title}" — fecha: ${fmtDate(due)}`,link:''});
-        toast(`Fase creada: ${title} ✓`);
+        DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`➡️ Siguiente fase creada: "${title}" — fecha: ${fmtDate(due)}. Este entregable se marcó como completado.`,link:''});
+        toast(`Fase creada: ${title} ✓ — Original marcado como aprobado`);
       }
     });
   },
