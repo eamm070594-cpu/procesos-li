@@ -598,7 +598,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
         <div class="page-header-inner">
           <div class="page-title">
             <h2 id="hoy-title">Mi día de hoy</h2>
-            <p id="hoy-sub">Entregables y rutinas pendientes</p>
+            <p id="hoy-sub">Tus entregables pendientes</p>
           </div>
           <div class="page-actions">
             <span id="sync-pill-hoy" style="display:none"></span>
@@ -612,8 +612,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
         <div id="hoy-overdue-block"></div>
         <!-- Entregables próximos -->
         <div id="hoy-upcoming-block"></div>
-        <!-- Rutinas hoy -->
-        <div id="hoy-rutinas-block"></div>
+
       </div>
     </div>
 
@@ -691,7 +690,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
       <div class="pad">
         <div class="card" style="margin-bottom:12px">
           <div class="flex flex-wrap" style="gap:8px">
-            <select class="select-input" id="proj-f-status" style="flex:1;min-width:140px"><option value="">Estatus (todos)</option><option>Activo</option><option>En riesgo</option><option>Detenido</option><option>Cerrado</option></select>
+            <select class="select-input" id="proj-f-status" style="flex:1;min-width:140px"><option value="">Estatus (todos)</option><option>Activo</option><option>Por aprobar</option><option>En riesgo</option><option>Detenido</option><option>Cerrado</option></select>
             <select class="select-input" id="proj-f-priority" style="flex:1;min-width:140px"><option value="">Prioridad (todas)</option><option>Alta</option><option>Media</option><option>Baja</option></select>
             <input class="input" id="proj-search" placeholder="Buscar…" style="flex:2;min-width:180px"/>
           </div>
@@ -854,8 +853,6 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
             <div><label class="lbl">Rojo si bloqueo (días) ≥</label><input class="input" type="number" id="r-rd-b" min="0"/></div>
           </div>
           <div class="form-row">
-            <div><label class="lbl">Amarillo rutinas pendientes ≥</label><input class="input" type="number" id="r-yw-r" min="0"/></div>
-            <div><label class="lbl">Rojo rutinas pendientes ≥</label><input class="input" type="number" id="r-rd-r" min="0"/></div>
           </div>
           <div class="hr"></div>
           <button class="btn sm primary" id="btn-save-rules">Guardar reglas</button>
@@ -869,7 +866,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
             <div><label class="lbl">Penalización por falta seguimiento (%)</label><input class="input" type="number" id="sr-pen" min="0" max="100"/></div>
           </div>
           <div class="form-row">
-            <div><label class="lbl">Rutinas completan hasta (%)</label><input class="input" type="number" id="sr-rut" min="0" max="100"/></div>
+
             <div><label class="lbl">Incidencias abiertas penalizan (%)</label><input class="input" type="number" id="sr-inc" min="0" max="100"/></div>
           </div>
           <div class="hr"></div>
@@ -1033,28 +1030,22 @@ function defaultDB(){
     {id:uid('d'),title:'Ficha técnica conceptual',projectId:projects[0].id,assigneeId:users[3].id,due:'2026-02-10',originalDue:'2026-02-10',status:'Bloqueado',blocked:true,blockSince:'2026-02-09',evidence:'',notes:'Falta validación de medidas',completedAt:null,scorePenalty:0},
     {id:uid('d'),title:'Lista de productos por zona',projectId:projects[1].id,assigneeId:users[0].id,due:'2026-02-18',originalDue:'2026-02-18',status:'En revisión',blocked:false,blockSince:null,evidence:'Drive/…',notes:'Organizar por configuraciones',completedAt:null,scorePenalty:0},
   ];
-  const routines=[
-    {id:uid('r'),name:'Actualizar avances de entregables',frequency:'Diaria',assigneeId:users[2].id,checklist:['Actualizar estado','Agregar evidencia','Registrar bloqueo si existe']},
-    {id:uid('r'),name:'Revisión semanal de bloqueos',frequency:'Semanal',assigneeId:users[1].id,checklist:['Listar bloqueos','Asignar responsables','Fecha de desbloqueo']},
-    {id:uid('r'),name:'Cierre de incidencias críticas',frequency:'Diaria',assigneeId:users[0].id,checklist:['Revisar severidad Alta','Definir acción correctiva','Cerrar/escala']},
-  ];
-  const routineRuns=[
-    {id:uid('rr'),routineId:routines[0].id,date:t,assigneeId:users[2].id,status:'Pendiente'},
-    {id:uid('rr'),routineId:routines[2].id,date:t,assigneeId:users[0].id,status:'Pendiente'},
-  ];
-  const rules={yellowOverdue:1,redOverdue:3,yellowBlockDays:2,redBlockDays:5,yellowRoutinePending:1,redRoutinePending:2};
-  const scoreRules={basePerDeliverable:80,penaltyFollowUp:5,routineBonus:10,openIncidentPenalty:3};
-  return{users,projects,deliverables,routines,routineRuns,incidents:[],checkins:[],rules,scoreRules,monthlyScores:[],tareas:[]};
+  const routines=[];
+  const routineRuns=[];
+  const rules={yellowOverdue:1,redOverdue:3,yellowBlockDays:2,redBlockDays:5};
+  const scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
+  return{users,projects,deliverables,routines,routineRuns,incidents:[],checkins:[],rules,scoreRules,monthlyScores:[],tareas:[],comments:{}};
 }
 
 let DB=(() => {
   try{const r=localStorage.getItem(LS);return r?JSON.parse(r):defaultDB()}
   catch{return defaultDB()}
 })();
-if(!DB.scoreRules) DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,routineBonus:10,openIncidentPenalty:3};
+if(!DB.scoreRules) DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
 if(!DB.monthlyScores) DB.monthlyScores=[];
 if(!DB.tareas) DB.tareas=[];
 if(!DB.incidents) DB.incidents=[];
+if(!DB.comments) DB.comments={};
 
 let GS_URL=localStorage.getItem(LS_GS)||'';
 let SESSION=null;
@@ -1148,11 +1139,7 @@ function calcMonthlyScore(userId, year, month){
   const pending=myDels.filter(d=>d.status!=='Aprobado').length;
   const penalties=myDels.reduce((a,d)=>a+(d.scorePenalty||0),0);
 
-  // Rutinas del mes
-  const myRuns=DB.routineRuns.filter(r=>r.assigneeId===userId&&r.date>=ms&&r.date<=me);
-  const rutDone=myRuns.filter(r=>r.status==='Completada').length;
-  const rutTotal=myRuns.length;
-  const rutPct=rutTotal?Math.round((rutDone/rutTotal)*100):100;
+  // Rutinas eliminadas del score
 
   // Incidencias abiertas atribuibles
   const openInc=DB.incidents.filter(i=>i.ownerId===userId&&i.status!=='Cerrada').length;
@@ -1163,14 +1150,14 @@ function calcMonthlyScore(userId, year, month){
     const delivScore=(onTime/total)*sr.basePerDeliverable;
     score=delivScore;
     score-=penalties;
-    score+=Math.round((rutPct/100)*sr.routineBonus);
+  
     score-=openInc*sr.openIncidentPenalty;
     score=Math.max(0,Math.min(100,Math.round(score)));
   } else {
     score=null; // no deliverables this month
   }
 
-  return{userId,year,month,ms,me,total,onTime,late,pending,penalties,rutDone,rutTotal,rutPct,openInc,score};
+  return{userId,year,month,ms,me,total,onTime,late,pending,penalties,openInc,score};
 }
 
 function getCurrentMonthScores(){
@@ -1182,7 +1169,6 @@ function getCurrentMonthScores(){
    KPI GLOBAL
 ══════════════════════════════════════════════════════ */
 function calcKPIs(){
-  ensureRoutineRuns();
   const t=todayISO();
   const active=DB.deliverables.filter(d=>d.status!=='Aprobado');
   const overdue=active.filter(d=>d.due&&daysBetween(d.due,t)>0).length;
@@ -1191,11 +1177,11 @@ function calcKPIs(){
   const runsToday=DB.routineRuns.filter(r=>r.date===t);
   const pendRut=runsToday.filter(r=>r.status==='Pendiente').length;
   const doneRut=runsToday.filter(r=>r.status==='Completada').length;
-  const rutPct=runsToday.length?Math.round((doneRut/runsToday.length)*100):100;
+  const rutPct=100; // rutinas desactivadas
   const approved=DB.deliverables.filter(d=>d.status==='Aprobado'&&d.completedAt&&d.due);
   const onTime=approved.filter(d=>d.completedAt<=d.due).length;
   const cumPct=approved.length?Math.round((onTime/approved.length)*100):0;
-  return{overdue,blocked,maxBlock,pendRut,rutPct,cumPct};
+  return{overdue,blocked,maxBlock,cumPct};
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1235,7 +1221,6 @@ document.querySelectorAll('[data-view]').forEach(btn=>{
    RENDER: HOY
 ══════════════════════════════════════════════════════ */
 function renderHoy(){
-  ensureRoutineRuns();
   const t=todayISO();
   const isAdmin=SESSION?.role==='admin';
   const myId=SESSION?.userId;
@@ -1259,7 +1244,7 @@ function renderHoy(){
   const k=[
     {label:'Vencidos',value:overdue.length,level:overdue.length===0?'ok':overdue.length<=2?'warn':'bad'},
     {label:'Próximos (7d)',value:upcoming.length,level:upcoming.length===0?'ok':'warn'},
-    {label:'Rutinas hoy',value:pendRut,level:pendRut===0?'ok':pendRut<=1?'warn':'bad'},
+
     {label:'Bloqueados',value:myDels.filter(d=>d.blocked).length,level:myDels.filter(d=>d.blocked).length===0?'ok':'bad'},
   ];
   document.getElementById('hoy-kpis').innerHTML=k.map(x=>`
@@ -1286,26 +1271,8 @@ function renderHoy(){
     ub.innerHTML='';
   }
 
-  // Rutinas hoy
-  const ruts=DB.routineRuns.filter(r=>r.date===t&&(isAdmin||r.assigneeId===myId));
-  const rb=document.getElementById('hoy-rutinas-block');
-  if(ruts.length){
-    rb.innerHTML=`<div class="today-section-title" style="margin:14px 0 6px">🔁 Rutinas de hoy</div>`
-      +ruts.map(rr=>{
-        const r=byId(DB.routines,rr.routineId);if(!r)return'';
-        const done=rr.status==='Completada';
-        const who=isAdmin?`<span class="muted">${userName(rr.assigneeId)}</span>`:'';
-        return`<div class="del-item ${done?'ok':''}" style="display:flex;align-items:center;gap:10px">
-          <div style="flex:1">
-            <div class="del-title" style="${done?'text-decoration:line-through;opacity:.5':''}">${esc(r.name)}</div>
-            <div class="del-meta"><span class="tag gray">${r.frequency}</span>${who}</div>
-          </div>
-          ${!done?`<button class="btn xs ok" data-run-r="${r.id}">✓ Completar</button>`:`<span class="tag ok">✓</span>`}
-        </div>`;
-      }).join('');
-  } else {
-    rb.innerHTML='';
-  }
+  // fin renderHoy
+}
 }
 
 function delCard(d,t,isOverdue){
@@ -1334,14 +1301,13 @@ function delCard(d,t,isOverdue){
    RENDER: DASHBOARD
 ══════════════════════════════════════════════════════ */
 function renderDashboard(){
-  ensureRoutineRuns();
   const k=calcKPIs();
   const t=todayISO();
   const kpis=[
     {label:'Cumplimiento total',value:`${k.cumPct}%`,level:k.cumPct>=85?'ok':k.cumPct>=70?'warn':'bad',hint:'Entregables aprobados a tiempo'},
     {label:'Vencidos activos',value:k.overdue,level:k.overdue===0?'ok':k.overdue<=2?'warn':'bad',hint:'Sin aprobar y fecha pasada'},
     {label:'Bloqueos activos',value:k.blocked,level:k.blocked===0?'ok':k.maxBlock<=2?'warn':'bad',hint:`Máx. antigüedad: ${k.maxBlock}d`},
-    {label:'Rutinas hoy',value:`${k.rutPct}%`,level:k.rutPct>=90?'ok':k.rutPct>=70?'warn':'bad',hint:`${k.pendRut} pendientes`},
+    
   ];
   document.getElementById('dash-kpis').innerHTML=kpis.map(x=>`
     <div class="kpi-card ${x.level}">
@@ -1441,6 +1407,69 @@ function renderHotTable(){
 }
 
 /* ══════════════════════════════════════════════════════
+   COMENTARIOS — helpers
+══════════════════════════════════════════════════════ */
+function commentsHTML(entity, entityId){
+  // entity = 'project' | 'deliverable'
+  if(!DB.comments) DB.comments={};
+  const key=entity+'_'+entityId;
+  const list=DB.comments[key]||[];
+  const canComment=!!SESSION;
+  return`<div class="comments-block" id="cmts-${key}">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">
+      💬 Comentarios (${list.length})
+    </div>
+    <div id="cmts-list-${key}">
+      ${list.length ? list.map(c=>`
+        <div style="padding:10px 12px;background:var(--surface2);border-radius:var(--r);margin-bottom:6px;border-left:3px solid ${c.role==='admin'?'var(--accent)':'var(--border)'}">
+          <div class="flex-between" style="margin-bottom:4px">
+            <span style="font-weight:700;font-size:13px">${esc(c.author)}</span>
+            <span class="small muted">${fmtDate(c.date)} ${c.time||''}</span>
+          </div>
+          <div style="font-size:13px">${esc(c.text)}</div>
+          ${c.link?`<a href="${esc(c.link)}" target="_blank" style="font-size:11px;color:var(--accent);margin-top:4px;display:inline-block">🔗 Ver evidencia</a>`:''}
+        </div>`).join('')
+      : '<div class="small muted" style="margin-bottom:8px">Sin comentarios aún.</div>'}
+    </div>
+    ${canComment?`
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+      <textarea class="input" id="cmt-text-${key}" placeholder="Escribe un comentario…" style="min-height:60px;font-size:13px"></textarea>
+      <input class="input" id="cmt-link-${key}" placeholder="Link de evidencia (opcional)" style="font-size:12px"/>
+      <button class="btn xs primary" onclick="addComment('${entity}','${entityId}')">Comentar</button>
+    </div>`:''}
+  </div>`;
+}
+
+function addComment(entity, entityId){
+  if(!DB.comments) DB.comments={};
+  const key=entity+'_'+entityId;
+  const textEl=document.getElementById('cmt-text-'+key);
+  const linkEl=document.getElementById('cmt-link-'+key);
+  const text=(textEl?.value||'').trim();
+  if(!text){toast('Escribe algo antes de comentar');return}
+  const now=new Date();
+  const comment={
+    id:uid('c'),
+    author:SESSION?.name||'Usuario',
+    role:SESSION?.role||'user',
+    date:todayISO(),
+    time:now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),
+    text,
+    link:(linkEl?.value||'').trim()
+  };
+  if(!DB.comments[key]) DB.comments[key]=[];
+  DB.comments[key].push(comment);
+  saveDB();
+  // Re-render the comments block in place
+  const block=document.getElementById('cmts-'+key);
+  if(block){
+    const parent=block.parentElement;
+    if(parent) parent.innerHTML=commentsHTML(entity,entityId);
+  }
+  toast('Comentario agregado ✓');
+}
+
+/* ══════════════════════════════════════════════════════
    RENDER: PROYECTOS
 ══════════════════════════════════════════════════════ */
 function renderProyectos(){
@@ -1449,44 +1478,129 @@ function renderProyectos(){
   const q=(document.getElementById('proj-search')?.value||'').trim().toLowerCase();
   const isAdmin=SESSION?.role==='admin';
 
-  const filtered=DB.projects
-    .filter(p=>!sf||p.status===sf)
+  let all=DB.projects
     .filter(p=>!pf||p.priority===pf)
     .filter(p=>!q||p.name.toLowerCase().includes(q));
+
+  // Groups
+  const porAprobar = all.filter(p=>p.status==='En revisión'||p.status==='Por aprobar');
+  const enRiesgo   = all.filter(p=>p.status==='En riesgo'||p.status==='Detenido');
+  const cerrados   = all.filter(p=>p.status==='Cerrado');
+  const activos    = all.filter(p=>!['En revisión','Por aprobar','En riesgo','Detenido','Cerrado'].includes(p.status));
+
+  // If status filter active, only show that group
+  const filtered = sf ? all.filter(p=>p.status===sf) : all;
 
   const container=document.getElementById('proj-list');
   if(!filtered.length){container.innerHTML='<div class="empty">No hay proyectos.</div>';return}
 
-  container.innerHTML=filtered.map(p=>{
+  function projCard(p){
     const dels=DB.deliverables.filter(d=>d.projectId===p.id);
     const done=dels.filter(d=>d.status==='Aprobado').length;
     const pct=dels.length?Math.round((done/dels.length)*100):0;
     const lvl=pct>=85?'ok':pct>=70?'warn':'bad';
-    const stTag=p.status==='Cerrado'?'<span class="tag ok">Cerrado</span>':p.status==='En riesgo'?'<span class="tag warn">En riesgo</span>':p.status==='Detenido'?'<span class="tag bad">Detenido</span>':'<span class="tag blue">Activo</span>';
+    const stTag=p.status==='Cerrado'?'<span class="tag ok">Cerrado</span>':
+      p.status==='En riesgo'?'<span class="tag warn">En riesgo</span>':
+      p.status==='Detenido'?'<span class="tag bad">Detenido</span>':
+      p.status==='Por aprobar'||p.status==='En revisión'?'<span class="tag blue">Por aprobar</span>':
+      '<span class="tag blue">Activo</span>';
     return`<div class="card" style="margin-bottom:10px">
       <div class="flex-between flex-wrap" style="gap:8px;margin-bottom:8px">
         <div>
           <div style="font-weight:700;font-size:15px">${esc(p.name)}</div>
           <div class="small muted">${userName(p.leaderId)} · ${fmtDate(p.start)} → ${fmtDate(p.end)}</div>
         </div>
-        <div class="flex flex-wrap" style="gap:6px">
-          ${stTag}${priorityTag(p.priority)}
-        </div>
+        <div class="flex flex-wrap" style="gap:6px">${stTag}${priorityTag(p.priority)}</div>
       </div>
       <div class="person-bar-wrap" style="margin-bottom:8px">
         <div class="progress-bar"><div class="progress-bar-fill ${lvl}" style="width:${pct}%"></div></div>
         <span class="progress-pct ${lvl}">${pct}%</span>
         <span class="small muted">${done}/${dels.length} entregables</span>
       </div>
-      ${p.notes?`<div class="small muted">${esc(p.notes)}</div>`:''}
-      <div class="flex flex-wrap" style="gap:6px;margin-top:10px">
-        <button class="btn xs" data-open-proj="${p.id}">Ver entregables</button>
+      ${p.notes?`<div class="small muted" style="margin-bottom:8px">${esc(p.notes)}</div>`:''}
+      <div class="flex flex-wrap" style="gap:6px;margin-bottom:10px">
+        <button class="btn xs" data-open-proj="${p.id}">📋 Entregables</button>
+        <button class="btn xs" data-open-proj-cmt="${p.id}">💬 Comentarios</button>
         ${isAdmin?`<button class="btn xs" data-add-del-proj="${p.id}">＋ Entregable</button><button class="btn xs" data-edit-proj="${p.id}">Editar</button><button class="btn xs danger" data-del-proj="${p.id}">Eliminar</button>`:''}
       </div>
       <div id="proj-dels-${p.id}" class="hidden"></div>
+      <div id="proj-cmt-${p.id}" class="hidden"></div>
     </div>`;
-  }).join('');
+  }
+
+  // Render with collapsible groups when no status filter
+  if(!sf){
+    let html='';
+
+    // Proyectos por aprobar
+    if(porAprobar.length){
+      html+=collapsibleGroup('Por aprobar',porAprobar.length,'blue',
+        'proj-group-aprobar', porAprobar.map(projCard).join(''));
+    }
+    // En riesgo
+    if(enRiesgo.length){
+      html+=collapsibleGroup('En riesgo / Detenidos',enRiesgo.length,'warn',
+        'proj-group-riesgo', enRiesgo.map(projCard).join(''));
+    }
+    // Activos
+    if(activos.length){
+      html+=collapsibleGroup('Activos',activos.length,'ok',
+        'proj-group-activos', activos.map(projCard).join(''), true);
+    }
+    // Cerrados — con stats por ingeniero
+    if(cerrados.length){
+      const statsHTML=terminadosPorIngeniero(cerrados);
+      html+=collapsibleGroup('Terminados',cerrados.length,'gray',
+        'proj-group-cerrados',
+        statsHTML + cerrados.map(projCard).join(''));
+    }
+
+    container.innerHTML=html||'<div class="empty">No hay proyectos.</div>';
+  } else {
+    container.innerHTML=filtered.map(projCard).join('');
+  }
 }
+
+function collapsibleGroup(label, count, tagCls, id, innerHTML, open=false){
+  return`<div style="margin-bottom:12px">
+    <div class="collapse-header${open?' open':''}" onclick="toggleCollapse(this,'${id}')" style="padding:10px 14px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);margin-bottom:6px">
+      <div class="flex" style="gap:8px">
+        <span style="font-weight:700;font-size:14px">${label}</span>
+        <span class="tag ${tagCls}">${count}</span>
+      </div>
+      <span class="chev">▼</span>
+    </div>
+    <div id="${id}" style="display:${open?'block':'none'}">${innerHTML}</div>
+  </div>`;
+}
+
+function terminadosPorIngeniero(cerrados){
+  if(!cerrados.length) return '';
+  // Count per user
+  const counts={};
+  cerrados.forEach(p=>{
+    // Count all users who have deliverables in this project
+    const involved=[...new Set(DB.deliverables.filter(d=>d.projectId===p.id).map(d=>d.assigneeId))];
+    involved.forEach(uid=>{
+      if(!counts[uid]) counts[uid]={total:0,projects:[]};
+      counts[uid].total++;
+      counts[uid].projects.push(p.name);
+    });
+  });
+  if(!Object.keys(counts).length) return '';
+  return`<div class="card" style="margin-bottom:10px;border-color:rgba(30,158,94,.3)">
+    <div class="card-title">🏆 Proyectos terminados por ingeniero</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:6px">
+      ${Object.entries(counts).map(([uid,data])=>`
+        <div style="padding:10px 12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border2)">
+          <div style="font-weight:700;font-size:13px">${userName(uid)}</div>
+          <div style="font-size:24px;font-weight:800;color:var(--ok);font-family:var(--font-display)">${data.total}</div>
+          <div style="font-size:11px;color:var(--muted)">${data.projects.slice(0,3).map(n=>esc(n)).join(', ')}${data.projects.length>3?'…':''}</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
 
 /* ══════════════════════════════════════════════════════
    RENDER: ENTREGABLES
@@ -1515,9 +1629,13 @@ function renderEntregables(){
       <td>${fmtDueFull(d.due,d.originalDue)}</td>
       <td>${d.blocked?`<span class="tag bad">Sí·${d.blockSince?daysBetween(d.blockSince,t):0}d</span>`:`<span class="tag gray">No</span>`}</td>
       <td class="right">
+        <button class="btn xs" data-open-del-cmt="${d.id}">💬</button>
         ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}
         ${SESSION?.role==='user'&&d.assigneeId===SESSION?.userId&&d.status!=='Aprobado'&&d.status!=='En revisión'?`<button class="btn xs primary" data-submit-del="${d.id}">Terminado</button>`:''}
       </td>
+    </tr>
+    <tr id="del-cmt-row-${d.id}" style="display:none">
+      <td colspan="7" style="padding:0 10px 10px">${commentsHTML('deliverable',d.id)}</td>
     </tr>`).join('');
   document.getElementById('del-tbody').innerHTML=rows||`<tr><td colspan="7" class="empty">No hay entregables.</td></tr>`;
 }
@@ -1655,9 +1773,9 @@ function renderEvaluacion(){
           <div class="small muted">${byId(DB.users,s.userId)?.role||'—'}</div>
           <div class="small muted" style="margin-top:6px">
             ${s.total} entregables · ${s.onTime} a tiempo · ${s.late} tardíos · ${s.pending} pendientes<br>
-            Rutinas: ${s.rutDone}/${s.rutTotal} (${s.rutPct}%) · Penalización seguimiento: -${s.penalties}% · Inc. abiertas: ${s.openInc}
+            Penalización seguimiento: -${s.penalties}% · Inc. abiertas: ${s.openInc}
           </div>
-          ${s.score!==null?`<div style="font-size:11px;color:var(--muted);margin-top:4px">Fórmula: base(${s.total>0?Math.round((s.onTime/s.total)*DB.scoreRules.basePerDeliverable):0}%) + rutinas(+${Math.round((s.rutPct/100)*DB.scoreRules.routineBonus)}%) - seguimiento(-${s.penalties}%) - incidencias(-${s.openInc*DB.scoreRules.openIncidentPenalty}%)</div>`:'<div class="small muted" style="margin-top:4px">Sin entregables este mes</div>'}
+          ${s.score!==null?`<div style="font-size:11px;color:var(--muted);margin-top:4px">Fórmula: base(${s.total>0?Math.round((s.onTime/s.total)*DB.scoreRules.basePerDeliverable):0}%)  - seguimiento(-${s.penalties}%) - incidencias(-${s.openInc*DB.scoreRules.openIncidentPenalty}%)</div>`:'<div class="small muted" style="margin-top:4px">Sin entregables este mes</div>'}
         </div>
         <div style="text-align:right">
           <div class="score-big ${lvl}">${s.score!==null?s.score+'%':'—'}</div>
@@ -1681,11 +1799,11 @@ function renderEvaluacion(){
       <div class="card" style="margin-bottom:10px">
         <div class="card-title">${MONTHS[g.month]} ${g.year} <span class="tag ok" style="font-size:10px">Cerrado</span></div>
         <div class="tbl-wrap"><table>
-          <thead><tr><th>Persona</th><th>Total</th><th>A tiempo</th><th>Tardíos</th><th>Rutinas</th><th>Score</th></tr></thead>
+          <thead><tr><th>Persona</th><th>Total</th><th>A tiempo</th><th>Tardíos</th><th>Score</th></tr></thead>
           <tbody>${g.scores.map(s=>{const lvl=scoreLevel(s.score);return`<tr>
             <td><b>${userName(s.userId)}</b></td>
             <td>${s.total}</td><td>${s.onTime}</td><td>${s.late}</td>
-            <td>${s.rutPct}%</td>
+            
             <td><span class="tag ${lvl}">${s.score!==null?s.score+'%':'—'}</span></td>
           </tr>`}).join('')}</tbody>
         </table></div>
@@ -1801,11 +1919,9 @@ function renderAjustes(){
   document.getElementById('r-rd-o').value=DB.rules.redOverdue;
   document.getElementById('r-yw-b').value=DB.rules.yellowBlockDays;
   document.getElementById('r-rd-b').value=DB.rules.redBlockDays;
-  document.getElementById('r-yw-r').value=DB.rules.yellowRoutinePending;
-  document.getElementById('r-rd-r').value=DB.rules.redRoutinePending;
   document.getElementById('sr-base').value=DB.scoreRules.basePerDeliverable;
   document.getElementById('sr-pen').value=DB.scoreRules.penaltyFollowUp;
-  document.getElementById('sr-rut').value=DB.scoreRules.routineBonus;
+  // sr-rut removed
   document.getElementById('sr-inc').value=DB.scoreRules.openIncidentPenalty;
 }
 
@@ -1839,7 +1955,7 @@ function qaRender(){
       <div class="form-row"><div><label class="lbl">Nombre *</label><input class="input" id="qa-name" placeholder="Ej: Bench 3000"/></div>
       <div><label class="lbl">Líder</label><select class="select-input" id="qa-leader">${uOpts}</select></div></div>
       <div class="form-row"><div><label class="lbl">Prioridad</label><select class="select-input" id="qa-pri"><option>Alta</option><option selected>Media</option><option>Baja</option></select></div>
-      <div><label class="lbl">Estatus</label><select class="select-input" id="qa-st"><option selected>Activo</option><option>En riesgo</option><option>Detenido</option></select></div></div>
+      <div><label class="lbl">Estatus</label><select class="select-input" id="qa-st"><option selected>Activo</option><option>Por aprobar</option><option>En riesgo</option><option>Detenido</option></select></div></div>
       <div class="form-row"><div><label class="lbl">Inicio</label><input class="input" type="date" id="qa-start" value="${t}"/></div>
       <div><label class="lbl">Fin *</label><input class="input" type="date" id="qa-end" value="${t}"/></div></div>
       <label class="lbl">Notas</label><textarea class="input" id="qa-notes"></textarea>`,
@@ -1850,11 +1966,6 @@ function qaRender(){
       <div class="form-row"><div><label class="lbl">Fecha *</label><input class="input" type="date" id="qa-due" value="${t}"/></div>
       <div><label class="lbl">Estado</label><select class="select-input" id="qa-status"><option selected>Pendiente</option><option>En progreso</option><option>Bloqueado</option></select></div></div>
       <label class="lbl">Notas</label><textarea class="input" id="qa-notes" placeholder="Criterios de aceptación…"></textarea>`,
-    routine:`
-      <label class="lbl">Rutina *</label><input class="input" id="qa-name" placeholder="Ej: Bitácora diaria"/>
-      <div class="form-row"><div><label class="lbl">Responsable</label><select class="select-input" id="qa-ass">${uOpts}</select></div>
-      <div><label class="lbl">Frecuencia</label><select class="select-input" id="qa-freq"><option selected>Diaria</option><option>Semanal</option><option>Mensual</option></select></div></div>
-      <label class="lbl">Checklist (1 por línea)</label><textarea class="input" id="qa-check" placeholder="Revisar pendientes\nActualizar estatus\nSubir evidencia"></textarea>`,
   };
   document.getElementById('qa-form').innerHTML=forms[type]||'';
 }
@@ -1875,12 +1986,7 @@ document.getElementById('qa-save').addEventListener('click',()=>{
     if(!title)return toast('Falta nombre del entregable');
     const due=document.getElementById('qa-due')?.value||t;
     const status=document.getElementById('qa-status')?.value||'Pendiente';
-    DB.deliverables.push({id:uid('d'),title,projectId:document.getElementById('qa-proj')?.value||'',assigneeId:document.getElementById('qa-ass')?.value||'',due,originalDue:due,status,blocked:status==='Bloqueado',blockSince:status==='Bloqueado'?t:null,evidence:'',notes:(document.getElementById('qa-notes')?.value||'').trim(),completedAt:null,scorePenalty:0});
-  } else if(type==='routine'){
-    const name=(document.getElementById('qa-name')?.value||'').trim();
-    if(!name)return toast('Falta nombre de la rutina');
-    const chk=(document.getElementById('qa-check')?.value||'').split('\n').map(s=>s.trim()).filter(Boolean);
-    DB.routines.push({id:uid('r'),name,assigneeId:document.getElementById('qa-ass')?.value||'',frequency:document.getElementById('qa-freq')?.value||'Diaria',checklist:chk});
+    DB.deliverables.push({id:uid('d'),title,projectId:document.getElementById('qa-proj')?.value||'',assigneeId:document.getElementById('qa-ass')?.value||'',due,originalDue:due,status,blocked:status==='Bloqueado',blockSince:status==='Bloqueado'?t:null,evidence:'',notes:(document.getElementById('qa-notes')?.value||'').trim(),completedAt:null,scorePenalty:0}););
   }
   saveDB();
   document.getElementById('dlg-qa').close();
@@ -1903,8 +2009,26 @@ function fillSelect(id,arr,defaultLabel,valKey='id',labelKey='name'){
    EVENT DELEGATION — TABLE ACTIONS
 ══════════════════════════════════════════════════════ */
 document.body.addEventListener('click',e=>{
-  const btn=e.target.closest('[data-edit-del],[data-approve-del],[data-del-del],[data-submit-del],[data-reject-del],[data-run-r],[data-edit-r],[data-del-r],[data-edit-proj],[data-del-proj],[data-open-proj],[data-add-del-proj],[data-edit-u],[data-del-u]');
+  const btn=e.target.closest('[data-edit-del],[data-approve-del],[data-del-del],[data-submit-del],[data-reject-del],[data-run-r],[data-edit-r],[data-del-r],[data-edit-proj],[data-del-proj],[data-open-proj],[data-add-del-proj],[data-edit-u],[data-del-u],[data-open-del-cmt],[data-open-proj-cmt]');
   if(!btn)return;
+
+  // Comentarios — verificación explícita primero
+  if(btn.hasAttribute('data-open-del-cmt')){
+    const id=btn.getAttribute('data-open-del-cmt');
+    const row=document.getElementById('del-cmt-row-'+id);
+    if(row) row.style.display=row.style.display==='none'?'table-row':'none';
+    return;
+  }
+  if(btn.hasAttribute('data-open-proj-cmt')){
+    const id=btn.getAttribute('data-open-proj-cmt');
+    const el=document.getElementById('proj-cmt-'+id);
+    if(!el) return;
+    if(!el.classList.contains('hidden')){el.classList.add('hidden');return}
+    el.innerHTML=`<div style="padding:10px 0">${commentsHTML('project',id)}</div>`;
+    el.classList.remove('hidden');
+    return;
+  }
+
   const k=Object.keys(btn.dataset)[0];
   const id=btn.dataset[k];
   handlers[k]&&handlers[k](id);
@@ -2012,7 +2136,7 @@ const handlers={
       <label class="lbl">Nombre</label><input class="input" id="ep-name" value="${esc(p.name)}"/>
       <div class="form-row"><div><label class="lbl">Líder</label><select class="select-input" id="ep-leader">${uOpts}</select></div>
       <div><label class="lbl">Prioridad</label><select class="select-input" id="ep-pri">${['Alta','Media','Baja'].map(x=>`<option${x===p.priority?' selected':''}>${x}</option>`).join('')}</select></div></div>
-      <div class="form-row"><div><label class="lbl">Estatus</label><select class="select-input" id="ep-status">${['Activo','En riesgo','Detenido','Cerrado'].map(x=>`<option${x===p.status?' selected':''}>${x}</option>`).join('')}</select></div>
+      <div class="form-row"><div><label class="lbl">Estatus</label><select class="select-input" id="ep-status">${['Activo','Por aprobar','En riesgo','Detenido','Cerrado'].map(x=>`<option${x===p.status?' selected':''}>${x}</option>`).join('')}</select></div>
       <div><label class="lbl">Fecha fin</label><input class="input" type="date" id="ep-end" value="${p.end||todayISO()}"/></div></div>
       <label class="lbl">Notas</label><textarea class="input" id="ep-notes">${esc(p.notes||'')}</textarea>`,
       onSave:()=>{
@@ -2137,10 +2261,9 @@ function openPersonDetail(userId){
         <span class="tag ${s?.level||'gray'}" style="font-size:13px">${s?.level==='ok'?'Verde':s?.level==='warn'?'Amarillo':'Rojo'}</span>
       </div>
     </div>
-    ${ms?`<div class="small muted">Entregables: ${ms.total} · A tiempo: ${ms.onTime} · Tardíos: ${ms.late} · Pendientes: ${ms.pending}<br>
-    Rutinas: ${ms.rutDone}/${ms.rutTotal} (${ms.rutPct}%) · Penalización: -${ms.penalties}% · Inc. abiertas: ${ms.openInc}</div>`:''}
+    ${ms?`<div class='small muted' style='margin-top:6px'>${ms.total} entregables · ${ms.onTime} a tiempo · ${ms.late} tardíos · ${ms.pending} pendientes<br>Penalización seguimiento: -${ms.penalties}% · Inc. abiertas: ${ms.openInc}</div>`:''}
     <div class="hr"></div>
-    <div class="small muted">Semáforo diario: Vencidos=${s?.overdue} · Bloqueo máx=${s?.maxBlock}d · Rutinas pend.=${s?.pendRut}</div>
+    <div class="small muted">Semáforo diario: Vencidos=${s?.overdue} · Bloqueo máx=${s?.maxBlock}d </div>
   `,onSave:()=>true});
   document.getElementById('dlg-save').style.display='none';
   setTimeout(()=>document.getElementById('dlg-save').style.display='',100);
@@ -2172,14 +2295,12 @@ document.getElementById('btn-save-rules')?.addEventListener('click',()=>{
   DB.rules.redOverdue=+document.getElementById('r-rd-o').value||0;
   DB.rules.yellowBlockDays=+document.getElementById('r-yw-b').value||0;
   DB.rules.redBlockDays=+document.getElementById('r-rd-b').value||0;
-  DB.rules.yellowRoutinePending=+document.getElementById('r-yw-r').value||0;
-  DB.rules.redRoutinePending=+document.getElementById('r-rd-r').value||0;
   saveDB();toast('Reglas del semáforo guardadas ✓');
 });
 document.getElementById('btn-save-srules')?.addEventListener('click',()=>{
   DB.scoreRules.basePerDeliverable=+document.getElementById('sr-base').value||80;
   DB.scoreRules.penaltyFollowUp=+document.getElementById('sr-pen').value||5;
-  DB.scoreRules.routineBonus=+document.getElementById('sr-rut').value||10;
+  // routineBonus removed
   DB.scoreRules.openIncidentPenalty=+document.getElementById('sr-inc').value||3;
   saveDB();toast('Reglas de score guardadas ✓');
 });
@@ -2337,7 +2458,7 @@ async function gsPull(){
     const json=await res.json();
     if(json.ok&&json.data){
       DB=json.data;
-      if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,routineBonus:10,openIncidentPenalty:3};
+      if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
       if(!DB.monthlyScores)DB.monthlyScores=[];
       if(!DB.tareas)DB.tareas=[];
       if(!DB.incidents)DB.incidents=[];
@@ -2376,7 +2497,6 @@ function doLogin(){
   sessionStorage.setItem('li_sess',JSON.stringify(SESSION));
   applyRole();
   document.getElementById('login-screen').style.display='none';
-  ensureRoutineRuns();
   renderView('hoy');
 }
 
@@ -2412,7 +2532,6 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_deferredIn
    INIT
 ══════════════════════════════════════════════════════ */
 (function init(){
-  ensureRoutineRuns();
   if(GS_URL)updateSyncUI('ok');
   qaRender();
 
