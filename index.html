@@ -520,6 +520,25 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
 /* SCORE HISTORY TABLE rows */
 .score-hist-row{padding:10px 0;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;gap:10px}
 .score-hist-row:last-child{border-bottom:none}
+
+/* PROJECT TABS */
+.proj-tab{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:var(--r2);
+  border:1.5px solid var(--border2);background:var(--surface);
+  color:var(--muted);font-size:13px;font-weight:600;
+  cursor:pointer;font-family:var(--font-body);
+  transition:all .15s;white-space:nowrap;
+}
+.proj-tab:hover{border-color:var(--border);color:var(--text);background:var(--surface2)}
+.proj-tab.active{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
+.tab-count{
+  background:var(--surface2);color:var(--muted);
+  font-size:11px;font-weight:700;
+  padding:1px 7px;border-radius:99px;
+  min-width:20px;text-align:center;
+}
+.proj-tab.active .tab-count{background:var(--accent);color:#fff}
 </style>
 </head>
 <body>
@@ -682,20 +701,49 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
     <div class="view" id="view-proyectos">
       <div class="page-header">
         <div class="page-header-inner">
-          <div class="page-title"><h2>Proyectos</h2><p>Gestión y seguimiento por lider</p></div>
+          <div class="page-title"><h2>Proyectos</h2><p>Gestión y seguimiento por líder</p></div>
           <div class="page-actions admin-only">
             <button class="btn sm primary" id="btn-add-proj">＋ Proyecto</button>
           </div>
         </div>
       </div>
       <div class="pad">
-        <div class="card" style="margin-bottom:12px">
+        <!-- Menú de pestañas -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="proj-tabs">
+          <button class="proj-tab active" data-tab="">
+            <span class="tab-icon">📋</span> Todos
+            <span class="tab-count" id="tc-all">0</span>
+          </button>
+          <button class="proj-tab" data-tab="Activo">
+            <span class="tab-icon">🟢</span> Activos
+            <span class="tab-count" id="tc-activo">0</span>
+          </button>
+          <button class="proj-tab" data-tab="Por aprobar">
+            <span class="tab-icon">🔵</span> Por aprobar
+            <span class="tab-count" id="tc-aprobar">0</span>
+          </button>
+          <button class="proj-tab" data-tab="En riesgo">
+            <span class="tab-icon">🟡</span> En riesgo
+            <span class="tab-count" id="tc-riesgo">0</span>
+          </button>
+          <button class="proj-tab" data-tab="Detenido">
+            <span class="tab-icon">🔴</span> Detenidos
+            <span class="tab-count" id="tc-detenido">0</span>
+          </button>
+          <button class="proj-tab" data-tab="Cerrado">
+            <span class="tab-icon">✅</span> Terminados
+            <span class="tab-count" id="tc-cerrado">0</span>
+          </button>
+        </div>
+        <!-- Búsqueda y prioridad -->
+        <div class="card" style="margin-bottom:12px;padding:10px 14px">
           <div class="flex flex-wrap" style="gap:8px">
-            <select class="select-input" id="proj-f-status" style="flex:1;min-width:140px"><option value="">Estatus (todos)</option><option>Activo</option><option>Por aprobar</option><option>En riesgo</option><option>Detenido</option><option>Cerrado</option></select>
-            <select class="select-input" id="proj-f-priority" style="flex:1;min-width:140px"><option value="">Prioridad (todas)</option><option>Alta</option><option>Media</option><option>Baja</option></select>
-            <input class="input" id="proj-search" placeholder="Buscar…" style="flex:2;min-width:180px"/>
+            <input class="input" id="proj-search" placeholder="Buscar proyecto…" style="flex:2;min-width:180px"/>
+            <select class="select-input" id="proj-f-priority" style="flex:1;min-width:130px"><option value="">Prioridad (todas)</option><option>Alta</option><option>Media</option><option>Baja</option></select>
           </div>
         </div>
+        <!-- Hidden status filter kept for JS compat -->
+        <select id="proj-f-status" style="display:none"></select>
         <div id="proj-list"></div>
       </div>
     </div>
@@ -1519,6 +1567,7 @@ function addComment(entity, entityId){
    RENDER: PROYECTOS
 ══════════════════════════════════════════════════════ */
 function renderProyectos(){
+  updateProjTabCounts();
   const sf=document.getElementById('proj-f-status')?.value||'';
   const pf=document.getElementById('proj-f-priority')?.value||'';
   const q=(document.getElementById('proj-search')?.value||'').trim().toLowerCase();
@@ -1535,6 +1584,17 @@ function renderProyectos(){
   let all=DB.projects
     .filter(p=>!pf||p.priority===pf)
     .filter(p=>!q||p.name.toLowerCase().includes(q));
+
+  // Update tab counts
+  const tcMap={
+    'tc-all':all.length,
+    'tc-activo':all.filter(p=>p.status==='Activo').length,
+    'tc-aprobar':all.filter(p=>p.status==='Por aprobar'||p.status==='En revisión').length,
+    'tc-riesgo':all.filter(p=>p.status==='En riesgo').length,
+    'tc-detenido':all.filter(p=>p.status==='Detenido').length,
+    'tc-cerrado':all.filter(p=>p.status==='Cerrado').length,
+  };
+  Object.entries(tcMap).forEach(([id,n])=>{const el=document.getElementById(id);if(el)el.textContent=n});
 
   // Groups
   const porAprobar = all.filter(p=>p.status==='En revisión'||p.status==='Por aprobar');
@@ -1554,27 +1614,47 @@ function renderProyectos(){
       p.status==='Detenido'?'<span class="tag bad">Detenido</span>':
       p.status==='Por aprobar'||p.status==='En revisión'?'<span class="tag blue">Por aprobar</span>':
       '<span class="tag blue">Activo</span>';
-    return`<div class="card" style="margin-bottom:10px">
-      <div class="flex-between flex-wrap" style="gap:8px;margin-bottom:8px">
-        <div>
-          <div style="font-weight:700;font-size:15px">${esc(p.name)}</div>
-          <div class="small muted">${userName(p.leaderId)} · ${fmtDate(p.start)} → ${fmtDate(p.end)}</div>
+
+    // Leader avatar (igual que en dashboard)
+    const leader=byId(DB.users,p.leaderId);
+    const photo=userPhotoURL(leader?.email);
+    const initials=(leader?.name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    const sem=leader?semaforoUser(leader.id):{level:'gray'};
+    const avatarEl=photo
+      ?`<img src="${photo}" alt="${esc(leader?.name||'')}"
+          style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2.5px solid var(--${sem.level==='ok'?'ok':sem.level==='warn'?'warn':'bad'})"
+          onerror="this.outerHTML='<div class=\\'person-avatar ${sem.level}\\' style=\\'width:44px;height:44px;font-size:15px\\'>${initials}</div>'">`
+      :`<div class="person-avatar ${sem.level}" style="width:44px;height:44px;font-size:15px">${initials}</div>`;
+
+    return`<div class="card" style="margin-bottom:10px;display:flex;gap:14px;align-items:flex-start">
+      <!-- Avatar líder -->
+      <div style="flex:0 0 44px;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:2px">
+        ${avatarEl}
+        <span style="font-size:9px;color:var(--muted);text-align:center;max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(leader?.name||'—')}</span>
+      </div>
+      <!-- Contenido -->
+      <div style="flex:1;min-width:0">
+        <div class="flex-between flex-wrap" style="gap:8px;margin-bottom:6px">
+          <div>
+            <div style="font-weight:700;font-size:15px">${esc(p.name)}</div>
+            <div class="small muted">${fmtDate(p.start)} → ${fmtDate(p.end)}</div>
+          </div>
+          <div class="flex flex-wrap" style="gap:6px">${stTag}${priorityTag(p.priority)}</div>
         </div>
-        <div class="flex flex-wrap" style="gap:6px">${stTag}${priorityTag(p.priority)}</div>
+        <div class="person-bar-wrap" style="margin-bottom:8px">
+          <div class="progress-bar"><div class="progress-bar-fill ${lvl}" style="width:${pct}%"></div></div>
+          <span class="progress-pct ${lvl}">${pct}%</span>
+          <span class="small muted">${done}/${dels.length} entregables</span>
+        </div>
+        ${p.notes?`<div class="small muted" style="margin-bottom:8px">${esc(p.notes)}</div>`:''}
+        <div class="flex flex-wrap" style="gap:6px">
+          <button class="btn xs" data-open-proj="${p.id}">📋 Entregables</button>
+          <button class="btn xs" data-open-proj-cmt="${p.id}">💬 Comentarios</button>
+          ${isAdmin?`<button class="btn xs" data-add-del-proj="${p.id}">＋ Entregable</button><button class="btn xs" data-edit-proj="${p.id}">Editar</button><button class="btn xs danger" data-del-proj="${p.id}">Eliminar</button>`:''}
+        </div>
+        <div id="proj-dels-${p.id}" class="hidden"></div>
+        <div id="proj-cmt-${p.id}" class="hidden"></div>
       </div>
-      <div class="person-bar-wrap" style="margin-bottom:8px">
-        <div class="progress-bar"><div class="progress-bar-fill ${lvl}" style="width:${pct}%"></div></div>
-        <span class="progress-pct ${lvl}">${pct}%</span>
-        <span class="small muted">${done}/${dels.length} entregables</span>
-      </div>
-      ${p.notes?`<div class="small muted" style="margin-bottom:8px">${esc(p.notes)}</div>`:''}
-      <div class="flex flex-wrap" style="gap:6px;margin-bottom:10px">
-        <button class="btn xs" data-open-proj="${p.id}">📋 Entregables</button>
-        <button class="btn xs" data-open-proj-cmt="${p.id}">💬 Comentarios</button>
-        ${isAdmin?`<button class="btn xs" data-add-del-proj="${p.id}">＋ Entregable</button><button class="btn xs" data-edit-proj="${p.id}">Editar</button><button class="btn xs danger" data-del-proj="${p.id}">Eliminar</button>`:''}
-      </div>
-      <div id="proj-dels-${p.id}" class="hidden"></div>
-      <div id="proj-cmt-${p.id}" class="hidden"></div>
     </div>`;
   }
 
@@ -2492,7 +2572,33 @@ document.getElementById('btn-add-user')?.addEventListener('click',()=>{
   });
 });
 
-// Logout
+// Project tabs
+document.getElementById('proj-tabs')?.addEventListener('click',e=>{
+  const tab=e.target.closest('.proj-tab');
+  if(!tab)return;
+  document.querySelectorAll('.proj-tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  const sf=document.getElementById('proj-f-status');
+  if(sf) sf.value=tab.dataset.tab||'';
+  renderProyectos();
+});
+
+function updateProjTabCounts(){
+  const counts={
+    '':           DB.projects.length,
+    'Activo':     DB.projects.filter(p=>p.status==='Activo').length,
+    'Por aprobar':DB.projects.filter(p=>p.status==='Por aprobar'||p.status==='En revisión').length,
+    'En riesgo':  DB.projects.filter(p=>p.status==='En riesgo').length,
+    'Detenido':   DB.projects.filter(p=>p.status==='Detenido').length,
+    'Cerrado':    DB.projects.filter(p=>p.status==='Cerrado').length,
+  };
+  const ids={'':'tc-all','Activo':'tc-activo','Por aprobar':'tc-aprobar','En riesgo':'tc-riesgo','Detenido':'tc-detenido','Cerrado':'tc-cerrado'};
+  Object.entries(ids).forEach(([k,id])=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent=counts[k]||0;
+  });
+}
+
 ['sb-logout','btn-logout-adj'].forEach(id=>{
   document.getElementById(id)?.addEventListener('click',()=>{if(confirm('¿Cerrar sesión?')){SESSION=null;sessionStorage.removeItem('li_sess');location.reload()}});
 });
