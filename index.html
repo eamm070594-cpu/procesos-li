@@ -1364,7 +1364,7 @@ function delCard(d,t,isOverdue){
     </div>
     <div class="del-actions">
       ${canSubmit?`<button class="btn xs primary" data-submit-del="${d.id}">Marcar terminado</button>`:''}
-      ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>`:''}
+      ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button>${d.status==='En revisión'?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:''}<button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>`:''}
       ${d.status==='En revisión'?'<span class="tag blue">Pendiente validación</span>':''}
     </div>
   </div>`;
@@ -1390,31 +1390,7 @@ function renderDashboard(){
     </div>`).join('');
 
   // Pendientes validar (admin)
-  const vb=document.getElementById('validar-block');
-  if(SESSION?.role==='admin'){
-    const pending=DB.deliverables.filter(d=>d.status==='En revisión');
-    if(pending.length){
-      vb.classList.remove('hidden');
-      vb.innerHTML=`<div class="card" style="margin-bottom:10px;border-color:rgba(212,98,42,.4)">
-        <div class="flex-between" style="margin-bottom:10px">
-          <div class="card-title" style="margin:0">⏳ Pendientes de validar</div>
-          <span class="tag blue">${pending.length}</span>
-        </div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>Entregable</th><th>Responsable</th><th>Proyecto</th><th class="right">Acción</th></tr></thead>
-          <tbody>${pending.map(d=>`<tr>
-            <td><b>${esc(d.title)}</b></td>
-            <td>${userName(d.assigneeId)}</td>
-            <td>${projName(d.projectId)}</td>
-            <td class="right">
-              <button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button>
-              <button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>
-            </td>
-          </tr>`).join('')}</tbody>
-        </table></div>
-      </div>`;
-    } else { vb.classList.add('hidden'); }
-  } else { vb.classList.add('hidden'); }
+  renderValidarBlock();
 
   // Semáforo personas
   const sl=document.getElementById('semaforo-list');
@@ -1473,7 +1449,7 @@ function renderHotTable(){
     <td>${userName(d.assigneeId)}</td>
     <td>${d.due?`${fmtDate(d.due)}<div class="small muted">${ov>0?'Vencido '+ov+'d':'En '+din+'d'}</div>`:'—'}</td>
     <td class="right">
-      ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>`:''}
+      ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button>${d.status==='En revisión'?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:''}<button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>`:''}
       ${SESSION?.role==='user'&&d.assigneeId===SESSION?.userId&&d.status!=='En revisión'?`<button class="btn xs primary" data-submit-del="${d.id}">Terminado</button>`:''}
     </td>
   </tr>`).join('')||`<tr><td colspan="6" class="empty">Sin entregables activos.</td></tr>`;
@@ -1767,7 +1743,11 @@ function renderEntregables(){
       <td>${d.blocked?`<span class="tag bad">Sí·${d.blockSince?daysBetween(d.blockSince,t):0}d</span>`:`<span class="tag gray">No</span>`}</td>
       <td class="right">
         <button class="btn xs" data-open-del-cmt="${d.id}">💬</button>
-        ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button><button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}
+        ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button>
+              ${d.status==='En revisión'?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button>
+              <button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:''}
+              <button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>
+              <button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}
         ${SESSION?.role==='user'&&d.assigneeId===SESSION?.userId&&d.status!=='Aprobado'&&d.status!=='En revisión'?`<button class="btn xs primary" data-submit-del="${d.id}">Terminado</button>`:''}
       </td>
     </tr>
@@ -2085,9 +2065,7 @@ function closeDlg(){document.getElementById('dlg-edit').close();_dlgSave=null}
 document.getElementById('dlg-save').addEventListener('click',()=>{
   if(_dlgSave&&_dlgSave()===false)return;
   saveDB();
-  // If on projects view, only re-render projects to preserve group state
-  if(currentView==='proyectos') renderProyectos();
-  else renderView(currentView);
+  refreshAfterDelAction();
   closeDlg();
 });
 
@@ -2250,6 +2228,57 @@ const handlers={
       }
     });
   },
+function refreshAfterDelAction(){
+  saveDB();
+  renderValidarBlock();
+  renderHotTable();
+  renderKPIs();
+  if(currentView==='dashboard') renderDashboard();
+  else if(currentView==='proyectos'){
+    // Preserve which project panels are open before re-rendering
+    const openPanels=[];
+    document.querySelectorAll('[id^="proj-dels-"],[id^="proj-cmt-"]').forEach(el=>{
+      if(!el.classList.contains('hidden')) openPanels.push(el.id);
+    });
+    renderProyectos();
+    // Re-open panels that were open
+    openPanels.forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.classList.remove('hidden');
+    });
+  }
+  else if(currentView==='entregables') renderEntregables();
+  else if(currentView==='hoy') renderHoy();
+}
+
+function renderValidarBlock(){
+  const vb=document.getElementById('validar-block');
+  if(!vb) return;
+  if(SESSION?.role!=='admin'){vb.classList.add('hidden');return;}
+  const pending=DB.deliverables.filter(d=>d.status==='En revisión');
+  if(!pending.length){vb.classList.add('hidden');return;}
+  vb.classList.remove('hidden');
+  vb.innerHTML=`<div class="card" style="margin-bottom:10px;border-color:rgba(212,98,42,.4)">
+    <div class="flex-between" style="margin-bottom:10px">
+      <div class="card-title" style="margin:0">⏳ Pendientes de validar</div>
+      <span class="tag blue">${pending.length}</span>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Entregable</th><th>Responsable</th><th>Proyecto</th><th class="right">Acción</th></tr></thead>
+      <tbody>${pending.map(d=>`<tr>
+        <td><b>${esc(d.title)}</b></td>
+        <td>${userName(d.assigneeId)}</td>
+        <td>${projName(d.projectId)}</td>
+        <td class="right">
+          <button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button>
+          <button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>
+          <button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div>`;
+}
+
   approveDel(id){
     const d=byId(DB.deliverables,id);if(!d)return;
     d.status='Aprobado';d.completedAt=todayISO();d.blocked=false;d.blockSince=null;
@@ -2257,17 +2286,17 @@ const handlers={
     const key='deliverable_'+id;
     if(!DB.comments[key]) DB.comments[key]=[];
     DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:'✅ Entregable aprobado.',link:''});
-    saveDB();if(currentView==='proyectos')renderProyectos();else renderView(currentView);toast(`✓ Aprobado: ${d.title}`);
+    refreshAfterDelAction();toast(`✓ Aprobado: ${d.title}`);
   },
   delDel(id){
     const idx=DB.deliverables.findIndex(x=>x.id===id);if(idx<0)return;
     if(!confirm('¿Eliminar entregable?'))return;
-    DB.deliverables.splice(idx,1);saveDB();renderView(currentView);toast('Eliminado');
+    DB.deliverables.splice(idx,1);refreshAfterDelAction();toast('Eliminado');
   },
   submitDel(id){
     const d=byId(DB.deliverables,id);if(!d)return;
     d.status='En revisión';d.submittedAt=todayISO();d.submittedBy=SESSION?.userId;
-    saveDB();if(currentView==='proyectos')renderProyectos();else renderView(currentView);toast('Enviado para validación ✓');
+    refreshAfterDelAction();toast('Enviado para validación ✓');
   },
   rejectDel(id){
     if(SESSION?.role!=='admin'){toast('Solo el admin puede rechazar');return;}
@@ -2309,7 +2338,10 @@ const handlers={
         const key='deliverable_'+id;
         if(!DB.comments[key]) DB.comments[key]=[];
         DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:t,time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`❌ Rechazado: ${reason}${affectsScore?' · Penalización -'+DB.scoreRules.penaltyFollowUp+'%':''}`,link:''});
+        refreshAfterDelAction();
+        closeDlg();
         toast(`Rechazado${affectsScore?' · -'+DB.scoreRules.penaltyFollowUp+'% al score':' · sin penalización'}`);
+        return false; // prevent dlg-save from re-saving
       }
     });
   },
@@ -2353,7 +2385,10 @@ const handlers={
         const key='deliverable_'+id;
         if(!DB.comments[key]) DB.comments[key]=[];
         DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`➡️ Siguiente fase creada: "${title}" — fecha: ${fmtDate(due)}. Este entregable se marcó como completado.`,link:''});
+        refreshAfterDelAction();
+        closeDlg();
         toast(`Fase creada: ${title} ✓ — Original marcado como aprobado`);
+        return false;
       }
     });
   },
@@ -2430,7 +2465,7 @@ const handlers={
         <td>${userName(d.assigneeId)}</td>
         <td>${fmtDueFull(d.due,d.originalDue)}</td>
         <td class="right">
-          ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button>`:''}
+          ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button>${d.status==='En revisión'?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:''}<button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button><button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}
           ${SESSION?.role==='user'&&d.assigneeId===SESSION?.userId&&d.status!=='Aprobado'&&d.status!=='En revisión'?`<button class="btn xs primary" data-submit-del="${d.id}">Terminado</button>`:''}
         </td>
       </tr>`).join('')||`<tr><td colspan="5" class="empty">Sin entregables.</td></tr>`}</tbody>
