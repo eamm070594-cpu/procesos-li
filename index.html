@@ -539,6 +539,16 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
   min-width:20px;text-align:center;
 }
 .proj-tab.active .tab-count{background:var(--accent);color:#fff}
+
+/* ── PROGRESS BAR (ingeniero/proyecto) ── */
+.progress-bar{flex:1;height:5px;background:var(--surface2);border-radius:99px;overflow:hidden}
+.progress-bar-fill{height:100%;border-radius:99px;transition:width .3s}
+.progress-bar-fill.ok{background:var(--ok)}
+.progress-bar-fill.warn{background:var(--warn)}
+.progress-bar-fill.bad{background:var(--bad)}
+.progress-bar-fill.gray{background:var(--muted)}
+/* ── VIEW: ingeniero / proyecto ── */
+#view-ingeniero,#view-proyecto{overflow-y:auto;-webkit-overflow-scrolling:touch}
 </style>
 </head>
 <body>
@@ -579,7 +589,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
       <button class="snav-btn active" data-view="hoy"><span class="icon">📋</span> Hoy</button>
       <button class="snav-btn" data-view="dashboard"><span class="icon">📊</span> Dashboard</button>
       <button class="snav-btn" data-view="proyectos"><span class="icon">📁</span> Proyectos</button>
-      <button class="snav-btn" data-view="entregables"><span class="icon">✅</span> Entregables</button>
+      
       <button class="snav-btn" data-view="gantt"><span class="icon">📅</span> Gantt</button>
       <div class="snav-section">Operacion</div>
       <button class="snav-btn" data-view="calendario"><span class="icon">🗓</span> Calendario</button>
@@ -725,7 +735,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
     </div>
 
     <!-- ─── VIEW: ENTREGABLES ─── -->
-    <div class="view" id="view-entregables">
+    <div class="view" id="view-entregables" style="display:none!important">
       <div class="page-header">
         <div class="page-header-inner">
           <div class="page-title"><h2>Entregables</h2><p>Lista completa filtrable</p></div>
@@ -845,6 +855,25 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
         <div id="equipo-cards"></div>
       </div>
     </div>
+
+    <!-- ══ SCREEN: DETALLE INGENIERO ══ -->
+    <div class="view hidden" id="view-ingeniero">
+      <div style="padding:12px 16px 0">
+        <button style="display:flex;align-items:center;gap:4px;padding:6px 0;font-size:13px;font-weight:600;color:var(--accent);background:none;border:none;cursor:pointer;margin-bottom:4px" onclick="goBackFromIngeniero()">◀ Equipo</button>
+        <div class="page-header-inner" id="ing-ph"></div>
+      </div>
+      <div class="pad" id="ing-body"></div>
+    </div>
+
+    <!-- ══ SCREEN: DETALLE PROYECTO ══ -->
+    <div class="view hidden" id="view-proyecto">
+      <div style="padding:12px 16px 0">
+        <button style="display:flex;align-items:center;gap:4px;padding:6px 0;font-size:13px;font-weight:600;color:var(--accent);background:none;border:none;cursor:pointer;margin-bottom:4px" id="proj-back-btn" onclick="goBackFromProyecto()">◀ Volver</button>
+        <div class="page-header-inner" id="proj-ph"></div>
+      </div>
+      <div class="pad" id="proj-body"></div>
+    </div>
+
 
     <!-- ─── VIEW: AJUSTES ─── -->
     <div class="view" id="view-ajustes">
@@ -1159,6 +1188,24 @@ function semaforoUser(userId){
 /* ══════════════════════════════════════════════════════
    SCORE DE NÓMINA (mensual) — MES EN CURSO
 ══════════════════════════════════════════════════════ */
+
+/* ═══ MÉTRICAS SEMANALES ═══ */
+function getWeekBounds(d=new Date()){
+  const t=new Date(d);t.setHours(0,0,0,0);
+  const dow=(t.getDay()+6)%7;
+  const mon=new Date(t);mon.setDate(t.getDate()-dow);
+  const fri=new Date(mon);fri.setDate(mon.getDate()+4);
+  return{ws:todayISO(mon),we:todayISO(fri)};
+}
+function weekMetricForUser(userId,d=new Date()){
+  const{ws,we}=getWeekBounds(d);
+  const dels=DB.deliverables.filter(d=>d.assigneeId===userId&&d.due&&d.due>=ws&&d.due<=we);
+  const efectivo=dels.filter(d=>d.status==='Aprobado'&&d.completedAt&&d.completedAt<=d.due).length;
+  const cumplido=dels.filter(d=>d.status==='Aprobado'&&d.completedAt&&d.completedAt>d.due).length;
+  const pendiente=dels.filter(d=>d.status!=='Aprobado').length;
+  return{total:dels.length,efectivo,cumplido,pendiente,ws,we};
+}
+
 function calcMonthlyScore(userId, year, month){
   // month is 0-indexed
   const ms=`${year}-${String(month+1).padStart(2,'0')}-01`;
@@ -1226,6 +1273,8 @@ function calcKPIs(){
 let currentView='hoy';
 
 function showView(v){
+  // Reset ingeniero/proyecto screens when navigating via main nav
+  _currentIngenieroId=null;_currentProyectoId=null;
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   const el=document.getElementById('view-'+v);
   if(el){el.classList.add('active');el.scrollTop=0}
@@ -1607,7 +1656,7 @@ function renderProyectos(){
         <div class="flex flex-wrap" style="gap:6px">
           <button class="btn xs" data-open-proj="${p.id}">📋 Entregables</button>
           <button class="btn xs" data-open-proj-cmt="${p.id}">💬 Comentarios</button>
-          ${isAdmin?`<button class="btn xs" data-add-del-proj="${p.id}">＋ Entregable</button><button class="btn xs" data-edit-proj="${p.id}">Editar</button><button class="btn xs danger" data-del-proj="${p.id}">Eliminar</button>`:''}
+          ${isAdmin?`<button class="btn xs" data-add-del-proj="${p.id}">＋ Entregable</button><button class="btn xs" data-edit-proj="${p.id}">Editar</button><button class="btn xs ok" data-close-proj="${p.id}">✓ Proyecto terminado</button><button class="btn xs danger" data-del-proj="${p.id}">Eliminar</button>`:''}
         </div>
         <div id="proj-dels-${p.id}" class="hidden"></div>
         <div id="proj-cmt-${p.id}" class="hidden"></div>
@@ -1970,62 +2019,96 @@ function avatarHTML(u, size=42){
 }
 
 function renderEquipo(){
-  const container = document.getElementById('equipo-cards');
+  const container=document.getElementById('equipo-cards');
   if(!container) return;
 
-  // ── Metas cumplidas (proyectos cerrados) ──
-  const cerrados = DB.projects.filter(p=>p.status==='Cerrado');
-  const metasHTML = cerrados.length ? terminadosPorIngeniero(cerrados) : '';
+  // Week metric chart
+  const{ws,we}=getWeekBounds();
+  const maxV=Math.max(1,...DB.users.map(u=>{const m=weekMetricForUser(u.id);return m.total}));
+  const chartHTML=`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:14px;margin-bottom:12px">
+    <div style="font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:10px">📊 Semana ${fmtDate(ws)} — ${fmtDate(we)}</div>
+    ${DB.users.map(u=>{
+      const m=weekMetricForUser(u.id);
+      return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+        <div style="font-size:12px;font-weight:600;min-width:76px;max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(u.name.split(' ')[0])}</div>
+        <div style="flex:1;height:20px;background:var(--surface2);border-radius:6px;overflow:hidden;display:flex">
+          ${m.efectivo?`<div style="flex:${m.efectivo};background:var(--ok);display:flex;align-items:center;padding-left:5px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap">${m.efectivo}</div>`:''}
+          ${m.cumplido?`<div style="flex:${m.cumplido};background:var(--warn);display:flex;align-items:center;padding-left:4px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap">${m.cumplido}</div>`:''}
+          ${m.pendiente?`<div style="flex:${m.pendiente};background:var(--bad);display:flex;align-items:center;padding-left:4px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap">${m.pendiente}</div>`:''}
+          ${m.total===0?`<div style="padding-left:8px;font-size:10px;color:var(--muted);line-height:20px">Sin entregables</div>`:''}
+        </div>
+        <div style="font-size:11px;color:var(--muted);min-width:20px;text-align:right">${m.total}</div>
+      </div>`;
+    }).join('')}
+    <div style="display:flex;gap:12px;margin-top:8px;font-size:10px;flex-wrap:wrap">
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:3px"></span>Efectivo (a tiempo)</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warn);margin-right:3px"></span>Cumplido (tarde)</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--bad);margin-right:3px"></span>Pendiente</span>
+    </div>
+  </div>`;
 
-  // ── Tarjetas del equipo ──
-  const equipoHTML = DB.users.map(u=>{
-    const dgp = u.dgp || {};
-    const photo = userPhotoURL(u.email);
-    const initials = u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
-    const ms = getCurrentMonthScores().find(x=>x.userId===u.id);
-    const sc = ms?.score;
-    const lvl = sc===null?'gray':sc>=85?'ok':sc>=70?'warn':'bad';
-    return`<div class="card" style="display:flex;gap:16px;align-items:flex-start;margin-bottom:10px">
-      <div style="flex:0 0 64px;display:flex;flex-direction:column;align-items:center;gap:6px">
+  // Cerrados / logros
+  const cerrados=DB.projects.filter(p=>p.status==='Cerrado');
+  const metasHTML=terminadosPorIngeniero(cerrados);
+
+  // Person cards — now clickable
+  const monthScores=getCurrentMonthScores();
+  const cardsHTML=DB.users.map(u=>{
+    const dgp=u.dgp||{};
+    const photo=userPhotoURL(u.email);
+    const initials=u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    const ms=monthScores.find(x=>x.userId===u.id);
+    const sc=ms?.score;
+    const lvl=sc===null?'gray':sc>=85?'ok':sc>=70?'warn':'bad';
+    const scoreColor=lvl==='ok'?'var(--ok)':lvl==='warn'?'var(--warn)':lvl==='bad'?'var(--bad)':'var(--muted)';
+    const s=semaforoUser(u.id);
+    const wm=weekMetricForUser(u.id);
+    const borderColor=s.level==='ok'?'var(--ok)':s.level==='warn'?'var(--warn)':'var(--bad)';
+    return`<div class="card" style="display:flex;gap:14px;align-items:flex-start;margin-bottom:10px;cursor:pointer;transition:box-shadow .15s" onclick="openIngeniero('${u.id}')" onmouseenter="this.style.boxShadow='0 4px 16px rgba(26,34,51,.1)'" onmouseleave="this.style.boxShadow=''">
+      <div style="flex:0 0 52px;display:flex;flex-direction:column;align-items:center;gap:4px">
         ${photo
-          ? `<img src="${photo}" alt="${esc(u.name)}"
-              style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border)"
-              onerror="this.outerHTML='<div style=\\'width:64px;height:64px;border-radius:50%;background:var(--accent-bg);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--accent)\\'>${initials}</div>'"
-            />`
-          : `<div style="width:64px;height:64px;border-radius:50%;background:var(--accent-bg);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--accent)">${initials}</div>`
+          ?`<img src="${photo}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2.5px solid ${borderColor}" onerror="this.outerHTML='<div style=\'width:52px;height:52px;border-radius:50%;background:var(--accent-bg);border:2.5px solid ${borderColor};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--accent)\'>${initials}</div>'">`
+          :`<div style="width:52px;height:52px;border-radius:50%;background:var(--accent-bg);border:2.5px solid ${borderColor};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--accent)">${initials}</div>`
         }
-        <span class="tag ${lvl}" style="font-size:10px;padding:2px 7px">${sc!==null?sc+'%':'—'}</span>
+        <span class="tag ${s.level}" style="font-size:10px;padding:2px 6px">${s.level==='ok'?'Verde':s.level==='warn'?'Amarillo':'Rojo'}</span>
       </div>
       <div style="flex:1;min-width:0">
-        <div class="flex-between flex-wrap" style="gap:6px;margin-bottom:4px">
-          <div>
-            <div style="font-weight:700;font-size:15px">${esc(u.name)}</div>
-            <div class="small muted">${u.role} · ${u.team||'—'}</div>
-          </div>
-          <div class="flex" style="gap:6px">
-            ${SESSION?.role==='admin'?`<button class="btn xs" data-edit-u="${u.id}">Editar</button>
-            <button class="btn xs danger" data-del-u="${u.id}">✕</button>`:''}
-          </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:3px">
+          <div style="font-weight:700;font-size:15px">${esc(u.name)}</div>
+          <span style="color:var(--muted);font-size:18px">›</span>
         </div>
-        ${dgp.puesto||dgp.area||dgp.responsabilidades ? `
-        <div class="hr" style="margin:8px 0"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:12px">
-          ${dgp.puesto?`<div><span class="muted">Puesto: </span><b>${esc(dgp.puesto)}</b></div>`:''}
-          ${dgp.area?`<div><span class="muted">Área: </span><b>${esc(dgp.area)}</b></div>`:''}
-          ${dgp.nivel?`<div><span class="muted">Nivel: </span><b>${esc(dgp.nivel)}</b></div>`:''}
-          ${u.email?`<div><span class="muted">Correo: </span><b>${esc(u.email)}</b></div>`:''}
+        <div class="small muted" style="margin-bottom:5px">${u.role} · ${u.team||'—'}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <div class="progress-bar" style="flex:1"><div class="progress-bar-fill ${lvl}" style="width:${sc??0}%"></div></div>
+          <span style="font-size:12px;font-weight:700;color:${scoreColor};min-width:32px">${sc!==null?sc+'%':'—'}</span>
         </div>
-        ${dgp.responsabilidades?`<div style="margin-top:6px;font-size:12px"><span class="muted">Responsabilidades: </span>${esc(dgp.responsabilidades)}</div>`:''}
-        ` : `<div class="small muted" style="margin-top:4px">Sin DGP — haz clic en Editar para agregar.</div>`}
+        <div class="small muted">Semana: <b style="color:var(--ok)">${wm.efectivo}</b> efectivos · <b style="color:var(--warn)">${wm.cumplido}</b> cumplidos · <b style="color:var(--bad)">${wm.pendiente}</b> pendientes</div>
       </div>
     </div>`;
-  }).join('') || `<div class="empty">Sin usuarios.</div>`;
+  }).join('');
 
-  container.innerHTML =
-    (metasHTML ? `<div class="card" style="margin-bottom:16px;border-color:rgba(30,158,94,.25);background:rgba(30,158,94,.03)">${metasHTML}</div>` : '') +
-    `<div style="font-family:var(--font-display);font-size:14px;font-weight:700;margin-bottom:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">👥 Miembros del equipo</div>` +
-    equipoHTML;
+  container.innerHTML=(cerrados.length?`<div class="card" style="margin-bottom:12px;border-color:rgba(30,158,94,.25)">${metasHTML}</div>`:'') + chartHTML + cardsHTML;
 }
+
+function openIngeniero(userId){
+  const u=byId(DB.users,userId);if(!u)return;
+  _currentIngenieroId=userId;
+  currentView='ingeniero';
+  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  const sc=document.getElementById('view-ingeniero');
+  if(sc){sc.classList.remove('hidden');sc.scrollTop=0;}
+  renderIngeniero(userId);
+}
+
+function goBackFromIngeniero(){
+  currentView='equipo';
+  _currentIngenieroId=null;
+  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  const sc=document.getElementById('view-equipo');
+  if(sc)sc.classList.remove('hidden');
+  document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='equipo'));
+}
+
 
 /* ══════════════════════════════════════════════════════
    RENDER: AJUSTES
@@ -2170,6 +2253,7 @@ document.body.addEventListener('click',e=>{
     ['data-add-del-proj','addDelProj'],
     ['data-edit-u','editU'],
     ['data-del-u','delU'],
+    ['data-close-proj','closeProj'],
   ];
   for(const [attr,fn] of attrMap){
     if(btn.hasAttribute(attr)){
@@ -2279,51 +2363,24 @@ const handlers={
   nextPhase(id){
     const d=byId(DB.deliverables,id);if(!d)return;
     const p=byId(DB.projects,d.projectId);
-    const uOpts=DB.users.map(u=>`<option value="${u.id}"${u.id===d.assigneeId?' selected':''}>${esc(u.name)}</option>`).join('');
     const phaseMatch=d.title.match(/fase\s*(\d+)/i);
     const nextNum=phaseMatch?parseInt(phaseMatch[1])+1:2;
-    const suggestedTitle=phaseMatch?d.title.replace(/fase\s*\d+/i,`Fase ${nextNum}`):`${d.title} — Fase 2`;
-    openDlg({
-      title:'Crear siguiente fase',
-      sub:`Basado en: ${esc(d.title)}`,
-      body:`
-        <div style="padding:10px 12px;background:var(--accent-bg);border:1px solid rgba(212,98,42,.25);border-radius:var(--r);margin-bottom:12px;font-size:12px;color:var(--muted)">
-          Se creará un nuevo entregable en <b>${esc(p?.name||'—')}</b>
-        </div>
-        <label class="lbl">Nombre de la siguiente fase *</label>
-        <input class="input" id="nf-title" value="${esc(suggestedTitle)}"/>
-        <div class="form-row" style="margin-top:4px">
-          <div><label class="lbl">Responsable</label><select class="select-input" id="nf-ass">${uOpts}</select></div>
-          <div><label class="lbl">Nueva fecha límite *</label><input class="input" type="date" id="nf-due" value="${d.due||todayISO()}"/></div>
-        </div>
-        <label class="lbl">Notas / criterios de aceptación</label>
-        <textarea class="input" id="nf-notes" placeholder="Qué debe incluir esta fase…"></textarea>`,
-      onSave:()=>{
-        const title=(document.getElementById('nf-title')?.value||'').trim();
-        if(!title){toast('Falta nombre');return false;}
-        const due=document.getElementById('nf-due')?.value||todayISO();
-        const newDel={id:uid('d'),title,projectId:d.projectId,assigneeId:document.getElementById('nf-ass')?.value||d.assigneeId,due,originalDue:due,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:(document.getElementById('nf-notes')?.value||'').trim(),completedAt:null,scorePenalty:0,parentId:id};
-        DB.deliverables.push(newDel);
-
-        // Marcar el original como Aprobado — ya no está pendiente ni vencido
-        d.status='Aprobado';
-        d.completedAt=todayISO();
-        d.blocked=false;
-        d.blockSince=null;
-        d.supersededBy=newDel.id;
-
-        if(!DB.comments) DB.comments={};
-        const key='deliverable_'+id;
-        if(!DB.comments[key]) DB.comments[key]=[];
-        DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`➡️ Siguiente fase creada: "${title}" — fecha: ${fmtDate(due)}. Este entregable se marcó como completado.`,link:''});
-        saveDB();
-        refreshAfterDelAction();
-        closeDlg();
-        toast(`Fase creada: ${title} ✓ — Original marcado como aprobado`);
-        return false;
-      }
-    });
+    const sug=phaseMatch?d.title.replace(/fase\s*\d+/i,`Fase ${nextNum}`):`${d.title} — Fase 2`;
+    const title=window.prompt(`Siguiente fase\nProyecto: ${p?.name||'—'}\nNombre:`,sug);
+    if(!title||!title.trim())return;
+    const dueStr=window.prompt('Fecha límite (YYYY-MM-DD):',d.due||todayISO());
+    if(!dueStr)return;
+    const newDel={id:uid('d'),title:title.trim(),projectId:d.projectId,assigneeId:d.assigneeId,due:dueStr,originalDue:dueStr,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:'',completedAt:null,scorePenalty:0,parentId:id};
+    DB.deliverables.push(newDel);
+    d.status='Aprobado';d.completedAt=todayISO();d.blocked=false;d.blockSince=null;d.supersededBy=newDel.id;
+    if(!DB.comments)DB.comments={};
+    const key='deliverable_'+id;
+    if(!DB.comments[key])DB.comments[key]=[];
+    DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`➡️ Fase: "${title.trim()}" · ${fmtDate(dueStr)}`,link:''});
+    refreshAfterDelAction();
+    toast(`✓ Original aprobado · Nueva fase: "${title.trim()}"`);
   },
+
   runR(id){
     const r=byId(DB.routines,id);if(!r)return;
     ensureRoutineRuns();const t=todayISO();
@@ -2378,6 +2435,14 @@ const handlers={
       }
     });
   },
+  closeProj(id){
+    const p=byId(DB.projects,id);if(!p)return;
+    if(!confirm(`¿Marcar "${p.name}" como terminado?\n\nTodos los entregables pendientes quedarán como están.`))return;
+    p.status='Cerrado';
+    p.closedAt=todayISO();
+    refreshAfterDelAction();
+    toast(`✓ Proyecto terminado: ${p.name}`);
+  },
   delProj(id){
     const idx=DB.projects.findIndex(x=>x.id===id);if(idx<0)return;
     if(!confirm(`¿Eliminar proyecto "${DB.projects[idx].name}" y todos sus entregables?`))return;
@@ -2391,19 +2456,25 @@ const handlers={
     const isAdmin=SESSION?.role==='admin';
     el.innerHTML=`<div class="hr"></div><div class="tbl-wrap"><table>
       <thead><tr><th>Estado</th><th>Entregable</th><th>Responsable</th><th>Fecha</th><th class="right">Acción</th></tr></thead>
-      <tbody>${dels.map(d=>`<tr>
-        <td>${statusTag(d.status,d.due)}</td>
-        <td><b>${esc(d.title)}</b></td>
-        <td>${userName(d.assigneeId)}</td>
-        <td>${fmtDueFull(d.due,d.originalDue)}</td>
-        <td class="right">
-          ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Sig. fase</button><button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}
-          ${SESSION?.role==='user'&&d.assigneeId===SESSION?.userId&&d.status!=='Aprobado'&&d.status!=='En revisión'?`<button class="btn xs primary" data-submit-del="${d.id}">Terminado</button>`:''}
-        </td>
-      </tr>`).join('')||`<tr><td colspan="5" class="empty">Sin entregables.</td></tr>`}</tbody>
+      <tbody>${dels.map(d=>{
+        const canFinish=d.status!=='Aprobado'&&d.status!=='En revisión';
+        const isMyDel=d.assigneeId===SESSION?.userId;
+        return`<tr>
+          <td>${statusTag(d.status,d.due)}</td>
+          <td><b>${esc(d.title)}</b></td>
+          <td>${userName(d.assigneeId)}</td>
+          <td>${fmtDueFull(d.due,d.originalDue)}</td>
+          <td class="right">
+            ${(canFinish&&(isAdmin||isMyDel))?`<button class="btn xs primary" data-submit-del="${d.id}">✓ Terminado</button>`:''}
+            ${(d.status==='En revisión'&&isAdmin)?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:''}
+            ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Fase</button><button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}
+          </td>
+        </tr>`;
+      }).join('')||`<tr><td colspan="5" class="empty">Sin entregables.</td></tr>`}</tbody>
     </table></div>`;
     el.classList.remove('hidden');
   },
+
   addDelProj(id){
     const p=byId(DB.projects,id);
     const uOpts=DB.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
@@ -2476,9 +2547,16 @@ const handlers={
 ══════════════════════════════════════════════════════ */
 function refreshAfterDelAction(){
   saveDB();
-  renderValidarBlock();
-  renderHotTable();
-  renderKPIs();
+  if(typeof renderValidarBlock==='function') renderValidarBlock();
+  if(typeof renderKPIs==='function') renderKPIs();
+  if(typeof renderHotTable==='function') renderHotTable();
+  // Route based on currentView
+  if(currentView==='proyecto' && _currentProyectoId){
+    renderProyectoDetail(_currentProyectoId);return;
+  }
+  if(currentView==='ingeniero' && _currentIngenieroId){
+    renderIngeniero(_currentIngenieroId);return;
+  }
   if(currentView==='dashboard') renderDashboard();
   else if(currentView==='proyectos'){
     const openPanels=[];
@@ -2917,3 +2995,294 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_deferredIn
 </script>
 </body>
 </html>
+<script>
+// ── INGENIERO DETAIL ──
+var _currentIngenieroId=null;
+var _currentProyectoId=null;
+
+function renderIngeniero(userId){
+  const u=byId(DB.users,userId);if(!u)return;
+  const s=semaforoUser(userId);
+  const ms=calcMonthlyScore(userId,new Date().getFullYear(),new Date().getMonth());
+  const sc=ms?.score;
+  const lvl=sc===null?'gray':sc>=85?'ok':sc>=70?'warn':'bad';
+  const scoreColor=lvl==='ok'?'var(--ok)':lvl==='warn'?'var(--warn)':lvl==='bad'?'var(--bad)':'var(--muted)';
+  const ini=u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  const photo=userPhotoURL(u.email);
+  const borderColor=s.level==='ok'?'var(--ok)':s.level==='warn'?'var(--warn)':'var(--bad)';
+
+  // Header
+  const ph=document.getElementById('ing-ph');
+  if(ph){
+    const photoHTML=photo
+      ?`<img src="${photo}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:3px solid ${borderColor}" onerror="this.style.display='none'">`
+      :`<div style="width:56px;height:56px;border-radius:50%;background:var(--accent-bg);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:20px;color:var(--accent)">${ini}</div>`;
+    ph.innerHTML=`<div style="display:flex;align-items:center;gap:12px">
+      ${photoHTML}
+      <div>
+        <h2 style="margin:0;font-size:20px">${esc(u.name)}</h2>
+        <p style="margin:3px 0 0;font-size:12px;color:var(--muted)">${u.role} · ${u.team||'—'}</p>
+      </div>
+    </div>`;
+  }
+
+  // Body
+  const body=document.getElementById('ing-body');
+  if(!body)return;
+
+  // Last 4 weeks chart
+  const weeks=[];
+  for(let w=3;w>=0;w--){
+    const d=new Date();d.setDate(d.getDate()-w*7);
+    const m=weekMetricForUser(userId,d);
+    weeks.push(m);
+  }
+
+  // Month score
+  const scoreHTML=`<div class="card" style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div>
+      <div class="small muted">Score nómina — ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][new Date().getMonth()]} ${new Date().getFullYear()}</div>
+      <div style="font-family:var(--font-display);font-size:42px;font-weight:800;color:${scoreColor};line-height:1">${sc!==null?sc+'%':'—'}</div>
+      <div class="small muted">${ms.total} entregables · ${ms.onTime} a tiempo · ${ms.late} tardíos · ${ms.pending} pend.</div>
+    </div>
+    <span class="tag ${s.level}" style="font-size:13px">${s.level==='ok'?'🟢 Verde':s.level==='warn'?'🟡 Amarillo':'🔴 Rojo'}</span>
+  </div>`;
+
+  const chartHTML=`<div class="card" style="margin-bottom:10px">
+    <div style="font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:10px">📊 Últimas 4 semanas (L-V)</div>
+    ${weeks.map(m=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+      <div style="font-size:10px;color:var(--muted);min-width:60px">${fmtDate(m.ws).slice(0,5)}</div>
+      <div style="flex:1;height:20px;background:var(--surface2);border-radius:6px;overflow:hidden;display:flex">
+        ${m.efectivo?`<div style="flex:${m.efectivo};background:var(--ok);display:flex;align-items:center;padding-left:5px;font-size:10px;font-weight:700;color:#fff">${m.efectivo}</div>`:''}
+        ${m.cumplido?`<div style="flex:${m.cumplido};background:var(--warn);display:flex;align-items:center;padding-left:4px;font-size:10px;font-weight:700;color:#fff">${m.cumplido}</div>`:''}
+        ${m.pendiente?`<div style="flex:${m.pendiente};background:var(--bad);display:flex;align-items:center;padding-left:4px;font-size:10px;font-weight:700;color:#fff">${m.pendiente}</div>`:''}
+        ${m.total===0?`<div style="padding-left:8px;font-size:10px;color:var(--muted);line-height:20px">Sin entregables</div>`:''}
+      </div>
+      <div style="font-size:10px;color:var(--muted);min-width:16px;text-align:right">${m.total}</div>
+    </div>`).join('')}
+    <div style="display:flex;gap:10px;margin-top:6px;font-size:10px;flex-wrap:wrap">
+      <span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:2px"></span>Efectivo</span>
+      <span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warn);margin-right:2px"></span>Cumplido</span>
+      <span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--bad);margin-right:2px"></span>Pendiente</span>
+    </div>
+  </div>`;
+
+  // Projects assigned to this user
+  const myProjIds=[...new Set(DB.deliverables.filter(d=>d.assigneeId===userId).map(d=>d.projectId))];
+  DB.projects.filter(p=>p.leaderId===userId).forEach(p=>{if(!myProjIds.includes(p.id))myProjIds.push(p.id)});
+  const myProjs=DB.projects.filter(p=>myProjIds.includes(p.id));
+  const icons={'Activo':'🟢','En riesgo':'🟡','Detenido':'🔴','Por aprobar':'🔵','Cerrado':'✅'};
+
+  const projsHTML=myProjs.length?`
+    <div style="font-family:var(--font-display);font-weight:700;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Proyectos</div>
+    ${myProjs.map(p=>{
+      const dels=DB.deliverables.filter(d=>d.projectId===p.id&&d.assigneeId===userId);
+      const done=dels.filter(d=>d.status==='Aprobado').length;
+      const pct=dels.length?Math.round((done/dels.length)*100):0;
+      const plvl=pct>=85?'ok':pct>=70?'warn':'bad';
+      const pColor=plvl==='ok'?'var(--ok)':plvl==='warn'?'var(--warn)':'var(--bad)';
+      const overdue=dels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<todayISO()).length;
+      return`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:14px;display:flex;gap:12px;align-items:flex-start;margin-bottom:8px;cursor:pointer;transition:box-shadow .15s"
+        onclick="openProyectoFromIngeniero('${p.id}')"
+        onmouseenter="this.style.boxShadow='0 4px 16px rgba(26,34,51,.1)'"
+        onmouseleave="this.style.boxShadow=''">
+        <div style="width:44px;height:44px;border-radius:var(--r);background:var(--${plvl==='ok'?'ok-bg':plvl==='warn'?'warn-bg':'bad-bg'});display:flex;align-items:center;justify-content:center;font-size:22px;flex:0 0 44px">${icons[p.status]||'📁'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:15px;margin-bottom:2px">${esc(p.name)}</div>
+          <div class="small muted" style="margin-bottom:6px">${fmtDate(p.start)} → ${fmtDate(p.end)}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="progress-bar" style="flex:1"><div class="progress-bar-fill ${plvl}" style="width:${pct}%"></div></div>
+            <span style="font-size:12px;font-weight:700;color:${pColor}">${pct}%</span>
+            <span class="small muted">${done}/${dels.length}</span>
+          </div>
+          ${overdue?`<div style="margin-top:4px"><span class="tag bad" style="font-size:10px">${overdue} vencido${overdue>1?'s':''}</span></div>`:''}
+        </div>
+        <span style="color:var(--muted);font-size:18px">›</span>
+      </div>`;
+    }).join('')}`:'<div class="empty">Sin proyectos asignados.</div>';
+
+  body.innerHTML=scoreHTML+chartHTML+projsHTML;
+}
+
+function openProyectoFromIngeniero(projId){
+  _currentProyectoId=projId;
+  currentView='proyecto';
+  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  const sc=document.getElementById('view-proyecto');
+  if(sc){sc.classList.remove('hidden');sc.scrollTop=0;}
+  const backBtn=document.getElementById('proj-back-btn');
+  if(backBtn){
+    const u=byId(DB.users,_currentIngenieroId);
+    backBtn.textContent='◀ '+(u?.name||'Volver');
+  }
+  renderProyectoDetail(projId);
+}
+
+function goBackFromProyecto(){
+  currentView='ingeniero';
+  _currentProyectoId=null;
+  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  const sc=document.getElementById('view-ingeniero');
+  if(sc){sc.classList.remove('hidden');sc.scrollTop=0;}
+  if(_currentIngenieroId) renderIngeniero(_currentIngenieroId);
+}
+
+function renderProyectoDetail(projId){
+  const p=byId(DB.projects,projId);if(!p)return;
+  const isAdmin=SESSION?.role==='admin';
+  const dels=DB.deliverables.filter(d=>d.projectId===projId);
+  const done=dels.filter(d=>d.status==='Aprobado').length;
+  const pct=dels.length?Math.round((done/dels.length)*100):0;
+  const lvl=pct>=85?'ok':pct>=70?'warn':'bad';
+
+  // Header
+  const ph=document.getElementById('proj-ph');
+  if(ph){
+    ph.innerHTML=`<div>
+      <h2 style="margin:0;font-size:20px">${esc(p.name)}</h2>
+      <p style="margin:3px 0 0;font-size:12px;color:var(--muted)">${fmtDate(p.start)} → ${fmtDate(p.end)} · ${userName(p.leaderId)}</p>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      ${isAdmin?`<button class="btn sm primary" onclick="openAddDelToProj2('${projId}')">＋ Entregable</button>`:''}
+    </div>`;
+  }
+
+  const body=document.getElementById('proj-body');
+  if(!body)return;
+
+  let html=`<div class="card" style="margin-bottom:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span class="small muted">Avance</span>
+      <span class="tag ${lvl}">${pct}% completado</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="progress-bar" style="flex:1;height:8px"><div class="progress-bar-fill ${lvl}" style="width:${pct}%"></div></div>
+      <span style="font-size:12px;font-weight:700;color:var(--${lvl==='ok'?'ok':lvl==='warn'?'warn':'bad'})">${done}/${dels.length}</span>
+    </div>
+    ${p.notes?`<div class="small muted" style="margin-top:8px">${esc(p.notes)}</div>`:''}
+  </div>`;
+
+  // Group deliverables
+  const t=todayISO();
+  const groups=[
+    {label:'⏳ En revisión',filter:d=>d.status==='En revisión',cls:'blue'},
+    {label:'🔴 Vencidos',filter:d=>d.status!=='Aprobado'&&d.status!=='En revisión'&&d.due&&d.due<t,cls:'bad'},
+    {label:'🚫 Bloqueados',filter:d=>d.blocked&&d.status!=='Aprobado',cls:'bad'},
+    {label:'▶ En progreso',filter:d=>d.status==='En progreso'&&!(d.due&&d.due<t),cls:'blue'},
+    {label:'○ Pendiente',filter:d=>d.status==='Pendiente'&&!(d.due&&d.due<t),cls:'gray'},
+    {label:'✓ Aprobados',filter:d=>d.status==='Aprobado',cls:'ok'},
+  ];
+
+  let hasAny=false;
+  groups.forEach(g=>{
+    const items=dels.filter(g.filter);
+    if(!items.length)return;
+    hasAny=true;
+    html+=`<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 6px">${g.label} (${items.length})</div>`;
+    items.forEach(d=>{
+      const canFinish=d.status!=='Aprobado'&&d.status!=='En revisión';
+      const isMyDel=d.assigneeId===SESSION?.userId;
+      html+=`<div style="background:var(--surface);border:1px solid var(--border2);border-left:3px solid var(--${g.cls==='ok'?'ok':g.cls==='bad'?'bad':g.cls==='blue'?'accent':'muted'});border-radius:var(--r2);padding:12px 14px;margin-bottom:8px" id="ditem-${d.id}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px">
+          <div style="font-weight:600;font-size:14px">${esc(d.title)}</div>
+          ${statusTag(d.status,d.due)}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+          <span class="small muted">${userName(d.assigneeId)}</span>
+          <span class="small muted">·</span>
+          <span class="small muted">${fmtDueFull(d.due,d.originalDue)}</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${(canFinish&&(isAdmin||isMyDel))?`<button class="btn xs primary" onclick="submitDelAndRefresh('${d.id}','${projId}')">✓ Terminado</button>`:''}
+          ${(d.status==='En revisión'&&isAdmin)?`<button class="btn xs ok" onclick="approveDelAndRefresh('${d.id}','${projId}')">Aprobar</button><button class="btn xs danger" onclick="rejectAndRefresh('${d.id}','${projId}')">Rechazar</button>`:''}
+          ${isAdmin?`<button class="btn xs" onclick="nextPhaseAndRefresh('${d.id}','${projId}')">➡️ Fase</button><button class="btn xs" onclick="editDelModal('${d.id}')">Editar</button><button class="btn xs danger" onclick="delDelAndRefresh('${d.id}','${projId}')">✕</button>`:''}
+        </div>
+      </div>`;
+    });
+  });
+  if(!hasAny) html+='<div class="empty">Sin entregables. Agrega el primero con el botón ＋</div>';
+  body.innerHTML=html;
+}
+
+// Actions that refresh the project detail screen
+function submitDelAndRefresh(id,projId){
+  const d=byId(DB.deliverables,id);if(!d)return;
+  d.status='En revisión';d.submittedAt=todayISO();d.submittedBy=SESSION?.userId;
+  refreshAfterDelAction();toast('Enviado para revisión ✓');
+}
+function approveDelAndRefresh(id,projId){
+  const d=byId(DB.deliverables,id);if(!d)return;
+  d.status='Aprobado';d.completedAt=todayISO();d.blocked=false;d.blockSince=null;
+  if(!DB.comments)DB.comments={};
+  const key='deliverable_'+id;
+  if(!DB.comments[key])DB.comments[key]=[];
+  DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:'✅ Aprobado.',link:''});
+  refreshAfterDelAction();toast(`✓ Aprobado: ${d.title}`);
+}
+function rejectAndRefresh(id,projId){
+  const d=byId(DB.deliverables,id);if(!d)return;
+  const reason=window.prompt(`Rechazar: "${d.title}"\n\nMotivo:`);
+  if(reason===null)return;
+  if(!reason.trim()){toast('Escribe un motivo');return}
+  const afecta=window.confirm('¿Afecta el score?\nAceptar = Sí · Cancelar = No');
+  const t2=todayISO();
+  d.status='En progreso';d.submittedAt=null;d.rejectedAt=t2;d.rejectedBy=SESSION?.name;
+  if(afecta)d.scorePenalty=(d.scorePenalty||0)+DB.scoreRules.penaltyFollowUp;
+  if(!DB.comments)DB.comments={};
+  const key='deliverable_'+id;
+  if(!DB.comments[key])DB.comments[key]=[];
+  DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:t2,time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`❌ Rechazado: ${reason.trim()}${afecta?' · -'+DB.scoreRules.penaltyFollowUp+'%':''}`,link:''});
+  refreshAfterDelAction();toast('Rechazado'+( afecta?' · -'+DB.scoreRules.penaltyFollowUp+'%':' · sin penalización'));
+}
+function nextPhaseAndRefresh(id,projId){
+  const d=byId(DB.deliverables,id);if(!d)return;
+  const p=byId(DB.projects,d.projectId);
+  const phaseMatch=d.title.match(/fase\s*(\d+)/i);
+  const nextNum=phaseMatch?parseInt(phaseMatch[1])+1:2;
+  const sug=phaseMatch?d.title.replace(/fase\s*\d+/i,`Fase ${nextNum}`):`${d.title} — Fase 2`;
+  const title=window.prompt(`Siguiente fase:\nProyecto: ${p?.name||'—'}\n\nNombre:`,sug);
+  if(!title||!title.trim())return;
+  const dueStr=window.prompt('Fecha límite (YYYY-MM-DD):',d.due||todayISO());
+  if(!dueStr)return;
+  const newDel={id:uid('d'),title:title.trim(),projectId:d.projectId,assigneeId:d.assigneeId,due:dueStr,originalDue:dueStr,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:'',completedAt:null,scorePenalty:0,parentId:id};
+  DB.deliverables.push(newDel);
+  d.status='Aprobado';d.completedAt=todayISO();d.blocked=false;d.blockSince=null;
+  if(!DB.comments)DB.comments={};
+  const key='deliverable_'+id;
+  if(!DB.comments[key])DB.comments[key]=[];
+  DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`➡️ Fase creada: "${title.trim()}" · ${fmtDate(dueStr)}`,link:''});
+  refreshAfterDelAction();toast(`✓ Original aprobado · Nueva fase: "${title.trim()}"`);
+}
+function delDelAndRefresh(id,projId){
+  const idx=DB.deliverables.findIndex(x=>x.id===id);if(idx<0)return;
+  if(!confirm('¿Eliminar entregable?'))return;
+  DB.deliverables.splice(idx,1);refreshAfterDelAction();toast('Eliminado');
+}
+
+function openAddDelToProj2(projId){
+  const p=byId(DB.projects,projId);
+  const uOpts=DB.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
+  openDlg({title:'Nuevo entregable',sub:p?esc(p.name):'',body:`
+    <label class="lbl">Título *</label><input class="input" id="nd-title" placeholder="Nombre del entregable"/>
+    <div class="form-row"><div><label class="lbl">Responsable</label><select class="sel" id="nd-ass"><option value="">Sin asignar</option>${uOpts}</select></div>
+    <div><label class="lbl">Fecha límite *</label><input class="input" type="date" id="nd-due" value="${p?.end||todayISO()}"/></div></div>
+    <label class="lbl">Notas</label><textarea class="input" id="nd-notes"></textarea>`,
+    onSave:()=>{
+      const title=(document.getElementById('nd-title')?.value||'').trim();
+      if(!title){toast('Falta título');return false}
+      const due=document.getElementById('nd-due')?.value||todayISO();
+      DB.deliverables.push({id:uid('d'),title,projectId:projId,assigneeId:document.getElementById('nd-ass')?.value||'',due,originalDue:due,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:(document.getElementById('nd-notes')?.value||'').trim(),completedAt:null,scorePenalty:0});
+      saveDB();renderProyectoDetail(projId);toast('Entregable creado ✓');
+    }
+  });
+}
+
+function updateRevisarBadge(){
+  const pending=DB.deliverables.filter(d=>d.status==='En revisión');
+  // Update existing validar-block if on dashboard
+  if(typeof renderValidarBlock==='function') renderValidarBlock();
+  // Update bottom nav badge if present
+  const navBadge=document.querySelector('[data-view="revisar"] .bnav-badge,.revisar-nav-badge');
+  if(navBadge){navBadge.style.display=pending.length?'':'none';navBadge.textContent=pending.length;}
+}
+</script>
