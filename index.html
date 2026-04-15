@@ -2059,7 +2059,8 @@ function openDlg({title,sub='',body,onSave}){
 }
 function closeDlg(){document.getElementById('dlg-edit').close();_dlgSave=null}
 document.getElementById('dlg-save').addEventListener('click',()=>{
-  if(_dlgSave&&_dlgSave()===false)return;
+  const result=_dlgSave&&_dlgSave();
+  if(result===false)return; // onSave handled everything itself
   saveDB();
   refreshAfterDelAction();
   closeDlg();
@@ -2283,6 +2284,7 @@ const handlers={
         const key='deliverable_'+id;
         if(!DB.comments[key]) DB.comments[key]=[];
         DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:t,time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`❌ Rechazado: ${reason}${affectsScore?' · Penalización -'+DB.scoreRules.penaltyFollowUp+'%':''}`,link:''});
+        saveDB();
         refreshAfterDelAction();
         closeDlg();
         toast(`Rechazado${affectsScore?' · -'+DB.scoreRules.penaltyFollowUp+'% al score':' · sin penalización'}`);
@@ -2330,6 +2332,7 @@ const handlers={
         const key='deliverable_'+id;
         if(!DB.comments[key]) DB.comments[key]=[];
         DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`➡️ Siguiente fase creada: "${title}" — fecha: ${fmtDate(due)}. Este entregable se marcó como completado.`,link:''});
+        saveDB();
         refreshAfterDelAction();
         closeDlg();
         toast(`Fase creada: ${title} ✓ — Original marcado como aprobado`);
