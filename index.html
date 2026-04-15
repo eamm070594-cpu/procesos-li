@@ -2247,50 +2247,34 @@ const handlers={
   rejectDel(id){
     if(SESSION?.role!=='admin'){toast('Solo el admin puede rechazar');return;}
     const d=byId(DB.deliverables,id);if(!d)return;
-    const uOpts=DB.users.map(u=>`<option value="${u.id}"${u.id===d.assigneeId?' selected':''}>${esc(u.name)}</option>`).join('');
-    openDlg({
-      title:'Rechazar entregable',
-      sub:esc(d.title),
-      body:`
-        <div style="padding:10px 12px;background:var(--bad-bg);border:1px solid rgba(217,53,53,.25);border-radius:var(--r);margin-bottom:12px;font-size:13px">
-          ⚠️ El entregable regresará a <b>En progreso</b>.
-        </div>
-        <label class="lbl">Motivo del rechazo *</label>
-        <textarea class="input" id="rj-reason" placeholder="Explica qué debe corregirse…" style="min-height:80px"></textarea>
-        <label class="lbl" style="margin-top:12px">¿Afecta el score de nómina?</label>
-        <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r);flex:1;background:var(--surface2)">
-            <input type="radio" name="rj-score" value="no" checked style="accent-color:var(--ok)"/>
-            <span>No afecta — corrección normal</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r);flex:1;background:var(--surface2)">
-            <input type="radio" name="rj-score" value="yes" style="accent-color:var(--bad)"/>
-            <span>Sí afecta — penaliza -${DB.scoreRules.penaltyFollowUp}%</span>
-          </label>
-        </div>
-        <label class="lbl" style="margin-top:12px">Nueva fecha límite (opcional)</label>
-        <input class="input" type="date" id="rj-newdue" value="${d.due||todayISO()}"/>`,
-      onSave:()=>{
-        const reason=(document.getElementById('rj-reason')?.value||'').trim();
-        if(!reason){toast('Escribe el motivo del rechazo');return false;}
-        const affectsScore=document.querySelector('input[name="rj-score"]:checked')?.value==='yes';
-        const newDue=document.getElementById('rj-newdue')?.value||d.due;
-        const t=todayISO();
-        d.status='En progreso';d.submittedAt=null;d.submittedBy=null;
-        d.rejectedAt=t;d.rejectedBy=SESSION?.name;
-        if(newDue&&newDue!==d.due){if(!d.originalDue)d.originalDue=d.due;d.due=newDue;}
-        if(affectsScore){d.scorePenalty=(d.scorePenalty||0)+DB.scoreRules.penaltyFollowUp;}
-        if(!DB.comments) DB.comments={};
-        const key='deliverable_'+id;
-        if(!DB.comments[key]) DB.comments[key]=[];
-        DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:t,time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`❌ Rechazado: ${reason}${affectsScore?' · Penalización -'+DB.scoreRules.penaltyFollowUp+'%':''}`,link:''});
-        saveDB();
-        refreshAfterDelAction();
-        closeDlg();
-        toast(`Rechazado${affectsScore?' · -'+DB.scoreRules.penaltyFollowUp+'% al score':' · sin penalización'}`);
-        return false; // prevent dlg-save from re-saving
-      }
+
+    // Simple prompt - no modal conflicts
+    const reason=window.prompt(`Rechazar: "${d.title}"\n\nEscribe el motivo del rechazo:`);
+    if(reason===null)return; // cancelled
+    if(!reason.trim()){toast('Escribe un motivo para rechazar');return;}
+
+    const affectsScore=window.confirm('¿Este rechazo afecta el score de nómina?\n\nAceptar = Sí penaliza\nCancelar = No penaliza');
+
+    const t=todayISO();
+    d.status='En progreso';
+    d.submittedAt=null;
+    d.submittedBy=null;
+    d.rejectedAt=t;
+    d.rejectedBy=SESSION?.name;
+    if(affectsScore) d.scorePenalty=(d.scorePenalty||0)+DB.scoreRules.penaltyFollowUp;
+
+    if(!DB.comments) DB.comments={};
+    const key='deliverable_'+id;
+    if(!DB.comments[key]) DB.comments[key]=[];
+    DB.comments[key].push({
+      id:uid('c'),author:SESSION?.name||'Admin',role:'admin',
+      date:t,time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),
+      text:`❌ Rechazado: ${reason.trim()}${affectsScore?' · Penalización -'+DB.scoreRules.penaltyFollowUp+'%':''}`,
+      link:''
     });
+    saveDB();
+    refreshAfterDelAction();
+    toast(`Rechazado${affectsScore?' · -'+DB.scoreRules.penaltyFollowUp+'% al score':' · sin penalización'}`);
   },
   nextPhase(id){
     const d=byId(DB.deliverables,id);if(!d)return;
