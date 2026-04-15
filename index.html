@@ -1271,15 +1271,28 @@ function calcKPIs(){
    NAVIGATION
 ══════════════════════════════════════════════════════ */
 let currentView='hoy';
+let _projectBackView='proyectos';
 
-function showView(v){
-  // Reset ingeniero/proyecto screens when navigating via main nav
-  _currentIngenieroId=null;_currentProyectoId=null;
-  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+function setActiveView(v){
+  document.querySelectorAll('.view').forEach(el=>{
+    el.classList.remove('active');
+    el.classList.add('hidden');
+  });
   const el=document.getElementById('view-'+v);
-  if(el){el.classList.add('active');el.scrollTop=0}
+  if(el){
+    el.classList.remove('hidden');
+    el.classList.add('active');
+    el.scrollTop=0;
+  }
   document.querySelectorAll('[data-view]').forEach(btn=>btn.classList.toggle('active',btn.dataset.view===v));
   currentView=v;
+}
+
+function showView(v){
+  _currentIngenieroId=null;
+  if(v!=='proyecto') _currentProyectoId=null;
+  if(v!=='ingeniero'&&v!=='proyecto') _projectBackView='proyectos';
+  setActiveView(v);
   renderView(v);
 }
 
@@ -1589,105 +1602,129 @@ function renderProyectos(){
   const fl=document.getElementById('proj-f-leader')?.value||'';
   const q=(document.getElementById('proj-search')?.value||'').trim().toLowerCase();
   const isAdmin=SESSION?.role==='admin';
+  const container=document.getElementById('proj-list');
 
-  // Preserve which groups are currently open before re-render
   const openGroups={
     'proj-group-activos':  !document.getElementById('proj-group-activos') || document.getElementById('proj-group-activos').style.display!=='none',
-    'proj-group-aprobar':  document.getElementById('proj-group-aprobar')?.style.display!=='none',
-    'proj-group-riesgo':   document.getElementById('proj-group-riesgo')?.style.display!=='none',
+    'proj-group-aprobar':  !document.getElementById('proj-group-aprobar') || document.getElementById('proj-group-aprobar').style.display!=='none',
+    'proj-group-riesgo':   !document.getElementById('proj-group-riesgo') || document.getElementById('proj-group-riesgo').style.display!=='none',
     'proj-group-cerrados': document.getElementById('proj-group-cerrados')?.style.display!=='none',
+  };
+
+  const priorityWeight={Alta:0,Media:1,Baja:2};
+  const normalize=v=>(v||'').toString().toLowerCase();
+  const sortProjects=list=>list.slice().sort((a,b)=>{
+    const pa=priorityWeight[a.priority]??9, pb=priorityWeight[b.priority]??9;
+    if(pa!==pb) return pa-pb;
+    const da=a.end||'9999-12-31', db=b.end||'9999-12-31';
+    if(da!==db) return da.localeCompare(db);
+    return a.name.localeCompare(b.name,'es',{sensitivity:'base'});
+  });
+  const projectMetrics=p=>{
+    const dels=DB.deliverables.filter(d=>d.projectId===p.id);
+    const approved=dels.filter(d=>d.status==='Aprobado').length;
+    const open=dels.filter(d=>d.status!=='Aprobado').length;
+    const overdue=dels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<todayISO()).length;
+    const blocked=dels.filter(d=>d.status!=='Aprobado'&&d.blocked).length;
+    const review=dels.filter(d=>d.status==='En revisión').length;
+    const teamCount=[...new Set(dels.map(d=>d.assigneeId).filter(Boolean).concat(p.leaderId?[p.leaderId]:[]))].length;
+    const pct=dels.length?Math.round((approved/dels.length)*100):0;
+    const lvl=p.status==='Cerrado'?'ok':overdue>0||blocked>0?'bad':review>0?'warn':pct>=80?'ok':pct>=50?'warn':'bad';
+    return{dels,approved,open,overdue,blocked,review,teamCount,pct,lvl};
   };
 
   let all=DB.projects
     .filter(p=>!fl||p.leaderId===fl)
-    .filter(p=>!q||p.name.toLowerCase().includes(q));
+    .filter(p=>{
+      if(!q) return true;
+      const leader=userName(p.leaderId);
+      return normalize(p.name).includes(q)||normalize(p.notes).includes(q)||normalize(leader).includes(q)||normalize(p.priority).includes(q)||normalize(p.status).includes(q);
+    });
 
-  // Groups
-  const porAprobar = all.filter(p=>p.status==='En revisión'||p.status==='Por aprobar');
-  const enRiesgo   = all.filter(p=>p.status==='En riesgo'||p.status==='Detenido');
-  const cerrados   = all.filter(p=>p.status==='Cerrado');
-  const activos    = all.filter(p=>!['En revisión','Por aprobar','En riesgo','Detenido','Cerrado'].includes(p.status));
+  const porAprobar=sortProjects(all.filter(p=>p.status==='En revisión'||p.status==='Por aprobar'));
+  const enRiesgo=sortProjects(all.filter(p=>p.status==='En riesgo'||p.status==='Detenido'));
+  const cerrados=sortProjects(all.filter(p=>p.status==='Cerrado'));
+  const activos=sortProjects(all.filter(p=>!['En revisión','Por aprobar','En riesgo','Detenido','Cerrado'].includes(p.status)));
 
-  const container=document.getElementById('proj-list');
+  const totalDeliverables=all.reduce((sum,p)=>sum+DB.deliverables.filter(d=>d.projectId===p.id).length,0);
+  const totalOverdue=all.reduce((sum,p)=>sum+projectMetrics(p).overdue,0);
+  const totalBlocked=all.reduce((sum,p)=>sum+projectMetrics(p).blocked,0);
+
+  const summaryHTML=`<div class="kpi-grid" style="margin-bottom:12px">
+    <div class="kpi-card ok"><div class="kpi-label">Proyectos visibles</div><div class="kpi-value">${all.length}</div><div class="kpi-hint">Con filtros aplicados</div></div>
+    <div class="kpi-card ${activos.length?'warn':'ok'}"><div class="kpi-label">Activos</div><div class="kpi-value">${activos.length}</div><div class="kpi-hint">${porAprobar.length} por aprobar</div></div>
+    <div class="kpi-card ${totalOverdue?'bad':'ok'}"><div class="kpi-label">Vencidos</div><div class="kpi-value">${totalOverdue}</div><div class="kpi-hint">${totalBlocked} bloqueados</div></div>
+    <div class="kpi-card ${cerrados.length?'ok':'warn'}"><div class="kpi-label">Terminados</div><div class="kpi-value">${cerrados.length}</div><div class="kpi-hint">${totalDeliverables} entregables totales</div></div>
+  </div>`;
 
   function projCard(p){
-    const dels=DB.deliverables.filter(d=>d.projectId===p.id);
-    const done=dels.filter(d=>d.status==='Aprobado').length;
-    const pct=dels.length?Math.round((done/dels.length)*100):0;
-    const lvl=pct>=85?'ok':pct>=70?'warn':'bad';
-    const stTag=p.status==='Cerrado'?'<span class="tag ok">Cerrado</span>':
-      p.status==='En riesgo'?'<span class="tag warn">En riesgo</span>':
-      p.status==='Detenido'?'<span class="tag bad">Detenido</span>':
-      p.status==='Por aprobar'||p.status==='En revisión'?'<span class="tag blue">Por aprobar</span>':
-      '<span class="tag blue">Activo</span>';
-
-    // Leader avatar (igual que en dashboard)
+    const m=projectMetrics(p);
     const leader=byId(DB.users,p.leaderId);
     const photo=userPhotoURL(leader?.email);
     const initials=(leader?.name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
     const sem=leader?semaforoUser(leader.id):{level:'gray'};
+    const statusTagHTML=p.status==='Cerrado'?'<span class="tag ok">Cerrado</span>':
+      p.status==='En riesgo'?'<span class="tag warn">En riesgo</span>':
+      p.status==='Detenido'?'<span class="tag bad">Detenido</span>':
+      p.status==='Por aprobar'||p.status==='En revisión'?'<span class="tag blue">Por aprobar</span>':'<span class="tag blue">Activo</span>';
     const avatarEl=photo
-      ?`<img src="${photo}" alt="${esc(leader?.name||'')}"
-          style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2.5px solid var(--${sem.level==='ok'?'ok':sem.level==='warn'?'warn':'bad'})"
-          onerror="this.outerHTML='<div class=\\'person-avatar ${sem.level}\\' style=\\'width:44px;height:44px;font-size:15px\\'>${initials}</div>'">`
-      :`<div class="person-avatar ${sem.level}" style="width:44px;height:44px;font-size:15px">${initials}</div>`;
-
-    return`<div class="card" style="margin-bottom:10px;display:flex;gap:14px;align-items:flex-start">
-      <!-- Avatar líder -->
-      <div style="flex:0 0 44px;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:2px">
-        ${avatarEl}
-        <span style="font-size:9px;color:var(--muted);text-align:center;max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(leader?.name||'—')}</span>
-      </div>
-      <!-- Contenido -->
-      <div style="flex:1;min-width:0">
-        <div class="flex-between flex-wrap" style="gap:8px;margin-bottom:6px">
-          <div>
-            <div style="font-weight:700;font-size:15px">${esc(p.name)}</div>
-            <div class="small muted">${fmtDate(p.start)} → ${fmtDate(p.end)}</div>
+      ?`<img src="${photo}" alt="${esc(leader?.name||'')}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2.5px solid var(--${sem.level==='ok'?'ok':sem.level==='warn'?'warn':'bad'});flex:0 0 48px" onerror="this.outerHTML='<div class=\'person-avatar ${sem.level}\' style=\'width:48px;height:48px;font-size:16px;flex:0 0 48px\'>${initials}</div>'">`
+      :`<div class="person-avatar ${sem.level}" style="width:48px;height:48px;font-size:16px;flex:0 0 48px">${initials}</div>`;
+    return`<div class="card" style="margin-bottom:10px;padding:16px">
+      <div class="flex-between flex-wrap" style="align-items:flex-start;gap:12px">
+        <div style="display:flex;gap:12px;align-items:flex-start;min-width:0;flex:1">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            ${avatarEl}
+            <span style="font-size:10px;color:var(--muted);max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(leader?.name||'Sin líder')}</span>
           </div>
-          <div class="flex flex-wrap" style="gap:6px">${stTag}${priorityTag(p.priority)}</div>
+          <div style="min-width:0;flex:1">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+              <div style="font-weight:700;font-size:16px;line-height:1.2">${esc(p.name)}</div>
+              ${statusTagHTML}
+              ${priorityTag(p.priority)}
+            </div>
+            <div class="small muted" style="margin-bottom:8px">${fmtDate(p.start)} → ${fmtDate(p.end)} · ${m.teamCount} integrante${m.teamCount===1?'':'s'} · ${m.dels.length} entregable${m.dels.length===1?'':'s'}</div>
+            <div class="person-bar-wrap" style="margin-bottom:8px">
+              <div class="progress-bar"><div class="progress-bar-fill ${m.lvl}" style="width:${m.pct}%"></div></div>
+              <span class="progress-pct ${m.lvl}">${m.pct}%</span>
+              <span class="small muted">${m.approved}/${m.dels.length||0} aprobados</span>
+            </div>
+            <div class="flex flex-wrap" style="gap:6px;margin-bottom:${p.notes?8:0}px">
+              <span class="tag gray">Abiertos: ${m.open}</span>
+              <span class="tag ${m.overdue?'bad':'gray'}">Vencidos: ${m.overdue}</span>
+              <span class="tag ${m.blocked?'bad':'gray'}">Bloqueados: ${m.blocked}</span>
+              <span class="tag ${m.review?'blue':'gray'}">En revisión: ${m.review}</span>
+            </div>
+            ${p.notes?`<div class="small muted" style="padding:8px 10px;background:var(--surface2);border-radius:10px;border:1px solid var(--border2)">${esc(p.notes)}</div>`:''}
+          </div>
         </div>
-        <div class="person-bar-wrap" style="margin-bottom:8px">
-          <div class="progress-bar"><div class="progress-bar-fill ${lvl}" style="width:${pct}%"></div></div>
-          <span class="progress-pct ${lvl}">${pct}%</span>
-          <span class="small muted">${done}/${dels.length} entregables</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end">
+          <button class="btn xs primary" data-open-proj-page="${p.id}">Abrir</button>
+          <button class="btn xs" data-open-proj="${p.id}">Entregables</button>
+          <button class="btn xs" data-open-proj-cmt="${p.id}">Comentarios</button>
+          ${isAdmin?`<button class="btn xs" data-add-del-proj="${p.id}">＋ Entregable</button><button class="btn xs" data-edit-proj="${p.id}">Editar</button><button class="btn xs ok" data-close-proj="${p.id}">✓ Terminar</button><button class="btn xs danger" data-del-proj="${p.id}">Eliminar</button>`:''}
         </div>
-        ${p.notes?`<div class="small muted" style="margin-bottom:8px">${esc(p.notes)}</div>`:''}
-        <div class="flex flex-wrap" style="gap:6px">
-          <button class="btn xs" data-open-proj="${p.id}">📋 Entregables</button>
-          <button class="btn xs" data-open-proj-cmt="${p.id}">💬 Comentarios</button>
-          ${isAdmin?`<button class="btn xs" data-add-del-proj="${p.id}">＋ Entregable</button><button class="btn xs" data-edit-proj="${p.id}">Editar</button><button class="btn xs ok" data-close-proj="${p.id}">✓ Proyecto terminado</button><button class="btn xs danger" data-del-proj="${p.id}">Eliminar</button>`:''}
-        </div>
-        <div id="proj-dels-${p.id}" class="hidden"></div>
-        <div id="proj-cmt-${p.id}" class="hidden"></div>
       </div>
+      <div id="proj-dels-${p.id}" class="hidden"></div>
+      <div id="proj-cmt-${p.id}" class="hidden"></div>
     </div>`;
   }
 
-  // Always show collapsible groups
-  if(!all.length){container.innerHTML='<div class="empty">No hay proyectos.</div>';return}
-
-  let html='';
-
-  if(activos.length){
-    const open=openGroups['proj-group-activos']!==false;
-    html+=collapsibleGroup('Activos',activos.length,'ok','proj-group-activos',activos.map(projCard).join(''),open);
-  }
-  if(porAprobar.length){
-    const open=!!openGroups['proj-group-aprobar'];
-    html+=collapsibleGroup('Por aprobar',porAprobar.length,'blue','proj-group-aprobar',porAprobar.map(projCard).join(''),open);
-  }
-  if(enRiesgo.length){
-    const open=!!openGroups['proj-group-riesgo'];
-    html+=collapsibleGroup('En riesgo / Detenidos',enRiesgo.length,'warn','proj-group-riesgo',enRiesgo.map(projCard).join(''),open);
-  }
-  if(cerrados.length){
-    const open=!!openGroups['proj-group-cerrados'];
-    html+=collapsibleGroup('Terminados',cerrados.length,'gray','proj-group-cerrados',
-      terminadosPorIngeniero(cerrados)+cerrados.map(projCard).join(''),open);
+  function groupHTML(label,count,tagCls,id,items,open,extra=''){
+    const content=items.length?items.map(projCard).join(''):`<div class="card"><div class="empty" style="padding:22px 16px">Sin proyectos en esta sección.</div></div>`;
+    return collapsibleGroup(label,count,tagCls,id,extra+content,open);
   }
 
-  container.innerHTML=html;
+  if(!all.length){
+    container.innerHTML=summaryHTML+'<div class="empty">No hay proyectos con esos filtros.</div>';
+    return;
+  }
+
+  container.innerHTML=summaryHTML
+    +groupHTML('Activos',activos.length,'ok','proj-group-activos',activos,openGroups['proj-group-activos']!==false)
+    +groupHTML('Por aprobar',porAprobar.length,'blue','proj-group-aprobar',porAprobar,openGroups['proj-group-aprobar']!==false)
+    +groupHTML('En riesgo / detenidos',enRiesgo.length,'warn','proj-group-riesgo',enRiesgo,openGroups['proj-group-riesgo']!==false)
+    +groupHTML('Terminados',cerrados.length,'gray','proj-group-cerrados',cerrados,!!openGroups['proj-group-cerrados'],cerrados.length?terminadosPorIngeniero(cerrados):'');
 }
 
 function collapsibleGroup(label, count, tagCls, id, innerHTML, open=false){
@@ -2093,20 +2130,15 @@ function renderEquipo(){
 function openIngeniero(userId){
   const u=byId(DB.users,userId);if(!u)return;
   _currentIngenieroId=userId;
-  currentView='ingeniero';
-  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
-  const sc=document.getElementById('view-ingeniero');
-  if(sc){sc.classList.remove('hidden');sc.scrollTop=0;}
+  _projectBackView='equipo';
+  setActiveView('ingeniero');
   renderIngeniero(userId);
 }
 
 function goBackFromIngeniero(){
-  currentView='equipo';
   _currentIngenieroId=null;
-  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
-  const sc=document.getElementById('view-equipo');
-  if(sc)sc.classList.remove('hidden');
-  document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='equipo'));
+  setActiveView('equipo');
+  renderEquipo();
 }
 
 
@@ -2216,7 +2248,7 @@ function fillSelect(id,arr,defaultLabel,valKey='id',labelKey='name'){
    EVENT DELEGATION — TABLE ACTIONS
 ══════════════════════════════════════════════════════ */
 document.body.addEventListener('click',e=>{
-  const btn=e.target.closest('[data-edit-del],[data-approve-del],[data-del-del],[data-submit-del],[data-reject-del],[data-next-phase],[data-run-r],[data-edit-r],[data-del-r],[data-edit-proj],[data-del-proj],[data-open-proj],[data-add-del-proj],[data-edit-u],[data-del-u],[data-open-del-cmt],[data-open-proj-cmt]');
+  const btn=e.target.closest('[data-edit-del],[data-approve-del],[data-del-del],[data-submit-del],[data-reject-del],[data-next-phase],[data-run-r],[data-edit-r],[data-del-r],[data-edit-proj],[data-del-proj],[data-open-proj],[data-open-proj-page],[data-add-del-proj],[data-edit-u],[data-del-u],[data-open-del-cmt],[data-open-proj-cmt],[data-close-proj]');
   if(!btn)return;
 
   // Comentarios — verificación explícita primero
@@ -2250,6 +2282,7 @@ document.body.addEventListener('click',e=>{
     ['data-edit-proj','editProj'],
     ['data-del-proj','delProj'],
     ['data-open-proj','openProj'],
+    ['data-open-proj-page','openProjPage'],
     ['data-add-del-proj','addDelProj'],
     ['data-edit-u','editU'],
     ['data-del-u','delU'],
@@ -2452,7 +2485,7 @@ const handlers={
   openProj(id){
     const el=document.getElementById(`proj-dels-${id}`);if(!el)return;
     if(!el.classList.contains('hidden')){el.classList.add('hidden');return}
-    const dels=DB.deliverables.filter(d=>d.projectId===id);
+    const dels=DB.deliverables.filter(d=>d.projectId===id).sort((a,b)=>(a.due||'9999-12-31').localeCompare(b.due||'9999-12-31'));
     const isAdmin=SESSION?.role==='admin';
     el.innerHTML=`<div class="hr"></div><div class="tbl-wrap"><table>
       <thead><tr><th>Estado</th><th>Entregable</th><th>Responsable</th><th>Fecha</th><th class="right">Acción</th></tr></thead>
@@ -2461,7 +2494,7 @@ const handlers={
         const isMyDel=d.assigneeId===SESSION?.userId;
         return`<tr>
           <td>${statusTag(d.status,d.due)}</td>
-          <td><b>${esc(d.title)}</b></td>
+          <td><b>${esc(d.title)}</b><div class="small muted">${esc((d.notes||'').slice(0,90))}</div></td>
           <td>${userName(d.assigneeId)}</td>
           <td>${fmtDueFull(d.due,d.originalDue)}</td>
           <td class="right">
@@ -2473,6 +2506,14 @@ const handlers={
       }).join('')||`<tr><td colspan="5" class="empty">Sin entregables.</td></tr>`}</tbody>
     </table></div>`;
     el.classList.remove('hidden');
+  },
+  openProjPage(id){
+    _projectBackView='proyectos';
+    _currentProyectoId=id;
+    setActiveView('proyecto');
+    const backBtn=document.getElementById('proj-back-btn');
+    if(backBtn) backBtn.textContent='◀ Proyectos';
+    renderProyectoDetail(id);
   },
 
   addDelProj(id){
@@ -3106,10 +3147,8 @@ function renderIngeniero(userId){
 
 function openProyectoFromIngeniero(projId){
   _currentProyectoId=projId;
-  currentView='proyecto';
-  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
-  const sc=document.getElementById('view-proyecto');
-  if(sc){sc.classList.remove('hidden');sc.scrollTop=0;}
+  _projectBackView='ingeniero';
+  setActiveView('proyecto');
   const backBtn=document.getElementById('proj-back-btn');
   if(backBtn){
     const u=byId(DB.users,_currentIngenieroId);
@@ -3119,12 +3158,17 @@ function openProyectoFromIngeniero(projId){
 }
 
 function goBackFromProyecto(){
-  currentView='ingeniero';
+  const backBtn=document.getElementById('proj-back-btn');
   _currentProyectoId=null;
-  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
-  const sc=document.getElementById('view-ingeniero');
-  if(sc){sc.classList.remove('hidden');sc.scrollTop=0;}
-  if(_currentIngenieroId) renderIngeniero(_currentIngenieroId);
+  if(_projectBackView==='ingeniero'&&_currentIngenieroId){
+    setActiveView('ingeniero');
+    if(backBtn) backBtn.textContent='◀ Equipo';
+    renderIngeniero(_currentIngenieroId);
+    return;
+  }
+  setActiveView('proyectos');
+  if(backBtn) backBtn.textContent='◀ Volver';
+  renderProyectos();
 }
 
 function renderProyectoDetail(projId){
@@ -3195,7 +3239,7 @@ function renderProyectoDetail(projId){
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           ${(canFinish&&(isAdmin||isMyDel))?`<button class="btn xs primary" onclick="submitDelAndRefresh('${d.id}','${projId}')">✓ Terminado</button>`:''}
           ${(d.status==='En revisión'&&isAdmin)?`<button class="btn xs ok" onclick="approveDelAndRefresh('${d.id}','${projId}')">Aprobar</button><button class="btn xs danger" onclick="rejectAndRefresh('${d.id}','${projId}')">Rechazar</button>`:''}
-          ${isAdmin?`<button class="btn xs" onclick="nextPhaseAndRefresh('${d.id}','${projId}')">➡️ Fase</button><button class="btn xs" onclick="editDelModal('${d.id}')">Editar</button><button class="btn xs danger" onclick="delDelAndRefresh('${d.id}','${projId}')">✕</button>`:''}
+          ${isAdmin?`<button class="btn xs" onclick="nextPhaseAndRefresh('${d.id}','${projId}')">➡️ Fase</button><button class="btn xs" onclick="handlers.editDel('${d.id}')">Editar</button><button class="btn xs danger" onclick="delDelAndRefresh('${d.id}','${projId}')">✕</button>`:''}
         </div>
       </div>`;
     });
@@ -3275,6 +3319,10 @@ function openAddDelToProj2(projId){
       saveDB();renderProyectoDetail(projId);toast('Entregable creado ✓');
     }
   });
+}
+
+function editDelModal(id){
+  handlers.editDel(id);
 }
 
 function updateRevisarBadge(){
