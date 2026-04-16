@@ -2957,7 +2957,10 @@ async function gsPull(){
       const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
       localStorage.setItem(LS_SYNC,now);
       const el=document.getElementById('last-sync');if(el)el.textContent=now;
-      updateSyncUI('ok');renderView(currentView);
+      updateSyncUI('ok');
+      if(currentView==='proyecto'&&_currentProyectoId) renderProyectoDetail(_currentProyectoId);
+      else if(currentView==='ingeniero'&&_currentIngenieroId) renderIngeniero(_currentIngenieroId);
+      else renderView(currentView);
     } else if(json.ok&&!json.data){updateSyncUI('ok');_syncBusy=false;await gsPush();return}
     else throw new Error(json.error||'Error');
   }catch{updateSyncUI('error')}
@@ -2979,16 +2982,39 @@ function getUsers(){
   return list;
 }
 
-function doLogin(){
+async function doLogin(){
   const inputU=document.getElementById('li-user').value.trim().toLowerCase();
   const inputP=document.getElementById('li-pass').value;
+  const btn=document.getElementById('btn-login');
+  if(btn){btn.disabled=true;btn.textContent='Verificando...';}
+
+  // If Sheets URL configured, pull fresh data first
+  if(GS_URL){
+    try{
+      const res=await fetch(GS_URL+'?action=load');
+      const json=await res.json();
+      if(json.ok&&json.data){
+        DB=json.data;
+        if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
+        if(!DB.monthlyScores)DB.monthlyScores=[];
+        if(!DB.incidents)DB.incidents=[];
+        if(!DB.comments)DB.comments={};
+        localStorage.setItem(LS,JSON.stringify(DB));
+      }
+    }catch(e){
+      // Sheets failed — continue with local data
+      console.warn('Sheets pull failed, using local data');
+    }
+  }
+
+  if(btn){btn.disabled=false;btn.textContent='Iniciar sesión';}
+
   const allUsers=getUsers();
   const found=allUsers.find(u=>u.username===inputU&&u.password===inputP);
   if(!found){
     const errEl=document.getElementById('login-err');
-    // Show hint with valid usernames
-    const names=allUsers.map(u=>u.username).join(', ');
-    errEl.textContent=`Usuario o contraseña incorrectos. Usuarios disponibles: ${names}`;
+    const names=allUsers.map(u=>u.username).join(' · ');
+    errEl.textContent='Incorrecto. Usuarios: '+names;
     errEl.style.display='block';
     return;
   }
@@ -2996,7 +3022,6 @@ function doLogin(){
   sessionStorage.setItem('li_sess',JSON.stringify(SESSION));
   applyRole();
   document.getElementById('login-screen').style.display='none';
-  // Admin goes to hoy/dashboard, users go to equipo
   renderView(found.role==='admin'?'hoy':'equipo');
 }
 
@@ -3041,8 +3066,15 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_deferredIn
       SESSION=JSON.parse(saved);
       applyRole();
       document.getElementById('login-screen').style.display='none';
-      if(GS_URL)gsPull();
-      else renderView(SESSION.role==='admin'?'hoy':'equipo');
+      if(GS_URL){
+        gsPull().then(()=>{
+          renderView(SESSION.role==='admin'?'hoy':'equipo');
+        }).catch(()=>{
+          renderView(SESSION.role==='admin'?'hoy':'equipo');
+        });
+      } else {
+        renderView(SESSION.role==='admin'?'hoy':'equipo');
+      }
     }catch{SESSION=null}
   }
 
