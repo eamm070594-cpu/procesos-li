@@ -2096,19 +2096,20 @@ function openIngeniero(userId){
   const u=byId(DB.users,userId);if(!u)return;
   _currentIngenieroId=userId;
   currentView='ingeniero';
-  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   const sc=document.getElementById('view-ingeniero');
-  if(sc){sc.classList.remove('hidden');sc.scrollTop=0;}
+  if(sc){sc.classList.add('active');sc.classList.remove('hidden');sc.scrollTop=0;}
   renderIngeniero(userId);
 }
 
 function goBackFromIngeniero(){
   currentView='equipo';
   _currentIngenieroId=null;
-  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   const sc=document.getElementById('view-equipo');
-  if(sc)sc.classList.remove('hidden');
+  if(sc){sc.classList.add('active');}
   document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='equipo'));
+  renderEquipo();
 }
 
 
@@ -3138,9 +3139,9 @@ function renderIngeniero(userId){
 function openProyectoFromIngeniero(projId){
   _currentProyectoId=projId;
   currentView='proyecto';
-  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   const sc=document.getElementById('view-proyecto');
-  if(sc){sc.classList.remove('hidden');sc.scrollTop=0;}
+  if(sc){sc.classList.add('active');sc.classList.remove('hidden');sc.scrollTop=0;}
   const backBtn=document.getElementById('proj-back-btn');
   if(backBtn){
     const u=byId(DB.users,_currentIngenieroId);
@@ -3152,9 +3153,9 @@ function openProyectoFromIngeniero(projId){
 function goBackFromProyecto(){
   currentView='ingeniero';
   _currentProyectoId=null;
-  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   const sc=document.getElementById('view-ingeniero');
-  if(sc){sc.classList.remove('hidden');sc.scrollTop=0;}
+  if(sc){sc.classList.add('active');sc.classList.remove('hidden');sc.scrollTop=0;}
   if(_currentIngenieroId) renderIngeniero(_currentIngenieroId);
 }
 
