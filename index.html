@@ -2536,8 +2536,18 @@ const handlers={
       <label class="lbl">Responsabilidades principales</label>
       <textarea class="input" id="eu-resp" placeholder="Describe las responsabilidades clave del puesto…">${esc(dgp.responsabilidades||'')}</textarea>
       <div class="hr"></div>
-      <label class="lbl">Contraseña (dejar vacío = sin cambio)</label>
-      <input class="input" type="password" id="eu-pass" placeholder="Nueva contraseña"/>`,
+      <div class="hr"></div>
+      <div style="padding:10px;background:var(--surface2);border-radius:var(--r);font-size:12px;margin-bottom:4px">🔑 <b>Credenciales de acceso</b></div>
+      <div class="form-row">
+        <div>
+          <label class="lbl">Usuario (para iniciar sesión)</label>
+          <input class="input" id="eu-username" value="${esc(u.customUsername||(u.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'.')))}" placeholder="nombre.apellido"/>
+        </div>
+        <div>
+          <label class="lbl">Contraseña (vacío = sin cambio)</label>
+          <input class="input" type="password" id="eu-pass" placeholder="Nueva contraseña"/>
+        </div>
+      </div>`,
       onSave:()=>{
         u.name=document.getElementById('eu-name').value.trim();
         u.role=document.getElementById('eu-role').value;
@@ -2550,9 +2560,12 @@ const handlers={
           reporta:document.getElementById('eu-reporta').value.trim(),
           responsabilidades:document.getElementById('eu-resp').value.trim(),
         };
+        const uname=(document.getElementById('eu-username')?.value||'').trim().toLowerCase();
+        if(uname) u.customUsername=uname;
         const p=document.getElementById('eu-pass').value;
         if(p)u.loginPassword=p;
-        toast('Usuario actualizado ✓');
+        toast(`Usuario actualizado ✓ · Entra con: ${uname||u.customUsername} / ${p||'(contraseña sin cambio)'}`);
+
       }
     });
   },
@@ -2822,9 +2835,23 @@ document.getElementById('btn-add-user')?.addEventListener('click',()=>{
     onSave:()=>{
       const name=(document.getElementById('nu-name')?.value||'').trim();
       if(!name){toast('Falta nombre');return false}
-      const p=document.getElementById('nu-pass')?.value||null;
-      DB.users.push({id:uid('u'),name,role:document.getElementById('nu-role').value,team:(document.getElementById('nu-team')?.value||'').trim(),email:(document.getElementById('nu-email')?.value||'').trim().toLowerCase(),loginPassword:p,dgp:{}});
-      toast('Usuario creado ✓');
+      const username=(document.getElementById('nu-username')?.value||'').trim().toLowerCase();
+      if(!username){toast('Falta nombre de usuario');return false}
+      const p=(document.getElementById('nu-pass')?.value||'').trim();
+      if(!p){toast('Falta contraseña');return false}
+      // Check username not taken
+      const taken=getUsers().some(u=>u.username===username);
+      if(taken){toast('Ese usuario ya existe');return false}
+      DB.users.push({
+        id:uid('u'),name,
+        role:document.getElementById('nu-role').value,
+        team:(document.getElementById('nu-team')?.value||'').trim(),
+        email:(document.getElementById('nu-email')?.value||'').trim().toLowerCase(),
+        loginPassword:p,
+        customUsername:username,
+        dgp:{}
+      });
+      toast(`Usuario creado ✓ · Entra con: ${username} / ${p}`);
     }
   });
 });
@@ -2945,7 +2972,8 @@ setInterval(()=>{if(GS_URL&&!_syncBusy&&Date.now()-_lastSave>60000)gsPull()},300
 function getUsers(){
   const list=[{username:ADMIN_USER,password:ADMIN_PASS,role:'admin',name:'Admin',userId:null}];
   DB.users.forEach(u=>{
-    const norm=u.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'.');
+    // Use customUsername if set, otherwise normalize from name
+    const norm=u.customUsername||u.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'.');
     list.push({username:norm,password:u.loginPassword||DEFAULT_PASS,role:'user',name:u.name,userId:u.id});
   });
   return list;
