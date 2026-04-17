@@ -2254,7 +2254,7 @@ function fillSelect(id,arr,defaultLabel,valKey='id',labelKey='name'){
    EVENT DELEGATION — TABLE ACTIONS
 ══════════════════════════════════════════════════════ */
 document.body.addEventListener('click',e=>{
-  const btn=e.target.closest('[data-edit-del],[data-approve-del],[data-del-del],[data-submit-del],[data-reject-del],[data-next-phase],[data-run-r],[data-edit-r],[data-del-r],[data-edit-proj],[data-del-proj],[data-open-proj],[data-add-del-proj],[data-edit-u],[data-del-u],[data-open-del-cmt],[data-open-proj-cmt]');
+  const btn=e.target.closest('[data-edit-del],[data-approve-del],[data-del-del],[data-submit-del],[data-reject-del],[data-next-phase],[data-close-proj],[data-run-r],[data-edit-r],[data-del-r],[data-edit-proj],[data-del-proj],[data-open-proj],[data-add-del-proj],[data-edit-u],[data-del-u],[data-open-del-cmt],[data-open-proj-cmt]');
   if(!btn)return;
 
   // Comentarios — verificación explícita primero
