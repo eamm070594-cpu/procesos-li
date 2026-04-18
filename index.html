@@ -1674,6 +1674,7 @@ function openQuoteEditor(q){
       <div class="right"></div>
       <button class="btn small" id="btnQuotePDF2">🖨 PDF / Imprimir</button>
       <button class="btn ${q.status==="authorized"?"danger":"primary"}" id="btnToggleAuth">${q.status==="authorized"?"Desautorizar":"Autorizar"}</button>
+      <button class="btn primary small" id="btnSaveQuoteOld">💾 Guardar</button>
       <button class="btn" id="btnBackQuotes">Volver</button>
     </div>
 
@@ -1854,7 +1855,8 @@ function openQuoteEditor(q){
   on($("qQtyInput"),"blur", ()=>{ q.qty=Math.max(1,Number($("qQtyInput").value||1)); save(); renderLines(); });
   on($("qQtyInput"),"keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); $("qQtyInput").blur(); }});
   on($("btnToggleAuth"),"click", ()=>{ q.status=(q.status==="authorized")?"draft":"authorized"; save(); renderProjectsList(); renderMain(); });
-  on($("btnBackQuotes"),"click", ()=>{ mainTab="quotes"; renderMain(); });
+  on($("btnBackQuotes"),"click", ()=>{ q.name=$("qNameInput").value.trim()||"Cotización"; save(); mainTab="quotes"; renderMain(); });
+  on($("btnSaveQuoteOld"),"click", ()=>{ q.name=$("qNameInput").value.trim()||"Cotización"; save(); const btn=$("btnSaveQuoteOld"); if(btn){ btn.textContent="✅ Guardado"; setTimeout(()=>{ if(btn) btn.textContent="💾 Guardar"; },1500); } });
   on($("btnQuotePDF2"),"click", ()=>{
     const proj = db.projects.find(x=>x.id===q.projectId)||{name:""};
     const sibling = db.quotes.filter(x=>x.projectId===q.projectId && x.id!==q.id);
