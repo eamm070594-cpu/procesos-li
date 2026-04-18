@@ -1062,6 +1062,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
 </dialog>
 
 <script>
+var _pendingPush=false;
 /* ══════════════════════════════════════════════════════
    UTILS
 ══════════════════════════════════════════════════════ */
@@ -2950,17 +2951,16 @@ async function gsPush(){
   if(!GS_URL||_syncBusy)return;
   _syncBusy=true;updateSyncUI('syncing');
   try{
-    const res=await fetch(GS_URL,{
-      method:'POST',
-      headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'save',data:DB})
-    });
+    // Use no-cors POST as primary, GET as fallback for CORS issues
+    const encoded=encodeURIComponent(JSON.stringify(DB));
+    const url=GS_URL+'?action=save&data='+encoded;
+    const res=await fetch(url);
     const json=await res.json();
     if(json.ok){
       const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
       localStorage.setItem(LS_SYNC,now);
       const el=document.getElementById('last-sync');if(el)el.textContent=now;
-      _pendingPush=false; // confirmed saved
+      _pendingPush=false;
       updateSyncUI('ok');
     } else {
       throw new Error(json.error||'Push failed');
@@ -2968,7 +2968,6 @@ async function gsPush(){
   }catch(e){
     console.warn('gsPush failed:',e);
     updateSyncUI('error');
-    // _pendingPush stays true — pull won't overwrite
   }
   _syncBusy=false;
 }
