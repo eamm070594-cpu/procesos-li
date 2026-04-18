@@ -2922,7 +2922,6 @@ document.getElementById('fab')?.addEventListener('click',()=>{document.getElemen
 document.getElementById('btn-add-proj')?.addEventListener('click',()=>{document.getElementById('qa-type').value='project';qaRender();document.getElementById('dlg-qa').showModal()});
 document.getElementById('btn-add-del')?.addEventListener('click',()=>{document.getElementById('qa-type').value='deliverable';qaRender();document.getElementById('dlg-qa').showModal()});
 document.getElementById('btn-add-user')?.addEventListener('click',()=>{
-  const uOpts=DB.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
   openDlg({title:'Agregar usuario',body:`
     <div class="form-row"><div><label class="lbl">Nombre *</label><input class="input" id="nu-name" placeholder="Ej: Israel"/></div>
     <div><label class="lbl">Rol</label><select class="select-input" id="nu-role"><option>Admin</option><option selected>Líder</option><option>Colaborador</option></select></div></div>
@@ -2931,17 +2930,18 @@ document.getElementById('btn-add-user')?.addEventListener('click',()=>{
     <div style="padding:8px 10px;background:var(--accent-bg);border-radius:var(--r);font-size:11px;color:var(--muted);margin-bottom:4px">
       📷 La foto se carga automáticamente del correo de Google Workspace
     </div>
+    <label class="lbl">Nombre de usuario (para login) *</label><input class="input" id="nu-username" placeholder="Ej: israel.garcia"/>
     <label class="lbl">Contraseña (dejar en blanco = ${DEFAULT_PASS})</label><input class="input" type="password" id="nu-pass"/>`,
     onSave:()=>{
       const name=(document.getElementById('nu-name')?.value||'').trim();
       if(!name){toast('Falta nombre');return false}
-      const username=(document.getElementById('nu-username')?.value||'').trim().toLowerCase();
-      if(!username){toast('Falta nombre de usuario');return false}
-      const p=(document.getElementById('nu-pass')?.value||'').trim();
-      if(!p){toast('Falta contraseña');return false}
+      const usernameInput=(document.getElementById('nu-username')?.value||'').trim().toLowerCase();
+      // If no username typed, auto-generate from name
+      const username=usernameInput||name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'.');
+      const p=(document.getElementById('nu-pass')?.value||'').trim()||DEFAULT_PASS;
       // Check username not taken
       const taken=getUsers().some(u=>u.username===username);
-      if(taken){toast('Ese usuario ya existe');return false}
+      if(taken){toast('Ese usuario ya existe: '+username);return false}
       DB.users.push({
         id:uid('u'),name,
         role:document.getElementById('nu-role').value,
@@ -2951,7 +2951,8 @@ document.getElementById('btn-add-user')?.addEventListener('click',()=>{
         customUsername:username,
         dgp:{}
       });
-      toast(`Usuario creado ✓ · Entra con: ${username} / ${p}`);
+      saveDB();
+      toast(`Usuario creado ✓ · Login: ${username} / ${p}`);
     }
   });
 });
@@ -3227,8 +3228,6 @@ function logout(){
   SESSION=null;sessionStorage.removeItem('li_sess');location.reload();
 }
 </script>
-</body>
-</html>
 <script>
 // ── INGENIERO DETAIL ──
 var _currentIngenieroId=null;
@@ -3438,11 +3437,11 @@ function renderProyectoDetail(projId){
   body.innerHTML=html;
 }
 
-// Actions that refresh the project detail screen
+/* ── Funciones inline usadas por renderProyectoDetail ── */
 function submitDelAndRefresh(id,projId){
   const d=byId(DB.deliverables,id);if(!d)return;
   d.status='En revisión';d.submittedAt=todayISO();d.submittedBy=SESSION?.userId;
-  refreshAfterDelAction();toast('Enviado para revisión ✓');
+  saveDB();refreshAfterDelAction();toast('Enviado para revisión ✓');
 }
 function approveDelAndRefresh(id,projId){
   const d=byId(DB.deliverables,id);if(!d)return;
@@ -3451,47 +3450,16 @@ function approveDelAndRefresh(id,projId){
   const key='deliverable_'+id;
   if(!DB.comments[key])DB.comments[key]=[];
   DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:'✅ Aprobado.',link:''});
-  refreshAfterDelAction();toast(`✓ Aprobado: ${d.title}`);
+  saveDB();refreshAfterDelAction();toast(`✓ Aprobado: ${d.title}`);
 }
-function rejectAndRefresh(id,projId){
-  const d=byId(DB.deliverables,id);if(!d)return;
-  const reason=window.prompt(`Rechazar: "${d.title}"\n\nMotivo:`);
-  if(reason===null)return;
-  if(!reason.trim()){toast('Escribe un motivo');return}
-  const afecta=window.confirm('¿Afecta el score?\nAceptar = Sí · Cancelar = No');
-  const t2=todayISO();
-  d.status='En progreso';d.submittedAt=null;d.rejectedAt=t2;d.rejectedBy=SESSION?.name;
-  if(afecta)d.scorePenalty=(d.scorePenalty||0)+DB.scoreRules.penaltyFollowUp;
-  if(!DB.comments)DB.comments={};
-  const key='deliverable_'+id;
-  if(!DB.comments[key])DB.comments[key]=[];
-  DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:t2,time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`❌ Rechazado: ${reason.trim()}${afecta?' · -'+DB.scoreRules.penaltyFollowUp+'%':''}`,link:''});
-  refreshAfterDelAction();toast('Rechazado'+( afecta?' · -'+DB.scoreRules.penaltyFollowUp+'%':' · sin penalización'));
-}
-function nextPhaseAndRefresh(id,projId){
-  const d=byId(DB.deliverables,id);if(!d)return;
-  const p=byId(DB.projects,d.projectId);
-  const phaseMatch=d.title.match(/fase\s*(\d+)/i);
-  const nextNum=phaseMatch?parseInt(phaseMatch[1])+1:2;
-  const sug=phaseMatch?d.title.replace(/fase\s*\d+/i,`Fase ${nextNum}`):`${d.title} — Fase 2`;
-  const title=window.prompt(`Siguiente fase:\nProyecto: ${p?.name||'—'}\n\nNombre:`,sug);
-  if(!title||!title.trim())return;
-  const dueStr=window.prompt('Fecha límite (YYYY-MM-DD):',d.due||todayISO());
-  if(!dueStr)return;
-  const newDel={id:uid('d'),title:title.trim(),projectId:d.projectId,assigneeId:d.assigneeId,due:dueStr,originalDue:dueStr,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:'',completedAt:null,scorePenalty:0,parentId:id};
-  DB.deliverables.push(newDel);
-  d.status='Aprobado';d.completedAt=todayISO();d.blocked=false;d.blockSince=null;
-  if(!DB.comments)DB.comments={};
-  const key='deliverable_'+id;
-  if(!DB.comments[key])DB.comments[key]=[];
-  DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`➡️ Fase creada: "${title.trim()}" · ${fmtDate(dueStr)}`,link:''});
-  refreshAfterDelAction();toast(`✓ Original aprobado · Nueva fase: "${title.trim()}"`);
-}
+function rejectAndRefresh(id,projId){handlers.rejectDel(id);}
+function nextPhaseAndRefresh(id,projId){handlers.nextPhase(id);}
 function delDelAndRefresh(id,projId){
   const idx=DB.deliverables.findIndex(x=>x.id===id);if(idx<0)return;
   if(!confirm('¿Eliminar entregable?'))return;
-  DB.deliverables.splice(idx,1);refreshAfterDelAction();toast('Eliminado');
+  DB.deliverables.splice(idx,1);saveDB();refreshAfterDelAction();toast('Eliminado');
 }
+function editDelModal(id){handlers.editDel(id);}
 
 function openAddDelToProj2(projId){
   const p=byId(DB.projects,projId);
@@ -3520,3 +3488,5 @@ function updateRevisarBadge(){
   if(navBadge){navBadge.style.display=pending.length?'':'none';navBadge.textContent=pending.length;}
 }
 </script>
+</body>
+</html>
