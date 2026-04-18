@@ -1133,10 +1133,11 @@ let _syncBusy=false;
 let _lastSave=0;
 
 function saveDB(){
+  DB._savedAt=Date.now(); // timestamp every save
   localStorage.setItem(LS,JSON.stringify(DB));
-  _lastSave=Date.now();
+  _lastSave=DB._savedAt;
   _pendingPush=true;
-  if(GS_URL){clearTimeout(saveDB._t);saveDB._t=setTimeout(async()=>{await gsPush();_pendingPush=false;},800)}
+  if(GS_URL){clearTimeout(saveDB._t);saveDB._t=setTimeout(gsPush,800)}
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2949,12 +2950,26 @@ async function gsPush(){
   if(!GS_URL||_syncBusy)return;
   _syncBusy=true;updateSyncUI('syncing');
   try{
-    await fetch(GS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save',data:DB})});
-    const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-    localStorage.setItem(LS_SYNC,now);
-    const el=document.getElementById('last-sync');if(el)el.textContent=now;
-    updateSyncUI('ok');
-  }catch{updateSyncUI('error')}
+    const res=await fetch(GS_URL,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'save',data:DB})
+    });
+    const json=await res.json();
+    if(json.ok){
+      const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+      localStorage.setItem(LS_SYNC,now);
+      const el=document.getElementById('last-sync');if(el)el.textContent=now;
+      _pendingPush=false; // confirmed saved
+      updateSyncUI('ok');
+    } else {
+      throw new Error(json.error||'Push failed');
+    }
+  }catch(e){
+    console.warn('gsPush failed:',e);
+    updateSyncUI('error');
+    // _pendingPush stays true — pull won't overwrite
+  }
   _syncBusy=false;
 }
 
@@ -2966,19 +2981,31 @@ async function gsPull(){
     const res=await fetch(GS_URL+'?action=load');
     const json=await res.json();
     if(json.ok&&json.data){
-      DB=json.data;
-      if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
-      if(!DB.monthlyScores)DB.monthlyScores=[];
-      if(!DB.tareas)DB.tareas=[];
-      if(!DB.incidents)DB.incidents=[];
-      localStorage.setItem(LS,JSON.stringify(DB));
-      const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-      localStorage.setItem(LS_SYNC,now);
-      const el=document.getElementById('last-sync');if(el)el.textContent=now;
-      updateSyncUI('ok');
-      if(currentView==='proyecto'&&_currentProyectoId) renderProyectoDetail(_currentProyectoId);
-      else if(currentView==='ingeniero'&&_currentIngenieroId) renderIngeniero(_currentIngenieroId);
-      else renderView(currentView);
+      const remote=json.data;
+      const localTs=DB._savedAt||0;
+      const remoteTs=remote._savedAt||0;
+      // Only overwrite local if Sheets has NEWER data
+      if(remoteTs > localTs){
+        DB=remote;
+        if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
+        if(!DB.monthlyScores)DB.monthlyScores=[];
+        if(!DB.tareas)DB.tareas=[];
+        if(!DB.incidents)DB.incidents=[];
+        localStorage.setItem(LS,JSON.stringify(DB));
+        const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+        localStorage.setItem(LS_SYNC,now);
+        const el=document.getElementById('last-sync');if(el)el.textContent=now;
+        updateSyncUI('ok');
+        if(currentView==='proyecto'&&_currentProyectoId) renderProyectoDetail(_currentProyectoId);
+        else if(currentView==='ingeniero'&&_currentIngenieroId) renderIngeniero(_currentIngenieroId);
+        else renderView(currentView);
+      } else {
+        // Local is newer — push to Sheets instead
+        updateSyncUI('ok');
+        _syncBusy=false;
+        await gsPush();
+        return;
+      }
     } else if(json.ok&&!json.data){updateSyncUI('ok');_syncBusy=false;await gsPush();return}
     else throw new Error(json.error||'Error');
   }catch{updateSyncUI('error')}
