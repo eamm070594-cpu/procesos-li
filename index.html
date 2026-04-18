@@ -549,6 +549,84 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
 .progress-bar-fill.gray{background:var(--muted)}
 /* ── VIEW: ingeniero / proyecto ── */
 #view-ingeniero,#view-proyecto{overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+/* ═══════════════════════════════
+   MOBILE — App feel
+═══════════════════════════════ */
+@media(max-width:767px){
+  /* Hide desktop sidebar */
+  #sidebar{display:none!important}
+  #main-content,main,.main-content{margin-left:0!important}
+
+  /* Full width content */
+  .view{
+    padding-bottom:calc(70px + env(safe-area-inset-bottom))!important;
+  }
+
+  /* Page headers smaller */
+  .page-title h2,.ph h2{font-size:18px!important}
+  .page-header-inner,.ph-inner{padding:10px 14px!important}
+
+  /* Cards */
+  .card{padding:12px!important;border-radius:12px!important}
+  .pad{padding:10px 12px!important}
+
+  /* Tables — scroll horizontal */
+  .tbl-wrap,table{overflow-x:auto!important;-webkit-overflow-scrolling:touch;display:block;width:100%}
+  table{min-width:0!important}
+  thead,tbody,tr{display:table;width:100%;table-layout:fixed}
+  
+  /* Stack form rows */
+  .form-row{grid-template-columns:1fr!important}
+
+  /* Bigger touch targets */
+  .btn{min-height:40px!important;padding:8px 14px!important}
+  .btn.xs{min-height:32px!important;font-size:12px!important}
+  .btn.sm{min-height:36px!important}
+
+  /* Person cards — no overflow */
+  .person-card,.proj-card,.del-item{
+    word-break:break-word!important;
+  }
+
+  /* KPI grid 2 cols */
+  .kpi-grid{grid-template-columns:1fr 1fr!important}
+
+  /* Bar rows wrap */
+  .bar-row{flex-wrap:nowrap!important}
+  .bar-label{min-width:60px!important;max-width:60px!important;font-size:11px!important}
+
+  /* Bottom nav safe area */
+  #bottomnav{
+    padding-bottom:env(safe-area-inset-bottom)!important;
+  }
+}
+
+/* Drawer items */
+.drawer-item{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:6px!important;
+  padding:18px 10px!important;
+  background:var(--surface)!important;
+  border:none!important;
+  cursor:pointer!important;
+  font-size:13px!important;
+  font-weight:600!important;
+  font-family:var(--font)!important;
+  color:var(--text)!important;
+  transition:background .12s!important;
+}
+.drawer-item:active{background:var(--surface2)!important}
+
+@media(min-width:768px){
+  /* Desktop: hide bottom nav */
+  #bottomnav{display:none!important}
+  #fab{display:none!important}
+  #mas-overlay,#mas-drawer{display:none!important}
+}
 </style>
 </head>
 <body>
@@ -1134,10 +1212,13 @@ let _syncBusy=false;
 let _lastSave=0;
 
 function saveDB(){
-  DB._savedAt=Date.now(); // timestamp every save
+  DB._savedAt=Date.now();
   localStorage.setItem(LS,JSON.stringify(DB));
   _lastSave=DB._savedAt;
   _pendingPush=true;
+  // Clear pendingPush after 30s (enough time for push to complete)
+  clearTimeout(saveDB._pt);
+  saveDB._pt=setTimeout(()=>{_pendingPush=false;},30000);
   if(GS_URL){clearTimeout(saveDB._t);saveDB._t=setTimeout(gsPush,800)}
 }
 
@@ -3011,7 +3092,7 @@ async function gsPull(){
   _syncBusy=false;
 }
 
-setInterval(()=>{if(GS_URL&&!_syncBusy&&!_pendingPush&&Date.now()-_lastSave>60000)gsPull()},30000);
+setInterval(()=>{if(GS_URL&&!_syncBusy&&!_pendingPush&&Date.now()-_lastSave>90000)gsPull()},60000);
 
 /* ══════════════════════════════════════════════════════
    AUTH
