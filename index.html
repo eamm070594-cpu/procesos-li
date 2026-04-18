@@ -3111,21 +3111,26 @@ async function doLogin(){
   const btn=document.getElementById('btn-login');
   if(btn){btn.disabled=true;btn.textContent='Verificando...';}
 
-  // If Sheets URL configured, pull fresh data first
+  // If Sheets URL configured, pull ONLY if remote data is newer than local
   if(GS_URL){
     try{
       const res=await fetch(GS_URL+'?action=load');
       const json=await res.json();
       if(json.ok&&json.data){
-        DB=json.data;
-        if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
-        if(!DB.monthlyScores)DB.monthlyScores=[];
-        if(!DB.incidents)DB.incidents=[];
-        if(!DB.comments)DB.comments={};
-        localStorage.setItem(LS,JSON.stringify(DB));
+        const remote=json.data;
+        const localTs=DB._savedAt||0;
+        const remoteTs=remote._savedAt||0;
+        if(remoteTs > localTs){
+          DB=remote;
+          if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
+          if(!DB.monthlyScores)DB.monthlyScores=[];
+          if(!DB.incidents)DB.incidents=[];
+          if(!DB.comments)DB.comments={};
+          localStorage.setItem(LS,JSON.stringify(DB));
+        }
+        // Si local es igual o mas nuevo — mantener local, no sobreescribir
       }
     }catch(e){
-      // Sheets failed — continue with local data
       console.warn('Sheets pull failed, using local data');
     }
   }
