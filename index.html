@@ -3109,17 +3109,19 @@ async function gsPush(){
     await new Promise(r=>setTimeout(r,3000));
     const check=await gsGet(GS_URL+'?action=load');
     if(check.ok&&check.data){
-      const remoteTs=check.data._savedAt||0;
-      if(remoteTs>=localTs-2000){
+      const remoteDels=check.data.deliverables?.length||0;
+      const localDels=DB.deliverables?.length||0;
+      // Verificar por conteo de entregables, no por timestamp
+      // (el reloj del servidor de Google puede diferir del local)
+      if(remoteDels>=localDels){
         _pendingPush=false;
         const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
         localStorage.setItem(LS_SYNC,now);
         const el=document.getElementById('last-sync');if(el)el.textContent=now;
-        console.log('[SYNC] push ✓ verificado en Sheets | remoteTs:',remoteTs);
+        console.log('[SYNC] push ✓ verificado | remoto:',remoteDels,'local:',localDels,'dels');
         updateSyncUI('ok');
       } else {
-        // POST llegó pero Sheets no guardó — posiblemente doPost no lee el body
-        console.error('[SYNC] push ✗ Sheets NO actualizó | localTs:',localTs,'remoteTs:',remoteTs,'diff:',(remoteTs-localTs)/1000,'s');
+        console.error('[SYNC] push ✗ remoto tiene menos dels:',remoteDels,'vs local:',localDels);
         updateSyncUI('error');
         toast('⚠️ No se guardó en Sheets. Ve a Ajustes → Subir datos.');
       }
