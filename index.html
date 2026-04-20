@@ -1207,15 +1207,7 @@ if(!DB.tareas) DB.tareas=[];
 if(!DB.incidents) DB.incidents=[];
 if(!DB.comments) DB.comments={};
 
-// Auto-detect URL when served directly from Google Apps Script (eliminates CORS)
-let GS_URL=(()=>{
-  const loc=window.location.href;
-  if(loc.includes('script.google.com/macros/s/')){
-    const m=loc.match(/(https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec)/);
-    if(m){localStorage.setItem(LS_GS,m[1]);return m[1];}
-  }
-  return localStorage.getItem(LS_GS)||'';
-})();
+let GS_URL=localStorage.getItem(LS_GS)||'';
 let SESSION=null;
 let _syncBusy=false;
 let _lastSave=0;
@@ -2897,7 +2889,7 @@ async function sendOverdueNow(){
   const result=document.getElementById('notify-result');
   if(btn){btn.disabled=true;btn.textContent='Enviando…'}
   try{
-    const res=await jsonpFetch(GS_URL+'?action=notify_overdue');
+    const res=await fetch(GS_URL+'?action=notify_overdue');
     const json=await res.json();
     if(result){
       result.style.display='block';
@@ -3059,76 +3051,37 @@ function updateSyncUI(state){
 }
 
 
-// JSONP fetch — evita CORS en GET requests a Apps Script
 function jsonpFetch(url){
   return new Promise((resolve,reject)=>{
-    const cbName='_cb'+Date.now()+Math.floor(Math.random()*9999);
-    const script=document.createElement('script');
-    const timeout=setTimeout(()=>{
-      cleanup();reject(new Error('JSONP timeout'));
-    },10000);
-    function cleanup(){
-      delete window[cbName];
-      if(script.parentNode)script.parentNode.removeChild(script);
-      clearTimeout(timeout);
-    }
-    window[cbName]=function(data){cleanup();resolve(data);};
-    script.src=url+(url.includes('?')?'&':'?')+'callback='+cbName;
-    script.onerror=function(){cleanup();reject(new Error('JSONP error'));};
-    document.head.appendChild(script);
+    const cb='_cb'+Date.now()+Math.floor(Math.random()*9999);
+    const s=document.createElement('script');
+    const t=setTimeout(()=>{cleanup();reject(new Error('timeout'));},10000);
+    function cleanup(){delete window[cb];s.parentNode&&s.parentNode.removeChild(s);clearTimeout(t);}
+    window[cb]=d=>{cleanup();resolve(d);};
+    s.src=url+(url.includes('?')?'&':'?')+'callback='+cb;
+    s.onerror=()=>{cleanup();reject(new Error('error'));};
+    document.head.appendChild(s);
   });
 }
-
 async function gsPush(){
   if(!GS_URL||_syncBusy)return;
   _syncBusy=true;updateSyncUI('syncing');
-  const sameOrigin=GS_URL.includes('script.google.com')&&window.location.href.includes('script.google.com');
-  console.log('[SYNC] gsPush — sending',DB.deliverables?.length,'deliverables, sameOrigin:',sameOrigin);
+  console.log('[SYNC] gsPush — sending',DB.deliverables?.length,'deliverables, _savedAt:',DB._savedAt);
   try{
-    if(sameOrigin){
-      const res=await fetch(GS_URL,{
-        method:'POST',
-        headers:{'Content-Type':'text/plain'},
-        body:JSON.stringify({action:'save',data:DB})
-      });
-      const json=await res.json();
-      if(json.ok){
-        const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-        localStorage.setItem(LS_SYNC,now);
-        const el=document.getElementById('last-sync');if(el)el.textContent=now;
-        _pendingPush=false;
-        console.log('[SYNC] gsPush — OK');
-        updateSyncUI('ok');
-      } else {
-        console.warn('[SYNC] gsPush — server error:',json.error);
-        updateSyncUI('error');
-      }
-    } else {
-      await fetch(GS_URL,{
-        method:'POST',
-        mode:'no-cors',
-        headers:{'Content-Type':'text/plain'},
-        body:JSON.stringify({action:'save',data:DB})
-      });
-      await new Promise(r=>setTimeout(r,2500));
-      try{
-        const res=await jsonpFetch(GS_URL+'?action=load');
-        const json=await res.json();
-        if(json.ok&&json.data){
-          const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-          localStorage.setItem(LS_SYNC,now);
-          const el=document.getElementById('last-sync');if(el)el.textContent=now;
-          _pendingPush=false;
-          console.log('[SYNC] gsPush — verified OK remoteDels:',json.data.deliverables?.length);
-          updateSyncUI('ok');
-        } else {
-          updateSyncUI('warn');_pendingPush=false;
-        }
-      }catch(e2){
-        console.warn('[SYNC] gsPush verify failed (data likely saved):',e2);
-        updateSyncUI('warn');_pendingPush=false;
-      }
-    }
+    // Use no-cors POST — Google Apps Script receives it fine even though we can't read the response
+    await fetch(GS_URL,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'save',data:DB})
+    });
+    // POST enviado — marcar como guardado sin verificar GET (CORS lo bloquea)
+    const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    localStorage.setItem(LS_SYNC,now);
+    const el=document.getElementById('last-sync');if(el)el.textContent=now;
+    _pendingPush=false;
+    console.log('[SYNC] gsPush — enviado OK');
+    updateSyncUI('ok');
   }catch(e){
     console.warn('[SYNC] gsPush failed:',e);
     updateSyncUI('error');
@@ -3196,26 +3149,11 @@ async function doLogin(){
   const inputU=document.getElementById('li-user').value.trim().toLowerCase();
   const inputP=document.getElementById('li-pass').value;
   const btn=document.getElementById('btn-login');
-  if(btn){btn.disabled=true;btn.textContent='Cargando datos...';}
+  if(btn){btn.disabled=true;btn.textContent='Verificando...';}
 
-  // Pull datos del servidor antes de validar credenciales
-  if(GS_URL){
-    try{
-      const json=await jsonpFetch(GS_URL+'?action=load');
-      if(json.ok&&json.data){
-        DB=json.data;
-        if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
-        if(!DB.monthlyScores)DB.monthlyScores=[];
-        if(!DB.tareas)DB.tareas=[];
-        if(!DB.incidents)DB.incidents=[];
-        if(!DB.comments)DB.comments={};
-        localStorage.setItem(LS,JSON.stringify(DB));
-        console.log('[LOGIN] DB cargado del servidor, users:',DB.users?.length);
-      }
-    }catch(e){console.warn('[LOGIN] No se pudo cargar del servidor, usando local:',e);}
-  }
+  // Auto-pull al login desactivado — usa Ajustes > Forzar descarga para sincronizar
 
-  if(btn){btn.disabled=false;btn.textContent='Iniciar sesion';}
+  if(btn){btn.disabled=false;btn.textContent='Iniciar sesión';}
 
   const allUsers=getUsers();
   const found=allUsers.find(u=>u.username===inputU&&u.password===inputP);
