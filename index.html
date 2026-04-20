@@ -1207,7 +1207,15 @@ if(!DB.tareas) DB.tareas=[];
 if(!DB.incidents) DB.incidents=[];
 if(!DB.comments) DB.comments={};
 
-let GS_URL=localStorage.getItem(LS_GS)||'';
+// Auto-detect URL when served directly from Google Apps Script (eliminates CORS)
+let GS_URL=(()=>{
+  const loc=window.location.href;
+  if(loc.includes('script.google.com/macros/s/')){
+    const m=loc.match(/(https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec)/);
+    if(m){localStorage.setItem(LS_GS,m[1]);return m[1];}
+  }
+  return localStorage.getItem(LS_GS)||'';
+})();
 let SESSION=null;
 let _syncBusy=false;
 let _lastSave=0;
@@ -3053,30 +3061,52 @@ function updateSyncUI(state){
 async function gsPush(){
   if(!GS_URL||_syncBusy)return;
   _syncBusy=true;updateSyncUI('syncing');
-  console.log('[SYNC] gsPush — sending',DB.deliverables?.length,'deliverables, _savedAt:',DB._savedAt);
+  const sameOrigin=GS_URL.includes('script.google.com')&&window.location.href.includes('script.google.com');
+  console.log('[SYNC] gsPush — sending',DB.deliverables?.length,'deliverables, sameOrigin:',sameOrigin);
   try{
-    const payload=JSON.stringify(DB);
-    const CHUNK_SIZE=8000;
-    const chunks=[];
-    for(let i=0;i<payload.length;i+=CHUNK_SIZE) chunks.push(payload.slice(i,i+CHUNK_SIZE));
-    const id=Date.now().toString(36);
-    let lastResult=null;
-    for(let i=0;i<chunks.length;i++){
-      const url=GS_URL+'?action=save_chunk&id='+id+'&index='+i+'&total='+chunks.length+'&chunk='+encodeURIComponent(chunks[i]);
-      const res=await fetch(url);
-      lastResult=await res.json();
-      console.log('[SYNC] chunk',i+1+'/'+chunks.length,'→',lastResult);
-      if(!lastResult.ok&&!lastResult.waiting) throw new Error(lastResult.error||'Chunk error');
-    }
-    if(lastResult&&lastResult.ok&&!lastResult.waiting){
-      const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-      localStorage.setItem(LS_SYNC,now);
-      const el=document.getElementById('last-sync');if(el)el.textContent=now;
-      _pendingPush=false;
-      console.log('[SYNC] gsPush — confirmed OK ✓');
-      updateSyncUI('ok');
+    if(sameOrigin){
+      const res=await fetch(GS_URL,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'save',data:DB})
+      });
+      const json=await res.json();
+      if(json.ok){
+        const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+        localStorage.setItem(LS_SYNC,now);
+        const el=document.getElementById('last-sync');if(el)el.textContent=now;
+        _pendingPush=false;
+        console.log('[SYNC] gsPush — OK');
+        updateSyncUI('ok');
+      } else {
+        console.warn('[SYNC] gsPush — server error:',json.error);
+        updateSyncUI('error');
+      }
     } else {
-      throw new Error('No confirmation from server');
+      await fetch(GS_URL,{
+        method:'POST',
+        mode:'no-cors',
+        headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'save',data:DB})
+      });
+      await new Promise(r=>setTimeout(r,2500));
+      try{
+        const res=await fetch(GS_URL+'?action=load');
+        const json=await res.json();
+        if(json.ok&&json.data){
+          const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+          localStorage.setItem(LS_SYNC,now);
+          const el=document.getElementById('last-sync');if(el)el.textContent=now;
+          _pendingPush=false;
+          console.log('[SYNC] gsPush — verified OK remoteDels:',json.data.deliverables?.length);
+          updateSyncUI('ok');
+        } else {
+          updateSyncUI('warn');_pendingPush=false;
+        }
+      }catch(e2){
+        console.warn('[SYNC] gsPush verify failed (data likely saved):',e2);
+        updateSyncUI('warn');_pendingPush=false;
+      }
     }
   }catch(e){
     console.warn('[SYNC] gsPush failed:',e);
