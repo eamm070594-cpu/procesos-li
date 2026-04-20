@@ -3055,16 +3055,28 @@ async function gsPush(){
   _syncBusy=true;updateSyncUI('syncing');
   console.log('[SYNC] gsPush — sending',DB.deliverables?.length,'deliverables, _savedAt:',DB._savedAt);
   try{
-    const payload=encodeURIComponent(JSON.stringify(DB));
-    const res=await fetch(GS_URL+'?action=save&data='+payload);
+    // Use no-cors POST — Google Apps Script receives it fine even though we can't read the response
+    await fetch(GS_URL,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'save',data:DB})
+    });
+    // Wait 2s then verify by pulling and checking the savedAt matches
+    await new Promise(r=>setTimeout(r,2000));
+    const res=await fetch(GS_URL+'?action=load');
     const json=await res.json();
-    if(!json.ok) throw new Error(json.error||'Error al guardar');
-    const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-    localStorage.setItem(LS_SYNC,now);
-    const el=document.getElementById('last-sync');if(el)el.textContent=now;
-    _pendingPush=false;
-    console.log('[SYNC] gsPush — confirmed OK, saved_at:',json.saved_at);
-    updateSyncUI('ok');
+    if(json.ok&&json.data&&json.data._savedAt===DB._savedAt){
+      const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+      localStorage.setItem(LS_SYNC,now);
+      const el=document.getElementById('last-sync');if(el)el.textContent=now;
+      _pendingPush=false;
+      console.log('[SYNC] gsPush — verified OK ✓ remoteDels:',json.data.deliverables?.length);
+      updateSyncUI('ok');
+    } else {
+      console.warn('[SYNC] gsPush — not confirmed yet, remote _savedAt:',json.data?._savedAt,'local:',DB._savedAt);
+      updateSyncUI('error');
+    }
   }catch(e){
     console.warn('[SYNC] gsPush failed:',e);
     updateSyncUI('error');
@@ -3072,9 +3084,9 @@ async function gsPush(){
   _syncBusy=false;
 }
 
-async function gsPull(){
+async function gsPull(force){
   if(!GS_URL||_syncBusy)return;
-  if(_pendingPush||Date.now()-_lastSave<15000)return;
+  if(!force&&(_pendingPush||Date.now()-_lastSave<15000))return;
   _syncBusy=true;updateSyncUI('syncing');
   try{
     const res=await fetch(GS_URL+'?action=load');
@@ -3084,8 +3096,8 @@ async function gsPull(){
       const localTs=DB._savedAt||0;
       const remoteTs=remote._savedAt||0;
       console.log('[SYNC] gsPull — localTs:',localTs,'remoteTs:',remoteTs,'diff(s):',(remoteTs-localTs)/1000,'localDels:',DB.deliverables?.length,'remoteDels:',remote.deliverables?.length);
-      // Only overwrite local if Sheets has NEWER data (>10s margin to avoid race with no-cors push)
-      if(remoteTs > localTs + 10000){
+      // Force overwrite on login, or if remote is newer
+      if(force || remoteTs > localTs + 10000){
         console.warn('[SYNC] Remote is newer — overwriting local DB');
         DB=remote;
         if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
@@ -3151,7 +3163,11 @@ async function doLogin(){
   sessionStorage.setItem('li_sess',JSON.stringify(SESSION));
   applyRole();
   document.getElementById('login-screen').style.display='none';
-  renderView('equipo');
+  if(GS_URL){
+    gsPull(true).then(()=>renderView('equipo')).catch(()=>renderView('equipo'));
+  } else {
+    renderView('equipo');
+  }
 }
 
 function applyRole(){
@@ -3196,7 +3212,7 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_deferredIn
       applyRole();
       document.getElementById('login-screen').style.display='none';
       if(GS_URL){
-        gsPull().then(()=>{
+        gsPull(true).then(()=>{
           renderView('equipo');
         }).catch(()=>{
           renderView('equipo');
