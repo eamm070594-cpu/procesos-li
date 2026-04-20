@@ -3086,16 +3086,14 @@ async function gsPush(){
   const kb=Math.round(payload.length/1024);
   console.log('[SYNC] gsPush — sending',DB.deliverables?.length,'deliverables, _savedAt:',DB._savedAt,'size:',kb,'KB');
   try{
-    await fetch(GS_URL,{
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'text/plain'},
-      body:payload
-    });
+    // FormData evita problemas de CORS con Content-Type en Apps Script
+    const form=new FormData();
+    form.append('payload',payload);
+    await fetch(GS_URL,{method:'POST',mode:'no-cors',body:form});
     const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     localStorage.setItem(LS_SYNC,now);
-    // Actualizar el _savedAt en Sheets esperando 3s y haciendo GET de verificación
-    await new Promise(r=>setTimeout(r,3000));
+    // Verificar con GET que Sheets actualizó
+    await new Promise(r=>setTimeout(r,2500));
     try{
       const check=await gsFetch(GS_URL+'?action=load');
       if(check.ok&&check.data){
@@ -3107,9 +3105,8 @@ async function gsPush(){
           updateSyncUI('ok');
         } else {
           console.warn('[SYNC] gsPush — Sheets no actualizó. remoteTs:',remoteTs,'localTs:',localTs,'diff:',(remoteTs-localTs)/1000,'s');
-          // No reintentar automáticamente — marcar error para que el usuario sepa
           updateSyncUI('error');
-          toast('⚠️ Datos enviados pero Sheets no confirmó. Verifica tu Apps Script.');
+          toast('⚠️ Sheets no guardó. Revisa Apps Script → Ajustes.');
         }
       }
     }catch{
