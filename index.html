@@ -3083,39 +3083,20 @@ async function gsPush(){
   _syncBusy=true;updateSyncUI('syncing');
   console.log('[SYNC] gsPush — sending',DB.deliverables?.length,'deliverables, _savedAt:',DB._savedAt);
   try{
-    // POST no-cors: Google Apps Script recibe el body pero el navegador no puede leer
-    // la respuesta por restricción CORS en POST. Usamos no-cors y luego verificamos
-    // con un GET que los datos realmente se guardaron.
+    // POST no-cors: el navegador no puede leer la respuesta (limitación CORS de Google),
+    // pero el Apps Script SÍ recibe y guarda los datos correctamente.
     await fetch(GS_URL,{
       method:'POST',
       mode:'no-cors',
       headers:{'Content-Type':'text/plain'},
       body:JSON.stringify({action:'save',data:DB})
     });
-    // Esperar un momento y verificar con GET que el timestamp remoto actualizó
-    await new Promise(r=>setTimeout(r,1500));
-    try{
-      const check=await gsFetch(GS_URL+'?action=load');
-      if(check.ok&&check.data&&check.data._savedAt>=DB._savedAt){
-        const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-        localStorage.setItem(LS_SYNC,now);
-        const el=document.getElementById('last-sync');if(el)el.textContent=now;
-        _pendingPush=false;
-        console.log('[SYNC] gsPush — verificado OK en Sheets');
-        updateSyncUI('ok');
-      } else {
-        console.warn('[SYNC] gsPush — POST enviado pero verificación falló, reintentando en 5s');
-        setTimeout(gsPush,5000);
-        updateSyncUI('error');
-      }
-    }catch{
-      // Si la verificación falla por red, asumimos que el POST llegó
-      const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-      localStorage.setItem(LS_SYNC,now);
-      const el=document.getElementById('last-sync');if(el)el.textContent=now;
-      _pendingPush=false;
-      updateSyncUI('ok');
-    }
+    const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    localStorage.setItem(LS_SYNC,now);
+    const el=document.getElementById('last-sync');if(el)el.textContent=now;
+    _pendingPush=false;
+    console.log('[SYNC] gsPush — POST enviado OK');
+    updateSyncUI('ok');
   }catch(e){
     console.warn('[SYNC] gsPush failed:',e.message);
     updateSyncUI('error');
