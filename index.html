@@ -3201,8 +3201,7 @@ async function doLogin(){
   // Pull datos del servidor antes de validar credenciales
   if(GS_URL){
     try{
-      const res=await jsonpFetch(GS_URL+'?action=load');
-      const json=await res.json();
+      const json=await jsonpFetch(GS_URL+'?action=load');
       if(json.ok&&json.data){
         DB=json.data;
         if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
