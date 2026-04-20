@@ -3069,129 +3069,131 @@ function updateSyncUI(state){
   if(badge){badge.className='tag '+s.cls;badge.textContent=s.label}
 }
 
-
-// ── SYNC HELPERS ────────────────────────────────────────────────────────────
-
-// GET con fetch — Apps Script doGet devuelve JSON con CORS habilitado en GitHub Pages
-async function gsFetch(url){
-  const res=await fetch(url,{method:'GET',cache:'no-store'});
-  if(!res.ok)throw new Error('HTTP '+res.status);
-  return res.json();
+// ── JSONP GET: única forma confiable de leer desde Apps Script sin CORS ─────────────
+// Apps Script en doGet ya maneja el parámetro ?callback= correctamente.
+function gsGet(url){
+  return new Promise((resolve,reject)=>{
+    const cb='_gs'+Date.now()+'_'+Math.floor(Math.random()*99999);
+    const s=document.createElement('script');
+    const t=setTimeout(()=>{cleanup();reject(new Error('timeout'));},12000);
+    function cleanup(){delete window[cb];s.parentNode&&s.parentNode.removeChild(s);clearTimeout(t);}
+    window[cb]=d=>{cleanup();resolve(d);};
+    s.onerror=()=>{cleanup();reject(new Error('network error'));};
+    s.src=url+(url.includes('?')?'&':'?')+'callback='+cb;
+    document.head.appendChild(s);
+  });
 }
 
+// ── POST: no-cors con texto plano. Apps Script recibe en e.postData.contents ───────
+// Con no-cors el navegador NO puede leer la respuesta — es normal y esperado.
+// Por eso verificamos con un gsGet posterior si los datos llegaron.
+async function gsPost(url, data){
+  await fetch(url,{
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify(data)
+  });
+}
+
+// ── PUSH: guardar DB local → Sheets ─────────────────────────────────────────────
 async function gsPush(){
   if(!GS_URL||_syncBusy)return;
-  _syncBusy=true;updateSyncUI('syncing');
-  const payload=JSON.stringify({action:'save',data:DB});
-  const kb=Math.round(payload.length/1024);
-  console.log('[SYNC] gsPush — sending',DB.deliverables?.length,'deliverables, _savedAt:',DB._savedAt,'size:',kb,'KB');
+  _syncBusy=true;
+  updateSyncUI('syncing');
+  const localTs=DB._savedAt||0;
+  console.log('[SYNC] push → Sheets | dels:',DB.deliverables?.length,'| ts:',localTs,'| size:',Math.round(JSON.stringify(DB).length/1024),'KB');
   try{
-    // FormData evita problemas de CORS con Content-Type en Apps Script
-    const form=new FormData();
-    form.append('payload',payload);
-    await fetch(GS_URL,{method:'POST',mode:'no-cors',body:form});
-    const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-    localStorage.setItem(LS_SYNC,now);
-    // Verificar con GET que Sheets actualizó
-    await new Promise(r=>setTimeout(r,2500));
-    try{
-      const check=await gsFetch(GS_URL+'?action=load');
-      if(check.ok&&check.data){
-        const remoteTs=check.data._savedAt||0;
-        const localTs=DB._savedAt||0;
-        if(remoteTs>=localTs-5000){
-          console.log('[SYNC] gsPush — verificado en Sheets ✓');
-          _pendingPush=false;
-          updateSyncUI('ok');
-        } else {
-          console.warn('[SYNC] gsPush — Sheets no actualizó. remoteTs:',remoteTs,'localTs:',localTs,'diff:',(remoteTs-localTs)/1000,'s');
-          updateSyncUI('error');
-          toast('⚠️ Sheets no guardó. Revisa Apps Script → Ajustes.');
-        }
-      }
-    }catch{
-      // Si el GET falla, asumir que el POST llegó
-      _pendingPush=false;
-      updateSyncUI('ok');
-    }
-    const el=document.getElementById('last-sync');if(el)el.textContent=now;
-  }catch(e){
-    console.warn('[SYNC] gsPush failed:',e.message);
-    updateSyncUI('error');
-  }
-  _syncBusy=false;
-}
-
-async function gsPull(force){
-  if(!GS_URL||_syncBusy)return;
-  if(!force&&(_pendingPush||Date.now()-_lastSave<15000))return;
-  _syncBusy=true;updateSyncUI('syncing');
-  try{
-    const json=await gsFetch(GS_URL+'?action=load');
-    if(json.ok&&json.data){
-      const remote=json.data;
-      const localTs=DB._savedAt||0;
-      const remoteTs=remote._savedAt||0;
-      const localDels=DB.deliverables?.length||0;
-      const remoteDels=remote.deliverables?.length||0;
-      console.log('[SYNC] gsPull — localTs:',localTs,'remoteTs:',remoteTs,'diff(s):',(remoteTs-localTs)/1000,'localDels:',localDels,'remoteDels:',remoteDels);
-
-      // ── PROTECCIÓN ANTI-BORRADO ──────────────────────────────────────────
-      // Nunca sobreescribir local si el remoto tiene MENOS entregables que el local,
-      // a menos que el remoto sea significativamente más nuevo (>5 min) Y tenga
-      // al menos 90% de los entregables locales.
-      const remoteIsNewer = remoteTs > localTs + 10000; // >10 segundos más nuevo
-      const remoteMuchNewer = remoteTs > localTs + 300000; // >5 minutos más nuevo
-      const remoteSafeCount = remoteDels >= localDels || remoteDels >= localDels * 0.9;
-
-      // Si los datos locales son de demo (no venían de localStorage), siempre tomar remote
-      const localIsDemo = !_dbFromStorage;
-      const shouldOverwrite = force || localIsDemo
-        || (remoteIsNewer && (remoteSafeCount || remoteMuchNewer));
-
-      if(shouldOverwrite){
-        // Advertencia si el remoto tiene menos entregables
-        if(remoteDels < localDels){
-          console.warn('[SYNC] ADVERTENCIA: remoto tiene menos entregables (',remoteDels,') que local (',localDels,'). Diff ts:',(remoteTs-localTs)/1000,'s');
-        }
-        console.warn('[SYNC] Overwriting local with remote');
-        DB=remote;
-        if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
-        if(!DB.monthlyScores)DB.monthlyScores=[];
-        if(!DB.tareas)DB.tareas=[];
-        if(!DB.incidents)DB.incidents=[];
-        if(!DB.comments)DB.comments={};
-        localStorage.setItem(LS,JSON.stringify(DB));
+    await gsPost(GS_URL,{action:'save',data:DB});
+    // Esperar 3s y verificar con GET que Sheets guardó
+    await new Promise(r=>setTimeout(r,3000));
+    const check=await gsGet(GS_URL+'?action=load');
+    if(check.ok&&check.data){
+      const remoteTs=check.data._savedAt||0;
+      if(remoteTs>=localTs-2000){
+        _pendingPush=false;
         const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
         localStorage.setItem(LS_SYNC,now);
         const el=document.getElementById('last-sync');if(el)el.textContent=now;
+        console.log('[SYNC] push ✓ verificado en Sheets | remoteTs:',remoteTs);
         updateSyncUI('ok');
-        if(currentView==='proyecto'&&_currentProyectoId) renderProyectoDetail(_currentProyectoId);
-        else if(currentView==='ingeniero'&&_currentIngenieroId) renderIngeniero(_currentIngenieroId);
-        else renderView(currentView);
       } else {
-        // Local tiene datos más recientes o más completos — subir a Sheets
-        console.log('[SYNC] Local is newer or has more data — pushing');
-        updateSyncUI('ok');
-        _syncBusy=false;
-        await gsPush();
-        return;
+        // POST llegó pero Sheets no guardó — posiblemente doPost no lee el body
+        console.error('[SYNC] push ✗ Sheets NO actualizó | localTs:',localTs,'remoteTs:',remoteTs,'diff:',(remoteTs-localTs)/1000,'s');
+        updateSyncUI('error');
+        toast('⚠️ No se guardó en Sheets. Ve a Ajustes → Subir datos.');
       }
-    } else if(json.ok&&!json.data){
-      console.log('[SYNC] Remote empty — pushing local data');
-      updateSyncUI('ok');_syncBusy=false;await gsPush();return;
     } else {
-      throw new Error(json.error||'Respuesta inesperada del servidor');
+      console.error('[SYNC] push ✗ GET de verificación falló:',check);
+      updateSyncUI('error');
     }
   }catch(e){
-    console.warn('[SYNC] gsPull failed:',e.message);
+    console.error('[SYNC] push error:',e.message);
     updateSyncUI('error');
   }
   _syncBusy=false;
 }
 
-// Auto-pull cada 60 s si hay URL configurada y no hay cambios locales pendientes
-setInterval(()=>{if(GS_URL&&!_syncBusy&&!_pendingPush&&Date.now()-_lastSave>120000)gsPull()},60000);
+// ── PULL: bajar datos de Sheets → local ───────────────────────────────────────────
+// force=true: siempre sobreescribir (al login, al forzar descarga)
+// force=false: solo sobreescribir si remoto es más nuevo Y no borra datos
+async function gsPull(force){
+  if(!GS_URL||_syncBusy)return;
+  if(!force&&(_pendingPush||Date.now()-_lastSave<15000))return;
+  _syncBusy=true;
+  updateSyncUI('syncing');
+  try{
+    const json=await gsGet(GS_URL+'?action=load');
+    if(!json.ok){throw new Error(json.error||'respuesta inválida');}
+    if(!json.data){
+      // Sheets vacío — subir datos locales
+      console.log('[SYNC] pull: Sheets vacío → pushing local');
+      _syncBusy=false;updateSyncUI('ok');await gsPush();return;
+    }
+    const remote=json.data;
+    const localTs=DB._savedAt||0;
+    const remoteTs=remote._savedAt||0;
+    const localDels=DB.deliverables?.length||0;
+    const remoteDels=remote.deliverables?.length||0;
+    const localIsDemo=!_dbFromStorage;
+    const remoteIsNewer=remoteTs>localTs+10000;
+    const remoteSafe=remoteDels>=localDels*0.9;
+    console.log('[SYNC] pull | localTs:',localTs,'remoteTs:',remoteTs,'diff:',(remoteTs-localTs)/1000,'s | local:',localDels,'remote:',remoteDels,'dels | demo:',localIsDemo);
+
+    const shouldOverwrite=force||localIsDemo||(remoteIsNewer&&remoteSafe);
+
+    if(shouldOverwrite){
+      if(remoteDels<localDels)console.warn('[SYNC] pull: remoto tiene menos entregables (',remoteDels,'<',localDels,') pero se sobreescribe (force/demo/ts)');
+      DB=remote;
+      if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
+      if(!DB.monthlyScores)DB.monthlyScores=[];
+      if(!DB.tareas)DB.tareas=[];
+      if(!DB.incidents)DB.incidents=[];
+      if(!DB.comments)DB.comments={};
+      _dbFromStorage=true;
+      localStorage.setItem(LS,JSON.stringify(DB));
+      const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+      localStorage.setItem(LS_SYNC,now);
+      const el=document.getElementById('last-sync');if(el)el.textContent=now;
+      updateSyncUI('ok');
+      console.log('[SYNC] pull ✓ sobreescrito local con remoto');
+      if(currentView==='proyecto'&&_currentProyectoId)renderProyectoDetail(_currentProyectoId);
+      else if(currentView==='ingeniero'&&_currentIngenieroId)renderIngeniero(_currentIngenieroId);
+      else renderView(currentView);
+    } else {
+      // Local más nuevo o tiene más datos — subir a Sheets
+      console.log('[SYNC] pull: local más nuevo → pushing');
+      updateSyncUI('ok');_syncBusy=false;await gsPush();return;
+    }
+  }catch(e){
+    console.error('[SYNC] pull error:',e.message);
+    updateSyncUI('error');
+  }
+  _syncBusy=false;
+}
+
+// Auto-pull cada 60s si no hay cambios locales pendientes
+setInterval(()=>{if(GS_URL&&!_syncBusy&&!_pendingPush&&Date.now()-_lastSave>120000)gsPull();},60000);
 
 /* ══════════════════════════════════════════════════════
    AUTH
