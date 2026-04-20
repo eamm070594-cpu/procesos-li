@@ -1215,8 +1215,9 @@ function defaultDB(){
   return{users,projects,deliverables,routines,routineRuns,incidents:[],checkins:[],rules,scoreRules,monthlyScores:[],tareas:[],comments:{}};
 }
 
+let _dbFromStorage=false;
 let DB=(() => {
-  try{const r=localStorage.getItem(LS);return r?JSON.parse(r):defaultDB()}
+  try{const r=localStorage.getItem(LS);if(r){_dbFromStorage=true;return JSON.parse(r)}return defaultDB()}
   catch{return defaultDB()}
 })();
 if(!DB.scoreRules) DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
@@ -3081,22 +3082,42 @@ async function gsFetch(url){
 async function gsPush(){
   if(!GS_URL||_syncBusy)return;
   _syncBusy=true;updateSyncUI('syncing');
-  console.log('[SYNC] gsPush — sending',DB.deliverables?.length,'deliverables, _savedAt:',DB._savedAt);
+  const payload=JSON.stringify({action:'save',data:DB});
+  const kb=Math.round(payload.length/1024);
+  console.log('[SYNC] gsPush — sending',DB.deliverables?.length,'deliverables, _savedAt:',DB._savedAt,'size:',kb,'KB');
   try{
-    // POST no-cors: el navegador no puede leer la respuesta (limitación CORS de Google),
-    // pero el Apps Script SÍ recibe y guarda los datos correctamente.
     await fetch(GS_URL,{
       method:'POST',
       mode:'no-cors',
       headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'save',data:DB})
+      body:payload
     });
     const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     localStorage.setItem(LS_SYNC,now);
+    // Actualizar el _savedAt en Sheets esperando 3s y haciendo GET de verificación
+    await new Promise(r=>setTimeout(r,3000));
+    try{
+      const check=await gsFetch(GS_URL+'?action=load');
+      if(check.ok&&check.data){
+        const remoteTs=check.data._savedAt||0;
+        const localTs=DB._savedAt||0;
+        if(remoteTs>=localTs-5000){
+          console.log('[SYNC] gsPush — verificado en Sheets ✓');
+          _pendingPush=false;
+          updateSyncUI('ok');
+        } else {
+          console.warn('[SYNC] gsPush — Sheets no actualizó. remoteTs:',remoteTs,'localTs:',localTs,'diff:',(remoteTs-localTs)/1000,'s');
+          // No reintentar automáticamente — marcar error para que el usuario sepa
+          updateSyncUI('error');
+          toast('⚠️ Datos enviados pero Sheets no confirmó. Verifica tu Apps Script.');
+        }
+      }
+    }catch{
+      // Si el GET falla, asumir que el POST llegó
+      _pendingPush=false;
+      updateSyncUI('ok');
+    }
     const el=document.getElementById('last-sync');if(el)el.textContent=now;
-    _pendingPush=false;
-    console.log('[SYNC] gsPush — POST enviado OK');
-    updateSyncUI('ok');
   }catch(e){
     console.warn('[SYNC] gsPush failed:',e.message);
     updateSyncUI('error');
@@ -3126,7 +3147,9 @@ async function gsPull(force){
       const remoteMuchNewer = remoteTs > localTs + 300000; // >5 minutos más nuevo
       const remoteSafeCount = remoteDels >= localDels || remoteDels >= localDels * 0.9;
 
-      const shouldOverwrite = force
+      // Si los datos locales son de demo (no venían de localStorage), siempre tomar remote
+      const localIsDemo = !_dbFromStorage;
+      const shouldOverwrite = force || localIsDemo
         || (remoteIsNewer && (remoteSafeCount || remoteMuchNewer));
 
       if(shouldOverwrite){
@@ -3171,7 +3194,7 @@ async function gsPull(force){
 }
 
 // Auto-pull cada 60 s si hay URL configurada y no hay cambios locales pendientes
-setInterval(()=>{if(GS_URL&&!_syncBusy&&!_pendingPush&&Date.now()-_lastSave>90000)gsPull()},60000);
+setInterval(()=>{if(GS_URL&&!_syncBusy&&!_pendingPush&&Date.now()-_lastSave>120000)gsPull()},60000);
 
 /* ══════════════════════════════════════════════════════
    AUTH
