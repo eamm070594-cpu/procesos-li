@@ -3053,6 +3053,7 @@ function updateSyncUI(state){
 async function gsPush(){
   if(!GS_URL||_syncBusy)return;
   _syncBusy=true;updateSyncUI('syncing');
+  console.log('[SYNC] gsPush — sending',DB.deliverables?.length,'deliverables, _savedAt:',DB._savedAt);
   try{
     await fetch(GS_URL,{
       method:'POST',
@@ -3064,6 +3065,7 @@ async function gsPush(){
     localStorage.setItem(LS_SYNC,now);
     const el=document.getElementById('last-sync');if(el)el.textContent=now;
     _pendingPush=false;
+    console.log('[SYNC] gsPush — completed (no-cors, cannot verify)');
     updateSyncUI('ok');
   }catch(e){
     console.warn('gsPush failed:',e);
@@ -3074,7 +3076,7 @@ async function gsPush(){
 
 async function gsPull(){
   if(!GS_URL||_syncBusy)return;
-  if(_pendingPush||Date.now()-_lastSave<5000)return;
+  if(_pendingPush||Date.now()-_lastSave<15000)return;
   _syncBusy=true;updateSyncUI('syncing');
   try{
     const res=await fetch(GS_URL+'?action=load');
@@ -3083,8 +3085,10 @@ async function gsPull(){
       const remote=json.data;
       const localTs=DB._savedAt||0;
       const remoteTs=remote._savedAt||0;
-      // Only overwrite local if Sheets has NEWER data
-      if(remoteTs > localTs){
+      console.log('[SYNC] gsPull — localTs:',localTs,'remoteTs:',remoteTs,'diff(s):',(remoteTs-localTs)/1000,'localDels:',DB.deliverables?.length,'remoteDels:',remote.deliverables?.length);
+      // Only overwrite local if Sheets has NEWER data (>10s margin to avoid race with no-cors push)
+      if(remoteTs > localTs + 10000){
+        console.warn('[SYNC] Remote is newer — overwriting local DB');
         DB=remote;
         if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
         if(!DB.monthlyScores)DB.monthlyScores=[];
