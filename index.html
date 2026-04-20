@@ -3055,27 +3055,28 @@ async function gsPush(){
   _syncBusy=true;updateSyncUI('syncing');
   console.log('[SYNC] gsPush — sending',DB.deliverables?.length,'deliverables, _savedAt:',DB._savedAt);
   try{
-    // Use no-cors POST — Google Apps Script receives it fine even though we can't read the response
-    await fetch(GS_URL,{
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'save',data:DB})
-    });
-    // Wait 2s then verify by pulling and checking the savedAt matches
-    await new Promise(r=>setTimeout(r,2000));
-    const res=await fetch(GS_URL+'?action=load');
-    const json=await res.json();
-    if(json.ok&&json.data&&json.data._savedAt===DB._savedAt){
+    const payload=JSON.stringify(DB);
+    const CHUNK_SIZE=8000;
+    const chunks=[];
+    for(let i=0;i<payload.length;i+=CHUNK_SIZE) chunks.push(payload.slice(i,i+CHUNK_SIZE));
+    const id=Date.now().toString(36);
+    let lastResult=null;
+    for(let i=0;i<chunks.length;i++){
+      const url=GS_URL+'?action=save_chunk&id='+id+'&index='+i+'&total='+chunks.length+'&chunk='+encodeURIComponent(chunks[i]);
+      const res=await fetch(url);
+      lastResult=await res.json();
+      console.log('[SYNC] chunk',i+1+'/'+chunks.length,'→',lastResult);
+      if(!lastResult.ok&&!lastResult.waiting) throw new Error(lastResult.error||'Chunk error');
+    }
+    if(lastResult&&lastResult.ok&&!lastResult.waiting){
       const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
       localStorage.setItem(LS_SYNC,now);
       const el=document.getElementById('last-sync');if(el)el.textContent=now;
       _pendingPush=false;
-      console.log('[SYNC] gsPush — verified OK ✓ remoteDels:',json.data.deliverables?.length);
+      console.log('[SYNC] gsPush — confirmed OK ✓');
       updateSyncUI('ok');
     } else {
-      console.warn('[SYNC] gsPush — not confirmed yet, remote _savedAt:',json.data?._savedAt,'local:',DB._savedAt);
-      updateSyncUI('error');
+      throw new Error('No confirmation from server');
     }
   }catch(e){
     console.warn('[SYNC] gsPush failed:',e);
