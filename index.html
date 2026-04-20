@@ -2839,7 +2839,7 @@ document.getElementById('btn-force-pull')?.addEventListener('click',async()=>{
   if(!confirm('¿Forzar descarga? Reemplazará los datos locales con los de Google Sheets.'))return;
   _syncBusy=true;updateSyncUI('syncing');
   try{
-    const res=await fetch(GS_URL+'?action=load');
+    const res=await jsonpFetch(GS_URL+'?action=load');
     const json=await res.json();
     if(json.ok&&json.data){
       DB=json.data;
@@ -2897,7 +2897,7 @@ async function sendOverdueNow(){
   const result=document.getElementById('notify-result');
   if(btn){btn.disabled=true;btn.textContent='Enviando…'}
   try{
-    const res=await fetch(GS_URL+'?action=notify_overdue');
+    const res=await jsonpFetch(GS_URL+'?action=notify_overdue');
     const json=await res.json();
     if(result){
       result.style.display='block';
@@ -3058,6 +3058,27 @@ function updateSyncUI(state){
   if(badge){badge.className='tag '+s.cls;badge.textContent=s.label}
 }
 
+
+// JSONP fetch — evita CORS en GET requests a Apps Script
+function jsonpFetch(url){
+  return new Promise((resolve,reject)=>{
+    const cbName='_cb'+Date.now()+Math.floor(Math.random()*9999);
+    const script=document.createElement('script');
+    const timeout=setTimeout(()=>{
+      cleanup();reject(new Error('JSONP timeout'));
+    },10000);
+    function cleanup(){
+      delete window[cbName];
+      if(script.parentNode)script.parentNode.removeChild(script);
+      clearTimeout(timeout);
+    }
+    window[cbName]=function(data){cleanup();resolve(data);};
+    script.src=url+(url.includes('?')?'&':'?')+'callback='+cbName;
+    script.onerror=function(){cleanup();reject(new Error('JSONP error'));};
+    document.head.appendChild(script);
+  });
+}
+
 async function gsPush(){
   if(!GS_URL||_syncBusy)return;
   _syncBusy=true;updateSyncUI('syncing');
@@ -3091,7 +3112,7 @@ async function gsPush(){
       });
       await new Promise(r=>setTimeout(r,2500));
       try{
-        const res=await fetch(GS_URL+'?action=load');
+        const res=await jsonpFetch(GS_URL+'?action=load');
         const json=await res.json();
         if(json.ok&&json.data){
           const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
@@ -3120,7 +3141,7 @@ async function gsPull(force){
   if(!force&&(_pendingPush||Date.now()-_lastSave<15000))return;
   _syncBusy=true;updateSyncUI('syncing');
   try{
-    const res=await fetch(GS_URL+'?action=load');
+    const res=await jsonpFetch(GS_URL+'?action=load');
     const json=await res.json();
     if(json.ok&&json.data){
       const remote=json.data;
@@ -3175,11 +3196,27 @@ async function doLogin(){
   const inputU=document.getElementById('li-user').value.trim().toLowerCase();
   const inputP=document.getElementById('li-pass').value;
   const btn=document.getElementById('btn-login');
-  if(btn){btn.disabled=true;btn.textContent='Verificando...';}
+  if(btn){btn.disabled=true;btn.textContent='Cargando datos...';}
 
-  // Auto-pull al login desactivado — usa Ajustes > Forzar descarga para sincronizar
+  // Pull datos del servidor antes de validar credenciales
+  if(GS_URL){
+    try{
+      const res=await jsonpFetch(GS_URL+'?action=load');
+      const json=await res.json();
+      if(json.ok&&json.data){
+        DB=json.data;
+        if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
+        if(!DB.monthlyScores)DB.monthlyScores=[];
+        if(!DB.tareas)DB.tareas=[];
+        if(!DB.incidents)DB.incidents=[];
+        if(!DB.comments)DB.comments={};
+        localStorage.setItem(LS,JSON.stringify(DB));
+        console.log('[LOGIN] DB cargado del servidor, users:',DB.users?.length);
+      }
+    }catch(e){console.warn('[LOGIN] No se pudo cargar del servidor, usando local:',e);}
+  }
 
-  if(btn){btn.disabled=false;btn.textContent='Iniciar sesión';}
+  if(btn){btn.disabled=false;btn.textContent='Iniciar sesion';}
 
   const allUsers=getUsers();
   const found=allUsers.find(u=>u.username===inputU&&u.password===inputP);
