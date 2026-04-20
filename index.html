@@ -1208,11 +1208,9 @@ function defaultDB(){
     {id:uid('d'),title:'Ficha técnica conceptual',projectId:projects[0].id,assigneeId:users[3].id,due:'2026-02-10',originalDue:'2026-02-10',status:'Bloqueado',blocked:true,blockSince:'2026-02-09',evidence:'',notes:'Falta validación de medidas',completedAt:null,scorePenalty:0},
     {id:uid('d'),title:'Lista de productos por zona',projectId:projects[1].id,assigneeId:users[0].id,due:'2026-02-18',originalDue:'2026-02-18',status:'En revisión',blocked:false,blockSince:null,evidence:'Drive/…',notes:'Organizar por configuraciones',completedAt:null,scorePenalty:0},
   ];
-  const routines=[];
-  const routineRuns=[];
   const rules={yellowOverdue:1,redOverdue:3,yellowBlockDays:2,redBlockDays:5};
   const scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
-  return{users,projects,deliverables,routines,routineRuns,incidents:[],checkins:[],rules,scoreRules,monthlyScores:[],tareas:[],comments:{}};
+  return{users,projects,deliverables,incidents:[],checkins:[],rules,scoreRules,monthlyScores:[],tareas:[],comments:{}};
 }
 
 let _dbFromStorage=false;
@@ -1225,6 +1223,9 @@ if(!DB.monthlyScores) DB.monthlyScores=[];
 if(!DB.tareas) DB.tareas=[];
 if(!DB.incidents) DB.incidents=[];
 if(!DB.comments) DB.comments={};
+// Limpiar rutinas heredadas
+DB.routines=[];
+DB.routineRuns=[];
 
 let GS_URL=localStorage.getItem(LS_GS)||'';
 let SESSION=null;
@@ -1248,21 +1249,7 @@ function saveDB(){
 function userName(id){const u=byId(DB.users,id);return u?u.name:'—'}
 function projName(id){const p=byId(DB.projects,id);return p?p.name:'—'}
 
-function routineTouchesToday(r,tISO){
-  const d=new Date(tISO+'T00:00:00'),dow=d.getDay(),dom=d.getDate();
-  if(r.frequency==='Diaria')return true;
-  if(r.frequency==='Semanal')return dow===1;
-  if(r.frequency==='Mensual')return dom===1;
-  return false;
-}
 
-function ensureRoutineRuns(){
-  const t=todayISO();
-  DB.routines.forEach(r=>{
-    if(!routineTouchesToday(r,t))return;
-    if(!DB.routineRuns.find(rr=>rr.date===t&&rr.routineId===r.id&&rr.assigneeId===r.assigneeId)){
-      DB.routineRuns.push({id:uid('rr'),routineId:r.id,date:t,assigneeId:r.assigneeId,status:'Pendiente'});
-    }
   });
 }
 
@@ -1297,7 +1284,7 @@ function semaforoUser(userId){
   const myDels=DB.deliverables.filter(d=>d.assigneeId===userId&&d.status!=='Aprobado');
   const overdue=myDels.filter(d=>d.due&&daysBetween(d.due,t)>0).length;
   const maxBlock=myDels.filter(d=>d.blocked).reduce((m,d)=>Math.max(m,d.blockSince?daysBetween(d.blockSince,t):0),0);
-  const pendRut=DB.routineRuns.filter(r=>r.date===t&&r.assigneeId===userId&&r.status==='Pendiente').length;
+  const pendRut=0;
   let level='ok';
   if(overdue>=rules.redOverdue||maxBlock>=rules.redBlockDays||pendRut>=rules.redRoutinePending)level='bad';
   else if(overdue>=rules.yellowOverdue||maxBlock>=rules.yellowBlockDays||pendRut>=rules.yellowRoutinePending)level='warn';
@@ -1376,10 +1363,6 @@ function calcKPIs(){
   const overdue=active.filter(d=>d.due&&daysBetween(d.due,t)>0).length;
   const blocked=active.filter(d=>d.blocked).length;
   const maxBlock=active.filter(d=>d.blocked).reduce((m,d)=>Math.max(m,d.blockSince?daysBetween(d.blockSince,t):0),0);
-  const runsToday=DB.routineRuns.filter(r=>r.date===t);
-  const pendRut=runsToday.filter(r=>r.status==='Pendiente').length;
-  const doneRut=runsToday.filter(r=>r.status==='Completada').length;
-  const rutPct=100; // rutinas desactivadas
   const approved=DB.deliverables.filter(d=>d.status==='Aprobado'&&d.completedAt&&d.due);
   const onTime=approved.filter(d=>d.completedAt<=d.due).length;
   const cumPct=approved.length?Math.round((onTime/approved.length)*100):0;
@@ -1443,7 +1426,6 @@ function renderHoy(){
   const upcoming=myDels.filter(d=>d.due&&d.due>=t&&daysBetween(t,d.due)<=7);
 
   // Mini KPIs
-  const myRuns=DB.routineRuns.filter(r=>r.date===t&&(isAdmin||r.assigneeId===myId));
   const pendRut=myRuns.filter(r=>r.status==='Pendiente').length;
   const k=[
     {label:'Vencidos',value:overdue.length,level:overdue.length===0?'ok':overdue.length<=2?'warn':'bad'},
@@ -2692,7 +2674,6 @@ const handlers={
     if(!confirm('¿Eliminar usuario?'))return;
     DB.projects.forEach(p=>{if(p.leaderId===id)p.leaderId=DB.users[0]?.id||''});
     DB.deliverables.forEach(d=>{if(d.assigneeId===id)d.assigneeId=DB.users[0]?.id||''});
-    DB.routines.forEach(r=>{if(r.assigneeId===id)r.assigneeId=DB.users[0]?.id||''});
     DB.users.splice(idx,1);saveDB();renderView(currentView);toast('Usuario eliminado');
   },
 };
@@ -3104,7 +3085,9 @@ async function gsPush(){
   const localTs=DB._savedAt||0;
   console.log('[SYNC] push → Sheets | dels:',DB.deliverables?.length,'| ts:',localTs,'| size:',Math.round(JSON.stringify(DB).length/1024),'KB');
   try{
-    await gsPost(GS_URL,{action:'save',data:DB});
+    // Excluir routines/routineRuns del payload para reducir tamaño
+    const dbToSend=Object.assign({},DB,{routines:[],routineRuns:[]});
+    await gsPost(GS_URL,{action:'save',data:dbToSend});
     // Esperar 3s y verificar con GET que Sheets guardó
     await new Promise(r=>setTimeout(r,3000));
     const check=await gsGet(GS_URL+'?action=load');
