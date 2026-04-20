@@ -1422,7 +1422,6 @@ function renderHoy(){
   const upcoming=myDels.filter(d=>d.due&&d.due>=t&&daysBetween(t,d.due)<=7);
 
   // Mini KPIs
-  const pendRut=myRuns.filter(r=>r.status==='Pendiente').length;
   const k=[
     {label:'Vencidos',value:overdue.length,level:overdue.length===0?'ok':overdue.length<=2?'warn':'bad'},
     {label:'Próximos (7d)',value:upcoming.length,level:upcoming.length===0?'ok':'warn'},
