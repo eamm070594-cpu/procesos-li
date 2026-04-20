@@ -1249,10 +1249,6 @@ function saveDB(){
 function userName(id){const u=byId(DB.users,id);return u?u.name:'—'}
 function projName(id){const p=byId(DB.projects,id);return p?p.name:'—'}
 
-
-  });
-}
-
 function statusTag(status,dueISO){
   const t=todayISO(),ov=dueISO&&daysBetween(dueISO,t)>0;
   if(status==='Aprobado')return'<span class="tag ok">✓ Aprobado</span>';
