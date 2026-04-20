@@ -985,6 +985,24 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
             <button class="btn sm danger" id="btn-force-pull">⬇ Forzar descarga</button>
             <span class="small muted" style="margin-left:auto">Última sync: <b id="last-sync">nunca</b></span>
           </div>
+          <div class="hr"></div>
+          <div style="background:var(--surface2);border-radius:var(--r);padding:12px;font-size:12px;color:var(--muted)">
+            <b style="color:var(--text)">⚠️ Requisito: CORS en Apps Script</b><br>
+            Para que la sincronización funcione entre dispositivos, tu Apps Script debe incluir los headers CORS en <code>doGet</code> y <code>doPost</code>. Asegúrate de que tu <b>Codigo.gs</b> tenga estas líneas en <code>doGet</code>:
+            <pre style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px;margin:8px 0;overflow-x:auto;font-size:11px">function doGet(e){
+  var output = ContentService
+    .createTextOutput(JSON.stringify(handleGet(e)))
+    .setMimeType(ContentService.MimeType.JSON);
+  return output;
+}
+function doPost(e){
+  var output = ContentService
+    .createTextOutput(JSON.stringify(handlePost(e)))
+    .setMimeType(ContentService.MimeType.JSON);
+  return output;
+}</pre>
+            Despliega siempre como <b>"Ejecutar como: yo"</b> y <b>"Quién tiene acceso: Cualquier persona"</b>. Cada vez que modifiques el script debes crear una <b>nueva versión de implementación</b> (no "Editar la misma").
+          </div>
         </div>
         <!-- Semáforo rules -->
         <div class="card" style="margin-bottom:10px">
@@ -3051,39 +3069,36 @@ function updateSyncUI(state){
 }
 
 
-function jsonpFetch(url){
-  return new Promise((resolve,reject)=>{
-    const cb='_cb'+Date.now()+Math.floor(Math.random()*9999);
-    const s=document.createElement('script');
-    const t=setTimeout(()=>{cleanup();reject(new Error('timeout'));},10000);
-    function cleanup(){delete window[cb];s.parentNode&&s.parentNode.removeChild(s);clearTimeout(t);}
-    window[cb]=d=>{cleanup();resolve(d);};
-    s.src=url+(url.includes('?')?'&':'?')+'callback='+cb;
-    s.onerror=()=>{cleanup();reject(new Error('error'));};
-    document.head.appendChild(s);
-  });
+// ── SYNC HELPERS ────────────────────────────────────────────────────────────
+// gsFetch: GET con fetch normal (Google Apps Script devuelve JSON con CORS habilitado)
+async function gsFetch(url){
+  const res=await fetch(url,{method:'GET',cache:'no-store'});
+  if(!res.ok)throw new Error('HTTP '+res.status);
+  return res.json();
 }
+
 async function gsPush(){
   if(!GS_URL||_syncBusy)return;
   _syncBusy=true;updateSyncUI('syncing');
   console.log('[SYNC] gsPush — sending',DB.deliverables?.length,'deliverables, _savedAt:',DB._savedAt);
   try{
-    // Use no-cors POST — Google Apps Script receives it fine even though we can't read the response
-    await fetch(GS_URL,{
+    // POST con text/plain para evitar preflight CORS; Apps Script lo acepta
+    const res=await fetch(GS_URL,{
       method:'POST',
-      mode:'no-cors',
       headers:{'Content-Type':'text/plain'},
       body:JSON.stringify({action:'save',data:DB})
     });
-    // POST enviado — marcar como guardado sin verificar GET (CORS lo bloquea)
+    let json={ok:false};
+    try{json=await res.json();}catch{json={ok:res.ok};}
+    if(!json.ok&&json.error)throw new Error(json.error);
     const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     localStorage.setItem(LS_SYNC,now);
     const el=document.getElementById('last-sync');if(el)el.textContent=now;
     _pendingPush=false;
-    console.log('[SYNC] gsPush — enviado OK');
+    console.log('[SYNC] gsPush — OK');
     updateSyncUI('ok');
   }catch(e){
-    console.warn('[SYNC] gsPush failed:',e);
+    console.warn('[SYNC] gsPush failed:',e.message);
     updateSyncUI('error');
   }
   _syncBusy=false;
@@ -3094,14 +3109,13 @@ async function gsPull(force){
   if(!force&&(_pendingPush||Date.now()-_lastSave<15000))return;
   _syncBusy=true;updateSyncUI('syncing');
   try{
-    const res=await jsonpFetch(GS_URL+'?action=load');
-    const json=await res.json();
+    // GET directo — Apps Script debe tener doGet que retorna ContentService JSON con CORS
+    const json=await gsFetch(GS_URL+'?action=load');
     if(json.ok&&json.data){
       const remote=json.data;
       const localTs=DB._savedAt||0;
       const remoteTs=remote._savedAt||0;
       console.log('[SYNC] gsPull — localTs:',localTs,'remoteTs:',remoteTs,'diff(s):',(remoteTs-localTs)/1000,'localDels:',DB.deliverables?.length,'remoteDels:',remote.deliverables?.length);
-      // Force overwrite on login, or if remote is newer
       if(force || remoteTs > localTs + 10000){
         console.warn('[SYNC] Remote is newer — overwriting local DB');
         DB=remote;
@@ -3109,6 +3123,7 @@ async function gsPull(force){
         if(!DB.monthlyScores)DB.monthlyScores=[];
         if(!DB.tareas)DB.tareas=[];
         if(!DB.incidents)DB.incidents=[];
+        if(!DB.comments)DB.comments={};
         localStorage.setItem(LS,JSON.stringify(DB));
         const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
         localStorage.setItem(LS_SYNC,now);
@@ -3118,18 +3133,28 @@ async function gsPull(force){
         else if(currentView==='ingeniero'&&_currentIngenieroId) renderIngeniero(_currentIngenieroId);
         else renderView(currentView);
       } else {
-        // Local is newer — push to Sheets instead
+        // Local is newer or equal — push to Sheets instead
+        console.log('[SYNC] Local is newer or equal — pushing');
         updateSyncUI('ok');
         _syncBusy=false;
         await gsPush();
         return;
       }
-    } else if(json.ok&&!json.data){updateSyncUI('ok');_syncBusy=false;await gsPush();return}
-    else throw new Error(json.error||'Error');
-  }catch{updateSyncUI('error')}
+    } else if(json.ok&&!json.data){
+      // Sheets vacío — subir datos locales
+      console.log('[SYNC] Remote empty — pushing local data');
+      updateSyncUI('ok');_syncBusy=false;await gsPush();return;
+    } else {
+      throw new Error(json.error||'Respuesta inesperada del servidor');
+    }
+  }catch(e){
+    console.warn('[SYNC] gsPull failed:',e.message);
+    updateSyncUI('error');
+  }
   _syncBusy=false;
 }
 
+// Auto-pull cada 60 s si hay URL configurada y no hay cambios locales pendientes
 setInterval(()=>{if(GS_URL&&!_syncBusy&&!_pendingPush&&Date.now()-_lastSave>90000)gsPull()},60000);
 
 /* ══════════════════════════════════════════════════════
