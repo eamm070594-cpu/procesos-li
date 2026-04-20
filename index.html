@@ -3055,20 +3055,18 @@ async function gsPush(){
   _syncBusy=true;updateSyncUI('syncing');
   console.log('[SYNC] gsPush — sending',DB.deliverables?.length,'deliverables, _savedAt:',DB._savedAt);
   try{
-    await fetch(GS_URL,{
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'save',data:DB})
-    });
+    const payload=encodeURIComponent(JSON.stringify(DB));
+    const res=await fetch(GS_URL+'?action=save&data='+payload);
+    const json=await res.json();
+    if(!json.ok) throw new Error(json.error||'Error al guardar');
     const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     localStorage.setItem(LS_SYNC,now);
     const el=document.getElementById('last-sync');if(el)el.textContent=now;
     _pendingPush=false;
-    console.log('[SYNC] gsPush — completed (no-cors, cannot verify)');
+    console.log('[SYNC] gsPush — confirmed OK, saved_at:',json.saved_at);
     updateSyncUI('ok');
   }catch(e){
-    console.warn('gsPush failed:',e);
+    console.warn('[SYNC] gsPush failed:',e);
     updateSyncUI('error');
   }
   _syncBusy=false;
