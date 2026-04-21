@@ -674,6 +674,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
       <div class="snav-section admin-only">Equipo</div>
       <button class="snav-btn admin-only" data-view="evaluacion"><span class="icon">🏆</span> Evaluación mensual</button>
       <button class="snav-btn" data-view="equipo"><span class="icon">👥</span> Equipo</button>
+      <button class="snav-btn admin-only" data-view="bitacora"><span class="icon">📓</span> Bitácora</button>
       <div class="snav-section">Sistema</div>
       <button class="snav-btn" data-view="ajustes"><span class="icon">⚙️</span> Ajustes</button>
       <button class="snav-btn" id="sb-logout" style="margin-top:4px"><span class="icon">🚪</span> Cerrar sesión</button>
@@ -1065,6 +1066,28 @@ function doPost(e){
       </div>
     </div>
 
+    <!-- ─── VIEW: BITÁCORA ─── -->
+    <div class="view" id="view-bitacora">
+      <div class="page-header">
+        <div class="page-header-inner">
+          <div class="page-title"><h2>📓 Bitácora</h2><p>Notas, tareas y seguimiento — solo admin</p></div>
+          <div class="page-actions">
+            <button class="btn sm primary" onclick="openBitacoraForm()">＋ Agregar</button>
+          </div>
+        </div>
+      </div>
+      <div class="pad">
+        <!-- Tabs -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px" id="bit-tabs">
+          <button class="proj-tab active" data-bit-tab="all">Todo <span class="tab-count" id="bit-tc-all">0</span></button>
+          <button class="proj-tab" data-bit-tab="nota">📝 Notas <span class="tab-count" id="bit-tc-nota">0</span></button>
+          <button class="proj-tab" data-bit-tab="tarea">✅ Tareas <span class="tab-count" id="bit-tc-tarea">0</span></button>
+          <button class="proj-tab" data-bit-tab="seguimiento">👁 Seguimiento <span class="tab-count" id="bit-tc-seguimiento">0</span></button>
+        </div>
+        <div id="bitacora-list"></div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /shell -->
 
@@ -1223,6 +1246,7 @@ if(!DB.monthlyScores) DB.monthlyScores=[];
 if(!DB.tareas) DB.tareas=[];
 if(!DB.incidents) DB.incidents=[];
 if(!DB.comments) DB.comments={};
+if(!DB.bitacora) DB.bitacora=[];
 // Limpiar rutinas heredadas
 DB.routines=[];
 DB.routineRuns=[];
@@ -2704,6 +2728,7 @@ function refreshAfterDelAction(){
   else if(currentView==='equipo') renderEquipo();
   else if(currentView==='entregables') renderEntregables();
   else if(currentView==='hoy') renderHoy();
+  else if(currentView==='bitacora') renderBitacora();
 }
 
 function renderValidarBlock(){
@@ -3584,10 +3609,123 @@ function openAddDelToProj2(projId){
 
 function updateRevisarBadge(){
   const pending=DB.deliverables.filter(d=>d.status==='En revisión');
-  // Update existing validar-block if on dashboard
   if(typeof renderValidarBlock==='function') renderValidarBlock();
-  // Update bottom nav badge if present
   const navBadge=document.querySelector('[data-view="revisar"] .bnav-badge,.revisar-nav-badge');
   if(navBadge){navBadge.style.display=pending.length?'':'none';navBadge.textContent=pending.length;}
 }
+
+/* ══════════════════════════════════════════════════════
+   BITÁCORA
+══════════════════════════════════════════════════════ */
+function renderBitacora(){
+  if(!DB.bitacora)DB.bitacora=[];
+  const activeTab=document.querySelector('#bit-tabs .proj-tab.active')?.dataset?.bitTab||'all';
+  const items=DB.bitacora.filter(i=>activeTab==='all'||i.tipo===activeTab);
+  items.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+
+  // Update tab counts
+  document.getElementById('bit-tc-all').textContent=DB.bitacora.length;
+  document.getElementById('bit-tc-nota').textContent=DB.bitacora.filter(i=>i.tipo==='nota').length;
+  document.getElementById('bit-tc-tarea').textContent=DB.bitacora.filter(i=>i.tipo==='tarea').length;
+  document.getElementById('bit-tc-seguimiento').textContent=DB.bitacora.filter(i=>i.tipo==='seguimiento').length;
+
+  const icons={nota:'📝',tarea:'✅',seguimiento:'👁'};
+  const colors={nota:'var(--accent)',tarea:'var(--ok)',seguimiento:'var(--warn)'};
+
+  const list=document.getElementById('bitacora-list');
+  if(!list)return;
+  if(!items.length){list.innerHTML='<div class="empty">Sin registros. Usa ＋ Agregar para crear el primero.</div>';return;}
+
+  list.innerHTML=items.map(i=>`
+    <div class="card" style="margin-bottom:10px;border-left:3px solid ${colors[i.tipo]||'var(--border)'}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">${icons[i.tipo]||'📌'}</span>
+          <div>
+            <div style="font-weight:700;font-size:14px">${esc(i.titulo)}</div>
+            <div class="small muted">${fmtDate(i.fecha)} ${i.tipo==='tarea'?'· <span class="tag '+(i.done?'ok':'gray')+'">'+(i.done?'Completada':'Pendiente')+'</span>':''}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          ${i.tipo==='tarea'?`<button class="btn xs ${i.done?'':'ok'}" onclick="toggleBitTarea('${i.id}')">${i.done?'↩ Reabrir':'✓ Listo'}</button>`:''}
+          <button class="btn xs" onclick="editBitacora('${i.id}')">Editar</button>
+          <button class="btn xs danger" onclick="deleteBitacora('${i.id}')">✕</button>
+        </div>
+      </div>
+      ${i.texto?`<div style="font-size:13px;color:var(--text);white-space:pre-wrap;margin-top:4px">${esc(i.texto)}</div>`:''}
+      ${i.proyecto?`<div class="small muted" style="margin-top:6px">📁 ${esc(i.proyecto)}</div>`:''}
+    </div>`).join('');
+}
+
+function openBitacoraForm(id){
+  const item=id?DB.bitacora?.find(x=>x.id===id):null;
+  const projOpts=DB.projects.map(p=>`<option value="${esc(p.name)}" ${item?.proyecto===p.name?'selected':''}>${esc(p.name)}</option>`).join('');
+  openDlg({
+    title: item?'Editar registro':'Nuevo registro',
+    body:`
+      <label class="lbl">Tipo *</label>
+      <select class="select-input" id="bit-tipo">
+        <option value="nota" ${(!item||item.tipo==='nota')?'selected':''}>📝 Nota</option>
+        <option value="tarea" ${item?.tipo==='tarea'?'selected':''}>✅ Tarea</option>
+        <option value="seguimiento" ${item?.tipo==='seguimiento'?'selected':''}>👁 Seguimiento</option>
+      </select>
+      <label class="lbl">Título *</label>
+      <input class="input" id="bit-titulo" value="${esc(item?.titulo||'')}" placeholder="Título del registro"/>
+      <label class="lbl">Fecha *</label>
+      <input class="input" type="date" id="bit-fecha" value="${item?.fecha||todayISO()}"/>
+      <label class="lbl">Detalle</label>
+      <textarea class="input" id="bit-texto" placeholder="Escribe aquí...">${esc(item?.texto||'')}</textarea>
+      <label class="lbl">Proyecto relacionado (opcional)</label>
+      <select class="select-input" id="bit-proyecto">
+        <option value="">Sin proyecto</option>
+        ${projOpts}
+      </select>`,
+    onSave:()=>{
+      const titulo=(document.getElementById('bit-titulo')?.value||'').trim();
+      if(!titulo){toast('Falta título');return false;}
+      const entry={
+        id: item?.id||uid('bit'),
+        tipo: document.getElementById('bit-tipo').value,
+        titulo,
+        fecha: document.getElementById('bit-fecha').value||todayISO(),
+        texto: (document.getElementById('bit-texto')?.value||'').trim(),
+        proyecto: document.getElementById('bit-proyecto').value||'',
+        done: item?.done||false,
+        creadoAt: item?.creadoAt||todayISO()
+      };
+      if(!DB.bitacora)DB.bitacora=[];
+      if(item){
+        const idx=DB.bitacora.findIndex(x=>x.id===item.id);
+        if(idx>=0)DB.bitacora[idx]=entry;
+      } else {
+        DB.bitacora.push(entry);
+      }
+      saveDB();renderBitacora();toast(item?'Registro actualizado ✓':'Registro creado ✓');
+    }
+  });
+}
+
+function editBitacora(id){openBitacoraForm(id);}
+
+function deleteBitacora(id){
+  if(!confirm('¿Eliminar este registro?'))return;
+  DB.bitacora=(DB.bitacora||[]).filter(x=>x.id!==id);
+  saveDB();renderBitacora();toast('Eliminado');
+}
+
+function toggleBitTarea(id){
+  const item=(DB.bitacora||[]).find(x=>x.id===id);
+  if(!item)return;
+  item.done=!item.done;
+  saveDB();renderBitacora();toast(item.done?'Tarea completada ✓':'Tarea reabierta');
+}
+
+// Tab switching for bitacora
+document.getElementById('bit-tabs')?.addEventListener('click',e=>{
+  const tab=e.target.closest('.proj-tab');
+  if(!tab)return;
+  document.querySelectorAll('#bit-tabs .proj-tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  renderBitacora();
+});
 </script>
