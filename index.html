@@ -361,7 +361,7 @@ dialog{
   border-radius:var(--r3);
   width:min(680px,95vw);
   max-height:92dvh;overflow:hidden;
-  box-shadow:0 8px 40px rgba(26,34,51,.15)
+  box-shadow:0 8px 40px rgba(26,34,51,.15);
   border:1px solid var(--border);
 }
 dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
@@ -443,7 +443,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
   width:min(380px,100%);
   background:var(--surface);border:1px solid var(--border);
   border-radius:var(--r3);padding:28px;
-  box-shadow:0 8px 40px rgba(26,34,51,.15)
+  box-shadow:0 8px 40px rgba(26,34,51,.15);
 }
 .login-logo{
   width:56px;height:56px;border-radius:14px;
@@ -540,13 +540,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
 }
 .proj-tab.active .tab-count{background:var(--accent);color:#fff}
 
-/* ── PROGRESS BAR (ingeniero/proyecto) ── */
-.progress-bar{flex:1;height:5px;background:var(--surface2);border-radius:99px;overflow:hidden}
-.progress-bar-fill{height:100%;border-radius:99px;transition:width .3s}
-.progress-bar-fill.ok{background:var(--ok)}
-.progress-bar-fill.warn{background:var(--warn)}
-.progress-bar-fill.bad{background:var(--bad)}
-.progress-bar-fill.gray{background:var(--muted)}
+/* progress-bar already defined above */
 /* ── VIEW: ingeniero / proyecto ── */
 #view-ingeniero,#view-proyecto{overflow-y:auto;-webkit-overflow-scrolling:touch}
 
@@ -554,79 +548,53 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
    MOBILE — App feel
 ═══════════════════════════════ */
 @media(max-width:767px){
-  /* Hide desktop sidebar */
-  #sidebar{display:none!important}
-  #main-content,main,.main-content{margin-left:0!important}
-
-  /* Full width content */
-  .view{
-    padding-bottom:calc(70px + env(safe-area-inset-bottom))!important;
-  }
-
-  /* Page headers smaller */
-  .page-title h2,.ph h2{font-size:18px!important}
-  .page-header-inner,.ph-inner{padding:10px 14px!important}
-
-  /* Cards */
-  .card{padding:12px!important;border-radius:12px!important}
-  .pad{padding:10px 12px!important}
-
-  /* Tables — scroll horizontal */
-  .tbl-wrap,table{overflow-x:auto!important;-webkit-overflow-scrolling:touch;display:block;width:100%}
-  table{min-width:0!important}
-  thead,tbody,tr{display:table;width:100%;table-layout:fixed}
-  
-  /* Stack form rows */
-  .form-row{grid-template-columns:1fr!important}
-
-  /* Bigger touch targets */
-  .btn{min-height:40px!important;padding:8px 14px!important}
-  .btn.xs{min-height:32px!important;font-size:12px!important}
-  .btn.sm{min-height:36px!important}
-
-  /* Person cards — no overflow */
-  .person-card,.proj-card,.del-item{
-    word-break:break-word!important;
-  }
-
-  /* KPI grid 2 cols */
-  .kpi-grid{grid-template-columns:1fr 1fr!important}
-
-  /* Bar rows wrap */
-  .bar-row{flex-wrap:nowrap!important}
-  .bar-label{min-width:60px!important;max-width:60px!important;font-size:11px!important}
-
-  /* Bottom nav safe area */
-  #bottomnav{
-    padding-bottom:env(safe-area-inset-bottom)!important;
-  }
+  #sidebar{display:none}
+  .view{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+  .page-title h2{font-size:18px}
+  .card{padding:12px}
+  .pad{padding:10px 12px}
+  .form-row{grid-template-columns:1fr}
+  .btn{min-height:40px}
+  .btn.xs{min-height:32px}
+  .btn.sm{min-height:36px}
+  .person-card,.del-item{word-break:break-word}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  #bottomnav{padding-bottom:env(safe-area-inset-bottom)}
 }
 
 /* Drawer items */
 .drawer-item{
-  display:flex!important;
-  flex-direction:column!important;
-  align-items:center!important;
-  justify-content:center!important;
-  gap:6px!important;
-  padding:18px 10px!important;
-  background:var(--surface)!important;
-  border:none!important;
-  cursor:pointer!important;
-  font-size:13px!important;
-  font-weight:600!important;
-  font-family:var(--font)!important;
-  color:var(--text)!important;
-  transition:background .12s!important;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:18px 10px;
+  background:var(--surface);
+  border:none;
+  cursor:pointer;
+  font-size:13px;
+  font-weight:600;
+  font-family:var(--font-body);
+  color:var(--text);
+  transition:background .12s;
 }
-.drawer-item:active{background:var(--surface2)!important}
+.drawer-item:active{background:var(--surface2)}
 
 @media(min-width:768px){
-  /* Desktop: hide bottom nav */
-  #bottomnav{display:none!important}
-  #fab{display:none!important}
-  #mas-overlay,#mas-drawer{display:none!important}
+  #bottomnav{display:none}
+  #fab{display:none}
+  #mas-overlay,#mas-drawer{display:none}
 }
+/* ── MÁS DRAWER ── */
+#mas-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200}
+#mas-drawer{
+  display:none;position:fixed;bottom:0;left:0;right:0;
+  background:var(--surface);border-radius:20px 20px 0 0;
+  z-index:201;padding:8px 0 calc(16px + env(safe-area-inset-bottom));
+  box-shadow:0 -8px 32px rgba(0,0,0,.15);
+}
+
 </style>
 </head>
 <body>
@@ -709,7 +677,6 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
             <p id="hoy-sub">Tus entregables pendientes</p>
           </div>
           <div class="page-actions">
-            <span id="sync-pill-hoy" style="display:none"></span>
           </div>
         </div>
       </div>
@@ -806,15 +773,12 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
             <input class="input" id="proj-search" placeholder="Buscar proyecto…" style="flex:2;min-width:180px"/>
           </div>
         </div>
-        <!-- Hidden filters for JS compat -->
-        <select id="proj-f-status" style="display:none"></select>
-        <select id="proj-f-priority" style="display:none"></select>
         <div id="proj-list"></div>
       </div>
     </div>
 
     <!-- ─── VIEW: ENTREGABLES ─── -->
-    <div class="view" id="view-entregables" style="display:none!important">
+    <div class="view hidden" id="view-entregables">
       <div class="page-header">
         <div class="page-header-inner">
           <div class="page-title"><h2>Entregables</h2><p>Lista completa filtrable</p></div>
@@ -921,7 +885,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
     </div>
 
     <!-- ─── VIEW: EQUIPO ─── -->
-    <div class="view active" id="view-equipo">
+    <div class="view" id="view-equipo">
       <div class="page-header">
         <div class="page-header-inner">
           <div class="page-title"><h2>Equipo</h2><p>Perfiles, DGP y acceso</p></div>
@@ -1091,6 +1055,85 @@ function doPost(e){
   </div><!-- /content -->
 </div><!-- /shell -->
 
+<!-- ─── MODAL CONFIRM ─── -->
+<dialog id="dlg-confirm">
+  <div class="modal-inner" style="max-width:420px">
+    <div class="modal-header">
+      <div><h3 id="dlg-confirm-title">¿Confirmar?</h3><p id="dlg-confirm-sub" class="muted"></p></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="dlg-confirm-cancel">Cancelar</button>
+      <button class="btn primary" id="dlg-confirm-ok">Aceptar</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ─── MODAL PROMPT ─── -->
+<dialog id="dlg-prompt">
+  <div class="modal-inner" style="max-width:480px">
+    <div class="modal-header">
+      <div><h3 id="dlg-prompt-title">Ingresa un valor</h3><p id="dlg-prompt-sub" class="muted"></p></div>
+      <button class="btn ghost icon-only" onclick="document.getElementById('dlg-prompt').close()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input class="input" id="dlg-prompt-input" style="width:100%"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="document.getElementById('dlg-prompt').close();window._promptReject&&window._promptReject()">Cancelar</button>
+      <button class="btn primary" id="dlg-prompt-ok">Aceptar</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ─── MODAL REJECT ─── -->
+<dialog id="dlg-reject">
+  <div class="modal-inner" style="max-width:480px">
+    <div class="modal-header">
+      <div><h3>Rechazar entregable</h3><p id="dlg-reject-sub" class="muted"></p></div>
+      <button class="btn ghost icon-only" onclick="document.getElementById('dlg-reject').close()">✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="lbl">Motivo del rechazo *</label>
+      <textarea class="input" id="dlg-reject-reason" placeholder="Describe por qué se rechaza…" style="min-height:80px"></textarea>
+      <div class="hr"></div>
+      <label class="lbl">¿Afecta el score de nómina?</label>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+          <input type="radio" name="reject-score" id="dlg-reject-yes" value="yes" checked> Sí, penalizar -<span id="dlg-reject-pen">5</span>%
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+          <input type="radio" name="reject-score" id="dlg-reject-no" value="no"> No penalizar
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="document.getElementById('dlg-reject').close()">Cancelar</button>
+      <button class="btn danger" id="dlg-reject-ok">Rechazar</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ─── MODAL NEXT PHASE ─── -->
+<dialog id="dlg-nextphase">
+  <div class="modal-inner" style="max-width:480px">
+    <div class="modal-header">
+      <div><h3>Siguiente fase</h3><p id="dlg-nextphase-proj" class="muted"></p></div>
+      <button class="btn ghost icon-only" onclick="document.getElementById('dlg-nextphase').close()">✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="lbl">Nombre de la fase *</label>
+      <input class="input" id="dlg-nextphase-name" style="width:100%"/>
+      <label class="lbl" style="margin-top:12px">Fecha límite *</label>
+      <input class="input" type="date" id="dlg-nextphase-due" style="width:100%"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="document.getElementById('dlg-nextphase').close()">Cancelar</button>
+      <button class="btn primary" id="dlg-nextphase-ok">Crear fase</button>
+    </div>
+  </div>
+</dialog>
+
+
 <!-- BOTTOM NAV (mobile) -->
 <nav id="bottomnav">
   <div class="bnav-inner">
@@ -1111,8 +1154,8 @@ function doPost(e){
 </nav>
 
 <!-- DRAWER: Más -->
-<div id="mas-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200" onclick="closeMasDrawer()"></div>
-<div id="mas-drawer" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:20px 20px 0 0;z-index:201;padding:8px 0 calc(16px + env(safe-area-inset-bottom));box-shadow:0 -8px 32px rgba(0,0,0,.15)">
+<div id="mas-overlay" onclick="closeMasDrawer()"></div>
+<div id="mas-drawer">
   <div style="width:36px;height:4px;background:var(--border);border-radius:99px;margin:8px auto 16px"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border2)">
     <button class="drawer-item" onclick="showView('gantt');closeMasDrawer()"><span style="font-size:28px">📅</span><span>Gantt</span></button>
@@ -1182,7 +1225,7 @@ function doPost(e){
 </dialog>
 
 <script>
-var _pendingPush=false;
+let _pendingPush=false;
 /* ══════════════════════════════════════════════════════
    UTILS
 ══════════════════════════════════════════════════════ */
@@ -1261,9 +1304,6 @@ function saveDB(){
   localStorage.setItem(LS,JSON.stringify(DB));
   _lastSave=DB._savedAt;
   _pendingPush=true;
-  // Clear pendingPush after 30s (enough time for push to complete)
-  clearTimeout(saveDB._pt);
-  saveDB._pt=setTimeout(()=>{_pendingPush=false;},60000);
   if(GS_URL){clearTimeout(saveDB._t);saveDB._t=setTimeout(gsPush,800)}
 }
 
@@ -1304,10 +1344,9 @@ function semaforoUser(userId){
   const myDels=DB.deliverables.filter(d=>d.assigneeId===userId&&d.status!=='Aprobado');
   const overdue=myDels.filter(d=>d.due&&daysBetween(d.due,t)>0).length;
   const maxBlock=myDels.filter(d=>d.blocked).reduce((m,d)=>Math.max(m,d.blockSince?daysBetween(d.blockSince,t):0),0);
-  const pendRut=0;
   let level='ok';
-  if(overdue>=rules.redOverdue||maxBlock>=rules.redBlockDays||pendRut>=rules.redRoutinePending)level='bad';
-  else if(overdue>=rules.yellowOverdue||maxBlock>=rules.yellowBlockDays||pendRut>=rules.yellowRoutinePending)level='warn';
+  if(overdue>=rules.redOverdue||maxBlock>=rules.redBlockDays)level='bad';
+  else if(overdue>=rules.yellowOverdue||maxBlock>=rules.yellowBlockDays)level='warn';
   return{level,overdue,maxBlock,pendRut};
 }
 
@@ -1323,8 +1362,8 @@ function getWeekBounds(d=new Date()){
   const fri=new Date(mon);fri.setDate(mon.getDate()+4);
   return{ws:todayISO(mon),we:todayISO(fri)};
 }
-function weekMetricForUser(userId,d=new Date()){
-  const{ws,we}=getWeekBounds(d);
+function weekMetricForUser(userId,_date=new Date()){
+  const{ws,we}=getWeekBounds(_date);
   const dels=DB.deliverables.filter(d=>d.assigneeId===userId&&d.due&&d.due>=ws&&d.due<=we);
   const efectivo=dels.filter(d=>d.status==='Aprobado'&&d.completedAt&&d.completedAt<=d.due).length;
   const cumplido=dels.filter(d=>d.status==='Aprobado'&&d.completedAt&&d.completedAt>d.due).length;
@@ -2035,7 +2074,6 @@ function openCalDay(iso,evs){
 /* ══════════════════════════════════════════════════════
    RENDER: EVALUACIÓN MENSUAL
 ══════════════════════════════════════════════════════ */
-let _preCierreMode=false;
 function renderEvaluacion(){
   const now=new Date();
   const scores=getCurrentMonthScores();
@@ -2099,18 +2137,16 @@ function renderEvaluacion(){
   const btnPre=document.getElementById('btn-pre-cierre');
   const btnCierre=document.getElementById('btn-cierre');
   if(btnPre) btnPre.onclick=()=>{
-    _preCierreMode=true;
-    btnPre.style.display='none';
+      btnPre.style.display='none';
     if(btnCierre)btnCierre.style.display='';
     toast('Pre-cierre listo — revisa los scores y confirma si estás de acuerdo');
   };
-  if(btnCierre) btnCierre.onclick=()=>{
-    if(!confirm(`Confirmar cierre de ${MONTHS[now.getMonth()]} ${now.getFullYear()}?\n\nEsta acción es irreversible. Los scores quedarán registrados.`))return;
+  if(btnCierre) btnCierre.onclick=async()=>{
+    if(!await appConfirm(`Confirmar cierre de ${MONTHS[now.getMonth()]} ${now.getFullYear()}`,`Los scores quedarán registrados. Esta acción es irreversible.`))return;
     const toSave=scores.map(s=>({...s,closedAt:todayISO(),frozen:true}));
     DB.monthlyScores.push(...toSave);
     saveDB();
-    _preCierreMode=false;
-    btnPre.style.display='';
+      btnPre.style.display='';
     btnCierre.style.display='none';
     renderEvaluacion();
     toast('Cierre confirmado — scores guardados');
@@ -2358,7 +2394,7 @@ function fillSelect(id,arr,defaultLabel,valKey='id',labelKey='name'){
    EVENT DELEGATION — TABLE ACTIONS
 ══════════════════════════════════════════════════════ */
 document.body.addEventListener('click',e=>{
-  const btn=e.target.closest('[data-edit-del],[data-approve-del],[data-del-del],[data-submit-del],[data-reject-del],[data-next-phase],[data-close-proj],[data-run-r],[data-edit-r],[data-del-r],[data-edit-proj],[data-del-proj],[data-open-proj],[data-add-del-proj],[data-edit-u],[data-del-u],[data-open-del-cmt],[data-open-proj-cmt]');
+  const btn=e.target.closest('[data-edit-del],[data-approve-del],[data-del-del],[data-submit-del],[data-reject-del],[data-next-phase],[data-close-proj],[data-edit-proj],[data-del-proj],[data-open-proj],[data-add-del-proj],[data-edit-u],[data-del-u],[data-open-del-cmt],[data-open-proj-cmt]');
   if(!btn)return;
 
   // Comentarios — verificación explícita primero
@@ -2386,9 +2422,6 @@ document.body.addEventListener('click',e=>{
     ['data-submit-del','submitDel'],
     ['data-reject-del','rejectDel'],
     ['data-next-phase','nextPhase'],
-    ['data-run-r','runR'],
-    ['data-edit-r','editR'],
-    ['data-del-r','delR'],
     ['data-edit-proj','editProj'],
     ['data-del-proj','delProj'],
     ['data-open-proj','openProj'],
@@ -2460,9 +2493,9 @@ const handlers={
     DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:'✅ Entregable aprobado.',link:''});
     saveDB();refreshAfterDelAction();toast(`✓ Aprobado: ${d.title}`);
   },
-  delDel(id){
+  async delDel(id){
     const idx=DB.deliverables.findIndex(x=>x.id===id);if(idx<0)return;
-    if(!confirm('¿Eliminar entregable?'))return;
+    if(!await appConfirm('¿Eliminar entregable?','Esta acción no se puede deshacer.'))return;
     DB.deliverables.splice(idx,1);refreshAfterDelAction();toast('Eliminado');
   },
   submitDel(id){
@@ -2470,89 +2503,42 @@ const handlers={
     d.status='En revisión';d.submittedAt=todayISO();d.submittedBy=SESSION?.userId;
     refreshAfterDelAction();toast('Enviado para validación ✓');
   },
-  rejectDel(id){
+  async rejectDel(id){
     if(SESSION?.role!=='admin'){toast('Solo el admin puede rechazar');return;}
     const d=byId(DB.deliverables,id);if(!d)return;
-
-    // Simple prompt - no modal conflicts
-    const reason=window.prompt(`Rechazar: "${d.title}"\n\nEscribe el motivo del rechazo:`);
-    if(reason===null)return; // cancelled
-    if(!reason.trim()){toast('Escribe un motivo para rechazar');return;}
-
-    const affectsScore=window.confirm('¿Este rechazo afecta el score de nómina?\n\nAceptar = Sí penaliza\nCancelar = No penaliza');
-
+    const result=await appRejectDlg(d.title);
+    if(!result)return;
+    const {reason,affectsScore}=result;
     const t=todayISO();
-    d.status='En progreso';
-    d.submittedAt=null;
-    d.submittedBy=null;
-    d.rejectedAt=t;
-    d.rejectedBy=SESSION?.name;
+    d.status='En progreso';d.submittedAt=null;d.submittedBy=null;d.rejectedAt=t;d.rejectedBy=SESSION?.name;
     if(affectsScore) d.scorePenalty=(d.scorePenalty||0)+DB.scoreRules.penaltyFollowUp;
-
     if(!DB.comments) DB.comments={};
     const key='deliverable_'+id;
     if(!DB.comments[key]) DB.comments[key]=[];
-    DB.comments[key].push({
-      id:uid('c'),author:SESSION?.name||'Admin',role:'admin',
-      date:t,time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),
-      text:`❌ Rechazado: ${reason.trim()}${affectsScore?' · Penalización -'+DB.scoreRules.penaltyFollowUp+'%':''}`,
-      link:''
-    });
-    saveDB();
-    refreshAfterDelAction();
+    DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:t,
+      time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),
+      text:`❌ Rechazado: ${reason}${affectsScore?' · -'+DB.scoreRules.penaltyFollowUp+'%':''}`,link:''});
+    saveDB();refreshAfterDelAction();
     toast(`Rechazado${affectsScore?' · -'+DB.scoreRules.penaltyFollowUp+'% al score':' · sin penalización'}`);
   },
-  nextPhase(id){
+  async nextPhase(id){
     const d=byId(DB.deliverables,id);if(!d)return;
     const p=byId(DB.projects,d.projectId);
-    const phaseMatch=d.title.match(/fase\s*(\d+)/i);
-    const nextNum=phaseMatch?parseInt(phaseMatch[1])+1:2;
-    const sug=phaseMatch?d.title.replace(/fase\s*\d+/i,`Fase ${nextNum}`):`${d.title} — Fase 2`;
-    const title=window.prompt(`Siguiente fase\nProyecto: ${p?.name||'—'}\nNombre:`,sug);
-    if(!title||!title.trim())return;
-    const dueStr=window.prompt('Fecha límite (YYYY-MM-DD):',d.due||todayISO());
-    if(!dueStr)return;
-    const newDel={id:uid('d'),title:title.trim(),projectId:d.projectId,assigneeId:d.assigneeId,due:dueStr,originalDue:dueStr,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:'',completedAt:null,scorePenalty:0,parentId:id};
+    const result=await appNextPhaseDlg(d,p?.name||'—');
+    if(!result)return;
+    const {name,due}=result;
+    const newDel={id:uid('d'),title:name,projectId:d.projectId,assigneeId:d.assigneeId,due,originalDue:due,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:'',completedAt:null,scorePenalty:0,parentId:id};
     DB.deliverables.push(newDel);
     d.status='Aprobado';d.completedAt=todayISO();d.blocked=false;d.blockSince=null;d.supersededBy=newDel.id;
     if(!DB.comments)DB.comments={};
     const key='deliverable_'+id;
     if(!DB.comments[key])DB.comments[key]=[];
-    DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`➡️ Fase: "${title.trim()}" · ${fmtDate(dueStr)}`,link:''});
+    DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`➡️ Fase: "${name}" · ${fmtDate(due)}`,link:''});
     refreshAfterDelAction();
-    toast(`✓ Original aprobado · Nueva fase: "${title.trim()}"`);
+    toast(`✓ Original aprobado · Nueva fase: "${name}"`);
   },
 
-  runR(id){
-    const r=byId(DB.routines,id);if(!r)return;
-    ensureRoutineRuns();const t=todayISO();
-    const rr=DB.routineRuns.find(x=>x.date===t&&x.routineId===id&&x.assigneeId===r.assigneeId);
-    if(rr)rr.status='Completada';
-    saveDB();renderView(currentView);toast('Rutina completada ✓');
-  },
-  editR(id){
-    const r=byId(DB.routines,id);if(!r)return;
-    const uOpts=DB.users.map(u=>`<option value="${u.id}"${u.id===r.assigneeId?' selected':''}>${esc(u.name)}</option>`).join('');
-    openDlg({title:'Editar rutina',sub:esc(r.name),body:`
-      <label class="lbl">Nombre</label><input class="input" id="er-name" value="${esc(r.name)}"/>
-      <div class="form-row"><div><label class="lbl">Responsable</label><select class="select-input" id="er-ass">${uOpts}</select></div>
-      <div><label class="lbl">Frecuencia</label><select class="select-input" id="er-freq">${['Diaria','Semanal','Mensual'].map(f=>`<option${f===r.frequency?' selected':''}>${f}</option>`).join('')}</select></div></div>
-      <label class="lbl">Checklist (1 por línea)</label><textarea class="input" id="er-check">${esc((r.checklist||[]).join('\n'))}</textarea>`,
-      onSave:()=>{
-        r.name=document.getElementById('er-name').value.trim();
-        r.assigneeId=document.getElementById('er-ass').value;
-        r.frequency=document.getElementById('er-freq').value;
-        r.checklist=(document.getElementById('er-check').value||'').split('\n').map(s=>s.trim()).filter(Boolean);
-        toast('Rutina actualizada ✓');
-      }
-    });
-  },
-  delR(id){
-    const idx=DB.routines.findIndex(x=>x.id===id);if(idx<0)return;
-    if(!confirm('¿Eliminar rutina?'))return;
-    DB.routineRuns=DB.routineRuns.filter(rr=>rr.routineId!==id);
-    DB.routines.splice(idx,1);saveDB();renderView(currentView);toast('Rutina eliminada');
-  },
+
   editProj(id){
     const p=byId(DB.projects,id);if(!p)return;
     const uOpts=DB.users.map(u=>`<option value="${u.id}"${u.id===p.leaderId?' selected':''}>${esc(u.name)}</option>`).join('');
@@ -2577,18 +2563,18 @@ const handlers={
       }
     });
   },
-  closeProj(id){
+  async closeProj(id){
     const p=byId(DB.projects,id);if(!p)return;
-    if(!confirm(`¿Marcar "${p.name}" como terminado?\n\nTodos los entregables pendientes quedarán como están.`))return;
+    if(!await appConfirm(`¿Marcar "${p.name}" como terminado?`,'Los entregables pendientes quedarán como están.'))return;
     p.status='Cerrado';
     p.closedAt=todayISO();
     saveDB();
     refreshAfterDelAction();
     toast(`✓ Proyecto terminado: ${p.name}`);
   },
-  delProj(id){
+  async delProj(id){
     const idx=DB.projects.findIndex(x=>x.id===id);if(idx<0)return;
-    if(!confirm(`¿Eliminar proyecto "${DB.projects[idx].name}" y todos sus entregables?`))return;
+    if(!await appConfirm(`¿Eliminar proyecto "${DB.projects[idx].name}"?`,'Se eliminarán también todos sus entregables.'))return;
     DB.deliverables=DB.deliverables.filter(d=>d.projectId!==id);
     DB.projects.splice(idx,1);saveDB();renderView(currentView);toast('Proyecto eliminado');
   },
@@ -2688,9 +2674,9 @@ const handlers={
       }
     });
   },
-  delU(id){
+  async delU(id){
     const idx=DB.users.findIndex(x=>x.id===id);if(idx<0)return;
-    if(!confirm('¿Eliminar usuario?'))return;
+    if(!await appConfirm('¿Eliminar usuario?','Los proyectos y entregables quedarán asignados al primer usuario.'))return;
     DB.projects.forEach(p=>{if(p.leaderId===id)p.leaderId=DB.users[0]?.id||''});
     DB.deliverables.forEach(d=>{if(d.assigneeId===id)d.assigneeId=DB.users[0]?.id||''});
     DB.users.splice(idx,1);saveDB();renderView(currentView);toast('Usuario eliminado');
@@ -2702,7 +2688,7 @@ const handlers={
 ══════════════════════════════════════════════════════ */
 function refreshAfterDelAction(){
   saveDB();
-  if(typeof renderValidarBlock==='function') renderValidarBlock();
+  renderValidarBlock();
   if(typeof renderKPIs==='function') renderKPIs();
   if(typeof renderHotTable==='function') renderHotTable();
   // Route based on currentView
@@ -2740,6 +2726,8 @@ function renderValidarBlock(){
 
   if(!pending.length){
     vb.classList.add('hidden');
+    const _nb=document.getElementById('nav-revisar-badge');
+    if(_nb){_nb.style.display='none';_nb.textContent='0';}
     return;
   }
 
@@ -2784,6 +2772,10 @@ function renderValidarBlock(){
       </div>
     </div>`;
   }).join('');
+
+  // Update nav badge
+  const _navBadge=document.getElementById('nav-revisar-badge');
+  if(_navBadge){_navBadge.style.display=pending.length?'':'none';_navBadge.textContent=pending.length;}
 
   vb.innerHTML=`
     <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);overflow:hidden">
@@ -2848,17 +2840,19 @@ document.getElementById('btn-push')?.addEventListener('click',gsPush);
 document.getElementById('btn-pull')?.addEventListener('click',gsPull);
 document.getElementById('btn-force-pull')?.addEventListener('click',async()=>{
   if(!GS_URL){toast('Configura primero la URL de Google Sheets');return}
-  if(!confirm('¿Forzar descarga? Reemplazará los datos locales con los de Google Sheets.'))return;
+  if(!await appConfirm('¿Forzar descarga?','Reemplazará los datos locales con los de Google Sheets.'))return;
   _syncBusy=true;updateSyncUI('syncing');
   try{
-    const res=await jsonpFetch(GS_URL+'?action=load');
-    const json=await res.json();
+    const json=await gsGet(GS_URL+'?action=load');
     if(json.ok&&json.data){
       DB=json.data;
       if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
       if(!DB.monthlyScores)DB.monthlyScores=[];
       if(!DB.incidents)DB.incidents=[];
       if(!DB.comments)DB.comments={};
+      if(!DB.bitacora)DB.bitacora=[];
+      DB.routines=[];DB.routineRuns=[];
+      _dbFromStorage=true;
       localStorage.setItem(LS,JSON.stringify(DB));
       updateSyncUI('ok');
       renderView(currentView);
@@ -2889,8 +2883,8 @@ document.getElementById('btn-export')?.addEventListener('click',()=>{
   const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='lineaitalia_export.csv';a.click();
   toast('CSV exportado ✓');
 });
-document.getElementById('btn-reset')?.addEventListener('click',()=>{
-  if(!confirm('¿Reiniciar datos de demo?'))return;
+document.getElementById('btn-reset')?.addEventListener('click',async()=>{
+  if(!await appConfirm('¿Reiniciar demo?','Se perderán todos los datos actuales.'))return;
   localStorage.removeItem(LS);DB=defaultDB();saveDB();renderView(currentView);toast('Datos reiniciados');
 });
 document.getElementById('btn-migrate')?.addEventListener('click',()=>{
@@ -2968,12 +2962,13 @@ document.getElementById('btn-add-user')?.addEventListener('click',()=>{
   openDlg({title:'Agregar usuario',body:`
     <div class="form-row"><div><label class="lbl">Nombre *</label><input class="input" id="nu-name" placeholder="Ej: Israel"/></div>
     <div><label class="lbl">Rol</label><select class="select-input" id="nu-role"><option>Admin</option><option selected>Líder</option><option>Colaborador</option></select></div></div>
-    <div class="form-row"><div><label class="lbl">Equipo</label><input class="input" id="nu-team" placeholder="Ej: Ingeniería"/></div>
-    <div><label class="lbl">Correo Gmail / Workspace</label><input class="input" id="nu-email" placeholder="nombre@empresa.com" type="email"/></div></div>
+    <div class="form-row"><div><label class="lbl">Usuario (para iniciar sesión) *</label><input class="input" id="nu-username" placeholder="nombre.apellido"/></div>
+    <div><label class="lbl">Equipo</label><input class="input" id="nu-team" placeholder="Ej: Ingeniería"/></div></div>
+    <div class="form-row"><div><label class="lbl">Correo Gmail / Workspace</label><input class="input" id="nu-email" placeholder="nombre@empresa.com" type="email"/></div>
+    <div><label class="lbl">Contraseña *</label><input class="input" type="password" id="nu-pass" placeholder="Contraseña de acceso"/></div></div>
     <div style="padding:8px 10px;background:var(--accent-bg);border-radius:var(--r);font-size:11px;color:var(--muted);margin-bottom:4px">
       📷 La foto se carga automáticamente del correo de Google Workspace
-    </div>
-    <label class="lbl">Contraseña (dejar en blanco = ${DEFAULT_PASS})</label><input class="input" type="password" id="nu-pass"/>`,
+    </div>`,
     onSave:()=>{
       const name=(document.getElementById('nu-name')?.value||'').trim();
       if(!name){toast('Falta nombre');return false}
@@ -3010,34 +3005,12 @@ document.getElementById('del-tabs')?.addEventListener('click',e=>{
   renderEntregables();
 });
 
-document.getElementById('proj-tabs')?.addEventListener('click',e=>{
-  const tab=e.target.closest('.proj-tab');
-  if(!tab)return;
-  document.querySelectorAll('.proj-tab').forEach(t=>t.classList.remove('active'));
-  tab.classList.add('active');
-  const sf=document.getElementById('proj-f-status');
-  if(sf) sf.value=tab.dataset.tab||'';
-  renderProyectos();
-});
+// proj-tabs removed — projects use collapsible groups
 
-function updateProjTabCounts(){
-  const counts={
-    '':           DB.projects.length,
-    'Activo':     DB.projects.filter(p=>p.status==='Activo').length,
-    'Por aprobar':DB.projects.filter(p=>p.status==='Por aprobar'||p.status==='En revisión').length,
-    'En riesgo':  DB.projects.filter(p=>p.status==='En riesgo').length,
-    'Detenido':   DB.projects.filter(p=>p.status==='Detenido').length,
-    'Cerrado':    DB.projects.filter(p=>p.status==='Cerrado').length,
-  };
-  const ids={'':'tc-all','Activo':'tc-activo','Por aprobar':'tc-aprobar','En riesgo':'tc-riesgo','Detenido':'tc-detenido','Cerrado':'tc-cerrado'};
-  Object.entries(ids).forEach(([k,id])=>{
-    const el=document.getElementById(id);
-    if(el) el.textContent=counts[k]||0;
-  });
-}
+
 
 ['sb-logout','btn-logout-adj'].forEach(id=>{
-  document.getElementById(id)?.addEventListener('click',()=>{if(confirm('¿Cerrar sesión?')){SESSION=null;sessionStorage.removeItem('li_sess');location.reload()}});
+  document.getElementById(id)?.addEventListener('click',async()=>{if(await appConfirm('¿Cerrar sesión?')){SESSION=null;sessionStorage.removeItem('li_sess');location.reload()}});
 });
 
 // Filters
@@ -3135,6 +3108,8 @@ async function gsPush(){
   }catch(e){
     console.error('[SYNC] push error:',e.message);
     updateSyncUI('error');
+    // Reset pendingPush after error so next save can retry
+    setTimeout(()=>{_pendingPush=false;},30000);
   }
   _syncBusy=false;
 }
@@ -3274,7 +3249,7 @@ async function gsPull(force){
 }
 
 // Auto-pull cada 60s si no hay cambios locales pendientes
-setInterval(()=>{if(GS_URL&&!_syncBusy&&!_pendingPush&&Date.now()-_lastSave>120000)gsPull();},60000);
+setInterval(()=>{if(GS_URL&&!_syncBusy){if(_pendingPush&&Date.now()-_lastSave>30000)gsPush();else if(!_pendingPush&&Date.now()-_lastSave>120000)gsPull();}},60000);
 
 /* ══════════════════════════════════════════════════════
    AUTH
@@ -3295,8 +3270,28 @@ async function doLogin(){
   const btn=document.getElementById('btn-login');
   if(btn){btn.disabled=true;btn.textContent='Verificando...';}
 
-  // Auto-pull al login desactivado — usa Ajustes > Forzar descarga para sincronizar
-
+  // Pull al login — para ver datos frescos del equipo
+  if(GS_URL){
+    try{
+      updateSyncUI('syncing');
+      const json=await gsGet(GS_URL+'?action=load');
+      if(json.ok&&json.data){
+        const remote=json.data;
+        DB=_dbFromStorage?mergeDB(DB,remote):remote;
+        if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
+        if(!DB.monthlyScores)DB.monthlyScores=[];
+        if(!DB.incidents)DB.incidents=[];
+        if(!DB.comments)DB.comments={};
+        if(!DB.bitacora)DB.bitacora=[];
+        DB.routines=[];DB.routineRuns=[];
+        _dbFromStorage=true;
+        localStorage.setItem(LS,JSON.stringify(DB));
+        updateSyncUI('ok');
+        const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+        localStorage.setItem(LS_SYNC,now);
+      }
+    }catch(e){console.warn('[LOGIN] pull falló:',e.message);updateSyncUI('error');}
+  }
   if(btn){btn.disabled=false;btn.textContent='Iniciar sesión';}
 
   const allUsers=getUsers();
@@ -3312,11 +3307,7 @@ async function doLogin(){
   sessionStorage.setItem('li_sess',JSON.stringify(SESSION));
   applyRole();
   document.getElementById('login-screen').style.display='none';
-  if(GS_URL){
-    gsPull(true).then(()=>renderView('equipo')).catch(()=>renderView('equipo'));
-  } else {
-    renderView('equipo');
-  }
+  renderView('equipo');
 }
 
 function applyRole(){
@@ -3343,9 +3334,7 @@ if('serviceWorker' in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 
-// Install prompt
-let _deferredInstall=null;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_deferredInstall=e});
+
 
 /* ══════════════════════════════════════════════════════
    INIT
@@ -3394,17 +3383,14 @@ function closeMasDrawer(){
 }
 document.getElementById('btn-mas-drawer')?.addEventListener('click',openMasDrawer);
 
-function logout(){
-  if(!confirm('¿Cerrar sesión?'))return;
+async function logout(){
+  if(!await appConfirm('¿Cerrar sesión?'))return;
   SESSION=null;sessionStorage.removeItem('li_sess');location.reload();
 }
-</script>
-</body>
-</html>
-<script>
+
 // ── INGENIERO DETAIL ──
-var _currentIngenieroId=null;
-var _currentProyectoId=null;
+let _currentIngenieroId=null;
+let _currentProyectoId=null;
 
 function renderIngeniero(userId){
   const u=byId(DB.users,userId);if(!u)return;
@@ -3601,7 +3587,7 @@ function renderProyectoDetail(projId){
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           ${(canFinish&&(isAdmin||isMyDel))?`<button class="btn xs primary" onclick="submitDelAndRefresh('${d.id}','${projId}')">✓ Terminado</button>`:''}
           ${(d.status==='En revisión'&&isAdmin)?`<button class="btn xs ok" onclick="approveDelAndRefresh('${d.id}','${projId}')">Aprobar</button><button class="btn xs danger" onclick="rejectAndRefresh('${d.id}','${projId}')">Rechazar</button>`:''}
-          ${isAdmin?`<button class="btn xs" onclick="nextPhaseAndRefresh('${d.id}','${projId}')">➡️ Fase</button><button class="btn xs" onclick="editDelModal('${d.id}')">Editar</button><button class="btn xs danger" onclick="delDelAndRefresh('${d.id}','${projId}')">✕</button>`:''}
+          ${isAdmin?`<button class="btn xs" onclick="nextPhaseAndRefresh('${d.id}','${projId}')">➡️ Fase</button><button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs danger" onclick="delDelAndRefresh('${d.id}','${projId}')">✕</button>`:''}
         </div>
       </div>`;
     });
@@ -3611,66 +3597,18 @@ function renderProyectoDetail(projId){
 }
 
 // Actions that refresh the project detail screen
-function submitDelAndRefresh(id,projId){
-  const d=byId(DB.deliverables,id);if(!d)return;
-  d.status='En revisión';d.submittedAt=todayISO();d.submittedBy=SESSION?.userId;
-  refreshAfterDelAction();toast('Enviado para revisión ✓');
-}
-function approveDelAndRefresh(id,projId){
-  const d=byId(DB.deliverables,id);if(!d)return;
-  d.status='Aprobado';d.completedAt=todayISO();d.blocked=false;d.blockSince=null;
-  if(!DB.comments)DB.comments={};
-  const key='deliverable_'+id;
-  if(!DB.comments[key])DB.comments[key]=[];
-  DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:'✅ Aprobado.',link:''});
-  refreshAfterDelAction();toast(`✓ Aprobado: ${d.title}`);
-}
-function rejectAndRefresh(id,projId){
-  const d=byId(DB.deliverables,id);if(!d)return;
-  const reason=window.prompt(`Rechazar: "${d.title}"\n\nMotivo:`);
-  if(reason===null)return;
-  if(!reason.trim()){toast('Escribe un motivo');return}
-  const afecta=window.confirm('¿Afecta el score?\nAceptar = Sí · Cancelar = No');
-  const t2=todayISO();
-  d.status='En progreso';d.submittedAt=null;d.rejectedAt=t2;d.rejectedBy=SESSION?.name;
-  if(afecta)d.scorePenalty=(d.scorePenalty||0)+DB.scoreRules.penaltyFollowUp;
-  if(!DB.comments)DB.comments={};
-  const key='deliverable_'+id;
-  if(!DB.comments[key])DB.comments[key]=[];
-  DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:t2,time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`❌ Rechazado: ${reason.trim()}${afecta?' · -'+DB.scoreRules.penaltyFollowUp+'%':''}`,link:''});
-  refreshAfterDelAction();toast('Rechazado'+( afecta?' · -'+DB.scoreRules.penaltyFollowUp+'%':' · sin penalización'));
-}
-function nextPhaseAndRefresh(id,projId){
-  const d=byId(DB.deliverables,id);if(!d)return;
-  const p=byId(DB.projects,d.projectId);
-  const phaseMatch=d.title.match(/fase\s*(\d+)/i);
-  const nextNum=phaseMatch?parseInt(phaseMatch[1])+1:2;
-  const sug=phaseMatch?d.title.replace(/fase\s*\d+/i,`Fase ${nextNum}`):`${d.title} — Fase 2`;
-  const title=window.prompt(`Siguiente fase:\nProyecto: ${p?.name||'—'}\n\nNombre:`,sug);
-  if(!title||!title.trim())return;
-  const dueStr=window.prompt('Fecha límite (YYYY-MM-DD):',d.due||todayISO());
-  if(!dueStr)return;
-  const newDel={id:uid('d'),title:title.trim(),projectId:d.projectId,assigneeId:d.assigneeId,due:dueStr,originalDue:dueStr,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:'',completedAt:null,scorePenalty:0,parentId:id};
-  DB.deliverables.push(newDel);
-  d.status='Aprobado';d.completedAt=todayISO();d.blocked=false;d.blockSince=null;
-  if(!DB.comments)DB.comments={};
-  const key='deliverable_'+id;
-  if(!DB.comments[key])DB.comments[key]=[];
-  DB.comments[key].push({id:uid('c'),author:SESSION?.name||'Admin',role:'admin',date:todayISO(),time:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),text:`➡️ Fase creada: "${title.trim()}" · ${fmtDate(dueStr)}`,link:''});
-  refreshAfterDelAction();toast(`✓ Original aprobado · Nueva fase: "${title.trim()}"`);
-}
-function delDelAndRefresh(id,projId){
-  const idx=DB.deliverables.findIndex(x=>x.id===id);if(idx<0)return;
-  if(!confirm('¿Eliminar entregable?'))return;
-  DB.deliverables.splice(idx,1);refreshAfterDelAction();toast('Eliminado');
-}
+function submitDelAndRefresh(id){handlers.submitDel(id);}
+function approveDelAndRefresh(id){handlers.approveDel(id);}
+function rejectAndRefresh(id){handlers.rejectDel(id);}
+function nextPhaseAndRefresh(id){handlers.nextPhase(id);}
+function delDelAndRefresh(id){handlers.delDel(id);}
 
 function openAddDelToProj2(projId){
   const p=byId(DB.projects,projId);
   const uOpts=DB.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
   openDlg({title:'Nuevo entregable',sub:p?esc(p.name):'',body:`
     <label class="lbl">Título *</label><input class="input" id="nd-title" placeholder="Nombre del entregable"/>
-    <div class="form-row"><div><label class="lbl">Responsable</label><select class="sel" id="nd-ass"><option value="">Sin asignar</option>${uOpts}</select></div>
+    <div class="form-row"><div><label class="lbl">Responsable</label><select class="select-input" id="nd-ass"><option value="">Sin asignar</option>${uOpts}</select></div>
     <div><label class="lbl">Fecha límite *</label><input class="input" type="date" id="nd-due" value="${p?.end||todayISO()}"/></div></div>
     <label class="lbl">Notas</label><textarea class="input" id="nd-notes"></textarea>`,
     onSave:()=>{
@@ -3683,12 +3621,6 @@ function openAddDelToProj2(projId){
   });
 }
 
-function updateRevisarBadge(){
-  const pending=DB.deliverables.filter(d=>d.status==='En revisión');
-  if(typeof renderValidarBlock==='function') renderValidarBlock();
-  const navBadge=document.querySelector('[data-view="revisar"] .bnav-badge,.revisar-nav-badge');
-  if(navBadge){navBadge.style.display=pending.length?'':'none';navBadge.textContent=pending.length;}
-}
 
 /* ══════════════════════════════════════════════════════
    BITÁCORA
@@ -3783,8 +3715,8 @@ function openBitacoraForm(id){
 
 function editBitacora(id){openBitacoraForm(id);}
 
-function deleteBitacora(id){
-  if(!confirm('¿Eliminar este registro?'))return;
+async function deleteBitacora(id){
+  if(!await appConfirm('¿Eliminar registro?'))return;
   DB.bitacora=(DB.bitacora||[]).filter(x=>x.id!==id);
   saveDB();renderBitacora();toast('Eliminado');
 }
@@ -3804,4 +3736,95 @@ document.getElementById('bit-tabs')?.addEventListener('click',e=>{
   tab.classList.add('active');
   renderBitacora();
 });
+/* ══════════════════════════════════════════════════════
+   MODAL HELPERS — replace native prompt/confirm
+══════════════════════════════════════════════════════ */
+function appConfirm(title, sub=''){
+  return new Promise(resolve=>{
+    const dlg=document.getElementById('dlg-confirm');
+    document.getElementById('dlg-confirm-title').textContent=title;
+    document.getElementById('dlg-confirm-sub').textContent=sub;
+    const ok=document.getElementById('dlg-confirm-ok');
+    const cancel=document.getElementById('dlg-confirm-cancel');
+    function cleanup(){dlg.close();ok.removeEventListener('click',onOk);cancel.removeEventListener('click',onCancel);dlg.removeEventListener('close',onClose);}
+    function onOk(){cleanup();resolve(true);}
+    function onCancel(){cleanup();resolve(false);}
+    function onClose(){cleanup();resolve(false);}
+    ok.addEventListener('click',onOk);
+    cancel.addEventListener('click',onCancel);
+    dlg.addEventListener('close',onClose,{once:true});
+    dlg.showModal();
+  });
+}
+
+function appPrompt(title, sub='', defaultVal='', type='text'){
+  return new Promise(resolve=>{
+    const dlg=document.getElementById('dlg-prompt');
+    document.getElementById('dlg-prompt-title').textContent=title;
+    document.getElementById('dlg-prompt-sub').textContent=sub;
+    const inp=document.getElementById('dlg-prompt-input');
+    inp.type=type;inp.value=defaultVal;
+    const ok=document.getElementById('dlg-prompt-ok');
+    window._promptReject=()=>{cleanup();resolve(null);};
+    function cleanup(){dlg.close();ok.removeEventListener('click',onOk);dlg.removeEventListener('close',onClose);window._promptReject=null;}
+    function onOk(){const v=inp.value.trim();if(!v)return;cleanup();resolve(v);}
+    function onClose(){cleanup();resolve(null);}
+    ok.addEventListener('click',onOk);
+    dlg.addEventListener('close',onClose,{once:true});
+    dlg.showModal();
+    setTimeout(()=>inp.focus(),50);
+  });
+}
+
+function appRejectDlg(delivTitle){
+  return new Promise(resolve=>{
+    const dlg=document.getElementById('dlg-reject');
+    document.getElementById('dlg-reject-sub').textContent=delivTitle;
+    document.getElementById('dlg-reject-reason').value='';
+    document.getElementById('dlg-reject-pen').textContent=DB.scoreRules.penaltyFollowUp;
+    document.getElementById('dlg-reject-yes').checked=true;
+    const ok=document.getElementById('dlg-reject-ok');
+    function cleanup(){dlg.close();ok.removeEventListener('click',onOk);dlg.removeEventListener('close',onClose);}
+    function onOk(){
+      const reason=document.getElementById('dlg-reject-reason').value.trim();
+      if(!reason){toast('Escribe un motivo');return;}
+      const affectsScore=document.getElementById('dlg-reject-yes').checked;
+      cleanup();resolve({reason,affectsScore});
+    }
+    function onClose(){cleanup();resolve(null);}
+    ok.addEventListener('click',onOk);
+    dlg.addEventListener('close',onClose,{once:true});
+    dlg.showModal();
+    setTimeout(()=>document.getElementById('dlg-reject-reason').focus(),50);
+  });
+}
+
+function appNextPhaseDlg(currentDel, projName){
+  return new Promise(resolve=>{
+    const dlg=document.getElementById('dlg-nextphase');
+    document.getElementById('dlg-nextphase-proj').textContent='Proyecto: '+projName;
+    const phaseMatch=currentDel.title.match(/fase\s*(\d+)/i);
+    const nextNum=phaseMatch?parseInt(phaseMatch[1])+1:2;
+    const sug=phaseMatch?currentDel.title.replace(/fase\s*\d+/i,'Fase '+nextNum):currentDel.title+' — Fase 2';
+    document.getElementById('dlg-nextphase-name').value=sug;
+    document.getElementById('dlg-nextphase-due').value=currentDel.due||todayISO();
+    const ok=document.getElementById('dlg-nextphase-ok');
+    function cleanup(){dlg.close();ok.removeEventListener('click',onOk);dlg.removeEventListener('close',onClose);}
+    function onOk(){
+      const name=document.getElementById('dlg-nextphase-name').value.trim();
+      const due=document.getElementById('dlg-nextphase-due').value;
+      if(!name){toast('Falta el nombre de la fase');return;}
+      if(!due){toast('Falta la fecha');return;}
+      cleanup();resolve({name,due});
+    }
+    function onClose(){cleanup();resolve(null);}
+    ok.addEventListener('click',onOk);
+    dlg.addEventListener('close',onClose,{once:true});
+    dlg.showModal();
+    setTimeout(()=>document.getElementById('dlg-nextphase-name').focus(),50);
+  });
+}
+
 </script>
+</body>
+</html>
