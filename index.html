@@ -2945,7 +2945,7 @@ async function sendProjectNotificationEmail(project, assignees){
         }).filter(a=>a.email)
       }
     };
-    await fetch(GS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
+    await gsPost(GS_URL,payload);
   }catch(err){
     console.warn('Notificación de proyecto fallida:',err.message);
   }
@@ -3059,16 +3059,16 @@ function gsGet(url){
   });
 }
 
-// ── POST: no-cors con texto plano. Apps Script recibe en e.postData.contents ───────
-// Con no-cors el navegador NO puede leer la respuesta — es normal y esperado.
-// Por eso verificamos con un gsGet posterior si los datos llegaron.
+// ── POST: con CORS — Apps Script confirma si guardó correctamente ────────────────
 async function gsPost(url, data){
-  await fetch(url,{
+  const res=await fetch(url,{
     method:'POST',
-    mode:'no-cors',
+    mode:'cors',
     headers:{'Content-Type':'text/plain'},
     body:JSON.stringify(data)
   });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return await res.json();
 }
 
 // ── PUSH: guardar DB local → Sheets ─────────────────────────────────────────────
