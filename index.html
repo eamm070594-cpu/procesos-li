@@ -2945,7 +2945,7 @@ async function sendProjectNotificationEmail(project, assignees){
         }).filter(a=>a.email)
       }
     };
-    await gsPost(GS_URL,payload);
+    await fetch(GS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
   }catch(err){
     console.warn('Notificación de proyecto fallida:',err.message);
   }
@@ -3059,16 +3059,14 @@ function gsGet(url){
   });
 }
 
-// ── POST: con CORS — Apps Script confirma si guardó correctamente ────────────────
+// ── POST: no-cors — limitación de Google Apps Script con dominios externos ────────
 async function gsPost(url, data){
-  const res=await fetch(url,{
+  await fetch(url,{
     method:'POST',
-    mode:'cors',
+    mode:'no-cors',
     headers:{'Content-Type':'text/plain'},
     body:JSON.stringify(data)
   });
-  if(!res.ok) throw new Error('HTTP '+res.status);
-  return await res.json();
 }
 
 // ── PUSH: guardar DB local → Sheets ─────────────────────────────────────────────
@@ -3079,37 +3077,33 @@ async function gsPush(){
   const localTs=DB._savedAt||0;
   console.log('[SYNC] push → Sheets | dels:',DB.deliverables?.length,'| ts:',localTs,'| size:',Math.round(JSON.stringify(DB).length/1024),'KB');
   try{
-    // Excluir routines/routineRuns del payload para reducir tamaño
-    const dbToSend=Object.assign({},DB,{routines:[],routineRuns:[]});
+    const token='t'+Date.now().toString(36);
+    const dbToSend=Object.assign({},DB,{routines:[],routineRuns:[],_pushToken:token});
     await gsPost(GS_URL,{action:'save',data:dbToSend});
-    // Esperar 3s y verificar con GET que Sheets guardó
-    await new Promise(r=>setTimeout(r,3000));
-    const check=await gsGet(GS_URL+'?action=load');
-    if(check.ok&&check.data){
-      const remoteDels=check.data.deliverables?.length||0;
-      const localDels=DB.deliverables?.length||0;
-      // Verificar por conteo de entregables, no por timestamp
-      // (el reloj del servidor de Google puede diferir del local)
-      if(remoteDels>=localDels){
-        _pendingPush=false;
-        const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-        localStorage.setItem(LS_SYNC,now);
-        const el=document.getElementById('last-sync');if(el)el.textContent=now;
-        console.log('[SYNC] push ✓ verificado | remoto:',remoteDels,'local:',localDels,'dels');
-        updateSyncUI('ok');
-      } else {
-        console.error('[SYNC] push ✗ remoto tiene menos dels:',remoteDels,'vs local:',localDels);
-        updateSyncUI('error');
-        toast('⚠️ No se guardó en Sheets. Ve a Ajustes → Subir datos.');
-      }
+    let verified=false;
+    for(let i=1;i<=4;i++){
+      await new Promise(r=>setTimeout(r,i*2000));
+      try{
+        const check=await gsGet(GS_URL+'?action=load');
+        if(check.ok&&check.data?._pushToken===token){verified=true;break;}
+        console.log('[SYNC] intento',i,'token pendiente…');
+      }catch(e2){console.log('[SYNC] intento',i,'falló:',e2.message);}
+    }
+    if(verified){
+      _pendingPush=false;
+      const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+      localStorage.setItem(LS_SYNC,now);
+      const el=document.getElementById('last-sync');if(el)el.textContent=now;
+      console.log('[SYNC] push ✓ verificado por token | dels:',DB.deliverables?.length);
+      updateSyncUI('ok');
     } else {
-      console.error('[SYNC] push ✗ GET de verificación falló:',check);
+      console.error('[SYNC] push ✗ token no confirmado después de 4 intentos');
       updateSyncUI('error');
+      toast('⚠️ No se pudo confirmar el guardado. Intenta “Subir datos” en Ajustes.');
     }
   }catch(e){
     console.error('[SYNC] push error:',e.message);
     updateSyncUI('error');
-    // Reset pendingPush after error so next save can retry
     setTimeout(()=>{_pendingPush=false;},30000);
   }
   _syncBusy=false;
