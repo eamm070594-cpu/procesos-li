@@ -484,6 +484,12 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
 #mobile-topbar .brand-sm .logo{width:30px;height:30px;border-radius:8px;background:var(--accent-bg);border:1px solid rgba(212,98,42,.3);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:11px;font-weight:800;color:var(--accent)}
 #mobile-topbar .brand-sm span{font-family:var(--font-display);font-size:13px;font-weight:700}
 #mobile-topbar .user-chip{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:600}
+#btn-save-sheets{display:none;align-items:center;gap:5px;padding:5px 12px;border-radius:99px;border:1px solid var(--border);background:var(--surface2);font-size:12px;font-weight:600;font-family:var(--font-body);color:var(--text);cursor:pointer;transition:background .12s}
+#btn-save-sheets:active{background:var(--surface3)}
+#btn-save-sheets .save-dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+#btn-save-sheets.pending .save-dot{background:var(--warn);animation:pulse .8s infinite}
+#btn-save-sheets.ok .save-dot{background:var(--ok)}
+#btn-save-sheets.error .save-dot{background:var(--bad)}
 #mobile-topbar .user-chip .dot{width:8px;height:8px;border-radius:50%}
 
 /* Score panel */
@@ -663,9 +669,15 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
         <div class="logo">LI</div>
         <span>LI · Procesos</span>
       </div>
-      <div class="user-chip" id="mob-user-chip">
-        <span class="dot gray"></span>
-        <span id="mob-user-name">—</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button id="btn-save-sheets" onclick="manualSaveToSheets()" title="Guardar en Sheets">
+          <span class="save-dot"></span>
+          <span id="btn-save-label">Guardar</span>
+        </button>
+        <div class="user-chip" id="mob-user-chip">
+          <span class="dot gray"></span>
+          <span id="mob-user-name">—</span>
+        </div>
       </div>
     </div>
 
@@ -3034,6 +3046,7 @@ document.getElementById('cal-today')?.addEventListener('click',()=>{calY=new Dat
    GOOGLE SHEETS SYNC
 ══════════════════════════════════════════════════════ */
 function updateSyncUI(state){
+  updateSaveBtnUI(state==='syncing'?'pending':state);
   const badge=document.getElementById('sync-badge');
   const pill=document.getElementById('sync-pill');
   const txt=document.getElementById('sync-text');
@@ -3082,7 +3095,7 @@ async function gsPush(){
     await gsPost(GS_URL,{action:'save',data:dbToSend});
     let verified=false;
     for(let i=1;i<=4;i++){
-      await new Promise(r=>setTimeout(r,i*2000));
+      await new Promise(r=>setTimeout(r,i*4000));
       try{
         const check=await gsGet(GS_URL+'?action=load');
         if(check.ok&&check.data?._pushToken===token){verified=true;break;}
@@ -3819,6 +3832,67 @@ function appNextPhaseDlg(currentDel, projName){
     setTimeout(()=>document.getElementById('dlg-nextphase-name').focus(),50);
   });
 }
+
+/* ── BOTÓN GUARDAR MANUAL ── */
+function updateSaveBtnUI(state){
+  const btn=document.getElementById('btn-save-sheets');
+  const lbl=document.getElementById('btn-save-label');
+  if(!btn)return;
+  if(!GS_URL){btn.style.display='none';return;}
+  btn.style.display='flex';
+  btn.className='';
+  if(state==='pending'){btn.classList.add('pending');lbl.textContent='Guardando…';}
+  else if(state==='ok'){btn.classList.add('ok');lbl.textContent='Guardado ✓';}
+  else if(state==='error'){btn.classList.add('error');lbl.textContent='Error ✗';}
+  else{lbl.textContent='Guardar';}
+  // Reset label after 3s
+  if(state==='ok'||state==='error'){
+    setTimeout(()=>{
+      if(btn.classList.contains(state)){
+        btn.className=_pendingPush?'pending':'';
+        lbl.textContent=_pendingPush?'Guardando…':'Guardar';
+      }
+    },3000);
+  }
+}
+
+async function manualSaveToSheets(){
+  if(!GS_URL){toast('Configura la URL de Sheets en Ajustes');return;}
+  if(_syncBusy){toast('Sincronización en progreso…');return;}
+  updateSaveBtnUI('pending');
+  try{
+    const token='t'+Date.now().toString(36);
+    const dbToSend=Object.assign({},DB,{routines:[],routineRuns:[],_pushToken:token});
+    await gsPost(GS_URL,{action:'save',data:dbToSend});
+    // Verify with retries
+    let verified=false;
+    for(let i=1;i<=5;i++){
+      await new Promise(r=>setTimeout(r,i*3000));
+      try{
+        const check=await gsGet(GS_URL+'?action=load&_='+Date.now());
+        if(check.ok&&check.data?._pushToken===token){verified=true;break;}
+      }catch(e2){}
+    }
+    if(verified){
+      _pendingPush=false;
+      const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+      localStorage.setItem(LS_SYNC,now);
+      const el=document.getElementById('last-sync');if(el)el.textContent=now;
+      updateSyncUI('ok');
+      updateSaveBtnUI('ok');
+      toast('✓ Guardado en Sheets');
+    } else {
+      updateSaveBtnUI('error');
+      toast('⚠️ No se pudo confirmar. Intenta de nuevo.');
+    }
+  }catch(e){
+    updateSaveBtnUI('error');
+    toast('Error: '+e.message);
+  }
+}
+
+// Show save button when GS_URL is set and there are pending changes
+const _origSaveDB=saveDB;
 
 </script>
 </body>
