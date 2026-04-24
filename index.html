@@ -3278,29 +3278,9 @@ async function doLogin(){
   const btn=document.getElementById('btn-login');
   if(btn){btn.disabled=true;btn.textContent='Verificando...';}
 
-  // Pull al login — para ver datos frescos del equipo
-  if(GS_URL){
-    try{
-      updateSyncUI('syncing');
-      const json=await gsGet(GS_URL+'?action=load');
-      if(json.ok&&json.data){
-        const remote=json.data;
-        DB=_dbFromStorage?mergeDB(DB,remote):remote;
-        if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
-        if(!DB.monthlyScores)DB.monthlyScores=[];
-        if(!DB.incidents)DB.incidents=[];
-        if(!DB.comments)DB.comments={};
-        if(!DB.bitacora)DB.bitacora=[];
-        DB.routines=[];DB.routineRuns=[];
-        _dbFromStorage=true;
-        localStorage.setItem(LS,JSON.stringify(DB));
-        updateSyncUI('ok');
-        const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-        localStorage.setItem(LS_SYNC,now);
-      }
-    }catch(e){console.warn('[LOGIN] pull falló:',e.message);updateSyncUI('error');}
-  }
   if(btn){btn.disabled=false;btn.textContent='Iniciar sesión';}
+  // Pull en segundo plano — no bloquea el login
+  if(GS_URL) setTimeout(()=>gsPull(false),1500);
 
   const allUsers=getUsers();
   const found=allUsers.find(u=>u.username===inputU&&u.password===inputP);
