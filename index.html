@@ -3577,7 +3577,7 @@ _fbRef.on('value', snap=>{
 ══════════════════════════════════════════════════════ */
 function getUsers(){
   const list=[{username:ADMIN_USER,password:ADMIN_PASS,role:'admin',name:'Admin',userId:null}];
-  DB.users.forEach(u=>{
+  (DB.users||[]).forEach(u=>{
     // Use customUsername if set, otherwise normalize from name
     const norm=u.customUsername||u.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'.');
     list.push({username:norm,password:u.loginPassword||DEFAULT_PASS,role:'user',name:u.name,userId:u.id});
@@ -3642,26 +3642,33 @@ if('serviceWorker' in navigator){
    INIT
 ══════════════════════════════════════════════════════ */
 (function init(){
-  if(GS_URL)updateSyncUI('ok');
-  qaRender();
+  updateSyncUI('ok');
 
-  const saved=sessionStorage.getItem('li_sess');
-  if(saved){
-    try{
-      SESSION=JSON.parse(saved);
-      applyRole();
-      document.getElementById('login-screen').style.display='none';
-      if(GS_URL){
-        gsPull(true).then(()=>{
-          renderView('equipo');
-        }).catch(()=>{
-          renderView('equipo');
-        });
-      } else {
+  // Primero cargar Firebase, luego inicializar la app
+  fbPull(true).then(()=>{
+    qaRender();
+    const saved=sessionStorage.getItem('li_sess');
+    if(saved){
+      try{
+        SESSION=JSON.parse(saved);
+        applyRole();
+        document.getElementById('login-screen').style.display='none';
         renderView('equipo');
-      }
-    }catch{SESSION=null}
-  }
+      }catch{SESSION=null}
+    }
+  }).catch(()=>{
+    // Si falla Firebase, inicializar con datos locales
+    qaRender();
+    const saved=sessionStorage.getItem('li_sess');
+    if(saved){
+      try{
+        SESSION=JSON.parse(saved);
+        applyRole();
+        document.getElementById('login-screen').style.display='none';
+        renderView('equipo');
+      }catch{SESSION=null}
+    }
+  });
 
   // keyboard shortcut
   window.addEventListener('keydown',e=>{
