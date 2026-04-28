@@ -3430,6 +3430,60 @@ async function gsPush(){
   _syncBusy=false;
 }
 
+function mergeDB(local, remote){
+  const merged = Object.assign({}, remote);
+  const localDelsMap = {};
+  (local.deliverables||[]).forEach(d=>{ localDelsMap[d.id]=d; });
+  merged.deliverables = (remote.deliverables||[]).map(rd=>{
+    const ld = localDelsMap[rd.id];
+    if(!ld) return rd;
+    const remoteRank = STATUS_RANK[rd.status]||0;
+    const localRank  = STATUS_RANK[ld.status]||0;
+    if(localRank > remoteRank){
+      console.log('[MERGE] conservando estado local más avanzado:',ld.title,'|',rd.status,'→',ld.status);
+      return Object.assign({}, rd, {
+        status: ld.status,
+        completedAt: ld.completedAt,
+        submittedAt: ld.submittedAt,
+        submittedBy: ld.submittedBy,
+        rejectedAt: ld.rejectedAt,
+        rejectedBy: ld.rejectedBy,
+        scorePenalty: ld.scorePenalty,
+        blocked: ld.blocked,
+        blockSince: ld.blockSince,
+      });
+    }
+    return rd;
+  });
+  const remoteDelsIds = new Set((remote.deliverables||[]).map(d=>d.id));
+  (local.deliverables||[]).forEach(ld=>{
+    if(!remoteDelsIds.has(ld.id)){
+      console.log('[MERGE] entregable local no existe en remoto, conservando:',ld.title);
+      merged.deliverables.push(ld);
+    }
+  });
+  const localComments = local.comments||{};
+  const remoteComments = remote.comments||{};
+  const mergedComments = Object.assign({}, remoteComments);
+  Object.keys(localComments).forEach(key=>{
+    if(!mergedComments[key]){
+      mergedComments[key] = localComments[key];
+    } else {
+      const remoteIds = new Set(mergedComments[key].map(c=>c.id));
+      localComments[key].forEach(lc=>{
+        if(!remoteIds.has(lc.id)) mergedComments[key].push(lc);
+      });
+    }
+  });
+  merged.comments = mergedComments;
+  const remoteBitIds = new Set((remote.bitacora||[]).map(b=>b.id));
+  merged.bitacora = [...(remote.bitacora||[])];
+  (local.bitacora||[]).forEach(lb=>{
+    if(!remoteBitIds.has(lb.id)) merged.bitacora.push(lb);
+  });
+  return merged;
+}
+
 async function gsPull(force){
   if(!GS_URL||_syncBusy)return;
   if(!force&&(_pendingPush||Date.now()-_lastSave<15000))return;
