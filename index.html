@@ -3382,31 +3382,37 @@ async function gsPush(){
   _syncBusy=true;
   updateSyncUI('syncing');
   const localTs=DB._savedAt||0;
-  console.log('[SYNC] push → Sheets | dels:',DB.deliverables?.length,'| ts:',localTs,'| size:',Math.round(JSON.stringify(DB).length/1024),'KB');
+  console.log('[SYNC] push → Sheets | dels:',DB.deliverables?.length,'| size:',Math.round(JSON.stringify(DB).length/1024),'KB');
   try{
     const token='t'+Date.now().toString(36);
     const dbToSend=Object.assign({},DB,{routines:[],routineRuns:[],_pushToken:token});
-    await gsPost(GS_URL,{action:'save',data:dbToSend});
-    let verified=false;
-    for(let i=1;i<=4;i++){
-      await new Promise(r=>setTimeout(r,i*4000));
-      try{
-        const check=await gsGet(GS_URL+'?action=load');
-        if(check.ok&&check.data?._pushToken===token){verified=true;break;}
-        console.log('[SYNC] intento',i,'token pendiente…');
-      }catch(e2){console.log('[SYNC] intento',i,'falló:',e2.message);}
+    const postResp=await gsPost(GS_URL,{action:'save',data:dbToSend});
+    // Si el script respondó ok:true en el POST, ya está guardado
+    let verified=postResp?.ok===true;
+    if(verified){
+      console.log('[SYNC] push ✓ confirmado por POST response');
+    } else {
+      // Fallback: verificar leyendo el token (6 intentos con más tiempo)
+      for(let i=1;i<=6;i++){
+        await new Promise(r=>setTimeout(r,i*5000));
+        try{
+          const check=await gsGet(GS_URL+'?action=load');
+          if(check.ok&&check.data?._pushToken===token){verified=true;break;}
+          console.log('[SYNC] intento',i,'token pendiente…');
+        }catch(e2){console.log('[SYNC] intento',i,'falló:',e2.message);}
+      }
     }
     if(verified){
       _pendingPush=false;
       const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
       localStorage.setItem(LS_SYNC,now);
       const el=document.getElementById('last-sync');if(el)el.textContent=now;
-      console.log('[SYNC] push ✓ verificado por token | dels:',DB.deliverables?.length);
+      console.log('[SYNC] push ✓ | dels:',DB.deliverables?.length);
       updateSyncUI('ok');
     } else {
-      console.error('[SYNC] push ✗ token no confirmado después de 4 intentos');
+      console.error('[SYNC] push ✗ no confirmado después de 6 intentos');
       updateSyncUI('error');
-      toast('⚠️ No se pudo confirmar el guardado. Intenta “Subir datos” en Ajustes.');
+      toast('⚠️ No se pudo confirmar el guardado. Revisa tu conexión.');
     }
   }catch(e){
     console.error('[SYNC] push error:',e.message);
