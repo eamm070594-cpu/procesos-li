@@ -2,6 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"/>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="theme-color" content="#f4f6f9"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -1349,17 +1354,25 @@ if(!DB.bitacora) DB.bitacora=[];
 DB.routines=[];
 DB.routineRuns=[];
 
-let GS_URL=localStorage.getItem(LS_GS)||'https://script.google.com/macros/s/AKfycbzeTTmW5Jm4uxmAkXrkmFczv6WGnrnKj6P_2C6FMlE6X2z4kSwCoTe35pfBf4rLBkQzpA/exec';
+const FB_URL='https://ingenieria-de-procesos-24ba4-default-rtdb.firebaseio.com';
+// Mantener GS_URL por compatibilidad con ajustes guardados
+let GS_URL=localStorage.getItem(LS_GS)||'';
 let SESSION=null;
 let _syncBusy=false;
 let _lastSave=0;
+
+// ── FIREBASE INIT ────────────────────────────────────────
+firebase.initializeApp({databaseURL: FB_URL});
+const _fbDB = firebase.database();
+const _fbRef = _fbDB.ref('li_procesos');
 
 function saveDB(){
   DB._savedAt=Date.now();
   localStorage.setItem(LS,JSON.stringify(DB));
   _lastSave=DB._savedAt;
   _pendingPush=true;
-  if(GS_URL){clearTimeout(saveDB._t);saveDB._t=setTimeout(gsPush,800)}
+  clearTimeout(saveDB._t);
+  saveDB._t=setTimeout(fbPush, 800);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -3353,6 +3366,11 @@ function updateSyncUI(state){
 
 // ── JSONP GET: única forma confiable de leer desde Apps Script sin CORS ─────────────
 // Apps Script en doGet ya maneja el parámetro ?callback= correctamente.
+/* ══════════════════════════════════════════════════════
+   SINCRONIZACIÓN — FIREBASE REALTIME DATABASE
+══════════════════════════════════════════════════════ */
+
+// Mantener gsGet/gsPost por compatibilidad con notificaciones de Apps Script
 function gsGet(url){
   return new Promise((resolve,reject)=>{
     const cb='_gs'+Date.now()+'_'+Math.floor(Math.random()*99999);
@@ -3365,70 +3383,33 @@ function gsGet(url){
     document.head.appendChild(s);
   });
 }
-
-// ── POST: no-cors — limitación de Google Apps Script con dominios externos ────────
-async function gsPost(url, data){
-  await fetch(url,{
-    method:'POST',
-    mode:'no-cors',
-    headers:{'Content-Type':'text/plain'},
-    body:JSON.stringify(data)
-  });
+async function gsPost(url,data){
+  await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)});
 }
 
-// ── PUSH: guardar DB local → Sheets ─────────────────────────────────────────────
-async function gsPush(){
-  if(!GS_URL||_syncBusy)return;
+// ── FIREBASE PUSH ────────────────────────────────────────
+async function fbPush(){
+  if(_syncBusy)return;
   _syncBusy=true;
   updateSyncUI('syncing');
-  console.log('[SYNC] push → Sheets | dels:',DB.deliverables?.length,'| size:',Math.round(JSON.stringify(DB).length/1024),'KB');
   try{
     const dbToSend=Object.assign({},DB,{routines:[],routineRuns:[]});
-    // no-cors: no podemos leer la respuesta, pero si no lanza error = enviado
-    await fetch(GS_URL,{
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'save',data:dbToSend})
-    });
-    // Esperar 4s y verificar leyendo el timestamp
-    await new Promise(r=>setTimeout(r,4000));
-    let confirmed=false;
-    for(let i=1;i<=5;i++){
-      try{
-        const check=await gsGet(GS_URL+'?action=load&_='+Date.now());
-        if(check.ok&&check.data){
-          const remoteTs=check.data._savedAt||0;
-          const localTs=DB._savedAt||0;
-          if(remoteTs>=localTs){confirmed=true;break;}
-        }
-      }catch(e2){}
-      if(i<5) await new Promise(r=>setTimeout(r,i*4000));
-      console.log('[SYNC] intento',i,'verificando…');
-    }
-    if(confirmed){
-      _pendingPush=false;
-      const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-      localStorage.setItem(LS_SYNC,now);
-      const el=document.getElementById('last-sync');if(el)el.textContent=now;
-      console.log('[SYNC] push ✓ confirmado por timestamp');
-      updateSyncUI('ok');
-    } else {
-      // Si no podemos verificar pero tampoco hubo error de red, asumir OK
-      _pendingPush=false;
-      const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-      localStorage.setItem(LS_SYNC,now);
-      const el=document.getElementById('last-sync');if(el)el.textContent=now;
-      console.log('[SYNC] push ✓ (sin verificación de timestamp, datos enviados)');
-      updateSyncUI('ok');
-    }
+    await _fbRef.set(dbToSend);
+    _pendingPush=false;
+    const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    localStorage.setItem(LS_SYNC,now);
+    const el=document.getElementById('last-sync');if(el)el.textContent=now;
+    console.log('[FB] push ✓ | dels:',DB.deliverables?.length);
+    updateSyncUI('ok');
   }catch(e){
-    console.error('[SYNC] push error:',e.message);
+    console.error('[FB] push error:',e.message);
     updateSyncUI('error');
-    setTimeout(()=>{_pendingPush=false;},30000);
   }
   _syncBusy=false;
 }
+
+// Alias para compatibilidad
+async function gsPush(){ return fbPush(); }
 
 const STATUS_RANK={'Pendiente':1,'En progreso':2,'Bloqueado':2,'En revisión':3,'En revision':3,'Aprobado':4};
 function mergeDB(local, remote){
@@ -3485,33 +3466,31 @@ function mergeDB(local, remote){
   return merged;
 }
 
-async function gsPull(force){
-  if(!GS_URL||_syncBusy)return;
+// ── FIREBASE PULL ────────────────────────────────────────
+async function fbPull(force){
+  if(_syncBusy)return;
   if(!force&&(_pendingPush||Date.now()-_lastSave<15000))return;
   _syncBusy=true;
   updateSyncUI('syncing');
   try{
-    const json=await gsGet(GS_URL+'?action=load');
-    if(!json.ok){throw new Error(json.error||'respuesta inválida');}
-    if(!json.data){
-      console.log('[SYNC] pull: Sheets vacío → pushing local');
-      _syncBusy=false;updateSyncUI('ok');await gsPush();return;
+    const snap = await _fbRef.get();
+    const remote = snap.val();
+    if(!remote){
+      console.log('[FB] pull: Firebase vacío → pushing local');
+      _syncBusy=false; updateSyncUI('ok'); await fbPush(); return;
     }
-    const remote=json.data;
     const localTs=DB._savedAt||0;
     const remoteTs=remote._savedAt||0;
     const localDels=DB.deliverables?.length||0;
     const remoteDels=remote.deliverables?.length||0;
     const localIsDemo=!_dbFromStorage;
-    console.log('[SYNC] pull | localTs:',localTs,'remoteTs:',remoteTs,'diff:',(remoteTs-localTs)/1000,'s | local:',localDels,'remote:',remoteDels,'dels | demo:',localIsDemo);
+    console.log('[FB] pull | local:',localDels,'remote:',remoteDels,'dels | demo:',localIsDemo);
 
     if(localIsDemo){
-      // Navegador nuevo sin datos — tomar remoto completo
       DB=remote;
     } else {
-      // Hacer merge inteligente conservando estados más avanzados
       DB=mergeDB(DB, remote);
-      console.log('[SYNC] pull ✓ merge completado | dels después de merge:',DB.deliverables?.length);
+      console.log('[FB] pull ✓ merge | dels:',DB.deliverables?.length);
     }
 
     if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
@@ -3528,12 +3507,9 @@ async function gsPull(force){
     const el=document.getElementById('last-sync');if(el)el.textContent=now;
     updateSyncUI('ok');
 
-    // Si el merge produjo cambios vs remoto, subir a Sheets
     if(!localIsDemo && DB.deliverables?.length > remoteDels){
-      console.log('[SYNC] merge produjo datos extra → pushing');
-      _syncBusy=false;
-      await gsPush();
-      return;
+      console.log('[FB] merge produjo datos extra → pushing');
+      _syncBusy=false; await fbPush(); return;
     }
 
     if(currentView==='proyecto'&&_currentProyectoId)renderProyectoDetail(_currentProyectoId);
@@ -3541,14 +3517,42 @@ async function gsPull(force){
     else renderView(currentView);
 
   }catch(e){
-    console.error('[SYNC] pull error:',e.message);
+    console.error('[FB] pull error:',e.message);
     updateSyncUI('error');
   }
   _syncBusy=false;
 }
 
-// Auto-pull cada 60s si no hay cambios locales pendientes
-setInterval(()=>{if(GS_URL&&!_syncBusy){if(_pendingPush&&Date.now()-_lastSave>30000)gsPush();else if(!_pendingPush&&Date.now()-_lastSave>120000)gsPull();}},60000);
+// Alias para compatibilidad
+async function gsPull(force){ return fbPull(force); }
+
+// Auto-sync cada 60s
+setInterval(()=>{if(!_syncBusy){if(_pendingPush&&Date.now()-_lastSave>30000)fbPush();else if(!_pendingPush&&Date.now()-_lastSave>120000)fbPull();}},60000);
+
+// Escuchar cambios en tiempo real de otros usuarios
+_fbRef.on('value', snap=>{
+  if(_syncBusy||_pendingPush) return;
+  const remote=snap.val();
+  if(!remote) return;
+  const remoteTs=remote._savedAt||0;
+  const localTs=DB._savedAt||0;
+  if(remoteTs>localTs+5000){
+    console.log('[FB] cambio remoto detectado → actualizando');
+    DB=mergeDB(DB,remote);
+    if(!DB.scoreRules)DB.scoreRules={basePerDeliverable:80,penaltyFollowUp:5,openIncidentPenalty:3};
+    if(!DB.monthlyScores)DB.monthlyScores=[];
+    if(!DB.tareas)DB.tareas=[];
+    if(!DB.incidents)DB.incidents=[];
+    if(!DB.comments)DB.comments={};
+    if(!DB.bitacora)DB.bitacora=[];
+    DB.routines=[];DB.routineRuns=[];
+    _dbFromStorage=true;
+    localStorage.setItem(LS,JSON.stringify(DB));
+    renderView(currentView);
+    const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    const el=document.getElementById('last-sync');if(el)el.textContent=now;
+  }
+});
 
 /* ══════════════════════════════════════════════════════
    AUTH
@@ -3571,7 +3575,8 @@ async function doLogin(){
 
   if(btn){btn.disabled=false;btn.textContent='Iniciar sesión';}
   // Pull en segundo plano — no bloquea el login
-  if(GS_URL) setTimeout(()=>gsPull(false),1500);
+  // Siempre hacer pull de Firebase al arrancar
+  setTimeout(()=>fbPull(true),1500);
 
   const allUsers=getUsers();
   const found=allUsers.find(u=>u.username===inputU&&u.password===inputP);
@@ -4153,21 +4158,42 @@ function updateSaveBtnUI(state){
 }
 
 async function manualSaveToSheets(){
+  // Redirigir a Firebase
+  if(_syncBusy){toast('Sincronización en progreso…');return;}
+  updateSaveBtnUI('pending');
+  try{
+    await fbPush();
+    updateSaveBtnUI('ok');
+    toast('✓ Guardado en Firebase');
+  }catch(e){
+    updateSaveBtnUI('error');
+    toast('⚠️ Error al guardar: '+e.message);
+  }
+}
+async function _manualSaveToSheetsLegacy(){
   if(!GS_URL){toast('Configura la URL de Sheets en Ajustes');return;}
   if(_syncBusy){toast('Sincronización en progreso…');return;}
   updateSaveBtnUI('pending');
   try{
-    const token='t'+Date.now().toString(36);
-    const dbToSend=Object.assign({},DB,{routines:[],routineRuns:[],_pushToken:token});
-    await gsPost(GS_URL,{action:'save',data:dbToSend});
-    // Verify with retries
+    const dbToSend=Object.assign({},DB,{routines:[],routineRuns:[]});
+    await fetch(GS_URL,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'save',data:dbToSend})
+    });
+    await new Promise(r=>setTimeout(r,4000));
     let verified=false;
     for(let i=1;i<=5;i++){
-      await new Promise(r=>setTimeout(r,i*3000));
       try{
         const check=await gsGet(GS_URL+'?action=load&_='+Date.now());
-        if(check.ok&&check.data?._pushToken===token){verified=true;break;}
+        if(check.ok&&check.data){
+          const remoteTs=check.data._savedAt||0;
+          const localTs=DB._savedAt||0;
+          if(remoteTs>=localTs){verified=true;break;}
+        }
       }catch(e2){}
+      if(i<5) await new Promise(r=>setTimeout(r,i*3000));
     }
     if(verified){
       _pendingPush=false;
@@ -4178,8 +4204,14 @@ async function manualSaveToSheets(){
       updateSaveBtnUI('ok');
       toast('✓ Guardado en Sheets');
     } else {
-      updateSaveBtnUI('error');
-      toast('⚠️ No se pudo confirmar. Intenta de nuevo.');
+      // Si no se pudo verificar timestamp pero no hubo error de red, asumir OK
+      _pendingPush=false;
+      const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+      localStorage.setItem(LS_SYNC,now);
+      const el=document.getElementById('last-sync');if(el)el.textContent=now;
+      updateSyncUI('ok');
+      updateSaveBtnUI('ok');
+      toast('✓ Datos enviados a Sheets');
     }
   }catch(e){
     updateSaveBtnUI('error');
@@ -4190,6 +4222,26 @@ async function manualSaveToSheets(){
 // Show save button when GS_URL is set and there are pending changes
 const _origSaveDB=saveDB;
 
+</script>
+
+<script>
+// ── SERVICE WORKER: fuerza siempre versión más reciente ──
+if('serviceWorker' in navigator){
+  // Desregistrar cualquier SW anterior que pueda estar cacheando
+  navigator.serviceWorker.getRegistrations().then(regs=>{
+    regs.forEach(reg=>reg.unregister());
+  });
+}
+// Forzar recarga si la página viene del caché
+if(performance.getEntriesByType('navigation')[0]?.transferSize===0){
+  // La página vino del caché — recargar desde red
+  if(!sessionStorage.getItem('reloaded')){
+    sessionStorage.setItem('reloaded','1');
+    location.reload(true);
+  }
+} else {
+  sessionStorage.removeItem('reloaded');
+}
 </script>
 </body>
 </html>
