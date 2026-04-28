@@ -3474,7 +3474,25 @@ async function fbPull(force){
   updateSyncUI('syncing');
   try{
     const snap = await _fbRef.get();
-    const remote = snap.val();
+    let remote = snap.val();
+    if(!remote) remote = null;
+    // Firebase convierte arrays a objetos — revertir
+    if(remote){
+      const toArr = v => v && typeof v==='object' && !Array.isArray(v) ? Object.values(v) : (v||[]);
+      remote.users        = toArr(remote.users);
+      remote.projects     = toArr(remote.projects);
+      remote.deliverables = toArr(remote.deliverables);
+      remote.bitacora     = toArr(remote.bitacora);
+      remote.incidencias  = toArr(remote.incidencias);
+      remote.monthlyScores= toArr(remote.monthlyScores);
+      remote.tareas       = toArr(remote.tareas);
+      remote.incidents    = toArr(remote.incidents);
+      if(remote.comments && typeof remote.comments==='object'){
+        Object.keys(remote.comments).forEach(k=>{
+          remote.comments[k]=toArr(remote.comments[k]);
+        });
+      }
+    }
     if(!remote){
       console.log('[FB] pull: Firebase vacío → pushing local');
       _syncBusy=false; updateSyncUI('ok'); await fbPush(); return;
