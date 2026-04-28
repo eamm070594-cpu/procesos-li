@@ -770,23 +770,65 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
     <div class="view" id="view-proyectos">
       <div class="page-header">
         <div class="page-header-inner">
-          <div class="page-title"><h2>Proyectos</h2><p>Gestión y seguimiento por líder</p></div>
-          <div class="page-actions admin-only">
-            <button class="btn sm primary" id="btn-add-proj">＋ Proyecto</button>
+          <div class="page-title"><h2>Proyectos</h2><p id="proj-tab-sub">Seguimiento y entregables</p></div>
+          <div class="page-actions">
+            <div id="proj-filters-tab" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <select class="select-input" id="proj-f-leader" style="min-width:140px">
+                <option value="">Persona (todos)</option>
+              </select>
+              <select class="select-input" id="proj-f-status" style="min-width:130px">
+                <option value="">Estado (todos)</option>
+                <option>Activo</option><option>En riesgo</option><option>Detenido</option>
+                <option>Por aprobar</option><option>Cerrado</option>
+              </select>
+              <input class="input" id="proj-search" placeholder="Buscar…" style="width:140px"/>
+              <button class="btn sm primary admin-only" id="btn-add-proj">+ Proyecto</button>
+            </div>
+            <div id="proj-filters-ing" style="display:none;gap:6px;align-items:center;flex-wrap:wrap">
+              <select class="select-input" id="ing-f-user" style="min-width:160px">
+                <option value="">Ingeniero (todos)</option>
+              </select>
+              <div style="display:flex;gap:4px;flex-wrap:wrap" id="ing-status-btns">
+                <button class="btn sm ing-st-btn active" data-ist="">Todos</button>
+                <button class="btn sm ing-st-btn" data-ist="vencido">Vencidos</button>
+                <button class="btn sm ing-st-btn" data-ist="Pendiente">Pendientes</button>
+                <button class="btn sm ing-st-btn" data-ist="En progreso">En curso</button>
+                <button class="btn sm ing-st-btn" data-ist="En revision">En revision</button>
+                <button class="btn sm ing-st-btn" data-ist="Bloqueado">Bloqueados</button>
+                <button class="btn sm ing-st-btn" data-ist="Aprobado">Aprobados</button>
+              </div>
+            </div>
           </div>
+        </div>
+        <div style="display:flex;gap:6px;padding:10px 20px 0;border-top:1px solid var(--border2);margin-top:4px">
+          <button class="proj-tab active" id="ptab-proyectos" onclick="switchProjTab('proyectos')">Proyectos</button>
+          <button class="proj-tab" id="ptab-ingenieros" onclick="switchProjTab('ingenieros')">Por ingeniero</button>
         </div>
       </div>
       <div class="pad">
-        <!-- Filtros: líder + búsqueda -->
-        <div class="card" style="margin-bottom:12px;padding:10px 14px">
-          <div class="flex flex-wrap" style="gap:8px">
-            <select class="select-input" id="proj-f-leader" style="flex:1;min-width:160px">
-              <option value="">Líder (todos)</option>
-            </select>
-            <input class="input" id="proj-search" placeholder="Buscar proyecto…" style="flex:2;min-width:180px"/>
+        <div id="proj-tab-proyectos">
+          <div id="proj-summary-kpis" style="margin-bottom:12px"></div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <div class="tbl-wrap">
+              <table id="proj-table" style="table-layout:fixed;width:100%">
+                <thead><tr>
+                  <th style="width:28%">Proyecto</th>
+                  <th style="width:14%">Lider</th>
+                  <th style="width:20%">Avance</th>
+                  <th style="width:11%">Fin</th>
+                  <th style="width:12%">Estado</th>
+                  <th style="width:9%" class="right">Vencidos</th>
+                  <th style="width:6%" class="right admin-only"></th>
+                </tr></thead>
+                <tbody id="proj-tbody"></tbody>
+              </table>
+            </div>
           </div>
+          <div id="proj-orphan-dels" style="margin-top:16px"></div>
         </div>
-        <div id="proj-list"></div>
+        <div id="proj-tab-ingenieros" style="display:none">
+          <div id="ing-list"></div>
+        </div>
       </div>
     </div>
 
@@ -1754,112 +1796,333 @@ function addComment(entity, entityId){
 }
 
 /* ══════════════════════════════════════════════════════
-   RENDER: PROYECTOS
+   RENDER: PROYECTOS — TABLA CON FILA EXPANDIBLE
 ══════════════════════════════════════════════════════ */
 function renderProyectos(){
-  fillSelect('proj-f-leader', DB.users, 'Líder (todos)');
-  const fl=document.getElementById('proj-f-leader')?.value||'';
-  const q=(document.getElementById('proj-search')?.value||'').trim().toLowerCase();
-  const isAdmin=SESSION?.role==='admin';
+  fillSelect('proj-f-leader', DB.users, 'Persona (todos)');
+  const fl   = document.getElementById('proj-f-leader')?.value||'';
+  const fst  = document.getElementById('proj-f-status')?.value||'';
+  const q    = (document.getElementById('proj-search')?.value||'').trim().toLowerCase();
+  const isAdmin = SESSION?.role==='admin';
+  const today   = todayISO();
 
-  // Preserve which groups are currently open before re-render
-  const openGroups={
-    'proj-group-activos':  !document.getElementById('proj-group-activos') || document.getElementById('proj-group-activos').style.display!=='none',
-    'proj-group-aprobar':  document.getElementById('proj-group-aprobar')?.style.display!=='none',
-    'proj-group-riesgo':   document.getElementById('proj-group-riesgo')?.style.display!=='none',
-    'proj-group-cerrados': document.getElementById('proj-group-cerrados')?.style.display!=='none',
-  };
+  /* ── Proyectos visibles ──────────────────────────── */
+  let projs = DB.projects.filter(p=>{
+    if(fl && p.leaderId!==fl) return false;
+    if(fst){
+      const s=p.status||'Activo';
+      if(fst==='Activo' && ['En revisión','Por aprobar','En riesgo','Detenido','Cerrado'].includes(s)) return false;
+      if(fst!=='Activo' && s!==fst) return false;
+    }
+    if(q && !p.name.toLowerCase().includes(q)) return false;
+    return true;
+  });
 
-  let all=DB.projects
-    .filter(p=>!fl||p.leaderId===fl)
-    .filter(p=>!q||p.name.toLowerCase().includes(q));
-
-  // Groups
-  const porAprobar = all.filter(p=>p.status==='En revisión'||p.status==='Por aprobar');
-  const enRiesgo   = all.filter(p=>p.status==='En riesgo'||p.status==='Detenido');
-  const cerrados   = all.filter(p=>p.status==='Cerrado');
-  const activos    = all.filter(p=>!['En revisión','Por aprobar','En riesgo','Detenido','Cerrado'].includes(p.status));
-
-  const container=document.getElementById('proj-list');
-
-  function projCard(p){
-    const dels=DB.deliverables.filter(d=>d.projectId===p.id);
-    const done=dels.filter(d=>d.status==='Aprobado').length;
-    const pct=dels.length?Math.round((done/dels.length)*100):0;
+  /* ── KPIs resumen ────────────────────────────────── */
+  const kpiEl=document.getElementById('proj-summary-kpis');
+  if(kpiEl){
+    const total=projs.length;
+    const allDels=projs.flatMap(p=>DB.deliverables.filter(d=>d.projectId===p.id));
+    const vencidos=allDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today).length;
+    const bloqueados=allDels.filter(d=>d.blocked).length;
+    const aprobados=allDels.filter(d=>d.status==='Aprobado').length;
+    const pct=allDels.length?Math.round((aprobados/allDels.length)*100):0;
     const lvl=pct>=85?'ok':pct>=70?'warn':'bad';
-    const stTag=p.status==='Cerrado'?'<span class="tag ok">Cerrado</span>':
-      p.status==='En riesgo'?'<span class="tag warn">En riesgo</span>':
-      p.status==='Detenido'?'<span class="tag bad">Detenido</span>':
-      p.status==='Por aprobar'||p.status==='En revisión'?'<span class="tag blue">Por aprobar</span>':
-      '<span class="tag blue">Activo</span>';
-
-    // Leader avatar (igual que en dashboard)
-    const leader=byId(DB.users,p.leaderId);
-    const photo=userPhotoURL(leader?.email);
-    const initials=(leader?.name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
-    const sem=leader?semaforoUser(leader.id):{level:'gray'};
-    const avatarEl=photo
-      ?`<img src="${photo}" alt="${esc(leader?.name||'')}"
-          style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2.5px solid var(--${sem.level==='ok'?'ok':sem.level==='warn'?'warn':'bad'})"
-          onerror="this.outerHTML='<div class=\\'person-avatar ${sem.level}\\' style=\\'width:44px;height:44px;font-size:15px\\'>${initials}</div>'">`
-      :`<div class="person-avatar ${sem.level}" style="width:44px;height:44px;font-size:15px">${initials}</div>`;
-
-    return`<div class="card" style="margin-bottom:10px;display:flex;gap:14px;align-items:flex-start">
-      <!-- Avatar líder -->
-      <div style="flex:0 0 44px;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:2px">
-        ${avatarEl}
-        <span style="font-size:9px;color:var(--muted);text-align:center;max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(leader?.name||'—')}</span>
-      </div>
-      <!-- Contenido -->
-      <div style="flex:1;min-width:0">
-        <div class="flex-between flex-wrap" style="gap:8px;margin-bottom:6px">
-          <div>
-            <div style="font-weight:700;font-size:15px">${esc(p.name)}</div>
-            <div class="small muted">${fmtDate(p.start)} → ${fmtDate(p.end)}</div>
-          </div>
-          <div class="flex flex-wrap" style="gap:6px">${stTag}${priorityTag(p.priority)}</div>
-        </div>
-        <div class="person-bar-wrap" style="margin-bottom:8px">
-          <div class="progress-bar"><div class="progress-bar-fill ${lvl}" style="width:${pct}%"></div></div>
-          <span class="progress-pct ${lvl}">${pct}%</span>
-          <span class="small muted">${done}/${dels.length} entregables</span>
-        </div>
-        ${p.notes?`<div class="small muted" style="margin-bottom:8px">${esc(p.notes)}</div>`:''}
-        <div class="flex flex-wrap" style="gap:6px">
-          <button class="btn xs" data-open-proj="${p.id}">📋 Entregables</button>
-          <button class="btn xs" data-open-proj-cmt="${p.id}">💬 Comentarios</button>
-          ${isAdmin?`<button class="btn xs" data-add-del-proj="${p.id}">＋ Entregable</button><button class="btn xs" data-edit-proj="${p.id}">Editar</button><button class="btn xs ok" data-close-proj="${p.id}">✓ Proyecto terminado</button><button class="btn xs danger" data-del-proj="${p.id}">Eliminar</button>`:''}
-        </div>
-        <div id="proj-dels-${p.id}" class="hidden"></div>
-        <div id="proj-cmt-${p.id}" class="hidden"></div>
-      </div>
+    kpiEl.innerHTML=`<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi-card ${lvl}"><div class="kpi-label">Cumplimiento</div><div class="kpi-value">${pct}%</div><div class="kpi-hint">${aprobados}/${allDels.length} entregables</div></div>
+      <div class="kpi-card ${vencidos===0?'ok':vencidos<=2?'warn':'bad'}"><div class="kpi-label">Vencidos</div><div class="kpi-value">${vencidos}</div><div class="kpi-hint">Sin aprobar y fecha pasada</div></div>
+      <div class="kpi-card ${bloqueados===0?'ok':'warn'}"><div class="kpi-label">Bloqueados</div><div class="kpi-value">${bloqueados}</div><div class="kpi-hint">Entregables detenidos</div></div>
+      <div class="kpi-card blue"><div class="kpi-label">Proyectos</div><div class="kpi-value">${total}</div><div class="kpi-hint">${fl?'de este líder':'en total'}</div></div>
     </div>`;
   }
 
-  // Always show collapsible groups
-  if(!all.length){container.innerHTML='<div class="empty">No hay proyectos.</div>';return}
-
-  let html='';
-
-  if(activos.length){
-    const open=openGroups['proj-group-activos']!==false;
-    html+=collapsibleGroup('Activos',activos.length,'ok','proj-group-activos',activos.map(projCard).join(''),open);
-  }
-  if(porAprobar.length){
-    const open=!!openGroups['proj-group-aprobar'];
-    html+=collapsibleGroup('Por aprobar',porAprobar.length,'blue','proj-group-aprobar',porAprobar.map(projCard).join(''),open);
-  }
-  if(enRiesgo.length){
-    const open=!!openGroups['proj-group-riesgo'];
-    html+=collapsibleGroup('En riesgo / Detenidos',enRiesgo.length,'warn','proj-group-riesgo',enRiesgo.map(projCard).join(''),open);
-  }
-  if(cerrados.length){
-    const open=!!openGroups['proj-group-cerrados'];
-    html+=collapsibleGroup('Terminados',cerrados.length,'gray','proj-group-cerrados',
-      terminadosPorIngeniero(cerrados)+cerrados.map(projCard).join(''),open);
+  /* ── Helper: avatar inline ───────────────────────── */
+  function avatarHTML(user){
+    if(!user) return '<span style="color:var(--muted);font-size:12px">—</span>';
+    const photo=userPhotoURL(user.email);
+    const initials=user.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    const sem=semaforoUser(user.id);
+    const bc=`var(--${sem.level==='ok'?'ok':sem.level==='warn'?'warn':'bad'})`;
+    const av=photo
+      ?`<img src="${photo}" alt="${esc(user.name)}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:2px solid ${bc};vertical-align:middle"
+          onerror="this.outerHTML='<span style=\\'width:24px;height:24px;border-radius:50%;background:var(--surface2);border:2px solid ${bc};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;font-family:var(--font-display);color:${bc}\\'>${initials}</span>'">`
+      :`<span style="width:24px;height:24px;border-radius:50%;background:var(--surface2);border:2px solid ${bc};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;font-family:var(--font-display);color:${bc}">${initials}</span>`;
+    return`<span style="display:inline-flex;align-items:center;gap:5px">${av}<span style="font-size:12px">${esc(user.name.split(' ')[0])}</span></span>`;
   }
 
-  container.innerHTML=html;
+  /* ── Filas de proyectos ──────────────────────────── */
+  const tbody=document.getElementById('proj-tbody');
+  if(!projs.length){
+    tbody.innerHTML=`<tr><td colspan="7" class="empty">No hay proyectos con ese filtro.</td></tr>`;
+  } else {
+    tbody.innerHTML=projs.map(p=>{
+      const dels=DB.deliverables.filter(d=>d.projectId===p.id);
+      const done=dels.filter(d=>d.status==='Aprobado').length;
+      const overdue=dels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today).length;
+      const pct=dels.length?Math.round((done/dels.length)*100):0;
+      const lvl=pct>=85?'ok':pct>=70?'warn':'bad';
+      const stTag=p.status==='Cerrado'?'<span class="tag gray">Cerrado</span>':
+        p.status==='En riesgo'?'<span class="tag warn">En riesgo</span>':
+        p.status==='Detenido'?'<span class="tag bad">Detenido</span>':
+        (p.status==='Por aprobar'||p.status==='En revisión')?'<span class="tag blue">Por aprobar</span>':
+        '<span class="tag blue">Activo</span>';
+      const leader=byId(DB.users,p.leaderId);
+      const priDot=p.priority==='Alta'?`<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--bad);margin-right:4px;vertical-align:middle"></span>`:
+        p.priority==='Media'?`<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--warn);margin-right:4px;vertical-align:middle"></span>`:'';
+
+      return`<tr class="proj-row" data-pid="${p.id}" style="cursor:pointer">
+        <td>
+          <div style="font-weight:600;font-size:13px">${priDot}${esc(p.name)}</div>
+          ${p.notes?`<div class="small muted" style="margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px">${esc(p.notes)}</div>`:''}
+        </td>
+        <td>${avatarHTML(leader)}</td>
+        <td>
+          <div class="person-bar-wrap" style="margin:0">
+            <div class="progress-bar"><div class="progress-bar-fill ${lvl}" style="width:${pct}%"></div></div>
+            <span class="progress-pct ${lvl}" style="font-size:11px">${pct}%</span>
+          </div>
+          <div class="small muted" style="margin-top:2px">${done}/${dels.length} entregables</div>
+        </td>
+        <td><div class="small">${fmtDate(p.end)}</div></td>
+        <td>${stTag}</td>
+        <td class="right">
+          ${overdue?`<span class="tag bad" style="font-size:11px">${overdue}</span>`:`<span style="color:var(--muted);font-size:12px">0</span>`}
+        </td>
+        <td class="right admin-only">
+          <div style="display:flex;gap:4px;justify-content:flex-end">
+            <button class="btn xs ghost" data-edit-proj="${p.id}" title="Editar">✎</button>
+            <button class="btn xs ghost" data-add-del-proj="${p.id}" title="Agregar entregable">＋</button>
+          </div>
+        </td>
+      </tr>
+      <tr id="proj-expand-${p.id}" style="display:none">
+        <td colspan="7" style="padding:0;background:var(--surface2)">
+          <div id="proj-dels-${p.id}" style="padding:10px 16px"></div>
+          <div id="proj-cmt-${p.id}" class="hidden"></div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  /* ── Entregables huérfanos (asignados al líder pero de otro proyecto) ── */
+  const orphanEl=document.getElementById('proj-orphan-dels');
+  if(fl && orphanEl){
+    const projIds=new Set(projs.map(p=>p.id));
+    const orphanDels=DB.deliverables.filter(d=>
+      d.assigneeId===fl &&
+      !projIds.has(d.projectId)
+    );
+    if(orphanDels.length){
+      const rows=orphanDels.map(d=>{
+        const canFinish=d.status!=='Aprobado'&&d.status!=='En revisión';
+        return`<tr>
+          <td>${statusTag(d.status,d.due)}</td>
+          <td><b>${esc(d.title)}</b><div class="small muted">${esc((d.notes||'').slice(0,60))}</div></td>
+          <td>${projName(d.projectId)}</td>
+          <td>${fmtDueFull(d.due,d.originalDue)}</td>
+          <td class="right">
+            ${canFinish?`<button class="btn xs primary" data-submit-del="${d.id}">✓ Terminado</button>`:''}
+            ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs" data-next-phase="${d.id}">➡️ Fase</button>`:''}
+          </td>
+        </tr>`;
+      }).join('');
+      orphanEl.innerHTML=`<div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:10px 14px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px">
+          <span class="card-title" style="margin:0">Entregables asignados en otros proyectos</span>
+          <span class="tag blue">${orphanDels.length}</span>
+        </div>
+        <div class="tbl-wrap">
+          <table><thead><tr>
+            <th>Estado</th><th>Entregable</th><th>Proyecto</th><th>Fecha</th><th class="right">Acción</th>
+          </tr></thead><tbody>${rows}</tbody></table>
+        </div>
+      </div>`;
+    } else {
+      orphanEl.innerHTML='';
+    }
+  } else if(orphanEl){
+    orphanEl.innerHTML='';
+  }
+
+  /* ── Click en fila para expandir ─────────────────── */
+  document.querySelectorAll('.proj-row').forEach(row=>{
+    row.addEventListener('click', e=>{
+      if(e.target.closest('button')) return;
+      const pid=row.dataset.pid;
+      const expandRow=document.getElementById(`proj-expand-${pid}`);
+      const delsEl=document.getElementById(`proj-dels-${pid}`);
+      if(!expandRow) return;
+      const isOpen=expandRow.style.display!=='none';
+      /* Cerrar todas las filas abiertas */
+      document.querySelectorAll('[id^="proj-expand-"]').forEach(r=>r.style.display='none');
+      if(!isOpen){
+        expandRow.style.display='table-row';
+        /* Renderizar entregables */
+        const dels=DB.deliverables.filter(d=>d.projectId===pid);
+        if(!dels.length){
+          delsEl.innerHTML='<div class="empty" style="padding:16px">Sin entregables.</div>';
+        } else {
+          const rows=dels.map(d=>{
+            const canFinish=d.status!=='Aprobado'&&d.status!=='En revisión';
+            const isMyDel=d.assigneeId===SESSION?.userId;
+            return`<tr>
+              <td>${statusTag(d.status,d.due)}</td>
+              <td><b>${esc(d.title)}</b>${d.notes?`<div class="small muted">${esc(d.notes.slice(0,60))}</div>`:''}</td>
+              <td>${userName(d.assigneeId)}</td>
+              <td>${fmtDueFull(d.due,d.originalDue)}</td>
+              <td class="right">
+                <div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap">
+                  <button class="btn xs" data-open-del-cmt="${d.id}">💬</button>
+                  ${(canFinish&&(isAdmin||isMyDel))?`<button class="btn xs primary" data-submit-del="${d.id}">✓</button>`:''}
+                  ${(d.status==='En revisión'&&isAdmin)?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:''}
+                  ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs" data-next-phase="${d.id}">➡️</button><button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}
+                </div>
+              </td>
+            </tr>
+            <tr id="del-cmt-row-${d.id}" style="display:none">
+              <td colspan="5" style="padding:0 10px 10px">${commentsHTML('deliverable',d.id)}</td>
+            </tr>`;
+          }).join('');
+          delsEl.innerHTML=`<div style="padding:6px 0 4px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Entregables</span>
+            <div style="display:flex;gap:5px">
+              <button class="btn xs" data-open-proj-cmt="${pid}">💬 Comentarios del proyecto</button>
+              ${isAdmin?`<button class="btn xs ok" data-close-proj="${pid}">✓ Cerrar proyecto</button><button class="btn xs danger" data-del-proj="${pid}">Eliminar</button>`:''}
+            </div>
+          </div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>Estado</th><th>Entregable</th><th>Responsable</th><th>Fecha</th><th class="right">Acción</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table></div>`;
+        }
+      }
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   TABS DE PROYECTOS
+══════════════════════════════════════════════════════ */
+let _projTab='proyectos';
+function switchProjTab(tab){
+  _projTab=tab;
+  document.getElementById('ptab-proyectos').classList.toggle('active',tab==='proyectos');
+  document.getElementById('ptab-ingenieros').classList.toggle('active',tab==='ingenieros');
+  document.getElementById('proj-tab-proyectos').style.display=tab==='proyectos'?'':'none';
+  document.getElementById('proj-tab-ingenieros').style.display=tab==='ingenieros'?'':'none';
+  document.getElementById('proj-filters-tab').style.display=tab==='proyectos'?'flex':'none';
+  document.getElementById('proj-filters-ing').style.display=tab==='ingenieros'?'flex':'none';
+  document.getElementById('proj-tab-sub').textContent=tab==='proyectos'?'Seguimiento y entregables':'Entregables por ingeniero';
+  if(tab==='ingenieros') renderIngenieros();
+}
+
+/* ══════════════════════════════════════════════════════
+   RENDER: POR INGENIERO
+══════════════════════════════════════════════════════ */
+function renderIngenieros(){
+  fillSelect('ing-f-user', DB.users, 'Ingeniero (todos)');
+  const fu  = document.getElementById('ing-f-user')?.value||'';
+  const fst = document.querySelector('.ing-st-btn.active')?.dataset.ist||'';
+  const today = todayISO();
+  const isAdmin = SESSION?.role==='admin';
+  const users = fu ? DB.users.filter(u=>u.id===fu) : DB.users;
+  const container = document.getElementById('ing-list');
+  if(!users.length){ container.innerHTML='<div class="empty">Sin ingenieros.</div>'; return; }
+
+  container.innerHTML = users.map(u=>{
+    const allDels = DB.deliverables.filter(d=>d.assigneeId===u.id);
+    const vencidos   = allDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today);
+    const pendientes = allDels.filter(d=>d.status==='Pendiente');
+    const enCurso    = allDels.filter(d=>d.status==='En progreso');
+    const revision   = allDels.filter(d=>d.status==='En revisi\u00f3n');
+    const bloqueados = allDels.filter(d=>d.blocked||d.status==='Bloqueado');
+    const aprobados  = allDels.filter(d=>d.status==='Aprobado');
+    let dels = allDels;
+    if(fst==='vencido')        dels = vencidos;
+    else if(fst==='Aprobado')  dels = aprobados;
+    else if(fst==='Bloqueado') dels = bloqueados;
+    else if(fst==='En revision') dels = revision;
+    else if(fst)               dels = allDels.filter(d=>d.status===fst);
+    const sem = semaforoUser(u.id);
+    const photo = userPhotoURL(u.email);
+    const initials = u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    const bc = sem.level==='ok'?'var(--ok)':sem.level==='warn'?'var(--warn)':'var(--bad)';
+    const avatarEl = photo
+      ?`<img src="${photo}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2.5px solid ${bc}" onerror="this.outerHTML='<div style=\'width:36px;height:36px;border-radius:50%;background:var(--surface2);border:2.5px solid ${bc};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:13px;font-weight:800;color:${bc}\'>${initials}</div>'">`
+      :`<div style="width:36px;height:36px;border-radius:50%;background:var(--surface2);border:2.5px solid ${bc};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:13px;font-weight:800;color:${bc}">${initials}</div>`;
+    const pct = allDels.length ? Math.round((aprobados.length/allDels.length)*100) : 0;
+    const lvl = pct>=85?'ok':pct>=70?'warn':'bad';
+    const delRows = dels.length ? dels.map(d=>{
+      const isMyDel = d.assigneeId===SESSION?.userId;
+      const canFinish = d.status!=='Aprobado'&&d.status!=='En revisi\u00f3n';
+      const isVenc = d.due&&d.due<today&&d.status!=='Aprobado';
+      return`<tr${isVenc?' style="background:var(--bad-bg)"':''}>
+        <td>${statusTag(d.status,d.due)}</td>
+        <td><b>${esc(d.title)}</b>${d.notes?`<div class="small muted">${esc(d.notes.slice(0,60))}</div>`:''}</td>
+        <td style="font-size:12px">${projName(d.projectId)}</td>
+        <td>${fmtDueFull(d.due,d.originalDue)}</td>
+        <td class="right">
+          <div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap">
+            <button class="btn xs" data-open-del-cmt="${d.id}">💬</button>
+            ${(canFinish&&(isAdmin||isMyDel))?`<button class="btn xs primary" data-submit-del="${d.id}">Terminado</button>`:""}
+            ${(d.status==="En revisi\u00f3n"&&isAdmin)?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:""}
+            ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs" data-next-phase="${d.id}">Sig. fase</button>`:""}
+          </div>
+        </td>
+      </tr>
+      <tr id="del-cmt-row-${d.id}" style="display:none">
+        <td colspan="5" style="padding:0 10px 10px">${commentsHTML('deliverable',d.id)}</td>
+      </tr>`;
+    }).join('')
+    :`<tr><td colspan="5" class="empty">${fst?'Sin entregables con ese filtro.':'Sin entregables asignados.'}</td></tr>`;
+
+    return`<div class="card" style="margin-bottom:10px;padding:0;overflow:hidden">
+      <div onclick="toggleIngCard(this,'ing-card-${u.id}')"
+        style="padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">
+        ${avatarEl}
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-weight:700;font-size:14px">${esc(u.name)}</span>
+            <span class="tag ${sem.level}">${sem.level==='ok'?'Verde':sem.level==='warn'?'Amarillo':'Rojo'}</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${u.role||'—'} · ${u.team||'—'}</div>
+          <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
+            ${vencidos.length?`<span class="tag bad" style="font-size:11px">${vencidos.length} vencidos</span>`:''}
+            ${pendientes.length?`<span class="tag gray" style="font-size:11px">${pendientes.length} pendientes</span>`:''}
+            ${enCurso.length?`<span class="tag blue" style="font-size:11px">${enCurso.length} en curso</span>`:''}
+            ${revision.length?`<span class="tag blue" style="font-size:11px">${revision.length} en revisi\u00f3n</span>`:''}
+            ${bloqueados.length?`<span class="tag warn" style="font-size:11px">${bloqueados.length} bloqueados</span>`:''}
+            ${!allDels.length?`<span class="tag gray" style="font-size:11px">Sin entregables</span>`:''}
+          </div>
+        </div>
+        <div style="text-align:right;flex:0 0 auto">
+          <div style="font-family:var(--font-display);font-size:28px;font-weight:800" class="progress-pct ${lvl}">${pct}%</div>
+          <div style="font-size:10px;color:var(--muted)">${aprobados.length}/${allDels.length}</div>
+          <div style="margin-top:4px">
+            <div class="progress-bar" style="width:80px;margin-left:auto"><div class="progress-bar-fill ${lvl}" style="width:${pct}%"></div></div>
+          </div>
+        </div>
+        <span class="ing-chev" style="color:var(--muted);font-size:14px;transition:transform .2s">▼</span>
+      </div>
+      <div id="ing-card-${u.id}" style="border-top:1px solid var(--border2);display:none">
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Estado</th><th>Entregable</th><th>Proyecto</th><th>Fecha</th><th class="right">Acci\u00f3n</th></tr></thead>
+            <tbody>${delRows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleIngCard(header, id){
+  const body=document.getElementById(id);
+  if(!body) return;
+  const isOpen=body.style.display!=='none';
+  body.style.display=isOpen?'none':'';
+  const chev=header.querySelector('.ing-chev');
+  if(chev) chev.style.transform=isOpen?'':'rotate(180deg)';
 }
 
 function collapsibleGroup(label, count, tagCls, id, innerHTML, open=false){
@@ -2045,7 +2308,7 @@ function renderCalendar(){
   const today=todayISO();
   const evMap={};
   const addEv=(iso,ev)=>{if(!iso)return;if(!evMap[iso])evMap[iso]=[];evMap[iso].push(ev)};
-  DB.deliverables.forEach(d=>{if(d.due)addEv(d.due,{t:'del',title:d.title,status:d.status,due:d.due})});
+  DB.deliverables.forEach(d=>{if(d.due)addEv(d.due,{t:'del',title:d.title,status:d.status,due:d.due,projectId:d.projectId,assigneeId:d.assigneeId,id:d.id})});
   DB.incidents.forEach(i=>{if(i.due)addEv(i.due,{t:'inc',title:i.title,severity:i.severity})});
 
   const firstDow=(new Date(calY,calM,1).getDay()+6)%7;
@@ -2074,12 +2337,31 @@ function renderCalendar(){
 }
 
 function openCalDay(iso,evs){
+  const today=todayISO();
   document.getElementById('dlg-cal-title').textContent=`${fmtDate(iso)}`;
   document.getElementById('dlg-cal-body').innerHTML=evs.length
-    ?evs.map(ev=>`<div style="padding:10px;border:1px solid var(--border2);border-radius:var(--r);margin-bottom:8px">
+    ?evs.map(ev=>{
+      if(ev.t==='del'){
+        const proj=byId(DB.projects,ev.projectId);
+        const assignee=byId(DB.users,ev.assigneeId);
+        const isVenc=ev.due<today&&ev.status!=='Aprobado';
+        const stTag=statusTag(ev.status,ev.due);
+        return`<div style="padding:12px;border:1px solid var(--border2);border-radius:var(--r);margin-bottom:8px;border-left:3px solid ${isVenc?'var(--bad)':ev.status==='Aprobado'?'var(--ok)':'var(--accent)'}">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+            <div style="font-weight:600;font-size:14px">${esc(ev.title)}</div>
+            ${stTag}
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
+            ${proj?`<span>📁 ${esc(proj.name)}</span>`:''}
+            ${assignee?`<span>👤 ${esc(assignee.name)}</span>`:''}
+          </div>
+        </div>`;
+      }
+      return`<div style="padding:10px;border:1px solid var(--border2);border-radius:var(--r);margin-bottom:8px">
         <div style="font-weight:600">${esc(ev.title)}</div>
-        <div class="small muted">${ev.t==='del'?'Entregable':ev.t==='inc'?'Incidencia·'+ev.severity:'Otro'}</div>
-      </div>`).join('')
+        <div class="small muted">${ev.t==='inc'?'Incidencia · '+ev.severity:'Otro'}</div>
+      </div>`;
+    }).join('')
     :'<div class="empty">Sin actividades este día.</div>';
   document.getElementById('dlg-cal').showModal();
 }
@@ -2252,6 +2534,10 @@ function renderEquipo(){
           <span style="font-size:12px;font-weight:700;color:${scoreColor};min-width:32px">${sc!==null?sc+'%':'—'}</span>
         </div>
         <div class="small muted">Semana: <b style="color:var(--ok)">${wm.efectivo}</b> efectivos · <b style="color:var(--warn)">${wm.cumplido}</b> cumplidos · <b style="color:var(--bad)">${wm.pendiente}</b> pendientes</div>
+        ${SESSION?.role==='admin'?`<div style="margin-top:8px;display:flex;gap:5px">
+          <button class="btn xs" data-edit-u="${u.id}" onclick="event.stopPropagation()">✎ Editar</button>
+          <button class="btn xs danger" data-del-u="${u.id}" onclick="event.stopPropagation()">✕</button>
+        </div>`:''}
       </div>
     </div>`;
   }).join('');
@@ -3028,9 +3314,17 @@ document.getElementById('del-tabs')?.addEventListener('click',e=>{
 
 // Filters
 // Filters — project filters only re-render projects, not the whole view
-['proj-f-leader','proj-search'].forEach(id=>{
+['proj-f-leader','proj-f-status','proj-search'].forEach(id=>{
   document.getElementById(id)?.addEventListener('input',()=>renderProyectos());
   document.getElementById(id)?.addEventListener('change',()=>renderProyectos());
+});
+document.getElementById('ing-f-user')?.addEventListener('change',()=>renderIngenieros());
+document.getElementById('ing-status-btns')?.addEventListener('click',e=>{
+  const btn=e.target.closest('.ing-st-btn');
+  if(!btn) return;
+  document.querySelectorAll('.ing-st-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderIngenieros();
 });
 ['del-search','del-f-proj','del-f-ass','dash-filter-ass','gantt-f-ass'].forEach(id=>{
   document.getElementById(id)?.addEventListener('input',()=>renderView(currentView));
@@ -3397,11 +3691,17 @@ function renderIngeniero(userId){
     const photoHTML=photo
       ?`<img src="${photo}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:3px solid ${borderColor}" onerror="this.style.display='none'">`
       :`<div style="width:56px;height:56px;border-radius:50%;background:var(--accent-bg);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:20px;color:var(--accent)">${ini}</div>`;
-    ph.innerHTML=`<div style="display:flex;align-items:center;gap:12px">
+    const isAdminView=SESSION?.role==='admin';
+    ph.innerHTML=`<div style="display:flex;align-items:center;gap:12px;flex:1">
       ${photoHTML}
-      <div>
-        <h2 style="margin:0;font-size:20px">${esc(u.name)}</h2>
-        <p style="margin:3px 0 0;font-size:12px;color:var(--muted)">${u.role} · ${u.team||'—'}</p>
+      <div style="flex:1">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div>
+            <h2 style="margin:0;font-size:20px">${esc(u.name)}</h2>
+            <p style="margin:3px 0 0;font-size:12px;color:var(--muted)">${u.role} · ${u.team||'—'}</p>
+          </div>
+          ${isAdminView?`<button class="btn sm" data-edit-u="${u.id}">✎ Editar perfil</button>`:''}
+        </div>
       </div>
     </div>`;
   }
@@ -3481,7 +3781,26 @@ function renderIngeniero(userId){
       </div>`;
     }).join('')}`:'<div class="empty">Sin proyectos asignados.</div>';
 
-  body.innerHTML=scoreHTML+chartHTML+projsHTML;
+  // DGP block
+  const dgp=u.dgp||{};
+  const dgpHTML=(dgp.puesto||dgp.area||dgp.nivel||dgp.reporta||dgp.responsabilidades)?`
+    <div class="card" style="margin-bottom:10px">
+      <div style="font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+        📋 <span>Descripción General del Puesto</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:${dgp.responsabilidades?'12px':'0'}">
+        ${dgp.puesto?`<div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Puesto</div><div style="font-size:13px">${esc(dgp.puesto)}</div></div>`:''}
+        ${dgp.area?`<div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Área</div><div style="font-size:13px">${esc(dgp.area)}</div></div>`:''}
+        ${dgp.nivel?`<div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Nivel</div><div style="font-size:13px">${esc(dgp.nivel)}</div></div>`:''}
+        ${dgp.reporta?`<div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Reporta a</div><div style="font-size:13px">${esc(dgp.reporta)}</div></div>`:''}
+      </div>
+      ${dgp.responsabilidades?`<div style="border-top:1px solid var(--border2);padding-top:10px;margin-top:4px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Responsabilidades</div>
+        <div style="font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap">${esc(dgp.responsabilidades)}</div>
+      </div>`:''}
+    </div>`:'';
+
+  body.innerHTML=scoreHTML+chartHTML+dgpHTML+projsHTML;
 }
 
 function openProyectoFromIngeniero(projId){
