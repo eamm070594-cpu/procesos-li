@@ -3430,6 +3430,7 @@ async function gsPush(){
   _syncBusy=false;
 }
 
+const STATUS_RANK={'Pendiente':1,'En progreso':2,'Bloqueado':2,'En revisión':3,'En revision':3,'Aprobado':4};
 function mergeDB(local, remote){
   const merged = Object.assign({}, remote);
   const localDelsMap = {};
