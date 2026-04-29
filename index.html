@@ -653,6 +653,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
       <button class="snav-btn" data-view="calendario"><span class="icon">🗓</span> Calendario</button>
       <div class="snav-section admin-only">Equipo</div>
       <button class="snav-btn admin-only" data-view="evaluacion"><span class="icon">🏆</span> Evaluación mensual</button>
+      <button class="snav-btn admin-only" data-view="directivo"><span class="icon">📊</span> Resumen directivo</button>
       <button class="snav-btn" data-view="equipo"><span class="icon">👥</span> Equipo</button>
       <button class="snav-btn admin-only" data-view="bitacora"><span class="icon">📓</span> Bitácora</button>
       <div class="snav-section">Sistema</div>
@@ -715,57 +716,53 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
       <div class="page-header">
         <div class="page-header-inner">
           <div class="page-title">
-            <h2>📋 Por revisar</h2>
-            <p>Entregables que el equipo marcó como terminados</p>
+            <h2>Dashboard</h2>
+            <p id="dash-date">Hoy</p>
           </div>
-          <div class="page-actions admin-only">
-            <button class="btn sm primary" id="btn-quickadd">＋ Agregar</button>
+          <div class="page-actions">
+            <select class="select-input" id="dash-filter-ass" style="min-width:160px">
+              <option value="">Todo el equipo</option>
+            </select>
+            <button class="btn sm primary admin-only" id="btn-quickadd">＋ Agregar</button>
           </div>
         </div>
       </div>
       <div class="pad">
-        <div class="kpi-grid" id="dash-kpis" style="margin-bottom:16px"></div>
-
-        <!-- POR REVISAR — sección dedicada admin -->
-        <div id="validar-block" class="hidden" style="margin-bottom:16px"></div>
-
-        <!-- Semáforo por persona -->
-        <div class="section-block" style="margin-left:0;margin-right:0">
-          <div class="collapse-header open" onclick="toggleCollapse(this,'semaforo-list')">
-            <div>
-              <div class="card-title" style="margin:0">Semáforo por persona</div>
-              <div class="small muted">Verde · Amarillo · Rojo según reglas del mes</div>
+        <!-- KPIs -->
+        <div class="kpi-grid" id="dash-kpis" style="margin-bottom:14px"></div>
+        <!-- Alertas -->
+        <div id="dash-alertas" style="margin-bottom:14px"></div>
+        <!-- Por revisar admin -->
+        <div id="validar-block" class="hidden" style="margin-bottom:14px"></div>
+        <!-- Esta semana -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between">
+              <span class="card-title" style="margin:0">Compromisos esta semana</span>
+              <span class="tag blue" id="dash-semana-count"></span>
             </div>
-            <span class="chev">▼</span>
+            <div id="dash-semana" style="padding:0"></div>
           </div>
-          <div id="semaforo-list" style="margin-top:10px;display:grid;gap:8px"></div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between">
+              <span class="card-title" style="margin:0">Semáforo del equipo</span>
+            </div>
+            <div id="semaforo-list" style="padding:8px 0"></div>
+          </div>
         </div>
-
-        <!-- Top vencidos -->
-        <div class="card" style="margin-top:10px">
-          <div class="collapse-header open" onclick="toggleCollapse(this,'hot-table-wrap')">
-            <div>
-              <div class="card-title" style="margin:0">Top vencidos / en riesgo</div>
-              <div class="small muted">Prioridad alta primero</div>
-            </div>
-            <span class="chev">▼</span>
+        <!-- Vencidos -->
+        <div class="card" style="margin-top:12px;padding:0;overflow:hidden">
+          <div style="padding:10px 14px;border-bottom:1px solid var(--border2)">
+            <span class="card-title" style="margin:0">Vencidos y en riesgo</span>
           </div>
-          <div id="hot-table-wrap">
-            <div class="hr"></div>
-            <div style="margin-bottom:8px">
-              <select class="select-input" id="dash-filter-ass" style="max-width:260px">
-                <option value="">Todos los responsables</option>
-              </select>
-            </div>
-            <div class="tbl-wrap">
-              <table>
-                <thead><tr>
-                  <th>Estado</th><th>Entregable</th><th>Proyecto</th>
-                  <th>Responsable</th><th>Fecha</th><th class="right">Acciones</th>
-                </tr></thead>
-                <tbody id="hot-tbody"></tbody>
-              </table>
-            </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr>
+                <th>Estado</th><th>Entregable</th><th>Proyecto</th>
+                <th>Responsable</th><th>Fecha</th><th class="right admin-only">Acciones</th>
+              </tr></thead>
+              <tbody id="hot-tbody"></tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -806,8 +803,9 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
           </div>
         </div>
         <div style="display:flex;gap:6px;padding:10px 20px 0;border-top:1px solid var(--border2);margin-top:4px">
-          <button class="proj-tab active" id="ptab-proyectos" onclick="switchProjTab('proyectos')">Proyectos</button>
-          <button class="proj-tab" id="ptab-ingenieros" onclick="switchProjTab('ingenieros')">Por ingeniero</button>
+          <button class="proj-tab active" id="ptab-proyectos" onclick="switchProjTab('proyectos')">📁 Activos</button>
+          <button class="proj-tab" id="ptab-ingenieros" onclick="switchProjTab('ingenieros')">👤 Por ingeniero</button>
+          <button class="proj-tab" id="ptab-terminados" onclick="switchProjTab('terminados')">🗄 Terminados</button>
         </div>
       </div>
       <div class="pad">
@@ -833,6 +831,9 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
         </div>
         <div id="proj-tab-ingenieros" style="display:none">
           <div id="ing-list"></div>
+        </div>
+        <div id="proj-tab-terminados" style="display:none">
+          <div id="terminados-list"></div>
         </div>
       </div>
     </div>
@@ -978,6 +979,30 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
       <div class="pad" id="proj-body"></div>
     </div>
 
+
+    <!-- ─── VIEW: DIRECTIVO ─── -->
+    <div class="view" id="view-directivo">
+      <div class="page-header">
+        <div class="page-header-inner">
+          <div class="page-title"><h2>Resumen Directivo</h2><p>Proyectos y compromisos por ingeniero</p></div>
+          <div class="page-actions">
+            <select class="select-input" id="dir-f-user" style="min-width:160px">
+              <option value="">Todos los ingenieros</option>
+            </select>
+            <select class="select-input" id="dir-f-period" style="min-width:140px">
+              <option value="week" selected>Esta semana</option>
+              <option value="day">Hoy</option>
+              <option value="month">Este mes</option>
+              <option value="all">Todo</option>
+            </select>
+            <button class="btn sm primary" onclick="exportDirectivoPDF()">📄 Exportar PDF</button>
+          </div>
+        </div>
+      </div>
+      <div class="pad">
+        <div id="dir-report"></div>
+      </div>
+    </div>
 
     <!-- ─── VIEW: AJUSTES ─── -->
     <div class="view" id="view-ajustes">
@@ -1523,6 +1548,7 @@ function renderView(v){
     evaluacion:renderEvaluacion,
     equipo:renderEquipo,
     ajustes:renderAjustes,
+    directivo:renderDirectivo,
   };
   if(fns[v])fns[v]();
 }
@@ -1650,61 +1676,164 @@ function delCard(d,t,isOverdue){
    RENDER: DASHBOARD
 ══════════════════════════════════════════════════════ */
 function renderDashboard(){
-  const k=calcKPIs();
-  const t=todayISO();
-  const kpis=[
-    {label:'Cumplimiento total',value:`${k.cumPct}%`,level:k.cumPct>=85?'ok':k.cumPct>=70?'warn':'bad',hint:'Entregables aprobados a tiempo'},
-    {label:'Vencidos activos',value:k.overdue,level:k.overdue===0?'ok':k.overdue<=2?'warn':'bad',hint:'Sin aprobar y fecha pasada'},
-    {label:'Bloqueos activos',value:k.blocked,level:k.blocked===0?'ok':k.maxBlock<=2?'warn':'bad',hint:`Máx. antigüedad: ${k.maxBlock}d`},
-    
-  ];
-  document.getElementById('dash-kpis').innerHTML=kpis.map(x=>`
-    <div class="kpi-card ${x.level}">
-      <div class="kpi-label">${x.label}</div>
-      <div class="kpi-value">${x.value}</div>
-      <div class="kpi-hint">${x.hint}</div>
-    </div>`).join('');
+  const today = todayISO();
+  const weekEnd = new Date(Date.now()+7*24*60*60*1000).toISOString().slice(0,10);
+  const isAdmin = SESSION?.role==='admin';
+  const fa = document.getElementById('dash-filter-ass')?.value||'';
+  fillSelect('dash-filter-ass', DB.users, 'Todo el equipo');
 
-  // Pendientes validar (admin)
-  renderValidarBlock();
+  // Set date
+  const dateEl=document.getElementById('dash-date');
+  if(dateEl) dateEl.textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
 
-  // Semáforo personas
-  const sl=document.getElementById('semaforo-list');
-  sl.innerHTML=DB.users.map(u=>{
-    const s=semaforoUser(u.id);
-    const ms=getCurrentMonthScores().find(x=>x.userId===u.id);
-    const sc=ms?.score;
-    const scLevel=sc===null?'gray':sc>=85?'ok':sc>=70?'warn':'bad';
-    const initials=u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
-    const photo=userPhotoURL(u.email);
-    return`<div class="person-card" onclick="openPersonDetail('${u.id}')">
-      <div style="position:relative;flex:0 0 42px">
-        ${photo
-          ? `<img src="${photo}" alt="${esc(u.name)}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid var(--border)" onerror="this.outerHTML='<div class=\\'person-avatar ${s.level}\\'>${initials}</div>'"/>`
-          : `<div class="person-avatar ${s.level}">${initials}</div>`
-        }
-        <span style="position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:var(--${s.level==='ok'?'ok':s.level==='warn'?'warn':'bad'});border:2px solid var(--surface)"></span>
-      </div>
-      <div class="person-info">
-        <div class="flex-between">
-          <div class="person-name">${esc(u.name)}</div>
-          <span class="tag ${s.level}">${s.level==='ok'?'Verde':s.level==='warn'?'Amarillo':'Rojo'}</span>
-        </div>
-        <div class="person-role">${u.role} · ${u.team||'—'}</div>
-        <div class="person-bar-wrap">
-          <div class="progress-bar">
-            <div class="progress-bar-fill ${scLevel}" style="width:${sc??0}%"></div>
+  const allDels = DB.deliverables.filter(d=>!isProjectClosed(d.projectId)&&(!fa||d.assigneeId===fa));
+  const vencidos  = allDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today);
+  const revision  = allDels.filter(d=>d.status==='En revisión');
+  const enCurso   = allDels.filter(d=>d.status==='En progreso'||d.status==='Pendiente');
+  const aprobados = allDels.filter(d=>d.status==='Aprobado');
+  const pct = allDels.length?Math.round(aprobados.length/allDels.length*100):0;
+  const lvl = pct>=85?'ok':pct>=70?'warn':'bad';
+
+  // ── KPIs ──────────────────────────────────────────
+  const kpisEl=document.getElementById('dash-kpis');
+  if(kpisEl) kpisEl.innerHTML=`
+    <div class="kpi-card ${lvl}"><div class="kpi-label">Cumplimiento</div><div class="kpi-value">${pct}%</div><div class="kpi-hint">${aprobados.length}/${allDels.length} entregables</div></div>
+    <div class="kpi-card ${vencidos.length===0?'ok':vencidos.length<=3?'warn':'bad'}"><div class="kpi-label">Vencidos</div><div class="kpi-value">${vencidos.length}</div><div class="kpi-hint">Sin aprobar</div></div>
+    <div class="kpi-card ${revision.length>0?'warn':'ok'}"><div class="kpi-label">Por revisar</div><div class="kpi-value">${revision.length}</div><div class="kpi-hint">Esperando aprobación</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">En curso</div><div class="kpi-value">${enCurso.length}</div><div class="kpi-hint">Pendientes + en progreso</div></div>
+  `;
+
+  // ── ALERTAS ───────────────────────────────────────
+  const alertasEl=document.getElementById('dash-alertas');
+  if(alertasEl){
+    let alertas='';
+    if(vencidos.length){
+      const byUser={};
+      vencidos.forEach(d=>{
+        const n=userName(d.assigneeId);
+        byUser[n]=(byUser[n]||0)+1;
+      });
+      const resumen=Object.entries(byUser).map(([n,c])=>`${n} (${c})`).join(', ');
+      alertas+=`<div style="background:var(--warn-bg,#FAEEDA);border-left:3px solid var(--warn,#BA7517);border-radius:var(--r);padding:10px 14px;font-size:13px;color:var(--warn-text,#7A4700);margin-bottom:8px">
+        <b>⚠ ${vencidos.length} entregable${vencidos.length!==1?'s':''} vencido${vencidos.length!==1?'s':''}</b> — ${resumen}
+      </div>`;
+    }
+    if(revision.length&&isAdmin){
+      alertas+=`<div style="background:var(--accent-bg,#E6F1FB);border-left:3px solid var(--accent,#185FA5);border-radius:var(--r);padding:10px 14px;font-size:13px;color:var(--accent,#185FA5);margin-bottom:8px">
+        <b>📋 ${revision.length} entregable${revision.length!==1?'s':''} por revisar</b> — pendientes de tu aprobación
+        <button class="btn xs" style="margin-left:8px" onclick="document.getElementById('validar-block').classList.toggle('hidden')">Ver</button>
+      </div>`;
+    }
+    alertasEl.innerHTML=alertas;
+  }
+
+  // ── ESTA SEMANA ───────────────────────────────────
+  const semanaEl=document.getElementById('dash-semana');
+  const semanaCount=document.getElementById('dash-semana-count');
+  const semanaDels=allDels
+    .filter(d=>d.status!=='Aprobado'&&d.due&&d.due>=today&&d.due<=weekEnd)
+    .sort((a,b)=>a.due.localeCompare(b.due))
+    .slice(0,8);
+  if(semanaCount) semanaCount.textContent=semanaDels.length||'0';
+  if(semanaEl){
+    if(!semanaDels.length){
+      semanaEl.innerHTML='<div class="empty" style="padding:20px">Sin compromisos esta semana.</div>';
+    } else {
+      semanaEl.innerHTML=semanaDels.map(d=>{
+        const isHoy=d.due===today;
+        const manana=new Date(Date.now()+86400000).toISOString().slice(0,10);
+        const label=isHoy?'Hoy':d.due===manana?'Mañana':fmtDate(d.due);
+        const tagCls=isHoy?'warn':'blue';
+        return`<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:0.5px solid var(--border2)">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.title)}</div>
+            <div style="font-size:11px;color:var(--muted)">${userName(d.assigneeId)} · ${projName(d.projectId)}</div>
           </div>
-          <span class="progress-pct ${scLevel}">${sc!==null?sc+'%':'—'}</span>
-        </div>
-        <div class="small muted" style="margin-top:2px">Score mes · ${s.overdue} vencidos · ${s.maxBlock}d bloqueo</div>
-      </div>
-    </div>`;
-  }).join('');
+          <span class="tag ${tagCls}" style="font-size:11px;flex:0 0 auto">${label}</span>
+        </div>`;
+      }).join('');
+    }
+  }
 
-  // Hot table
-  fillSelect('dash-filter-ass',DB.users,'Todos los responsables');
-  renderHotTable();
+  // ── SEMÁFORO ──────────────────────────────────────
+  const semList=document.getElementById('semaforo-list');
+  if(semList){
+    const usersToShow=fa?DB.users.filter(u=>u.id===fa):DB.users;
+    semList.innerHTML=usersToShow.map(u=>{
+      const sem=semaforoUser(u.id);
+      const uDels=DB.deliverables.filter(d=>d.assigneeId===u.id&&!isProjectClosed(d.projectId));
+      const uAprov=uDels.filter(d=>d.status==='Aprobado').length;
+      const uVenc=uDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today).length;
+      const uPct=uDels.length?Math.round(uAprov/uDels.length*100):0;
+      const photo=userPhotoURL(u.email);
+      const ini=u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+      const bc=sem.level==='ok'?'var(--ok)':sem.level==='warn'?'var(--warn)':'var(--bad)';
+      const av=photo
+        ?`<img src="${photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid ${bc};flex:0 0 28px" onerror="this.outerHTML='<div style=\'width:28px;height:28px;border-radius:50%;background:var(--surface2);border:2px solid ${bc};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:${bc};flex:0 0 28px\'>${ini}</div>'">`
+        :`<div style="width:28px;height:28px;border-radius:50%;background:var(--surface2);border:2px solid ${bc};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:${bc};flex:0 0 28px">${ini}</div>`;
+      return`<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;border-bottom:0.5px solid var(--border2)" onclick="openPersonDetail('${u.id}')" style="cursor:pointer">
+        ${av}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500">${esc(u.name.split(' ')[0])}</div>
+          <div style="font-size:11px;color:var(--muted)">${uPct}% · ${uVenc>0?`<span style="color:var(--bad)">${uVenc} venc.</span>`:uAprov+'/'+uDels.length}</div>
+        </div>
+        <span class="tag ${sem.level}" style="font-size:11px">${sem.level==='ok'?'Verde':sem.level==='warn'?'Amarillo':'Rojo'}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // ── VENCIDOS TABLE ────────────────────────────────
+  const hotTbody=document.getElementById('hot-tbody');
+  if(hotTbody){
+    const hotDels=[...vencidos,...allDels.filter(d=>d.status==='En revisión')]
+      .sort((a,b)=>a.due?.localeCompare(b.due||'')||0);
+    if(!hotDels.length){
+      hotTbody.innerHTML=`<tr><td colspan="6" class="empty">Sin entregables vencidos ni por revisar.</td></tr>`;
+    } else {
+      hotTbody.innerHTML=hotDels.map(d=>{
+        const isMyDel=d.assigneeId===SESSION?.userId;
+        const canFinish=d.status!=='Aprobado'&&d.status!=='En revisión';
+        return`<tr>
+          <td>${statusTag(d.status,d.due)}</td>
+          <td><b>${esc(d.title)}</b></td>
+          <td style="font-size:12px">${projName(d.projectId)}</td>
+          <td style="font-size:12px">${userName(d.assigneeId)}</td>
+          <td>${fmtDueFull(d.due,d.originalDue)}</td>
+          <td class="right admin-only">
+            <div style="display:flex;gap:4px;justify-content:flex-end">
+              ${(canFinish&&(isAdmin||isMyDel))?`<button class="btn xs primary" data-submit-del="${d.id}">✓</button>`:''}
+              ${(d.status==='En revisión'&&isAdmin)?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:''}
+              ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button>`:''}
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  // ── POR REVISAR (admin) ───────────────────────────
+  if(isAdmin){
+    const vb=document.getElementById('validar-block');
+    if(vb&&revision.length){
+      vb.classList.remove('hidden');
+      vb.innerHTML=`<div class="card" style="padding:0;overflow:hidden;border-left:3px solid var(--accent)">
+        <div style="padding:10px 14px;border-bottom:1px solid var(--border2);font-size:13px;font-weight:600">📋 Por revisar (${revision.length})</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Entregable</th><th>Proyecto</th><th>Responsable</th><th>Fecha</th><th class="right">Acción</th></tr></thead>
+          <tbody>${revision.map(d=>`<tr>
+            <td><b>${esc(d.title)}</b></td>
+            <td style="font-size:12px">${projName(d.projectId)}</td>
+            <td style="font-size:12px">${userName(d.assigneeId)}</td>
+            <td>${fmtDate(d.due)}</td>
+            <td class="right"><div style="display:flex;gap:4px;justify-content:flex-end">
+              <button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button>
+              <button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>
+            </div></td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </div>`;
+    }
+  }
 }
 
 function renderHotTable(){
@@ -1821,10 +1950,11 @@ function renderProyectos(){
 
   /* ── Proyectos visibles ──────────────────────────── */
   let projs = DB.projects.filter(p=>{
+    if(p.status==='Cerrado') return false; // Cerrados van a pestaña Terminados
     if(fl && p.leaderId!==fl) return false;
     if(fst){
       const s=p.status||'Activo';
-      if(fst==='Activo' && ['En revisión','Por aprobar','En riesgo','Detenido','Cerrado'].includes(s)) return false;
+      if(fst==='Activo' && ['En revisión','Por aprobar','En riesgo','Detenido'].includes(s)) return false;
       if(fst!=='Activo' && s!==fst) return false;
     }
     if(q && !p.name.toLowerCase().includes(q)) return false;
@@ -2019,14 +2149,16 @@ function renderProyectos(){
 let _projTab='proyectos';
 function switchProjTab(tab){
   _projTab=tab;
-  document.getElementById('ptab-proyectos').classList.toggle('active',tab==='proyectos');
-  document.getElementById('ptab-ingenieros').classList.toggle('active',tab==='ingenieros');
-  document.getElementById('proj-tab-proyectos').style.display=tab==='proyectos'?'':'none';
-  document.getElementById('proj-tab-ingenieros').style.display=tab==='ingenieros'?'':'none';
+  ['proyectos','ingenieros','terminados'].forEach(t=>{
+    document.getElementById('ptab-'+t)?.classList.toggle('active',tab===t);
+    document.getElementById('proj-tab-'+t)?.style.setProperty('display',tab===t?'':'none');
+  });
   document.getElementById('proj-filters-tab').style.display=tab==='proyectos'?'flex':'none';
   document.getElementById('proj-filters-ing').style.display=tab==='ingenieros'?'flex':'none';
-  document.getElementById('proj-tab-sub').textContent=tab==='proyectos'?'Seguimiento y entregables':'Entregables por ingeniero';
+  const subs={proyectos:'Proyectos activos',ingenieros:'Entregables por ingeniero',terminados:'Proyectos terminados y archivados'};
+  document.getElementById('proj-tab-sub').textContent=subs[tab]||'';
   if(tab==='ingenieros') renderIngenieros();
+  if(tab==='terminados') renderTerminados();
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2039,10 +2171,23 @@ function renderIngenieros(){
   const today = todayISO();
   const isAdmin = SESSION?.role==='admin';
   const users = fu ? DB.users.filter(u=>u.id===fu) : DB.users;
+  // Show active filter label
+  const activeBtn=document.querySelector('.ing-st-btn.active');
+  const activeLabel=activeBtn?.textContent||'Todos';
+
   const container = document.getElementById('ing-list');
   if(!users.length){ container.innerHTML='<div class="empty">Sin ingenieros.</div>'; return; }
 
-  container.innerHTML = users.map(u=>{
+  const filterDesc = fst===''?'Mostrando todos los entregables':
+    fst==='vencido'?'Mostrando solo entregables vencidos':
+    fst==='Aprobado'?'Mostrando solo entregables aprobados':
+    `Mostrando entregables: ${activeLabel}`;
+
+  const labelHtml=`<div style="padding:8px 12px;background:var(--accent-bg);border-radius:var(--r);font-size:12px;color:var(--accent);font-weight:500;margin-bottom:10px">
+    🔍 ${filterDesc} · ${users.length} ingeniero${users.length!==1?'s':''}
+  </div>`;
+
+  container.innerHTML = labelHtml + users.map(u=>{
     const allDels = DB.deliverables.filter(d=>d.assigneeId===u.id);
     const vencidos   = allDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today);
     const pendientes = allDels.filter(d=>d.status==='Pendiente');
@@ -2136,6 +2281,301 @@ function toggleIngCard(header, id){
   body.style.display=isOpen?'none':'';
   const chev=header.querySelector('.ing-chev');
   if(chev) chev.style.transform=isOpen?'':'rotate(180deg)';
+}
+
+/* ══════════════════════════════════════════════════════
+   RENDER: RESUMEN DIRECTIVO
+══════════════════════════════════════════════════════ */
+function renderDirectivo(){
+  fillSelect('dir-f-user', DB.users, 'Todos los ingenieros');
+  const fu     = document.getElementById('dir-f-user')?.value||'';
+  const period = document.getElementById('dir-f-period')?.value||'week';
+  const today  = todayISO();
+  const weekEnd= new Date(Date.now()+7*24*60*60*1000).toISOString().slice(0,10);
+  const users  = fu ? DB.users.filter(u=>u.id===fu) : DB.users;
+  const periodLabels2={all:'Todo',day:'Hoy',week:'Esta semana',month:'Este mes'};
+  const periodLabel = periodLabels2[period]||'Todo';
+
+  const report = document.getElementById('dir-report');
+  if(!users.length){ report.innerHTML='<div class="empty">Sin ingenieros.</div>'; return; }
+
+  report.innerHTML = users.map(u=>{
+    // Proyectos donde participa
+    const uDels = DB.deliverables.filter(d=>d.assigneeId===u.id&&!isProjectClosed(d.projectId));
+    const projIds = [...new Set(uDels.map(d=>d.projectId))];
+    const uProjs = projIds.map(pid=>byId(DB.projects,pid)).filter(Boolean);
+
+    // Entregables del período
+    let periodDels = uDels.filter(d=>d.status!=='Aprobado');
+    const monthEnd=new Date(Date.now()+30*24*60*60*1000).toISOString().slice(0,10);
+    if(period==='day')   periodDels = periodDels.filter(d=>d.due===today);
+    if(period==='week')  periodDels = periodDels.filter(d=>d.due&&d.due>=today&&d.due<=weekEnd);
+    if(period==='month') periodDels = periodDels.filter(d=>d.due&&d.due>=today&&d.due<=monthEnd);
+
+    const vencidos = uDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today);
+    const sem = semaforoUser(u.id);
+    const photo = userPhotoURL(u.email);
+    const ini = u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    const bc  = sem.level==='ok'?'var(--ok)':sem.level==='warn'?'var(--warn)':'var(--bad)';
+    const av  = photo
+      ?`<img src="${photo}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2.5px solid ${bc}" onerror="this.outerHTML='<div style=\'width:38px;height:38px;border-radius:50%;background:var(--surface2);border:2.5px solid ${bc};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:${bc}\'>${ini}</div>'">`
+      :`<div style="width:38px;height:38px;border-radius:50%;background:var(--surface2);border:2.5px solid ${bc};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:${bc}">${ini}</div>`;
+
+    // Proyectos rows
+    const projRows = uProjs.map(p=>{
+      const pDels  = DB.deliverables.filter(d=>d.projectId===p.id);
+      const pAprov = pDels.filter(d=>d.status==='Aprobado').length;
+      const pPct   = pDels.length?Math.round(pAprov/pDels.length*100):0;
+      const pLvl   = pPct>=85?'ok':pPct>=70?'warn':'bad';
+      const pVenc  = pDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today).length;
+      return`<tr>
+        <td style="font-size:13px;font-weight:600">${esc(p.name)}</td>
+        <td style="font-size:11px;color:var(--muted)">${fmtDate(p.end)}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div class="progress-bar" style="width:80px"><div class="progress-bar-fill ${pLvl}" style="width:${pPct}%"></div></div>
+            <span class="progress-pct ${pLvl}" style="font-size:12px">${pPct}%</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted)">${pAprov}/${pDels.length} entregables</div>
+        </td>
+        <td>${pVenc?`<span class="tag bad" style="font-size:11px">${pVenc} vencidos</span>`:''}</td>
+      </tr>`;
+    }).join('')||`<tr><td colspan="4" class="empty" style="font-size:12px">Sin proyectos asignados</td></tr>`;
+
+    // Entregables del período
+    const delRows = periodDels.length
+      ? periodDels.map(d=>{
+          const isVenc = d.due&&d.due<today;
+          return`<tr style="${isVenc?'background:var(--bad-bg)':''}">
+            <td>${statusTag(d.status,d.due)}</td>
+            <td style="font-size:13px;font-weight:500">${esc(d.title)}</td>
+            <td style="font-size:12px;color:var(--muted)">${projName(d.projectId)}</td>
+            <td style="font-size:12px${isVenc?';color:var(--bad);font-weight:700':''}">${fmtDate(d.due)}</td>
+          </tr>`;
+        }).join('')
+      : `<tr><td colspan="4" class="empty" style="font-size:12px">Sin entregables para ${periodLabel.toLowerCase()}.</td></tr>`;
+
+    return`<div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
+      <!-- Header -->
+      <div style="padding:12px 16px;display:flex;align-items:center;gap:12px;background:var(--surface2);border-bottom:1px solid var(--border2)">
+        ${av}
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-weight:700;font-size:15px">${esc(u.name)}</span>
+            <span class="tag ${sem.level}" style="font-size:11px">${sem.level==='ok'?'Verde':sem.level==='warn'?'Amarillo':'Rojo'}</span>
+            ${vencidos.length?`<span class="tag bad" style="font-size:11px">⚠ ${vencidos.length} vencidos</span>`:''}
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${u.role||'—'} · ${u.team||'—'} · ${uProjs.length} proyecto${uProjs.length!==1?'s':''}</div>
+        </div>
+      </div>
+      <!-- Proyectos -->
+      <div style="padding:10px 16px 0;border-bottom:1px solid var(--border2)">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Proyectos</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Proyecto</th><th>Fecha fin</th><th>Avance</th><th></th></tr></thead>
+          <tbody>${projRows}</tbody>
+        </table></div>
+      </div>
+      <!-- Entregables del período -->
+      <div style="padding:10px 16px 12px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">
+          Compromisos — ${periodLabel}
+          ${periodDels.length?`<span class="tag blue" style="font-size:10px;margin-left:4px">${periodDels.length}</span>`:''}
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Estado</th><th>Entregable</th><th>Proyecto</th><th>Fecha compromiso</th></tr></thead>
+          <tbody>${delRows}</tbody>
+        </table></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+
+/* ══════════════════════════════════════════════════════
+   EXPORTAR PDF — RESUMEN DIRECTIVO
+══════════════════════════════════════════════════════ */
+function exportDirectivoPDF(){
+  const reportEl = document.getElementById('dir-report');
+  if(!reportEl || !reportEl.innerHTML.trim()){
+    toast('Primero genera el reporte'); return;
+  }
+
+  const fu     = document.getElementById('dir-f-user')?.value||'';
+  const period = document.getElementById('dir-f-period')?.value||'week';
+  const periodLabels={all:'Todo',day:'Hoy',week:'Esta semana',month:'Este mes'};
+  const periodLabel = periodLabels[period]||period;
+  const userName2 = fu ? DB.users.find(u=>u.id===fu)?.name||'' : 'Todo el equipo';
+  const today = new Date().toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  // Get CSS variables for colors
+  const style = getComputedStyle(document.documentElement);
+  const ok   = '#2D6A0A';
+  const warn = '#7A4700';
+  const bad  = '#8B1A1A';
+  const okBg = '#EAF3DE';
+  const warnBg='#FAEEDA';
+  const badBg ='#FCEBEB';
+  const blueBg='#E6F1FB';
+  const blue  ='#185FA5';
+
+  // Clone the report content and adapt for print
+  const clone = reportEl.cloneNode(true);
+
+  // Remove action buttons from clone
+  clone.querySelectorAll('button,.btn').forEach(el=>el.remove());
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+  <title>Resumen Directivo — ${today}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;padding:28px;background:#fff}
+    h1{font-size:20px;font-weight:800;margin-bottom:2px}
+    .sub{font-size:12px;color:#888;margin-bottom:20px}
+    .card{border:1px solid #E8E6DF;border-radius:8px;margin-bottom:12px;overflow:hidden;page-break-inside:avoid}
+    .card-header{background:#F7F6F2;padding:10px 14px;border-bottom:1px solid #E8E6DF;display:flex;align-items:center;gap:10px}
+    .card-header img{width:36px;height:36px;border-radius:50%;object-fit:cover}
+    .card-header .name{font-weight:700;font-size:14px}
+    .card-header .meta{font-size:11px;color:#888}
+    .section-title{font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;padding:8px 14px 4px;border-bottom:1px solid #F0EEE8}
+    table{width:100%;border-collapse:collapse}
+    th{background:#F7F6F2;padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;border-bottom:1px solid #E8E6DF}
+    td{padding:7px 10px;font-size:12px;border-bottom:1px solid #F0EEE8;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    .tag{display:inline-block;padding:2px 7px;border-radius:99px;font-size:11px;font-weight:500}
+    .tag.ok{background:${okBg};color:${ok}}
+    .tag.warn{background:${warnBg};color:${warn}}
+    .tag.bad{background:${badBg};color:${bad}}
+    .tag.blue{background:${blueBg};color:${blue}}
+    .tag.gray{background:#F1EFE8;color:#5F5E5A}
+    .progress-bar{height:6px;background:#EEE;border-radius:99px;display:inline-block;width:80px;vertical-align:middle}
+    .bar-fill{height:100%;border-radius:99px}
+    .bar-ok{background:#639922}.bar-warn{background:#BA7517}.bar-bad{background:#C94040}
+    .pct{font-size:12px;font-weight:700;margin-left:5px}
+    .pct.ok{color:${ok}}.pct.warn{color:${warn}}.pct.bad{color:${bad}}
+    .venc-row{background:#FFF5F5}
+    .empty{color:#aaa;font-style:italic;padding:10px}
+    .footer{margin-top:24px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #E8E6DF;padding-top:10px}
+    @media print{body{padding:16px}.card{page-break-inside:avoid}}
+  </style></head><body>
+  <h1>Resumen Directivo — LI Ingeniería de Procesos</h1>
+  <div class="sub">Generado: ${today} · ${userName2} · Período: ${periodLabel}</div>
+  ${clone.innerHTML}
+  <div class="footer">LI Ingeniería de Procesos · Sistema de seguimiento de proyectos</div>
+  </body></html>`;
+
+  const win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(()=>win.print(), 600);
+}
+
+/* ══════════════════════════════════════════════════════
+   HELPER: proyecto cerrado
+══════════════════════════════════════════════════════ */
+function isProjectClosed(projectId){
+  const p=byId(DB.projects,projectId);
+  return p?.status==='Cerrado';
+}
+
+/* ══════════════════════════════════════════════════════
+   RENDER: TERMINADOS (archivo)
+══════════════════════════════════════════════════════ */
+function renderTerminados(){
+  const today = todayISO();
+  const isAdmin = SESSION?.role==='admin';
+  const cerrados = DB.projects.filter(p=>p.status==='Cerrado')
+    .sort((a,b)=>(b.closedAt||b.end||'').localeCompare(a.closedAt||a.end||''));
+
+  const container = document.getElementById('terminados-list');
+  if(!cerrados.length){
+    container.innerHTML='<div class="empty" style="padding:40px">No hay proyectos terminados aún.</div>';
+    return;
+  }
+
+  // Summary KPIs
+  const totalDels = cerrados.flatMap(p=>DB.deliverables.filter(d=>d.projectId===p.id));
+  const aprobados = totalDels.filter(d=>d.status==='Aprobado').length;
+  const pct = totalDels.length?Math.round(aprobados/totalDels.length*100):0;
+
+  container.innerHTML=`<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
+    <div class="kpi-card ok"><div class="kpi-label">Proyectos terminados</div><div class="kpi-value">${cerrados.length}</div></div>
+    <div class="kpi-card ok"><div class="kpi-label">Entregables aprobados</div><div class="kpi-value">${aprobados}/${totalDels.length}</div></div>
+    <div class="kpi-card ok"><div class="kpi-label">Cumplimiento</div><div class="kpi-value">${pct}%</div></div>
+  </div>`+cerrados.map(p=>{
+    const dels = DB.deliverables.filter(d=>d.projectId===p.id);
+    const done = dels.filter(d=>d.status==='Aprobado').length;
+    const pPct = dels.length?Math.round(done/dels.length*100):0;
+    const leader = byId(DB.users,p.leaderId);
+    const bits = (DB.bitacora||[]).filter(b=>b.proyecto===p.id||b.proyectoId===p.id);
+
+    const delRows = dels.map(d=>`
+      <tr style="opacity:${d.status==='Aprobado'?'1':'0.6'}">
+        <td>${statusTag(d.status,d.due)}</td>
+        <td style="font-size:12px">${esc(d.title)}</td>
+        <td style="font-size:11px">${userName(d.assigneeId)}</td>
+        <td style="font-size:11px">${fmtDate(d.due)}</td>
+        <td style="font-size:11px;color:var(--muted)">${d.completedAt?fmtDate(d.completedAt):'—'}</td>
+      </tr>`).join('');
+
+    const bitRows = bits.length?bits.map(b=>`
+      <div style="padding:6px 10px;border-bottom:0.5px solid var(--border2);font-size:12px">
+        <span style="font-weight:500">${esc(b.titulo||b.texto||'')}</span>
+        <span style="color:var(--muted);margin-left:8px;font-size:11px">${fmtDate(b.fecha)}</span>
+      </div>`).join(''):'<div class="empty" style="font-size:12px;padding:10px">Sin entradas de bitácora.</div>';
+
+    return`<div class="card" style="margin-bottom:10px;padding:0;overflow:hidden">
+      <div onclick="toggleIngCard(this,'term-card-${p.id}')"
+        style="padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;background:var(--surface2)">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-weight:700;font-size:14px">${esc(p.name)}</span>
+            <span class="tag gray" style="font-size:11px">✓ Terminado</span>
+            ${p.priority?`<span class="tag ${p.priority==='Alta'?'bad':p.priority==='Media'?'warn':'gray'}" style="font-size:10px">${p.priority}</span>`:''}
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;display:flex;gap:12px;flex-wrap:wrap">
+            ${leader?`<span>👤 ${esc(leader.name)}</span>`:''}
+            <span>📅 ${fmtDate(p.start)} → ${fmtDate(p.end)}</span>
+            ${p.closedAt?`<span>🗄 Cerrado: ${fmtDate(p.closedAt)}</span>`:''}
+          </div>
+        </div>
+        <div style="text-align:right;flex:0 0 auto">
+          <div style="font-family:var(--font-display);font-size:26px;font-weight:800;color:var(--ok)">${pPct}%</div>
+          <div style="font-size:10px;color:var(--muted)">${done}/${dels.length} aprobados</div>
+          <div style="margin-top:4px"><div class="progress-bar" style="width:80px;margin-left:auto"><div class="progress-bar-fill ok" style="width:${pPct}%"></div></div></div>
+        </div>
+        <span class="ing-chev" style="color:var(--muted);font-size:14px;transition:transform .2s">▼</span>
+      </div>
+      <div id="term-card-${p.id}" style="display:none;border-top:1px solid var(--border2)">
+        ${p.notes?`<div style="padding:10px 16px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border2);background:var(--surface2)">📝 ${esc(p.notes)}</div>`:''}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <div style="padding:12px 16px;border-right:1px solid var(--border2)">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Entregables (${dels.length})</div>
+            <div class="tbl-wrap"><table>
+              <thead><tr><th>Estado</th><th>Entregable</th><th>Responsable</th><th>Fecha límite</th><th>Completado</th></tr></thead>
+              <tbody>${delRows||'<tr><td colspan="5" class="empty">Sin entregables</td></tr>'}</tbody>
+            </table></div>
+            ${isAdmin?`<div style="margin-top:8px"><button class="btn xs" data-edit-proj="${p.id}">Editar</button> <button class="btn xs warn" onclick="reactivarProyecto('${p.id}')">↩ Reactivar</button></div>`:''}
+          </div>
+          <div style="padding:12px 16px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Bitácora (${bits.length})</div>
+            ${bitRows}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function reactivarProyecto(id){
+  const p=byId(DB.projects,id);
+  if(!p) return;
+  if(!confirm('¿Reactivar el proyecto "'+p.name+'"?')) return;
+  p.status='Activo';
+  p.closedAt=null;
+  saveDB();
+  renderTerminados();
+  toast('Proyecto reactivado ✓');
 }
 
 function collapsibleGroup(label, count, tagCls, id, innerHTML, open=false){
@@ -2644,7 +3084,8 @@ document.getElementById('dlg-save').addEventListener('click',()=>{
 ══════════════════════════════════════════════════════ */
 function qaRender(){
   const type=document.getElementById('qa-type').value;
-  const uOpts=DB.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
+  const _assignable=SESSION?.role==='leader'?DB.users.filter(u=>u.reportsTo===SESSION?.userId||u.id===SESSION?.userId):DB.users;
+  const uOpts=_assignable.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
   const pOpts=DB.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
   const t=todayISO();
   const forms={
@@ -2918,7 +3359,8 @@ const handlers={
 
   addDelProj(id){
     const p=byId(DB.projects,id);
-    const uOpts=DB.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
+    const _assignable=SESSION?.role==='leader'?DB.users.filter(u=>u.reportsTo===SESSION?.userId||u.id===SESSION?.userId):DB.users;
+  const uOpts=_assignable.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
     openDlg({title:'Nuevo entregable',sub:p?esc(p.name):'',body:`
       <label class="lbl">Título *</label><input class="input" id="nd-title" placeholder="Nombre del entregable"/>
       <div class="form-row"><div><label class="lbl">Responsable</label><select class="select-input" id="nd-ass"><option value="">Sin asignar</option>${uOpts}</select></div>
@@ -2939,6 +3381,15 @@ const handlers={
     openDlg({title:'Editar usuario',sub:esc(u.name),body:`
       <div class="form-row"><div><label class="lbl">Nombre</label><input class="input" id="eu-name" value="${esc(u.name)}"/></div>
       <div><label class="lbl">Rol</label><select class="select-input" id="eu-role">${['Admin','Líder','Colaborador'].map(r=>`<option${r===u.role?' selected':''}>${r}</option>`).join('')}</select></div></div>
+      <div class="form-row"><div><label class="lbl">Permiso en app</label><select class="select-input" id="eu-loginrole">
+        <option value="user"${(u.loginRole||'user')==='user'?' selected':''}>Usuario — solo ve sus entregables</option>
+        <option value="leader"${u.loginRole==='leader'?' selected':''}>Líder — puede asignar a sus reportes</option>
+        <option value="admin"${u.loginRole==='admin'?' selected':''}>Admin — acceso total</option>
+      </select></div>
+      <div><label class="lbl">Reporta a</label><select class="select-input" id="eu-reportsto">
+        <option value="">— Ninguno (director) —</option>
+        ${DB.users.filter(x=>x.id!==u.id).map(x=>`<option value="${x.id}"${u.reportsTo===x.id?' selected':''}>${esc(x.name)}</option>`).join('')}
+      </select></div></div>
       <div class="form-row"><div><label class="lbl">Equipo</label><input class="input" id="eu-team" value="${esc(u.team||'')}"/></div>
       <div><label class="lbl">Correo Gmail / Workspace</label><input class="input" id="eu-email" value="${esc(u.email||'')}" placeholder="nombre@empresa.com" type="email"/></div></div>
       <div style="margin-top:2px;padding:10px;background:var(--accent-bg);border-radius:var(--r);font-size:11px;color:var(--muted)">
@@ -2968,6 +3419,8 @@ const handlers={
       onSave:()=>{
         u.name=document.getElementById('eu-name').value.trim();
         u.role=document.getElementById('eu-role').value;
+        u.loginRole=document.getElementById('eu-loginrole')?.value||'user';
+        u.reportsTo=document.getElementById('eu-reportsto')?.value||null;
         u.team=document.getElementById('eu-team').value.trim();
         u.email=document.getElementById('eu-email').value.trim().toLowerCase();
         u.dgp={
@@ -3270,7 +3723,8 @@ document.getElementById('fab')?.addEventListener('click',()=>{document.getElemen
 document.getElementById('btn-add-proj')?.addEventListener('click',()=>{document.getElementById('qa-type').value='project';qaRender();document.getElementById('dlg-qa').showModal()});
 document.getElementById('btn-add-del')?.addEventListener('click',()=>{document.getElementById('qa-type').value='deliverable';qaRender();document.getElementById('dlg-qa').showModal()});
 document.getElementById('btn-add-user')?.addEventListener('click',()=>{
-  const uOpts=DB.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
+  const _assignable=SESSION?.role==='leader'?DB.users.filter(u=>u.reportsTo===SESSION?.userId||u.id===SESSION?.userId):DB.users;
+  const uOpts=_assignable.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
   openDlg({title:'Agregar usuario',body:`
     <div class="form-row"><div><label class="lbl">Nombre *</label><input class="input" id="nu-name" placeholder="Ej: Israel"/></div>
     <div><label class="lbl">Rol</label><select class="select-input" id="nu-role"><option>Admin</option><option selected>Líder</option><option>Colaborador</option></select></div></div>
@@ -3338,6 +3792,20 @@ document.getElementById('ing-status-btns')?.addEventListener('click',e=>{
   document.querySelectorAll('.ing-st-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderIngenieros();
+});
+// Directivo config panel listeners
+['dir-f-user','dir-f-period','dir-f-proj','dir-f-proj-id'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('change',()=>renderDirectivo());
+});
+['dir-sec-kpis','dir-sec-ingenieros','dir-sec-proyectos','dir-sec-riesgo','dir-sec-logros'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('change',()=>renderDirectivo());
+});
+document.getElementById('dir-f-proj')?.addEventListener('change',e=>{
+  const specific=document.getElementById('dir-proj-specific');
+  if(specific) specific.style.display=e.target.value==='specific'?'':'none';
+});
+['dir-f-user','dir-f-period'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('change',()=>renderDirectivo());
 });
 ['del-search','del-f-proj','del-f-ass','dash-filter-ass','gantt-f-ass'].forEach(id=>{
   document.getElementById(id)?.addEventListener('input',()=>renderView(currentView));
@@ -3580,7 +4048,7 @@ function getUsers(){
   (DB.users||[]).forEach(u=>{
     // Use customUsername if set, otherwise normalize from name
     const norm=u.customUsername||u.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'.');
-    list.push({username:norm,password:u.loginPassword||DEFAULT_PASS,role:'user',name:u.name,userId:u.id});
+    list.push({username:norm,password:u.loginPassword||DEFAULT_PASS,role:u.loginRole||'user',name:u.name,userId:u.id});
   });
   return list;
 }
@@ -3612,10 +4080,16 @@ async function doLogin(){
   renderView('equipo');
 }
 
+function isLeader(){ return SESSION?.role==='leader'||SESSION?.role==='admin'; }
+function getMyReports(){
+  if(SESSION?.role==='admin') return DB.users;
+  return DB.users.filter(u=>u.reportsTo===SESSION?.userId||u.id===SESSION?.userId);
+}
 function applyRole(){
   if(!SESSION)return;
   const isAdmin=SESSION.role==='admin';
   document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'':'none');
+  document.querySelectorAll('.leader-only').forEach(el=>el.style.display=isLeader()?'':'none');
   const rb=document.getElementById('sb-role-badge');
   if(rb)rb.textContent=(isAdmin?'👤 Admin: ':'👤 ')+SESSION.name;
   const chip=document.getElementById('mob-user-chip');
@@ -3939,7 +4413,8 @@ function delDelAndRefresh(id){handlers.delDel(id);}
 
 function openAddDelToProj2(projId){
   const p=byId(DB.projects,projId);
-  const uOpts=DB.users.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
+  const _assignable=SESSION?.role==='leader'?DB.users.filter(u=>u.reportsTo===SESSION?.userId||u.id===SESSION?.userId):DB.users;
+  const uOpts=_assignable.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('');
   openDlg({title:'Nuevo entregable',sub:p?esc(p.name):'',body:`
     <label class="lbl">Título *</label><input class="input" id="nd-title" placeholder="Nombre del entregable"/>
     <div class="form-row"><div><label class="lbl">Responsable</label><select class="select-input" id="nd-ass"><option value="">Sin asignar</option>${uOpts}</select></div>
