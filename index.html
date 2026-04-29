@@ -784,7 +784,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
                 <option>Por aprobar</option><option>Cerrado</option>
               </select>
               <input class="input" id="proj-search" placeholder="Buscar…" style="width:140px"/>
-              <button class="btn sm primary admin-only" id="btn-add-proj">+ Proyecto</button>
+              <button class="btn sm primary leader-only" id="btn-add-proj">+ Proyecto</button>
             </div>
             <div id="proj-filters-ing" style="display:none;gap:6px;align-items:center;flex-wrap:wrap">
               <select class="select-input" id="ing-f-user" style="min-width:160px">
@@ -1951,6 +1951,12 @@ function renderProyectos(){
   /* ── Proyectos visibles ──────────────────────────── */
   let projs = DB.projects.filter(p=>{
     if(p.status==='Cerrado') return false; // Cerrados van a pestaña Terminados
+    // Líderes solo ven proyectos donde participan
+    if(SESSION?.role==='leader'){
+      const myTeam=new Set(DB.users.filter(u=>u.reportsTo===SESSION?.userId||u.id===SESSION?.userId).map(u=>u.id));
+      const projDels=DB.deliverables.filter(d=>d.projectId===p.id);
+      if(!myTeam.has(p.leaderId)&&!projDels.some(d=>myTeam.has(d.assigneeId))) return false;
+    }
     if(fl && p.leaderId!==fl) return false;
     if(fst){
       const s=p.status||'Activo';
@@ -3294,7 +3300,8 @@ const handlers={
 
   editProj(id){
     const p=byId(DB.projects,id);if(!p)return;
-    const uOpts=DB.users.map(u=>`<option value="${u.id}"${u.id===p.leaderId?' selected':''}>${esc(u.name)}</option>`).join('');
+    const _editProjAssignable=SESSION?.role==='leader'?DB.users.filter(u=>u.reportsTo===SESSION?.userId||u.id===SESSION?.userId):DB.users;
+    const uOpts=_editProjAssignable.map(u=>`<option value="${u.id}"${u.id===p.leaderId?' selected':''}>${esc(u.name)}</option>`).join('');
     openDlg({title:'Editar proyecto',sub:esc(p.name),body:`
       <label class="lbl">Nombre</label><input class="input" id="ep-name" value="${esc(p.name)}"/>
       <div class="form-row"><div><label class="lbl">Líder</label><select class="select-input" id="ep-leader">${uOpts}</select></div>
@@ -4090,6 +4097,7 @@ function applyRole(){
   const isAdmin=SESSION.role==='admin';
   document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'':'none');
   document.querySelectorAll('.leader-only').forEach(el=>el.style.display=isLeader()?'':'none');
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'':'none');
   const rb=document.getElementById('sb-role-badge');
   if(rb)rb.textContent=(isAdmin?'👤 Admin: ':'👤 ')+SESSION.name;
   const chip=document.getElementById('mob-user-chip');
