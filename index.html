@@ -598,6 +598,11 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
   #fab{display:none}
   #mas-overlay,#mas-drawer{display:none}
 }
+.ct-item{border:1px solid var(--border2);border-radius:var(--r);padding:10px;margin-bottom:8px;background:var(--surface)}
+.ct-item-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-weight:600;font-size:13px}
+.met-item{display:flex;gap:5px;align-items:center;margin-bottom:5px;flex-wrap:wrap}
+.met-item input{flex:1;min-width:60px}
+
 /* ── MÁS DRAWER ── */
 #mas-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200}
 #mas-drawer{
@@ -644,8 +649,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
     </div>
     <div class="snav">
       <div class="snav-section">Principal</div>
-      <button class="snav-btn active" data-view="hoy"><span class="icon">📋</span> Hoy</button>
-      <button class="snav-btn" data-view="revisar"><span class="icon">📋</span> Por revisar</button>
+      <button class="snav-btn active" data-view="revisar"><span class="icon">🏠</span> Dashboard</button>
       <button class="snav-btn" data-view="proyectos"><span class="icon">📁</span> Proyectos</button>
       
       <button class="snav-btn" data-view="gantt"><span class="icon">📅</span> Gantt</button>
@@ -750,10 +754,19 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
             <div id="semaforo-list" style="padding:8px 0"></div>
           </div>
         </div>
+        <!-- Métricas del equipo -->
+        <div id="dash-metricas" style="margin-top:12px"></div>
         <!-- Vencidos -->
         <div class="card" style="margin-top:12px;padding:0;overflow:hidden">
-          <div style="padding:10px 14px;border-bottom:1px solid var(--border2)">
-            <span class="card-title" style="margin:0">Vencidos y en riesgo</span>
+          <div style="padding:10px 14px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="card-title" style="margin:0;flex:1">Entregables</span>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <button class="btn xs hot-filter-btn active" data-hf="all">Todos</button>
+              <button class="btn xs hot-filter-btn" data-hf="vencido">Vencidos</button>
+              <button class="btn xs hot-filter-btn" data-hf="En revisión">Por revisar</button>
+              <button class="btn xs hot-filter-btn" data-hf="En progreso">En curso</button>
+              <button class="btn xs hot-filter-btn" data-hf="Pendiente">Pendientes</button>
+            </div>
           </div>
           <div class="tbl-wrap">
             <table>
@@ -786,20 +799,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
               <input class="input" id="proj-search" placeholder="Buscar…" style="width:140px"/>
               <button class="btn sm primary leader-only" id="btn-add-proj">+ Proyecto</button>
             </div>
-            <div id="proj-filters-ing" style="display:none;gap:6px;align-items:center;flex-wrap:wrap">
-              <select class="select-input" id="ing-f-user" style="min-width:160px">
-                <option value="">Ingeniero (todos)</option>
-              </select>
-              <div style="display:flex;gap:4px;flex-wrap:wrap" id="ing-status-btns">
-                <button class="btn sm ing-st-btn active" data-ist="">Todos</button>
-                <button class="btn sm ing-st-btn" data-ist="vencido">Vencidos</button>
-                <button class="btn sm ing-st-btn" data-ist="Pendiente">Pendientes</button>
-                <button class="btn sm ing-st-btn" data-ist="En progreso">En curso</button>
-                <button class="btn sm ing-st-btn" data-ist="En revision">En revision</button>
-                <button class="btn sm ing-st-btn" data-ist="Bloqueado">Bloqueados</button>
-                <button class="btn sm ing-st-btn" data-ist="Aprobado">Aprobados</button>
-              </div>
-            </div>
+            <div id="proj-filters-ing" style="display:none"></div>
           </div>
         </div>
         <div style="display:flex;gap:6px;padding:10px 20px 0;border-top:1px solid var(--border2);margin-top:4px">
@@ -1228,10 +1228,7 @@ function doPost(e){
     <button class="bnav-btn" data-view="proyectos">
       <span class="bicon">📁</span><span>Proyectos</span>
     </button>
-    <button class="bnav-btn" data-view="revisar">
-      <span class="bicon">📋</span><span>Revisar</span>
-      <span class="bnav-badge hidden" id="nav-revisar-badge">0</span>
-    </button>
+
     <button class="bnav-btn" id="btn-mas-drawer">
       <span class="bicon">☰</span><span>Más</span>
     </button>
@@ -1784,9 +1781,12 @@ function renderDashboard(){
 
   // ── VENCIDOS TABLE ────────────────────────────────
   const hotTbody=document.getElementById('hot-tbody');
+  const activeHF=document.querySelector('.hot-filter-btn.active')?.dataset.hf||'all';
   if(hotTbody){
-    const hotDels=[...vencidos,...allDels.filter(d=>d.status==='En revisión')]
-      .sort((a,b)=>a.due?.localeCompare(b.due||'')||0);
+    let hotDels;
+    if(activeHF==='all') hotDels=[...vencidos,...allDels.filter(d=>d.status==='En revisión')].sort((a,b)=>a.due?.localeCompare(b.due||'')||0);
+    else if(activeHF==='vencido') hotDels=vencidos.sort((a,b)=>a.due?.localeCompare(b.due||'')||0);
+    else hotDels=allDels.filter(d=>d.status===activeHF).sort((a,b)=>a.due?.localeCompare(b.due||'')||0);
     if(!hotDels.length){
       hotTbody.innerHTML=`<tr><td colspan="6" class="empty">Sin entregables vencidos ni por revisar.</td></tr>`;
     } else {
@@ -1808,6 +1808,66 @@ function renderDashboard(){
           </td>
         </tr>`;
       }).join('');
+    }
+  }
+
+  // ── MÉTRICAS DEL EQUIPO ─────────────────────────
+  const metEl=document.getElementById('dash-metricas');
+  if(metEl){
+    const usersWithMetrics=DB.users.filter(function(u){
+      return (u.centrosTrabajo||[]).some(function(ct){
+        return (ct.metricas||[]).some(function(m){return m.nombre&&(m.meta||m.real);});
+      });
+    });
+    if(usersWithMetrics.length){
+      const rows=usersWithMetrics.map(function(u){
+        const centros=u.centrosTrabajo||[];
+        const allMets=[];
+        centros.forEach(function(ct){
+          (ct.metricas||[]).filter(function(m){return m.nombre&&(m.meta||m.real);}).forEach(function(m){
+            allMets.push({ctNombre:ct.nombre||'',metrica:m});
+          });
+        });
+        if(!allMets.length) return '';
+        const metCards=allMets.map(function(item){
+          const m=item.metrica;
+          const meta=m.meta||0, real=m.real||0;
+          const pct=meta?Math.round(real/meta*100):0;
+          const lvl=pct>=90?'ok':pct>=70?'warn':'bad';
+          const barPct=Math.min(100,pct);
+          return '<div style="min-width:130px;flex:1;border:0.5px solid var(--border2);border-radius:var(--r);padding:8px;background:var(--surface)">'
+            +'<div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px">'+esc(m.nombre)+(item.ctNombre?'<span style="color:var(--muted);font-weight:400"> · '+esc(item.ctNombre)+'</span>':'')+'</div>'
+            +'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:3px">'
+            +'<span class="progress-pct '+lvl+'" style="font-size:16px;font-family:var(--font-display);font-weight:800">'+real+'</span>'
+            +'<span style="font-size:10px;color:var(--muted)">'+esc(m.unidad||'')+'</span>'
+            +'<span style="font-size:10px;color:var(--muted);margin-left:auto">Meta: '+meta+'</span>'
+            +'</div>'
+            +'<div class="progress-bar"><div class="progress-bar-fill '+lvl+'" style="width:'+barPct+'%"></div></div>'
+            +'<div style="font-size:10px;color:var(--muted);margin-top:2px">'+pct+'%</div>'
+            +'</div>';
+        }).join('');
+        const photo=userPhotoURL(u.email);
+        const ini=u.name.split(' ').map(function(w){return w[0];}).slice(0,2).join('').toUpperCase();
+        const sem=semaforoUser(u.id);
+        const bc='var(--'+(sem.level==='ok'?'ok':sem.level==='warn'?'warn':'bad')+')';
+        const av=photo
+          ?'<img src="'+photo+'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid '+bc+';flex:0 0 28px">'
+          :'<div style="width:28px;height:28px;border-radius:50%;background:var(--surface2);border:2px solid '+bc+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:'+bc+';flex:0 0 28px">'+ini+'</div>';
+        return '<div style="margin-bottom:10px">'
+          +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'+av
+          +'<span style="font-size:13px;font-weight:600">'+esc(u.name.split(' ')[0])+'</span></div>'
+          +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+metCards+'</div>'
+          +'</div>';
+      }).filter(Boolean).join('');
+
+      metEl.innerHTML='<div class="card" style="padding:0;overflow:hidden">'
+        +'<div style="padding:10px 14px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px">'
+        +'<span class="card-title" style="margin:0">📊 Métricas del equipo</span>'
+        +'</div>'
+        +'<div style="padding:12px 14px">'+rows+'</div>'
+        +'</div>';
+    } else {
+      metEl.innerHTML='';
     }
   }
 
@@ -2171,113 +2231,125 @@ function switchProjTab(tab){
    RENDER: POR INGENIERO
 ══════════════════════════════════════════════════════ */
 function renderIngenieros(){
-  fillSelect('ing-f-user', DB.users, 'Ingeniero (todos)');
-  const fu  = document.getElementById('ing-f-user')?.value||'';
-  const fst = document.querySelector('.ing-st-btn.active')?.dataset.ist||'';
-  const today = todayISO();
-  const isAdmin = SESSION?.role==='admin';
-  const users = fu ? DB.users.filter(u=>u.id===fu) : DB.users;
-  // Show active filter label
-  const activeBtn=document.querySelector('.ing-st-btn.active');
-  const activeLabel=activeBtn?.textContent||'Todos';
+  var today=todayISO();
+  var isAdmin=SESSION?.role==='admin';
+  var users=DB.users;
+  var container=document.getElementById('ing-list');
+  if(!users.length){container.innerHTML='<div class="empty">Sin ingenieros.</div>';return;}
 
-  const container = document.getElementById('ing-list');
-  if(!users.length){ container.innerHTML='<div class="empty">Sin ingenieros.</div>'; return; }
+  var html='';
+  users.forEach(function(u){
+    var allDels=DB.deliverables.filter(function(d){return d.assigneeId===u.id;});
+    var vencidos=allDels.filter(function(d){return d.status!=='Aprobado'&&d.due&&d.due<today;});
+    var pendientes=allDels.filter(function(d){return d.status==='Pendiente';});
+    var enCurso=allDels.filter(function(d){return d.status==='En progreso';});
+    var revision=allDels.filter(function(d){return d.status==='En revisión';});
+    var bloqueados=allDels.filter(function(d){return d.blocked||d.status==='Bloqueado';});
+    var aprobados=allDels.filter(function(d){return d.status==='Aprobado';});
+    var pct=allDels.length?Math.round(aprobados.length/allDels.length*100):0;
+    var lvl=pct>=85?'ok':pct>=70?'warn':'bad';
+    var sem=semaforoUser(u.id);
+    var photo=userPhotoURL(u.email);
+    var ini=u.name.split(' ').map(function(w){return w[0];}).slice(0,2).join('').toUpperCase();
+    var bc='var(--'+(sem.level==='ok'?'ok':sem.level==='warn'?'warn':'bad')+')';
+    var av=photo
+      ?('<img src="'+photo+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2.5px solid '+bc+'">')
+      :('<div style="width:36px;height:36px;border-radius:50%;background:var(--surface2);border:2.5px solid '+bc+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:'+bc+'">'+ini+'</div>');
 
-  const filterDesc = fst===''?'Mostrando todos los entregables':
-    fst==='vencido'?'Mostrando solo entregables vencidos':
-    fst==='Aprobado'?'Mostrando solo entregables aprobados':
-    `Mostrando entregables: ${activeLabel}`;
+    var pills='';
+    if(vencidos.length)   pills+='<span class="tag bad" style="font-size:11px">'+vencidos.length+' vencidos</span>';
+    if(pendientes.length) pills+='<span class="tag gray" style="font-size:11px">'+pendientes.length+' pendientes</span>';
+    if(enCurso.length)    pills+='<span class="tag blue" style="font-size:11px">'+enCurso.length+' en curso</span>';
+    if(revision.length)   pills+='<span class="tag warn" style="font-size:11px">'+revision.length+' por revisar</span>';
+    if(bloqueados.length) pills+='<span class="tag warn" style="font-size:11px">'+bloqueados.length+' bloqueados</span>';
+    if(!allDels.length)   pills+='<span class="tag gray" style="font-size:11px">Sin entregables</span>';
 
-  const labelHtml=`<div style="padding:8px 12px;background:var(--accent-bg);border-radius:var(--r);font-size:12px;color:var(--accent);font-weight:500;margin-bottom:10px">
-    🔍 ${filterDesc} · ${users.length} ingeniero${users.length!==1?'s':''}
-  </div>`;
+    var btns='<button class="btn xs ing-flt active" data-uid="'+u.id+'" data-flt="">Todos ('+allDels.length+')</button>';
+    if(vencidos.length)   btns+='<button class="btn xs ing-flt" data-uid="'+u.id+'" data-flt="vencido">Vencidos ('+vencidos.length+')</button>';
+    if(pendientes.length) btns+='<button class="btn xs ing-flt" data-uid="'+u.id+'" data-flt="Pendiente">Pendientes ('+pendientes.length+')</button>';
+    if(enCurso.length)    btns+='<button class="btn xs ing-flt" data-uid="'+u.id+'" data-flt="En progreso">En curso ('+enCurso.length+')</button>';
+    if(revision.length)   btns+='<button class="btn xs ing-flt" data-uid="'+u.id+'" data-flt="En revisión">Por revisar ('+revision.length+')</button>';
+    if(bloqueados.length) btns+='<button class="btn xs ing-flt" data-uid="'+u.id+'" data-flt="Bloqueado">Bloqueados ('+bloqueados.length+')</button>';
+    if(aprobados.length)  btns+='<button class="btn xs ing-flt" data-uid="'+u.id+'" data-flt="Aprobado">Aprobados ('+aprobados.length+')</button>';
 
-  container.innerHTML = labelHtml + users.map(u=>{
-    const allDels = DB.deliverables.filter(d=>d.assigneeId===u.id);
-    const vencidos   = allDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today);
-    const pendientes = allDels.filter(d=>d.status==='Pendiente');
-    const enCurso    = allDels.filter(d=>d.status==='En progreso');
-    const revision   = allDels.filter(d=>d.status==='En revisi\u00f3n');
-    const bloqueados = allDels.filter(d=>d.blocked||d.status==='Bloqueado');
-    const aprobados  = allDels.filter(d=>d.status==='Aprobado');
-    let dels = allDels;
-    if(fst==='vencido')        dels = vencidos;
-    else if(fst==='Aprobado')  dels = aprobados;
-    else if(fst==='Bloqueado') dels = bloqueados;
-    else if(fst==='En revision') dels = revision;
-    else if(fst)               dels = allDels.filter(d=>d.status===fst);
-    const sem = semaforoUser(u.id);
-    const photo = userPhotoURL(u.email);
-    const initials = u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
-    const bc = sem.level==='ok'?'var(--ok)':sem.level==='warn'?'var(--warn)':'var(--bad)';
-    const avatarEl = photo
-      ?`<img src="${photo}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2.5px solid ${bc}" onerror="this.outerHTML='<div style=\'width:36px;height:36px;border-radius:50%;background:var(--surface2);border:2.5px solid ${bc};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:13px;font-weight:800;color:${bc}\'>${initials}</div>'">`
-      :`<div style="width:36px;height:36px;border-radius:50%;background:var(--surface2);border:2.5px solid ${bc};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:13px;font-weight:800;color:${bc}">${initials}</div>`;
-    const pct = allDels.length ? Math.round((aprobados.length/allDels.length)*100) : 0;
-    const lvl = pct>=85?'ok':pct>=70?'warn':'bad';
-    const delRows = dels.length ? dels.map(d=>{
-      const isMyDel = d.assigneeId===SESSION?.userId;
-      const canFinish = d.status!=='Aprobado'&&d.status!=='En revisi\u00f3n';
-      const isVenc = d.due&&d.due<today&&d.status!=='Aprobado';
-      return`<tr${isVenc?' style="background:var(--bad-bg)"':''}>
-        <td>${statusTag(d.status,d.due)}</td>
-        <td><b>${esc(d.title)}</b>${d.notes?`<div class="small muted">${esc(d.notes.slice(0,60))}</div>`:''}</td>
-        <td style="font-size:12px">${projName(d.projectId)}</td>
-        <td>${fmtDueFull(d.due,d.originalDue)}</td>
-        <td class="right">
-          <div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap">
-            <button class="btn xs" data-open-del-cmt="${d.id}">💬</button>
-            ${(canFinish&&(isAdmin||isMyDel))?`<button class="btn xs primary" data-submit-del="${d.id}">Terminado</button>`:""}
-            ${(d.status==="En revisi\u00f3n"&&isAdmin)?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:""}
-            ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button><button class="btn xs" data-next-phase="${d.id}">Sig. fase</button>`:""}
-          </div>
-        </td>
-      </tr>
-      <tr id="del-cmt-row-${d.id}" style="display:none">
-        <td colspan="5" style="padding:0 10px 10px">${commentsHTML('deliverable',d.id)}</td>
-      </tr>`;
-    }).join('')
-    :`<tr><td colspan="5" class="empty">${fst?'Sin entregables con ese filtro.':'Sin entregables asignados.'}</td></tr>`;
+    html+='<div class="card" style="margin-bottom:10px;padding:0;overflow:hidden">'
+      +'<div onclick="toggleIngDetail(\''+u.id+'\')" style="padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">'
+      +av
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +'<span style="font-weight:700;font-size:14px">'+esc(u.name)+'</span>'
+      +'<span class="tag '+sem.level+'" style="font-size:11px">'+(sem.level==='ok'?'Verde':sem.level==='warn'?'Amarillo':'Rojo')+'</span>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+(u.role||'—')+' · '+(u.team||'—')+'</div>'
+      +'<div style="display:flex;gap:5px;margin-top:5px;flex-wrap:wrap">'+pills+'</div>'
+      +'</div>'
+      +'<div style="text-align:right;flex:0 0 auto">'
+      +'<div class="progress-pct '+lvl+'" style="font-size:26px;font-family:var(--font-display);font-weight:800">'+pct+'%</div>'
+      +'<div style="font-size:10px;color:var(--muted)">'+aprobados.length+'/'+allDels.length+'</div>'
+      +'<div class="progress-bar" style="width:70px;margin:4px 0 0 auto"><div class="progress-bar-fill '+lvl+'" style="width:'+pct+'%"></div></div>'
+      +'</div>'
+      +'<span class="ing-chev" style="color:var(--muted);font-size:14px;transition:transform .2s">▼</span>'
+      +'</div>'
+      +'<div id="ing-detail-'+u.id+'" style="display:none;border-top:1px solid var(--border2)">'
+      +'<div style="padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--border2);display:flex;gap:5px;flex-wrap:wrap">'+btns+'</div>'
+      +'<div id="ing-tbl-'+u.id+'">'+buildIngTable(u.id,'',isAdmin)+'</div>'
+      +'</div>'
+      +'</div>';
+  });
+  container.innerHTML=html;
 
-    return`<div class="card" style="margin-bottom:10px;padding:0;overflow:hidden">
-      <div onclick="toggleIngCard(this,'ing-card-${u.id}')"
-        style="padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">
-        ${avatarEl}
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span style="font-weight:700;font-size:14px">${esc(u.name)}</span>
-            <span class="tag ${sem.level}">${sem.level==='ok'?'Verde':sem.level==='warn'?'Amarillo':'Rojo'}</span>
-          </div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">${u.role||'—'} · ${u.team||'—'}</div>
-          <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
-            ${vencidos.length?`<span class="tag bad" style="font-size:11px">${vencidos.length} vencidos</span>`:''}
-            ${pendientes.length?`<span class="tag gray" style="font-size:11px">${pendientes.length} pendientes</span>`:''}
-            ${enCurso.length?`<span class="tag blue" style="font-size:11px">${enCurso.length} en curso</span>`:''}
-            ${revision.length?`<span class="tag blue" style="font-size:11px">${revision.length} en revisi\u00f3n</span>`:''}
-            ${bloqueados.length?`<span class="tag warn" style="font-size:11px">${bloqueados.length} bloqueados</span>`:''}
-            ${!allDels.length?`<span class="tag gray" style="font-size:11px">Sin entregables</span>`:''}
-          </div>
-        </div>
-        <div style="text-align:right;flex:0 0 auto">
-          <div style="font-family:var(--font-display);font-size:28px;font-weight:800" class="progress-pct ${lvl}">${pct}%</div>
-          <div style="font-size:10px;color:var(--muted)">${aprobados.length}/${allDels.length}</div>
-          <div style="margin-top:4px">
-            <div class="progress-bar" style="width:80px;margin-left:auto"><div class="progress-bar-fill ${lvl}" style="width:${pct}%"></div></div>
-          </div>
-        </div>
-        <span class="ing-chev" style="color:var(--muted);font-size:14px;transition:transform .2s">▼</span>
-      </div>
-      <div id="ing-card-${u.id}" style="border-top:1px solid var(--border2);display:none">
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Estado</th><th>Entregable</th><th>Proyecto</th><th>Fecha</th><th class="right">Acci\u00f3n</th></tr></thead>
-            <tbody>${delRows}</tbody>
-          </table>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+  container.addEventListener('click',function(e){
+    var btn=e.target.closest('.ing-flt');
+    if(!btn) return;
+    var uid=btn.dataset.uid;
+    var flt=btn.dataset.flt;
+    document.querySelectorAll('.ing-flt[data-uid="'+uid+'"]').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    var tbl=document.getElementById('ing-tbl-'+uid);
+    if(tbl) tbl.innerHTML=buildIngTable(uid,flt,SESSION?.role==='admin');
+  });
+}
+
+function toggleIngDetail(uid){
+  var body=document.getElementById('ing-detail-'+uid);
+  if(!body) return;
+  var isOpen=body.style.display!=='none';
+  body.style.display=isOpen?'none':'';
+  var card=body.previousElementSibling;
+  var chev=card?card.querySelector('.ing-chev'):null;
+  if(chev) chev.style.transform=isOpen?'':'rotate(180deg)';
+}
+
+function buildIngTable(uid,flt,isAdmin){
+  var today=todayISO();
+  var allDels=DB.deliverables.filter(function(d){return d.assigneeId===uid;});
+  var dels=allDels;
+  if(flt==='vencido')        dels=allDels.filter(function(d){return d.status!=='Aprobado'&&d.due&&d.due<today;});
+  else if(flt==='Bloqueado') dels=allDels.filter(function(d){return d.blocked||d.status==='Bloqueado';});
+  else if(flt)               dels=allDels.filter(function(d){return d.status===flt;});
+  if(!dels.length) return '<div class="empty" style="padding:16px">Sin entregables con ese filtro.</div>';
+  var rows='';
+  dels.forEach(function(d){
+    var isVenc=d.due&&d.due<today&&d.status!=='Aprobado';
+    var isMyDel=d.assigneeId===SESSION?.userId;
+    var canFinish=d.status!=='Aprobado'&&d.status!=='En revisión';
+    rows+='<tr'+(isVenc?' style="background:var(--bad-bg)"':'')+'>'
+      +'<td>'+statusTag(d.status,d.due)+'</td>'
+      +'<td><b>'+esc(d.title)+'</b>'+(d.notes?'<div class="small muted">'+esc(d.notes.slice(0,50))+'</div>':'')+'</td>'
+      +'<td style="font-size:12px">'+projName(d.projectId)+'</td>'
+      +'<td>'+fmtDueFull(d.due,d.originalDue)+'</td>'
+      +'<td class="right"><div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap">'
+      +'<button class="btn xs" data-open-del-cmt="'+d.id+'">💬</button>'
+      +((canFinish&&(isAdmin||isMyDel))?'<button class="btn xs primary" data-submit-del="'+d.id+'">✓</button>':'')
+      +((d.status==='En revisión'&&isAdmin)?'<button class="btn xs ok" data-approve-del="'+d.id+'">Aprobar</button><button class="btn xs danger" data-reject-del="'+d.id+'">Rechazar</button>':'')
+      +(isAdmin?'<button class="btn xs" data-edit-del="'+d.id+'">Editar</button>':'')
+      +'</div></td>'
+      +'</tr>'
+      +'<tr id="del-cmt-row-'+d.id+'" style="display:none"><td colspan="5" style="padding:0 10px 10px">'+commentsHTML('deliverable',d.id)+'</td></tr>';
+  });
+  return '<div class="tbl-wrap"><table>'
+    +'<thead><tr><th>Estado</th><th>Entregable</th><th>Proyecto</th><th>Fecha</th><th class="right">Acción</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>';
 }
 
 function toggleIngCard(header, id){
@@ -3384,6 +3456,8 @@ const handlers={
   },
   editU(id){
     const u=byId(DB.users,id);if(!u)return;
+    window._euCurrentUser=u;
+    if(!u.centrosTrabajo) u.centrosTrabajo=u.centroTrabajo?[u.centroTrabajo]:[];
     const dgp=u.dgp||{};
     openDlg({title:'Editar usuario',sub:esc(u.name),body:`
       <div class="form-row"><div><label class="lbl">Nombre</label><input class="input" id="eu-name" value="${esc(u.name)}"/></div>
@@ -3411,6 +3485,8 @@ const handlers={
       <label class="lbl">Responsabilidades principales</label>
       <textarea class="input" id="eu-resp" placeholder="Describe las responsabilidades clave del puesto…">${esc(dgp.responsabilidades||'')}</textarea>
       <div class="hr"></div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px">🏭 Centros de trabajo</div>
+      <div id="eu-centros-wrap">${buildCentrosEditor(u)}</div>
       <div class="hr"></div>
       <div style="padding:10px;background:var(--surface2);border-radius:var(--r);font-size:12px;margin-bottom:4px">🔑 <b>Credenciales de acceso</b></div>
       <div class="form-row">
@@ -3437,6 +3513,8 @@ const handlers={
           reporta:document.getElementById('eu-reporta').value.trim(),
           responsabilidades:document.getElementById('eu-resp').value.trim(),
         };
+        saveCentrosFromForm(u);
+        window._euCurrentUser=null;
         const uname=(document.getElementById('eu-username')?.value||'').trim().toLowerCase();
         if(uname) u.customUsername=uname;
         const p=document.getElementById('eu-pass').value;
@@ -3454,6 +3532,76 @@ const handlers={
     DB.users.splice(idx,1);saveDB();renderView(currentView);toast('Usuario eliminado');
   },
 };
+
+/* ══════════════════════════════════════════════════════
+   CENTROS DE TRABAJO — HELPERS
+══════════════════════════════════════════════════════ */
+function buildCentrosEditor(u){
+  var centros=(u.centrosTrabajo||[]);
+  var html='<div id="eu-centros-list">';
+  centros.forEach(function(ct,i){
+    html+='<div class="ct-item"><div class="ct-item-header"><span>Centro '+(i+1)+'</span>'
+      +'<button type="button" class="btn xs danger" onclick="removeCentro('+i+')">✕ Quitar</button></div>'
+      +'<div class="form-row"><div><label class="lbl">Nombre del centro</label>'
+      +'<input class="input" id="eu-ct-'+i+'-nombre" value="'+esc(ct.nombre||'')+'" placeholder="Ej: Línea 3 Ensamble"/></div>'
+      +'<div><label class="lbl">Línea / Área</label>'
+      +'<input class="input" id="eu-ct-'+i+'-linea" value="'+esc(ct.linea||'')+'" placeholder="Ej: Soldadura"/></div></div>'
+      +'<label class="lbl">Objetivo de mejora</label>'
+      +'<textarea class="input" id="eu-ct-'+i+'-objetivo" rows="2" placeholder="Ej: Reducir scrap en 15%...">'+esc(ct.objetivo||'')+'</textarea>'
+      +'<div style="margin-top:8px"><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">'
+      +'<span>Métricas</span><button type="button" class="btn xs" onclick="addMetrica('+i+')">＋ Métrica</button></div>'
+      +'<div id="eu-ct-'+i+'-mets">';
+    (ct.metricas||[]).forEach(function(m,j){
+      html+='<div class="met-item" id="eu-ct-'+i+'-met-'+j+'">'
+        +'<input class="input" id="eu-ct-'+i+'-met-'+j+'-nombre" value="'+esc(m.nombre||'')+'" placeholder="Nombre métrica"/>'
+        +'<input class="input" style="width:60px" id="eu-ct-'+i+'-met-'+j+'-unidad" value="'+esc(m.unidad||'')+'" placeholder="Unidad"/>'
+        +'<input class="input" style="width:70px" id="eu-ct-'+i+'-met-'+j+'-meta" value="'+(m.meta||'')+'" placeholder="Meta" type="number" step="any"/>'
+        +'<input class="input" style="width:70px" id="eu-ct-'+i+'-met-'+j+'-real" value="'+(m.real||'')+'" placeholder="Real" type="number" step="any"/>'
+        +'<button type="button" class="btn xs danger" onclick="removeMetrica('+i+','+j+')">✕</button></div>';
+    });
+    html+='</div></div></div>';
+  });
+  html+='</div><button type="button" class="btn sm" onclick="addCentro()" style="margin-top:4px">＋ Agregar centro de trabajo</button>';
+  return html;
+}
+function addCentro(){
+  var u=window._euCurrentUser; if(!u) return;
+  if(!u.centrosTrabajo) u.centrosTrabajo=[];
+  u.centrosTrabajo.push({nombre:'',linea:'',objetivo:'',metricas:[]});
+  var el=document.getElementById('eu-centros-wrap'); if(el) el.innerHTML=buildCentrosEditor(u);
+}
+function removeCentro(i){
+  var u=window._euCurrentUser; if(!u||!u.centrosTrabajo) return;
+  u.centrosTrabajo.splice(i,1);
+  var el=document.getElementById('eu-centros-wrap'); if(el) el.innerHTML=buildCentrosEditor(u);
+}
+function addMetrica(ctIdx){
+  var u=window._euCurrentUser; if(!u||!u.centrosTrabajo||!u.centrosTrabajo[ctIdx]) return;
+  if(!u.centrosTrabajo[ctIdx].metricas) u.centrosTrabajo[ctIdx].metricas=[];
+  u.centrosTrabajo[ctIdx].metricas.push({nombre:'',unidad:'',meta:'',real:''});
+  var el=document.getElementById('eu-centros-wrap'); if(el) el.innerHTML=buildCentrosEditor(u);
+}
+function removeMetrica(ctIdx,mIdx){
+  var u=window._euCurrentUser; if(!u||!u.centrosTrabajo||!u.centrosTrabajo[ctIdx]) return;
+  u.centrosTrabajo[ctIdx].metricas.splice(mIdx,1);
+  var el=document.getElementById('eu-centros-wrap'); if(el) el.innerHTML=buildCentrosEditor(u);
+}
+function saveCentrosFromForm(u){
+  var centros=u.centrosTrabajo||[];
+  centros.forEach(function(ct,i){
+    ct.nombre=(document.getElementById('eu-ct-'+i+'-nombre')?.value||'').trim();
+    ct.linea=(document.getElementById('eu-ct-'+i+'-linea')?.value||'').trim();
+    ct.objetivo=(document.getElementById('eu-ct-'+i+'-objetivo')?.value||'').trim();
+    (ct.metricas||[]).forEach(function(m,j){
+      m.nombre=(document.getElementById('eu-ct-'+i+'-met-'+j+'-nombre')?.value||'').trim();
+      m.unidad=(document.getElementById('eu-ct-'+i+'-met-'+j+'-unidad')?.value||'').trim();
+      m.meta=parseFloat(document.getElementById('eu-ct-'+i+'-met-'+j+'-meta')?.value)||null;
+      m.real=parseFloat(document.getElementById('eu-ct-'+i+'-met-'+j+'-real')?.value)||null;
+      m.fecha=todayISO();
+    });
+  });
+  u.centrosTrabajo=centros.filter(function(ct){return ct.nombre||ct.linea;});
+}
 
 /* ══════════════════════════════════════════════════════
    REFRESH HELPERS
@@ -3810,6 +3958,14 @@ document.getElementById('ing-status-btns')?.addEventListener('click',e=>{
 document.getElementById('dir-f-proj')?.addEventListener('change',e=>{
   const specific=document.getElementById('dir-proj-specific');
   if(specific) specific.style.display=e.target.value==='specific'?'':'none';
+});
+// Hot table filter buttons
+document.getElementById('view-revisar')?.addEventListener('click',e=>{
+  const btn=e.target.closest('.hot-filter-btn');
+  if(!btn) return;
+  document.querySelectorAll('.hot-filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDashboard();
 });
 ['dir-f-user','dir-f-period'].forEach(id=>{
   document.getElementById(id)?.addEventListener('change',()=>renderDirectivo());
@@ -4309,7 +4465,43 @@ function renderIngeniero(userId){
       </div>`:''}
     </div>`:'';
 
-  body.innerHTML=scoreHTML+chartHTML+dgpHTML+projsHTML;
+  // Centros de trabajo
+  var centros=u.centrosTrabajo||[];
+  var ctHTML='';
+  if(centros.length){
+    ctHTML='<div class="card" style="margin-bottom:10px">'
+      +'<div style="font-family:var(--font-display);font-weight:700;font-size:13px;margin-bottom:12px">🏭 Centros de Trabajo</div>'
+      +centros.map(function(ct,i){
+        var metHTML='';
+        if((ct.metricas||[]).filter(function(m){return m.nombre;}).length){
+          metHTML='<div style="border-top:1px solid var(--border2);padding-top:8px;margin-top:8px">'
+            +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Métricas — Meta vs Real</div>'
+            +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">'
+            +ct.metricas.filter(function(m){return m.nombre;}).map(function(m){
+              var meta=m.meta||0, real=m.real||0;
+              var pct=meta?Math.round(real/meta*100):0;
+              var lvl=pct>=90?'ok':pct>=70?'warn':'bad';
+              var barPct=Math.min(100,meta?Math.round(real/meta*100):0);
+              return '<div style="border:0.5px solid var(--border2);border-radius:var(--r);padding:8px">'
+                +'<div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px">'+esc(m.nombre)+'</div>'
+                +'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:3px">'
+                +'<span class="progress-pct '+lvl+'" style="font-size:18px;font-family:var(--font-display);font-weight:800">'+real+'</span>'
+                +'<span style="font-size:11px;color:var(--muted)">'+esc(m.unidad||'')+'</span>'
+                +'<span style="font-size:10px;color:var(--muted);margin-left:auto">Meta: '+meta+'</span>'
+                +'</div>'
+                +'<div class="progress-bar"><div class="progress-bar-fill '+lvl+'" style="width:'+barPct+'%"></div></div>'
+                +'<div style="font-size:10px;color:var(--muted);margin-top:2px">'+pct+'%'+(m.fecha?' · '+fmtDate(m.fecha):'')+'</div>'
+                +'</div>';
+            }).join('')+'</div></div>';
+        }
+        return (i>0?'<div style="border-top:1px solid var(--border2);margin:10px 0"></div>':'')
+          +'<div style="font-size:12px;font-weight:700;margin-bottom:4px">'+esc(ct.nombre||'Centro '+(i+1))+'</div>'
+          +(ct.linea?'<div style="font-size:12px;color:var(--muted);margin-bottom:3px">Línea: '+esc(ct.linea)+'</div>':'')
+          +(ct.objetivo?'<div style="font-size:12px;margin-bottom:3px"><b>Objetivo:</b> '+esc(ct.objetivo)+'</div>':'')
+          +metHTML;
+      }).join('')+'</div>';
+  }
+  body.innerHTML=scoreHTML+chartHTML+dgpHTML+ctHTML+projsHTML;
 }
 
 function openProyectoFromIngeniero(projId){
