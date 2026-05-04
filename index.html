@@ -2939,9 +2939,8 @@ function terminadosPorIngeniero(cerrados){
         return`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:16px;text-align:center;position:relative;overflow:hidden">
           <div style="position:absolute;top:8px;right:10px;font-size:20px">${medal}</div>
           ${photo
-            ?`<img src="${photo}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:3px solid var(--ok);margin:0 auto 8px;display:block"
-                onerror="this.outerHTML='<div style=\\'width:52px;height:52px;border-radius:50%;background:var(--ok-bg);border:3px solid var(--ok);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--ok);margin:0 auto 8px\\'>${initials}</div>'"/>`
-            :`<div style="width:52px;height:52px;border-radius:50%;background:var(--ok-bg);border:3px solid var(--ok);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--ok);margin:0 auto 8px">${initials}</div>`
+            ?'<img src="'+photo+'" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:3px solid var(--ok);margin:0 auto 8px;display:block">'
+            :'<div style="width:52px;height:52px;border-radius:50%;background:var(--ok-bg);border:3px solid var(--ok);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--ok);margin:0 auto 8px">'+initials+'</div>'
           }
           <div style="font-weight:700;font-size:14px">${esc(u?.name||'—')}</div>
           <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${u?.role||'—'}</div>
