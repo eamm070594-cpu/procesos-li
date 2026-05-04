@@ -4542,8 +4542,9 @@ document.getElementById('li-pass').addEventListener('keydown',e=>{if(e.key==='En
 /* ══════════════════════════════════════════════════════
    PWA
 ══════════════════════════════════════════════════════ */
+// SW desregistrado permanentemente
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+  navigator.serviceWorker.getRegistrations().then(r=>r.forEach(s=>s.unregister()));
 }
 
 
