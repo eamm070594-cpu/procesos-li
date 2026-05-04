@@ -658,6 +658,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
       <div class="snav-section admin-only">Equipo</div>
       <button class="snav-btn admin-only" data-view="evaluacion"><span class="icon">🏆</span> Evaluación mensual</button>
       <button class="snav-btn admin-only" data-view="directivo"><span class="icon">📊</span> Resumen directivo</button>
+      <button class="snav-btn admin-only" data-view="centros"><span class="icon">🏭</span> Centros de trabajo</button>
       <button class="snav-btn" data-view="equipo"><span class="icon">👥</span> Equipo</button>
       <button class="snav-btn admin-only" data-view="bitacora"><span class="icon">📓</span> Bitácora</button>
       <div class="snav-section">Sistema</div>
@@ -1005,6 +1006,21 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
     </div>
 
     <!-- ─── VIEW: AJUSTES ─── -->
+    <!-- ─── VIEW: CENTROS DE TRABAJO ─── -->
+    <div class="view" id="view-centros">
+      <div class="page-header">
+        <div class="page-header-inner">
+          <div class="page-title"><h2>Centros de Trabajo</h2><p>Métricas e ingenieros por área</p></div>
+          <div class="page-actions admin-only">
+            <button class="btn sm primary" id="btn-add-centro">＋ Centro</button>
+          </div>
+        </div>
+      </div>
+      <div class="pad">
+        <div id="centros-list"></div>
+      </div>
+    </div>
+
     <div class="view" id="view-ajustes">
       <div class="page-header">
         <div class="page-header-inner">
@@ -1546,6 +1562,7 @@ function renderView(v){
     equipo:renderEquipo,
     ajustes:renderAjustes,
     directivo:renderDirectivo,
+    centros:renderCentros,
   };
   if(fns[v])fns[v]();
 }
@@ -2364,6 +2381,226 @@ function toggleIngCard(header, id){
 /* ══════════════════════════════════════════════════════
    RENDER: RESUMEN DIRECTIVO
 ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   RENDER: CENTROS DE TRABAJO
+══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   CENTROS DE TRABAJO v2 — OEE, COSTOS, HEADCOUNT
+══════════════════════════════════════════════════════ */
+function renderCentros(){
+  if(!DB.centros) DB.centros=[];
+  var isAdmin=SESSION?.role==='admin';
+  var container=document.getElementById('centros-list');
+
+  if(!DB.centros.length){
+    container.innerHTML='<div class="empty" style="padding:40px;text-align:center">'
+      +'<div style="font-size:32px;margin-bottom:8px">🏭</div>'
+      +'<div style="font-size:15px;font-weight:600;margin-bottom:4px">Sin centros de trabajo</div>'
+      +'<div style="font-size:13px;color:var(--muted)">Da clic en <b>＋ Centro</b> para crear el primero.</div>'
+      +'</div>';
+    return;
+  }
+
+  container.innerHTML=DB.centros.map(function(ct){
+    var kpi=ct.kpi||{};
+    var oee=calcOEE(kpi);
+    var oeeColor=oee>=85?'var(--ok)':oee>=65?'var(--warn)':'var(--bad)';
+    var costoReal=kpi.costoReal||0, costoMeta=kpi.costoMeta||0;
+    var costoPct=costoMeta?Math.round(costoReal/costoMeta*100):0;
+    var costoColor=costoPct<=100?'var(--ok)':costoPct<=115?'var(--warn)':'var(--bad)';
+    var hcActual=kpi.hcActual||0, hcCapacidad=kpi.hcCapacidad||0;
+    var hcPct=hcCapacidad?Math.round(hcActual/hcCapacidad*100):0;
+    var hcColor=hcPct>=90&&hcPct<=110?'var(--ok)':hcPct>=75?'var(--warn)':'var(--bad)';
+    var cumplimiento=kpi.cumplimiento||0;
+    var cumplColor=cumplimiento>=95?'var(--ok)':cumplimiento>=85?'var(--warn)':'var(--bad)';
+    var scrap=kpi.scrap||0;
+    var ppm=kpi.ppm||0;
+    var scrapColor=scrap<=2?'var(--ok)':scrap<=5?'var(--warn)':'var(--bad)';
+
+    // Ingeniero a cargo
+    var encargado=byId(DB.users,ct.encargadoId);
+    var ingenieros=(ct.ingenieros||[]).map(function(id){return byId(DB.users,id);}).filter(Boolean);
+
+    var encHTML='';
+    if(encargado){
+      var photo=userPhotoURL(encargado.email);
+      var ini=encargado.name.split(' ').map(function(w){return w[0];}).slice(0,2).join('').toUpperCase();
+      var sem=semaforoUser(encargado.id);
+      var bc='var(--'+(sem.level==='ok'?'ok':sem.level==='warn'?'warn':'bad')+')';
+      var av=photo
+        ?('<img src="'+photo+'" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid '+bc+'">')
+        :('<div style="width:32px;height:32px;border-radius:50%;background:var(--surface2);border:2px solid '+bc+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:'+bc+'">'+ini+'</div>');
+      encHTML='<div style="display:flex;align-items:center;gap:6px">'
+        +av+'<div><div style="font-size:12px;font-weight:600">'+esc(encargado.name)+'</div>'
+        +'<div style="font-size:10px;color:var(--muted)">Ingeniero a cargo</div></div></div>';
+    }
+
+    var ingList=ingenieros.length
+      ?'<div style="font-size:11px;color:var(--muted);margin-top:4px">Equipo: '
+        +ingenieros.map(function(u){return esc(u.name.split(' ')[0]);}).join(', ')+'</div>'
+      :'';
+
+    return '<div class="card" style="margin-bottom:14px;padding:0;overflow:hidden">'
+      // Header
+      +'<div style="padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border2);display:flex;align-items:flex-start;gap:12px">'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-weight:700;font-size:16px">'+esc(ct.nombre)+'</div>'
+      +(ct.linea?'<div style="font-size:12px;color:var(--muted)">'+esc(ct.linea)+'</div>':'')
+      +(ct.objetivo?'<div style="font-size:12px;margin-top:3px"><b>Objetivo:</b> '+esc(ct.objetivo)+'</div>':'')
+      +ingList
+      +'</div>'
+      +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'
+      +encHTML
+      +(isAdmin?'<div style="display:flex;gap:4px;margin-top:4px">'
+        +'<button class="btn xs" onclick="editCentro(\''+ct.id+'\')">✎ Editar</button>'
+        +'<button class="btn xs primary" onclick="capturarKPIs(\''+ct.id+'\')">📊 Capturar KPIs</button>'
+        +'<button class="btn xs danger" onclick="delCentro(\''+ct.id+'\')">✕</button>'
+        +'</div>':'')
+      +'</div>'
+      +'</div>'
+      // KPIs grid
+      +'<div style="padding:14px 16px">'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">'
+      // OEE
+      +kpiCard('OEE',oee,'%',oeeColor,
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:6px">'
+        +miniKpi('Disp.',(kpi.disponibilidad||0)+'%','var(--muted)')
+        +miniKpi('Rend.',(kpi.rendimiento||0)+'%','var(--muted)')
+        +miniKpi('Cal.',(kpi.calidad||0)+'%','var(--muted)')
+        +'</div>')
+      // Costo
+      +kpiCard('Costo CT',costoReal?'$'+fmtNum(costoReal):'—','',costoColor,
+        costoMeta?'<div style="font-size:10px;color:var(--muted);margin-top:4px">Presupuesto: $'+fmtNum(costoMeta)+'<br>'+costoPct+'% ejecutado</div>':'')
+      // Headcount
+      +kpiCard('Headcount',hcActual+'/'+hcCapacidad,'personas',hcColor,
+        '<div style="font-size:10px;color:var(--muted);margin-top:4px">'+hcPct+'% de capacidad</div>')
+      // Cumplimiento
+      +kpiCard('Cumplimiento',cumplimiento,'%',cumplColor,
+        '<div class="progress-bar" style="margin-top:6px"><div class="progress-bar-fill" style="width:'+Math.min(100,cumplimiento)+'%;background:'+cumplColor+'"></div></div>')
+      // Calidad
+      +kpiCard('Scrap',scrap,'%',scrapColor,
+        '<div style="font-size:10px;color:var(--muted);margin-top:4px">PPM: '+ppm+'</div>')
+      +'</div>'
+      +(ct.kpi?._fecha?'<div style="font-size:10px;color:var(--muted);margin-top:8px;text-align:right">Actualizado: '+fmtDate(ct.kpi._fecha)+'</div>':'')
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function kpiCard(label,value,unit,color,extra){
+  return '<div style="border:0.5px solid var(--border2);border-radius:var(--r);padding:10px;background:var(--surface);border-top:3px solid '+color+'">'
+    +'<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">'+label+'</div>'
+    +'<div style="font-size:22px;font-weight:800;font-family:var(--font-display);color:'+color+'">'+value+'<span style="font-size:12px;font-weight:400;color:var(--muted)"> '+unit+'</span></div>'
+    +(extra||'')
+    +'</div>';
+}
+function miniKpi(label,value,color){
+  return '<div style="text-align:center;background:var(--surface2);border-radius:4px;padding:3px">'
+    +'<div style="font-size:9px;color:var(--muted)">'+label+'</div>'
+    +'<div style="font-size:12px;font-weight:700;color:'+color+'">'+value+'</div>'
+    +'</div>';
+}
+function calcOEE(kpi){
+  var d=kpi.disponibilidad||0, r=kpi.rendimiento||0, c=kpi.calidad||0;
+  if(!d&&!r&&!c) return 0;
+  return Math.round(d*r*c/10000);
+}
+function fmtNum(n){
+  return Number(n).toLocaleString('es-MX',{maximumFractionDigits:0});
+}
+
+function capturarKPIs(id){
+  var ct=DB.centros.find(function(c){return c.id===id;});
+  if(!ct) return;
+  var k=ct.kpi||{};
+  openDlg({
+    title:'Capturar KPIs',
+    sub:esc(ct.nombre),
+    body:'<div style="font-weight:700;font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase">OEE</div>'
+      +'<div class="form-row">'
+      +'<div><label class="lbl">Disponibilidad (%)</label><input class="input" id="kpi-disp" type="number" step="0.1" min="0" max="100" value="'+(k.disponibilidad||'')+'"/></div>'
+      +'<div><label class="lbl">Rendimiento (%)</label><input class="input" id="kpi-rend" type="number" step="0.1" min="0" max="100" value="'+(k.rendimiento||'')+'"/></div>'
+      +'<div><label class="lbl">Calidad (%)</label><input class="input" id="kpi-cal" type="number" step="0.1" min="0" max="100" value="'+(k.calidad||'')+'"/></div>'
+      +'</div>'
+      +'<div style="font-weight:700;font-size:12px;color:var(--muted);margin:10px 0 8px;text-transform:uppercase">Costo del CT</div>'
+      +'<div class="form-row">'
+      +'<div><label class="lbl">Presupuesto ($)</label><input class="input" id="kpi-cmeta" type="number" step="1" value="'+(k.costoMeta||'')+'"/></div>'
+      +'<div><label class="lbl">Real ($)</label><input class="input" id="kpi-creal" type="number" step="1" value="'+(k.costoReal||'')+'"/></div>'
+      +'</div>'
+      +'<div style="font-weight:700;font-size:12px;color:var(--muted);margin:10px 0 8px;text-transform:uppercase">Headcount</div>'
+      +'<div class="form-row">'
+      +'<div><label class="lbl">Actuales</label><input class="input" id="kpi-hca" type="number" step="1" value="'+(k.hcActual||'')+'"/></div>'
+      +'<div><label class="lbl">Capacidad indicada</label><input class="input" id="kpi-hcc" type="number" step="1" value="'+(k.hcCapacidad||'')+'"/></div>'
+      +'</div>'
+      +'<div style="font-weight:700;font-size:12px;color:var(--muted);margin:10px 0 8px;text-transform:uppercase">Producción y Calidad</div>'
+      +'<div class="form-row">'
+      +'<div><label class="lbl">Cumplimiento (%)</label><input class="input" id="kpi-cumpl" type="number" step="0.1" min="0" max="100" value="'+(k.cumplimiento||'')+'"/></div>'
+      +'<div><label class="lbl">Scrap (%)</label><input class="input" id="kpi-scrap" type="number" step="0.01" min="0" value="'+(k.scrap||'')+'"/></div>'
+      +'<div><label class="lbl">PPM defectos</label><input class="input" id="kpi-ppm" type="number" step="1" value="'+(k.ppm||'')+'"/></div>'
+      +'</div>',
+    onSave:function(){
+      ct.kpi={
+        disponibilidad:parseFloat(document.getElementById('kpi-disp').value)||0,
+        rendimiento:parseFloat(document.getElementById('kpi-rend').value)||0,
+        calidad:parseFloat(document.getElementById('kpi-cal').value)||0,
+        costoMeta:parseFloat(document.getElementById('kpi-cmeta').value)||0,
+        costoReal:parseFloat(document.getElementById('kpi-creal').value)||0,
+        hcActual:parseInt(document.getElementById('kpi-hca').value)||0,
+        hcCapacidad:parseInt(document.getElementById('kpi-hcc').value)||0,
+        cumplimiento:parseFloat(document.getElementById('kpi-cumpl').value)||0,
+        scrap:parseFloat(document.getElementById('kpi-scrap').value)||0,
+        ppm:parseInt(document.getElementById('kpi-ppm').value)||0,
+        _fecha:todayISO(),
+      };
+      saveDB(); renderCentros(); toast('KPIs guardados ✓');
+    }
+  });
+}
+
+function editCentro(id){
+  var ct=DB.centros.find(function(c){return c.id===id;});
+  if(!ct) return;
+  var usersHtml=DB.users.map(function(u){
+    var checked=(ct.ingenieros||[]).indexOf(u.id)>=0?' checked':'';
+    return '<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" value="'+u.id+'"'+checked+'> '+esc(u.name)+'</label>';
+  }).join('');
+  var encOpts=DB.users.map(function(u){
+    var sel=ct.encargadoId===u.id?' selected':'';
+    return '<option value="'+u.id+'"'+sel+'>'+esc(u.name)+'</option>';
+  }).join('');
+  openDlg({
+    title:'Editar centro',
+    sub:esc(ct.nombre),
+    body:'<div class="form-row">'
+      +'<div><label class="lbl">Nombre *</label><input class="input" id="ec-nombre" value="'+esc(ct.nombre||'')+'"/></div>'
+      +'<div><label class="lbl">Área / Línea</label><input class="input" id="ec-linea" value="'+esc(ct.linea||'')+'"/></div>'
+      +'</div>'
+      +'<label class="lbl">Objetivo de mejora continua</label>'
+      +'<textarea class="input" id="ec-objetivo" rows="2">'+esc(ct.objetivo||'')+'</textarea>'
+      +'<label class="lbl" style="margin-top:8px">Ingeniero a cargo</label>'
+      +'<select class="select-input" id="ec-encargado" style="width:100%"><option value="">— Sin asignar —</option>'+encOpts+'</select>'
+      +'<label class="lbl" style="margin-top:8px">Equipo de ingenieros</label>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px" id="ec-users">'+usersHtml+'</div>',
+    onSave:function(){
+      var nombre=document.getElementById('ec-nombre').value.trim();
+      if(!nombre){toast('Ingresa un nombre');return false;}
+      ct.nombre=nombre;
+      ct.linea=document.getElementById('ec-linea').value.trim();
+      ct.objetivo=document.getElementById('ec-objetivo').value.trim();
+      ct.encargadoId=document.getElementById('ec-encargado').value||null;
+      ct.ingenieros=[...document.querySelectorAll('#ec-users input:checked')].map(function(i){return i.value;});
+      saveDB(); renderCentros(); toast('Centro actualizado ✓');
+    }
+  });
+}
+
+function delCentro(id){
+  if(!confirm('¿Eliminar este centro de trabajo?')) return;
+  DB.centros=(DB.centros||[]).filter(function(c){return c.id!==id;});
+  saveDB(); renderCentros(); toast('Centro eliminado');
+}
+
+
 function renderDirectivo(){
   fillSelect('dir-f-user', DB.users, 'Todos los ingenieros');
   const fu     = document.getElementById('dir-f-user')?.value||'';
@@ -3875,6 +4112,37 @@ document.getElementById('btn-notify-overdue')?.addEventListener('click',sendOver
 // Quick add buttons
 document.getElementById('btn-quickadd')?.addEventListener('click',()=>{document.getElementById('qa-type').value='project';qaRender();document.getElementById('dlg-qa').showModal()});
 document.getElementById('fab')?.addEventListener('click',()=>{document.getElementById('qa-type').value='deliverable';qaRender();document.getElementById('dlg-qa').showModal()});
+document.getElementById('btn-add-centro')?.addEventListener('click',function(){
+  if(!DB.centros) DB.centros=[];
+  var usersHtml=DB.users.map(function(u){
+    return '<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" value="'+u.id+'"> '+esc(u.name)+'</label>';
+  }).join('');
+  openDlg({
+    title:'Nuevo centro de trabajo',
+    body:'<div class="form-row">'
+      +'<div><label class="lbl">Nombre *</label><input class="input" id="nc-nombre" placeholder="Ej: Línea 3 — Ensamble"/></div>'
+      +'<div><label class="lbl">Área / Línea</label><input class="input" id="nc-linea" placeholder="Ej: Manufactura"/></div>'
+      +'</div>'
+      +'<label class="lbl">Objetivo de mejora continua</label>'
+      +'<textarea class="input" id="nc-objetivo" rows="2" placeholder="Ej: Reducir scrap en 15%..."></textarea>'
+      +'<label class="lbl" style="margin-top:8px">Ingenieros asignados</label>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px" id="nc-users">'+usersHtml+'</div>',
+    onSave:function(){
+      var nombre=document.getElementById('nc-nombre').value.trim();
+      if(!nombre){toast('Ingresa un nombre');return false;}
+      var asignados=[...document.querySelectorAll('#nc-users input:checked')].map(function(i){return i.value;});
+      DB.centros.push({
+        id:'ct_'+Date.now().toString(36),
+        nombre:nombre,
+        linea:document.getElementById('nc-linea').value.trim(),
+        objetivo:document.getElementById('nc-objetivo').value.trim(),
+        ingenieros:asignados,
+        metricas:[],
+      });
+      saveDB(); renderCentros(); toast('Centro creado ✓');
+    }
+  });
+});
 document.getElementById('btn-add-proj')?.addEventListener('click',()=>{document.getElementById('qa-type').value='project';qaRender();document.getElementById('dlg-qa').showModal()});
 document.getElementById('btn-add-del')?.addEventListener('click',()=>{document.getElementById('qa-type').value='deliverable';qaRender();document.getElementById('dlg-qa').showModal()});
 document.getElementById('btn-add-user')?.addEventListener('click',()=>{
@@ -4019,12 +4287,16 @@ async function gsPost(url,data){
 }
 
 // ── FIREBASE PUSH ────────────────────────────────────────
+function cleanUndefined(obj){
+  return JSON.parse(JSON.stringify(obj,function(k,v){return v===undefined?null:v;}));
+}
+
 async function fbPush(){
   if(_syncBusy)return;
   _syncBusy=true;
   updateSyncUI('syncing');
   try{
-    const dbToSend=Object.assign({},DB,{routines:[],routineRuns:[]});
+    const dbToSend=cleanUndefined(Object.assign({},DB,{routines:[],routineRuns:[]}));
     await _fbRef.set(dbToSend);
     _pendingPush=false;
     const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
