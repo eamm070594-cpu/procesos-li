@@ -1644,7 +1644,7 @@ function renderHoy(){
             const photo=userPhotoURL(u.email);
             const ini=u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
             return photo
-              ?`<img src="${photo}" title="${esc(u.name)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid #fff;margin-right:-8px" onerror="this.outerHTML='<div title=\\'${esc(u.name)}\\' style=\\'width:32px;height:32px;border-radius:50%;background:var(--ok-bg);border:2px solid #fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--ok);margin-right:-8px\\'>${ini}</div>'">`
+              ?`<img src="${photo}" title="${esc(u.name)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid #fff;margin-right:-8px">`
               :`<div title="${esc(u.name)}" style="width:32px;height:32px;border-radius:50%;background:var(--ok-bg);border:2px solid #fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--ok);margin-right:-8px">${ini}</div>`;
           }).join('');
           return`<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
@@ -1783,7 +1783,7 @@ function renderDashboard(){
       const ini=u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
       const bc=sem.level==='ok'?'var(--ok)':sem.level==='warn'?'var(--warn)':'var(--bad)';
       const av=photo
-        ?`<img src="${photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid ${bc};flex:0 0 28px" onerror="this.outerHTML='<div style=\'width:28px;height:28px;border-radius:50%;background:var(--surface2);border:2px solid ${bc};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:${bc};flex:0 0 28px\'>${ini}</div>'">`
+        ?`<img src="${photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid ${bc};flex:0 0 28px">`
         :`<div style="width:28px;height:28px;border-radius:50%;background:var(--surface2);border:2px solid ${bc};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:${bc};flex:0 0 28px">${ini}</div>`;
       return`<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;border-bottom:0.5px solid var(--border2)" onclick="openPersonDetail('${u.id}')" style="cursor:pointer">
         ${av}
@@ -2070,8 +2070,7 @@ function renderProyectos(){
     const sem=semaforoUser(user.id);
     const bc=`var(--${sem.level==='ok'?'ok':sem.level==='warn'?'warn':'bad'})`;
     const av=photo
-      ?`<img src="${photo}" alt="${esc(user.name)}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:2px solid ${bc};vertical-align:middle"
-          onerror="this.outerHTML='<span style=\\'width:24px;height:24px;border-radius:50%;background:var(--surface2);border:2px solid ${bc};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;font-family:var(--font-display);color:${bc}\\'>${initials}</span>'">`
+      ?`<img src="${photo}" alt="${esc(user.name)}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:2px solid ${bc};vertical-align:middle">`
       :`<span style="width:24px;height:24px;border-radius:50%;background:var(--surface2);border:2px solid ${bc};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;font-family:var(--font-display);color:${bc}">${initials}</span>`;
     return`<span style="display:inline-flex;align-items:center;gap:5px">${av}<span style="font-size:12px">${esc(user.name.split(' ')[0])}</span></span>`;
   }
@@ -2633,7 +2632,7 @@ function renderDirectivo(){
     const ini = u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
     const bc  = sem.level==='ok'?'var(--ok)':sem.level==='warn'?'var(--warn)':'var(--bad)';
     const av  = photo
-      ?`<img src="${photo}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2.5px solid ${bc}" onerror="this.outerHTML='<div style=\'width:38px;height:38px;border-radius:50%;background:var(--surface2);border:2.5px solid ${bc};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:${bc}\'>${ini}</div>'">`
+      ?`<img src="${photo}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2.5px solid ${bc}">`
       :`<div style="width:38px;height:38px;border-radius:50%;background:var(--surface2);border:2.5px solid ${bc};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:${bc}">${ini}</div>`;
 
     // Proyectos rows
@@ -3285,7 +3284,7 @@ function renderEquipo(){
     return`<div class="card" style="display:flex;gap:14px;align-items:flex-start;margin-bottom:10px;cursor:pointer;transition:box-shadow .15s" onclick="openIngeniero('${u.id}')" onmouseenter="this.style.boxShadow='0 4px 16px rgba(26,34,51,.1)'" onmouseleave="this.style.boxShadow=''">
       <div style="flex:0 0 52px;display:flex;flex-direction:column;align-items:center;gap:4px">
         ${photo
-          ?`<img src="${photo}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2.5px solid ${borderColor}" onerror="this.outerHTML='<div style=\'width:52px;height:52px;border-radius:50%;background:var(--accent-bg);border:2.5px solid ${borderColor};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--accent)\'>${initials}</div>'">`
+          ?`<img src="${photo}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2.5px solid ${borderColor}">`
           :`<div style="width:52px;height:52px;border-radius:50%;background:var(--accent-bg);border:2.5px solid ${borderColor};display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--accent)">${initials}</div>`
         }
         <span class="tag ${s.level}" style="font-size:10px;padding:2px 6px">${s.level==='ok'?'Verde':s.level==='warn'?'Amarillo':'Rojo'}</span>
@@ -3895,8 +3894,7 @@ function renderValidarBlock(){
     const photo=userPhotoURL(u?.email);
     const ini=(u?.name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
     const avatarEl=photo
-      ?`<img src="${photo}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);flex:0 0 36px"
-          onerror="this.outerHTML='<div style=\\'width:36px;height:36px;border-radius:50%;background:var(--accent-bg);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--accent);flex:0 0 36px\\'>${ini}</div>'">`
+      ?`<img src="${photo}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);flex:0 0 36px">`
       :`<div style="width:36px;height:36px;border-radius:50%;background:var(--accent-bg);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--accent);flex:0 0 36px">${ini}</div>`;
 
     // Show last comment if any
