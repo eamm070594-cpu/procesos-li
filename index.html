@@ -1003,6 +1003,9 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
         <div class="page-header-inner">
           <div class="page-title"><h2>Resumen Directivo</h2><p>Proyectos y compromisos por ingeniero</p></div>
           <div class="page-actions">
+            <select class="select-input" id="dir-f-centro" style="min-width:160px">
+              <option value="">Todos los CTs</option>
+            </select>
             <select class="select-input" id="dir-f-user" style="min-width:160px">
               <option value="">Todos los ingenieros</option>
             </select>
@@ -2701,64 +2704,86 @@ function delCentro(id){
 
 function renderDirectivo(){
   fillSelect('dir-f-user', DB.users, 'Todos los ingenieros');
-  const fu     = document.getElementById('dir-f-user')?.value||'';
-  const period = document.getElementById('dir-f-period')?.value||'week';
-  const today  = todayISO();
-  const weekEnd= new Date(Date.now()+7*24*60*60*1000).toISOString().slice(0,10);
-  const users  = fu ? DB.users.filter(u=>u.id===fu) : DB.users;
+  fillSelect('dir-f-centro', DB.centros||[], 'Todos los CTs', 'id', 'nombre');
+  const fu      = document.getElementById('dir-f-user')?.value||'';
+  const fct     = document.getElementById('dir-f-centro')?.value||'';
+  const period  = document.getElementById('dir-f-period')?.value||'week';
+  const today   = todayISO();
+  const weekEnd = new Date(Date.now()+7*24*60*60*1000).toISOString().slice(0,10);
+  const monthEnd= new Date(Date.now()+30*24*60*60*1000).toISOString().slice(0,10);
   const periodLabels2={all:'Todo',day:'Hoy',week:'Esta semana',month:'Este mes'};
   const periodLabel = periodLabels2[period]||'Todo';
-
   const report = document.getElementById('dir-report');
-  if(!users.length){ report.innerHTML='<div class="empty">Sin ingenieros.</div>'; return; }
 
-  report.innerHTML = users.map(u=>{
-    // Proyectos donde participa
+  /* ── Filtrar usuarios ── */
+  let users = fu ? DB.users.filter(u=>u.id===fu) : DB.users;
+
+  // Si hay filtro de CT, solo mostrar ingenieros asignados a ese CT
+  if(fct){
+    const ct=byId(DB.centros||[],fct);
+    const ctIngIds=new Set(ct?.ingenieros||[]);
+    if(ct?.encargadoId) ctIngIds.add(ct.encargadoId);
+    // También incluir ingenieros con proyectos en ese CT
+    DB.projects.filter(p=>p.centroId===fct).forEach(p=>{
+      if(p.leaderId) ctIngIds.add(p.leaderId);
+      DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
+    });
+    users=users.filter(u=>ctIngIds.has(u.id));
+  }
+
+  if(!users.length){ report.innerHTML='<div class="empty" style="padding:40px">Sin ingenieros con ese filtro.</div>'; return; }
+
+  /* ── Helper: tarjeta de ingeniero ── */
+  function ingCard(u){
     const uDels = DB.deliverables.filter(d=>d.assigneeId===u.id&&!isProjectClosed(d.projectId));
-    const projIds = [...new Set(uDels.map(d=>d.projectId))];
-    const uProjs = projIds.map(pid=>byId(DB.projects,pid)).filter(Boolean);
+    // Si hay filtro de CT, solo entregables de proyectos de ese CT
+    const uDelsFiltered = fct ? uDels.filter(d=>{ const p=byId(DB.projects,d.projectId); return p?.centroId===fct; }) : uDels;
 
-    // Entregables del período
-    let periodDels = uDels.filter(d=>d.status!=='Aprobado');
-    const monthEnd=new Date(Date.now()+30*24*60*60*1000).toISOString().slice(0,10);
-    if(period==='day')   periodDels = periodDels.filter(d=>d.due===today);
-    if(period==='week')  periodDels = periodDels.filter(d=>d.due&&d.due>=today&&d.due<=weekEnd);
-    if(period==='month') periodDels = periodDels.filter(d=>d.due&&d.due>=today&&d.due<=monthEnd);
+    const projIds = [...new Set(uDelsFiltered.map(d=>d.projectId))];
+    const uProjs  = projIds.map(pid=>byId(DB.projects,pid)).filter(Boolean);
 
-    const vencidos = uDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today);
-    const sem = semaforoUser(u.id);
-    const photo = userPhotoURL(u.email);
-    const ini = u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
-    const bc  = sem.level==='ok'?'var(--ok)':sem.level==='warn'?'var(--warn)':'var(--bad)';
-    const av  = photo
+    let periodDels = uDelsFiltered.filter(d=>d.status!=='Aprobado');
+    if(period==='day')   periodDels=periodDels.filter(d=>d.due===today);
+    if(period==='week')  periodDels=periodDels.filter(d=>d.due&&d.due>=today&&d.due<=weekEnd);
+    if(period==='month') periodDels=periodDels.filter(d=>d.due&&d.due>=today&&d.due<=monthEnd);
+
+    const vencidos = uDelsFiltered.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today);
+    const sem  = semaforoUser(u.id);
+    const photo= userPhotoURL(u.email);
+    const ini  = u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    const bc   = sem.level==='ok'?'var(--ok)':sem.level==='warn'?'var(--warn)':'var(--bad)';
+    const av   = photo
       ?`<img src="${photo}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2.5px solid ${bc}">`
       :`<div style="width:38px;height:38px;border-radius:50%;background:var(--surface2);border:2.5px solid ${bc};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:${bc}">${ini}</div>`;
 
-    // Proyectos rows
+    // CTs donde trabaja este ingeniero (para mostrar en sub-header)
+    const ingCTs=(DB.centros||[]).filter(ct=>(ct.ingenieros||[]).includes(u.id)||ct.encargadoId===u.id);
+
     const projRows = uProjs.map(p=>{
       const pDels  = DB.deliverables.filter(d=>d.projectId===p.id);
       const pAprov = pDels.filter(d=>d.status==='Aprobado').length;
       const pPct   = pDels.length?Math.round(pAprov/pDels.length*100):0;
       const pLvl   = pPct>=85?'ok':pPct>=70?'warn':'bad';
       const pVenc  = pDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today).length;
+      const pCT    = byId(DB.centros||[],p.centroId);
       return`<tr>
         <td style="font-size:13px;font-weight:600">${esc(p.name)}</td>
+        <td style="font-size:11px;color:var(--muted)">${pCT?`<span style="background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:2px 7px;font-size:10px;white-space:nowrap">🏭 ${esc(pCT.nombre)}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>'}</td>
         <td style="font-size:11px;color:var(--muted)">${fmtDate(p.end)}</td>
         <td>
           <div style="display:flex;align-items:center;gap:6px">
-            <div class="progress-bar" style="width:80px"><div class="progress-bar-fill ${pLvl}" style="width:${pPct}%"></div></div>
+            <div class="progress-bar" style="width:70px"><div class="progress-bar-fill ${pLvl}" style="width:${pPct}%"></div></div>
             <span class="progress-pct ${pLvl}" style="font-size:12px">${pPct}%</span>
           </div>
-          <div style="font-size:10px;color:var(--muted)">${pAprov}/${pDels.length} entregables</div>
+          <div style="font-size:10px;color:var(--muted)">${pAprov}/${pDels.length}</div>
         </td>
-        <td>${pVenc?`<span class="tag bad" style="font-size:11px">${pVenc} vencidos</span>`:''}</td>
+        <td>${pVenc?`<span class="tag bad" style="font-size:11px">${pVenc} venc.</span>`:''}</td>
       </tr>`;
-    }).join('')||`<tr><td colspan="4" class="empty" style="font-size:12px">Sin proyectos asignados</td></tr>`;
+    }).join('')||`<tr><td colspan="5" class="empty" style="font-size:12px">Sin proyectos asignados</td></tr>`;
 
-    // Entregables del período
     const delRows = periodDels.length
       ? periodDels.map(d=>{
-          const isVenc = d.due&&d.due<today;
+          const isVenc=d.due&&d.due<today;
           return`<tr style="${isVenc?'background:var(--bad-bg)':''}">
             <td>${statusTag(d.status,d.due)}</td>
             <td style="font-size:13px;font-weight:500">${esc(d.title)}</td>
@@ -2769,7 +2794,6 @@ function renderDirectivo(){
       : `<tr><td colspan="4" class="empty" style="font-size:12px">Sin entregables para ${periodLabel.toLowerCase()}.</td></tr>`;
 
     return`<div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
-      <!-- Header -->
       <div style="padding:12px 16px;display:flex;align-items:center;gap:12px;background:var(--surface2);border-bottom:1px solid var(--border2)">
         ${av}
         <div style="flex:1">
@@ -2778,18 +2802,19 @@ function renderDirectivo(){
             <span class="tag ${sem.level}" style="font-size:11px">${sem.level==='ok'?'Verde':sem.level==='warn'?'Amarillo':'Rojo'}</span>
             ${vencidos.length?`<span class="tag bad" style="font-size:11px">⚠ ${vencidos.length} vencidos</span>`:''}
           </div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">${u.role||'—'} · ${u.team||'—'} · ${uProjs.length} proyecto${uProjs.length!==1?'s':''}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">
+            ${u.role||'—'} · ${u.team||'—'} · ${uProjs.length} proyecto${uProjs.length!==1?'s':''}
+            ${ingCTs.length?` · <span style="color:var(--accent)">🏭 ${ingCTs.map(c=>esc(c.nombre)).join(', ')}</span>`:''}
+          </div>
         </div>
       </div>
-      <!-- Proyectos -->
       <div style="padding:10px 16px 0;border-bottom:1px solid var(--border2)">
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Proyectos</div>
         <div class="tbl-wrap"><table>
-          <thead><tr><th>Proyecto</th><th>Fecha fin</th><th>Avance</th><th></th></tr></thead>
+          <thead><tr><th>Proyecto</th><th>CT</th><th>Fecha fin</th><th>Avance</th><th></th></tr></thead>
           <tbody>${projRows}</tbody>
         </table></div>
       </div>
-      <!-- Entregables del período -->
       <div style="padding:10px 16px 12px">
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">
           Compromisos — ${periodLabel}
@@ -2801,7 +2826,84 @@ function renderDirectivo(){
         </table></div>
       </div>
     </div>`;
-  }).join('');
+  }
+
+  /* ── Render: agrupado por CT o plano ── */
+  if(!fu && !fct){
+    // Vista agrupada por CT
+    const centros = DB.centros||[];
+    const ctConUsers = centros.filter(ct=>{
+      const ctIngIds=new Set([...(ct.ingenieros||[]),ct.encargadoId].filter(Boolean));
+      DB.projects.filter(p=>p.centroId===ct.id).forEach(p=>{
+        if(p.leaderId) ctIngIds.add(p.leaderId);
+        DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
+      });
+      return users.some(u=>ctIngIds.has(u.id));
+    });
+
+    // Usuarios sin CT
+    const usersConCT=new Set();
+    centros.forEach(ct=>{
+      const ctIngIds=new Set([...(ct.ingenieros||[]),ct.encargadoId].filter(Boolean));
+      DB.projects.filter(p=>p.centroId===ct.id).forEach(p=>{
+        if(p.leaderId) ctIngIds.add(p.leaderId);
+        DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
+      });
+      users.filter(u=>ctIngIds.has(u.id)).forEach(u=>usersConCT.add(u.id));
+    });
+    const usersSinCT=users.filter(u=>!usersConCT.has(u.id));
+
+    let html='';
+    ctConUsers.forEach(ct=>{
+      const ctIngIds=new Set([...(ct.ingenieros||[]),ct.encargadoId].filter(Boolean));
+      DB.projects.filter(p=>p.centroId===ct.id).forEach(p=>{
+        if(p.leaderId) ctIngIds.add(p.leaderId);
+        DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
+      });
+      const ctUsers=users.filter(u=>ctIngIds.has(u.id));
+      const ctProjs=DB.projects.filter(p=>p.centroId===ct.id&&p.status!=='Cerrado');
+      const ctDels=ctProjs.flatMap(p=>DB.deliverables.filter(d=>d.projectId===p.id));
+      const ctVenc=ctDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today).length;
+      const ctAprov=ctDels.filter(d=>d.status==='Aprobado').length;
+      const ctPct=ctDels.length?Math.round(ctAprov/ctDels.length*100):0;
+      const ctLvl=ctPct>=85?'ok':ctPct>=70?'warn':'bad';
+
+      html+=`<div style="margin-bottom:20px">
+        <div style="padding:12px 16px;background:var(--text);color:#fff;border-radius:var(--r2) var(--r2) 0 0;display:flex;align-items:center;gap:12px">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-family:var(--font-display);font-weight:700;font-size:15px">🏭 ${esc(ct.nombre)}</span>
+              ${ct.linea?`<span style="background:rgba(255,255,255,.15);color:#fff;font-size:10px;padding:2px 7px;border-radius:99px">${esc(ct.linea)}</span>`:''}
+              <span style="background:rgba(255,255,255,.15);color:#fff;font-size:11px;padding:2px 8px;border-radius:99px">${ctProjs.length} proyecto${ctProjs.length!==1?'s':''} · ${ctUsers.length} ingeniero${ctUsers.length!==1?'s':''}</span>
+              ${ctVenc?`<span style="background:var(--bad);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">⚠ ${ctVenc} vencidos</span>`:''}
+            </div>
+            <div style="margin-top:5px;display:flex;align-items:center;gap:8px;font-size:11px;opacity:.85">
+              <div style="width:80px;height:4px;background:rgba(255,255,255,.25);border-radius:99px;overflow:hidden"><div style="height:100%;background:${ctLvl==='ok'?'#4ade80':ctLvl==='warn'?'#fbbf24':'#f87171'};width:${ctPct}%"></div></div>
+              <span>${ctPct}% avance general · ${ctAprov}/${ctDels.length} entregables</span>
+            </div>
+          </div>
+        </div>
+        <div style="border:1px solid var(--border2);border-top:none;border-radius:0 0 var(--r2) var(--r2);padding:12px">
+          ${ctUsers.map(u=>ingCard(u)).join('')}
+        </div>
+      </div>`;
+    });
+
+    if(usersSinCT.length){
+      html+=`<div style="margin-bottom:20px">
+        <div style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2) var(--r2) 0 0">
+          <span style="font-weight:700;font-size:13px;color:var(--muted)">📂 Sin centro de trabajo asignado</span>
+        </div>
+        <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r2) var(--r2);padding:12px">
+          ${usersSinCT.map(u=>ingCard(u)).join('')}
+        </div>
+      </div>`;
+    }
+    report.innerHTML=html||'<div class="empty" style="padding:40px">Sin datos.</div>';
+  } else {
+    // Vista plana (filtrado por ingeniero o CT específico)
+    report.innerHTML=users.map(u=>ingCard(u)).join('')||'<div class="empty" style="padding:40px">Sin ingenieros con ese filtro.</div>';
+  }
 }
 
 
@@ -3538,7 +3640,7 @@ document.getElementById('qa-save').addEventListener('click',()=>{
     if(!title)return toast('Falta nombre del entregable');
     const due=document.getElementById('qa-due')?.value||t;
     const status=document.getElementById('qa-status')?.value||'Pendiente';
-    DB.deliverables.push({id:uid('d'),title,projectId:document.getElementById('qa-proj')?.value||'',assigneeId:document.getElementById('qa-ass')?.value||'',due,originalDue:due,status,blocked:status==='Bloqueado',blockSince:status==='Bloqueado'?t:null,evidence:'',notes:(document.getElementById('qa-notes')?.value||'').trim(),completedAt:null,scorePenalty:0});
+    DB.deliverables.push({id:uid('d'),createdAt:Date.now(),title,projectId:document.getElementById('qa-proj')?.value||'',assigneeId:document.getElementById('qa-ass')?.value||'',due,originalDue:due,status,blocked:status==='Bloqueado',blockSince:status==='Bloqueado'?t:null,evidence:'',notes:(document.getElementById('qa-notes')?.value||'').trim(),completedAt:null,scorePenalty:0});
   }
   saveDB();
   document.getElementById('dlg-qa').close();
@@ -3664,6 +3766,9 @@ const handlers={
   async delDel(id){
     const idx=DB.deliverables.findIndex(x=>x.id===id);if(idx<0)return;
     if(!await appConfirm('¿Eliminar entregable?','Esta acción no se puede deshacer.'))return;
+    // Registrar tombstone para que el merge no lo resucite
+    if(!DB._deleted) DB._deleted={};
+    DB._deleted[id]=Date.now();
     DB.deliverables.splice(idx,1);refreshAfterDelAction();toast('Eliminado');
   },
   submitDel(id){
@@ -3695,7 +3800,7 @@ const handlers={
     const result=await appNextPhaseDlg(d,p?.name||'—');
     if(!result)return;
     const {name,due}=result;
-    const newDel={id:uid('d'),title:name,projectId:d.projectId,assigneeId:d.assigneeId,due,originalDue:due,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:'',completedAt:null,scorePenalty:0,parentId:id};
+    const newDel={id:uid('d'),createdAt:Date.now(),title:name,projectId:d.projectId,assigneeId:d.assigneeId,due,originalDue:due,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:'',completedAt:null,scorePenalty:0,parentId:id};
     DB.deliverables.push(newDel);
     d.status='Aprobado';d.completedAt=todayISO();d.blocked=false;d.blockSince=null;d.supersededBy=newDel.id;
     if(!DB.comments)DB.comments={};
@@ -3754,6 +3859,10 @@ const handlers={
   async delProj(id){
     const idx=DB.projects.findIndex(x=>x.id===id);if(idx<0)return;
     if(!await appConfirm(`¿Eliminar proyecto "${DB.projects[idx].name}"?`,'Se eliminarán también todos sus entregables.'))return;
+    // Registrar tombstones para todos los entregables del proyecto
+    if(!DB._deleted) DB._deleted={};
+    const now=Date.now();
+    DB.deliverables.filter(d=>d.projectId===id).forEach(d=>{ DB._deleted[d.id]=now; });
     DB.deliverables=DB.deliverables.filter(d=>d.projectId!==id);
     DB.projects.splice(idx,1);saveDB();renderView(currentView);toast('Proyecto eliminado');
   },
@@ -3796,7 +3905,7 @@ const handlers={
         const title=(document.getElementById('nd-title')?.value||'').trim();
         if(!title){toast('Falta título');return false}
         const due=document.getElementById('nd-due')?.value||todayISO();
-        DB.deliverables.push({id:uid('d'),title,projectId:id,assigneeId:document.getElementById('nd-ass')?.value||'',due,originalDue:due,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:(document.getElementById('nd-notes')?.value||'').trim(),completedAt:null,scorePenalty:0});
+        DB.deliverables.push({id:uid('d'),createdAt:Date.now(),title,projectId:id,assigneeId:document.getElementById('nd-ass')?.value||'',due,originalDue:due,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:(document.getElementById('nd-notes')?.value||'').trim(),completedAt:null,scorePenalty:0});
         toast('Entregable creado ✓');
       }
     });
@@ -4322,7 +4431,7 @@ document.getElementById('del-tabs')?.addEventListener('click',e=>{
   document.getElementById(id)?.addEventListener('change',()=>renderIngenieros());
 });
 // Directivo config panel listeners
-['dir-f-user','dir-f-period','dir-f-proj','dir-f-proj-id'].forEach(id=>{
+['dir-f-user','dir-f-period','dir-f-proj','dir-f-proj-id','dir-f-centro'].forEach(id=>{
   document.getElementById(id)?.addEventListener('change',()=>renderDirectivo());
 });
 ['dir-sec-kpis','dir-sec-ingenieros','dir-sec-proyectos','dir-sec-riesgo','dir-sec-logros'].forEach(id=>{
@@ -4401,13 +4510,15 @@ async function fbPush(){
   _syncBusy=true;
   updateSyncUI('syncing');
   try{
+    DB._savedAt = Date.now(); // timestamp del último push exitoso
     const dbToSend=cleanUndefined(Object.assign({},DB,{routines:[],routineRuns:[]}));
     await _fbRef.set(dbToSend);
     _pendingPush=false;
     const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     localStorage.setItem(LS_SYNC,now);
+    localStorage.setItem(LS,JSON.stringify(DB));
     const el=document.getElementById('last-sync');if(el)el.textContent=now;
-    console.log('[FB] push ✓ | dels:',DB.deliverables?.length);
+    console.log('[FB] push ✓ | dels:',DB.deliverables?.length,'| savedAt:',DB._savedAt);
     updateSyncUI('ok');
   }catch(e){
     console.error('[FB] push error:',e.message);
@@ -4422,37 +4533,57 @@ async function gsPush(){ return fbPush(); }
 const STATUS_RANK={'Pendiente':1,'En progreso':2,'Bloqueado':2,'En revisión':3,'En revision':3,'Aprobado':4};
 function mergeDB(local, remote){
   const merged = Object.assign({}, remote);
+
+  // ── Tombstones: unión de eliminaciones de ambos lados ──
+  const localDeleted  = local._deleted  || {};
+  const remoteDeleted = remote._deleted || {};
+  merged._deleted = Object.assign({}, remoteDeleted, localDeleted);
+  // Si local tiene una eliminación más reciente que remote, prevalece y viceversa
+  Object.keys(remoteDeleted).forEach(id=>{
+    if(!merged._deleted[id] || remoteDeleted[id] > merged._deleted[id])
+      merged._deleted[id] = remoteDeleted[id];
+  });
+
+  // ── Merge de entregables ──
   const localDelsMap = {};
   (local.deliverables||[]).forEach(d=>{ localDelsMap[d.id]=d; });
-  merged.deliverables = (remote.deliverables||[]).map(rd=>{
-    const ld = localDelsMap[rd.id];
-    if(!ld) return rd;
-    const remoteRank = STATUS_RANK[rd.status]||0;
-    const localRank  = STATUS_RANK[ld.status]||0;
-    if(localRank > remoteRank){
-      console.log('[MERGE] conservando estado local más avanzado:',ld.title,'|',rd.status,'→',ld.status);
-      return Object.assign({}, rd, {
-        status: ld.status,
-        completedAt: ld.completedAt,
-        submittedAt: ld.submittedAt,
-        submittedBy: ld.submittedBy,
-        rejectedAt: ld.rejectedAt,
-        rejectedBy: ld.rejectedBy,
-        scorePenalty: ld.scorePenalty,
-        blocked: ld.blocked,
-        blockSince: ld.blockSince,
-      });
-    }
-    return rd;
-  });
+
+  // Partir de los entregables remotos, actualizando con estado local más avanzado
+  merged.deliverables = (remote.deliverables||[])
+    .filter(rd => !merged._deleted[rd.id]) // descartar si fue eliminado
+    .map(rd=>{
+      const ld = localDelsMap[rd.id];
+      if(!ld) return rd;
+      const remoteRank = STATUS_RANK[rd.status]||0;
+      const localRank  = STATUS_RANK[ld.status]||0;
+      if(localRank > remoteRank){
+        console.log('[MERGE] conservando estado local más avanzado:',ld.title,'|',rd.status,'→',ld.status);
+        return Object.assign({}, rd, {
+          status:      ld.status,
+          completedAt: ld.completedAt,
+          submittedAt: ld.submittedAt,
+          submittedBy: ld.submittedBy,
+          rejectedAt:  ld.rejectedAt,
+          rejectedBy:  ld.rejectedBy,
+          scorePenalty:ld.scorePenalty,
+          blocked:     ld.blocked,
+          blockSince:  ld.blockSince,
+        });
+      }
+      return rd;
+    });
+
+  // Agregar entregables locales que no existen en remoto y no están en tombstones
   const remoteDelsIds = new Set((remote.deliverables||[]).map(d=>d.id));
   (local.deliverables||[]).forEach(ld=>{
-    if(!remoteDelsIds.has(ld.id)){
-      console.log('[MERGE] entregable local no existe en remoto, conservando:',ld.title);
+    if(!remoteDelsIds.has(ld.id) && !merged._deleted[ld.id]){
+      console.log('[MERGE] entregable nuevo local → agregando:',ld.title);
       merged.deliverables.push(ld);
     }
   });
-  const localComments = local.comments||{};
+
+  // ── Merge de comentarios ──
+  const localComments  = local.comments||{};
   const remoteComments = remote.comments||{};
   const mergedComments = Object.assign({}, remoteComments);
   Object.keys(localComments).forEach(key=>{
@@ -4466,11 +4597,14 @@ function mergeDB(local, remote){
     }
   });
   merged.comments = mergedComments;
+
+  // ── Merge de bitácora ──
   const remoteBitIds = new Set((remote.bitacora||[]).map(b=>b.id));
   merged.bitacora = [...(remote.bitacora||[])];
   (local.bitacora||[]).forEach(lb=>{
     if(!remoteBitIds.has(lb.id)) merged.bitacora.push(lb);
   });
+
   return merged;
 }
 
@@ -5002,7 +5136,7 @@ function openAddDelToProj2(projId){
       const title=(document.getElementById('nd-title')?.value||'').trim();
       if(!title){toast('Falta título');return false}
       const due=document.getElementById('nd-due')?.value||todayISO();
-      DB.deliverables.push({id:uid('d'),title,projectId:projId,assigneeId:document.getElementById('nd-ass')?.value||'',due,originalDue:due,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:(document.getElementById('nd-notes')?.value||'').trim(),completedAt:null,scorePenalty:0});
+      DB.deliverables.push({id:uid('d'),createdAt:Date.now(),title,projectId:projId,assigneeId:document.getElementById('nd-ass')?.value||'',due,originalDue:due,status:'Pendiente',blocked:false,blockSince:null,evidence:'',notes:(document.getElementById('nd-notes')?.value||'').trim(),completedAt:null,scorePenalty:0});
       saveDB();renderProyectoDetail(projId);toast('Entregable creado ✓');
     }
   });
