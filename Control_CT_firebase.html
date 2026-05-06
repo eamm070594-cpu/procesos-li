@@ -296,7 +296,7 @@ body.dark .dash-alert-title{color:#e05c5c;}
     <div id="detailView">
       <div id="detailHeader">
         <div id="detailHeaderIcon"></div>
-        <div>
+        <div style="flex:1;">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <div id="detailHeaderName"></div>
             <span id="detailResponsable" style="display:flex;flex-direction:column;gap:1px;">
@@ -304,6 +304,7 @@ body.dark .dash-alert-title{color:#e05c5c;}
               <span id="detailResponsableNombre" style="font-size:0.75rem;font-weight:600;letter-spacing:2px;color:var(--text-tertiary);text-transform:uppercase;"></span>
             </span>
             <span id="detailStamp"></span>
+            <button id="btnEliminarCentro" onclick="confirmarEliminarCentro(selectedIdx)" style="margin-left:auto;background:rgba(224,92,92,0.1);color:#c03030;border:1px solid rgba(224,92,92,0.25);border-radius:7px;padding:5px 12px;font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">✕ Eliminar centro</button>
           </div>
           <div id="detailFichaInfo" style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;"></div>
         </div>
@@ -352,6 +353,10 @@ body.dark .dash-alert-title{color:#e05c5c;}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Añadir consideración
             </button>
+          </div>
+          <div style="display:flex;gap:12px;padding:0 0 10px;flex-wrap:wrap;">
+            <div class="form-group" style="flex:0 0 180px;"><label>Tiempo disponible (min)</label><input type="number" id="consDisp" placeholder="480" min="0" step="1" oninput="guardarDispDemanda()"></div>
+            <div class="form-group" style="flex:0 0 180px;"><label>Demanda mensual (piezas)</label><input type="number" id="consDemanda" placeholder="0" min="0" step="1" oninput="guardarDispDemanda()"></div>
           </div>
           <div class="items-list" id="consList"><div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin consideraciones</div></div>
         </div>
@@ -578,7 +583,7 @@ body.dark .dash-alert-title{color:#e05c5c;}
     </div>
     <div class="dash-body">
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-        <button class="btn-add" id="btnAddGrupo" onclick="openModal('modal-grupo')">
+        <button class="btn-add" id="btnAddGrupo" onclick="s('grupoEditIdx').value='';s('modal-grupo-title').textContent='Nuevo grupo';s('grupoNombre').value='';openModal('modal-grupo')"  >>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Nuevo Grupo
         </button>
@@ -681,7 +686,6 @@ body.dark .dash-alert-title{color:#e05c5c;}
     <div class="modal-header"><span class="modal-title" id="modal-cons-title">Consideración de tiempo</span><button class="modal-close" onclick="closeModal('modal-cons')">✕</button></div>
     <input type="hidden" id="consEditIdx" value="">
     <div class="form-row">
-      <div class="form-group" style="flex:0 0 160px;"><label>Tiempo disponible (min)</label><input type="number" id="consDisp" placeholder="480" min="0" step="1"></div>
       <div class="form-group" style="flex:2;min-width:140px;"><label>Nombre</label><input type="text" id="consName" placeholder="Ej. Descanso"></div>
       <div class="form-group" style="flex:0 0 100px;"><label>Minutos</label><input type="number" id="consMin" placeholder="0" min="0" step="0.01"></div>
     </div>
@@ -784,10 +788,11 @@ body.dark .dash-alert-title{color:#e05c5c;}
   <div class="modal-box" style="max-width:420px;">
     <div class="modal-header"><span class="modal-title" id="modal-grupo-title">Nuevo grupo</span><button class="modal-close" onclick="closeModal('modal-grupo')">✕</button></div>
     <input type="hidden" id="grupoEditIdx" value="">
-    <div class="form-group"><label>Nombre del grupo</label><input type="text" id="grupoNombre" placeholder="Ej. Sindicalizado, Ayudante, Técnico..."></div>
+    <div class="form-group"><label>Nombre del grupo</label><input type="text" id="grupoNombre" placeholder="Ej. Sindicalizado, Ayudante, Técnico..." onkeydown="if(event.key==='Enter')saveGrupo()"></div>
+    <div style="font-size:0.62rem;color:var(--text-muted);letter-spacing:1px;padding:0 2px 8px;opacity:0.7;">Al guardar podrás agregar categorías de inmediato →</div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-grupo')">Cancelar</button>
-      <button class="btn btn-accent" onclick="saveGrupo()">Guardar</button>
+      <button class="btn btn-accent" onclick="saveGrupo()">Guardar →</button>
     </div>
   </div>
 </div>
@@ -801,9 +806,10 @@ body.dark .dash-alert-title{color:#e05c5c;}
       <div class="form-group"><label>Nombre de la categoría sindical</label><input type="text" id="catNombre" placeholder="Ej. Sindicalizado a prueba"></div>
       <div class="form-group"><label>Grupo al que pertenece</label><select id="catGrupo"><option value="">— Seleccionar grupo —</option></select></div>
     </div>
+    <div style="font-size:0.62rem;color:var(--text-muted);letter-spacing:1px;padding:0 2px 4px;opacity:0.7;">Al guardar podrás agregar niveles de inmediato →</div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-categoria')">Cancelar</button>
-      <button class="btn btn-accent" onclick="saveCategoria()">Guardar</button>
+      <button class="btn btn-accent" onclick="saveCategoria()">Guardar →</button>
     </div>
   </div>
 </div>
@@ -856,7 +862,7 @@ body.dark .dash-alert-title{color:#e05c5c;}
 // ═══════════════════════════════════════════════════
 // CENTROS DE TRABAJO
 // ═══════════════════════════════════════════════════
-const centros = [
+let centros = [
   { n:"Carpintería",     s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="1"/><path d="M3 7h18M3 12h18M3 17h18"/></svg>` },
   { n:"Láser",           s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="7.05" y2="7.05"/><line x1="16.95" y1="16.95" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="7.05" y2="16.95"/><line x1="16.95" y1="7.05" x2="19.78" y2="4.22"/></svg>` },
   { n:"Troqueles",       s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v4l3 2 3-2V3M9 21v-4l3-2 3 2v4"/><line x1="3" y1="9" x2="7" y2="9"/><line x1="17" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="7" y2="15"/><line x1="17" y1="15" x2="21" y2="15"/></svg>` },
@@ -876,6 +882,9 @@ const centros = [
   { n:"Ens. Archiveros", s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="2" width="20" height="5" rx=".5"/><rect x="2" y="9" width="20" height="5" rx=".5"/><rect x="2" y="16" width="20" height="6" rx=".5"/><line x1="8" y1="4.5" x2="16" y2="4.5"/><line x1="8" y1="11.5" x2="16" y2="11.5"/></svg>` },
 ];
 
+// Ícono genérico para nuevos centros
+const ICONO_GENERICO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>`;
+
 // Special pages (not work centres)
 const SPECIAL = {
   equipo: { n:"Equipo", s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>` },
@@ -891,7 +900,7 @@ function getAc(i){ return acs[i % acs.length]; }
 // ═══════════════════════════════════════════════════
 const state = {};
 centros.forEach((_, i) => {
-  state[i] = { ops:[], cons:{ disponible:null, items:[] }, mod:[], cif:[], equipos:[], updatedAt:null };
+  state[i] = { ops:[], cons:{ disponible:null, items:[] }, mod:[], cif:[], equipos:[], demanda:null, updatedAt:null };
 });
 
 // Equipo (ingenieros)
@@ -935,6 +944,8 @@ function openModal(id){
     s('consName').value = ''; s('consMin').value = '';
     const disp = cur() && cur().cons.disponible !== null ? cur().cons.disponible : '';
     s('consDisp').value = disp;
+    const dem = cur() && cur().demanda !== null ? cur().demanda : '';
+    s('consDemanda').value = dem;
   }
   if (id === 'modal-cif') {
     s('cifEditIdx').value = '';
@@ -1046,10 +1057,12 @@ function buildGrid(){
       const ac = getAc(i);
       const si = stampInfo(i);
       const respName = getResponsableCentro(i);
+      const tc = state[i]&&state[i].ops.length>0 ? Math.max(...state[i].ops.map(o=>o.min)) : null;
       return `<div class="card" style="--ac:${ac};" onclick="selectCentro(${i})">
         <div class="card-icon">${c.s}</div>
         <div class="card-name">${c.n}</div>
         ${respName ? `<div class="card-stamp stamp-green" style="font-size:0.44rem;">${respName}</div>` : ''}
+        ${tc!==null ? `<div class="card-stamp stamp-none" style="background:rgba(91,184,232,0.12);color:#2a7aaa;font-size:0.44rem;">TC ${tc.toFixed(2)} min</div>` : ''}
         <div id="stamp-${i}" class="card-stamp ${si.cls}">${si.label}</div>
       </div>`;
     }).join('') +
@@ -1064,7 +1077,63 @@ function buildGrid(){
       <div class="card-icon">${SPECIAL.tabulador.s}</div>
       <div class="card-name">${SPECIAL.tabulador.n}</div>
       <div class="card-stamp stamp-none" style="background:rgba(232,200,64,0.15);color:#a07a00;">Salarial</div>
+    </div>` +
+    // Botón nuevo centro
+    `<div class="card" style="--ac:#6fc98c;border:2px dashed rgba(111,201,140,0.4);opacity:0.75;" onclick="abrirNuevoCentro()">
+      <div class="card-icon" style="color:#6fc98c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+      <div class="card-name" style="color:#6fc98c">Nuevo centro</div>
+      <div class="card-stamp stamp-none" style="background:rgba(111,201,140,0.1);color:#3a9c5e;">+ Agregar</div>
     </div>`;
+}
+
+// ── AGREGAR / ELIMINAR CENTROS ──────────────────────
+function abrirNuevoCentro(){
+  const bd=document.createElement('div');
+  bd.id='nuevo-ct-backdrop';
+  bd.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:3000;display:flex;align-items:center;justify-content:center;';
+  bd.innerHTML=`
+    <div style="background:var(--card-bg,var(--bg));border:1px solid var(--border);border-radius:14px;padding:28px 24px;max-width:360px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.35);font-family:'Barlow Condensed',sans-serif;">
+      <div style="font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Nuevo centro de trabajo</div>
+      <input id="nuevoCTNombre" type="text" placeholder="Nombre del centro..." style="width:100%;background:var(--input-bg);border:1px solid var(--border-mid);border-radius:8px;padding:10px 12px;font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;font-weight:600;color:var(--text-primary);outline:none;margin-bottom:18px;" autofocus>
+      <div style="display:flex;gap:10px;">
+        <button onclick="document.getElementById('nuevo-ct-backdrop').remove()" style="flex:1;background:var(--hover-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Cancelar</button>
+        <button onclick="guardarNuevoCentro()" style="flex:2;background:#6fc98c;color:#fff;border:none;border-radius:8px;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">+ Crear centro</button>
+      </div>
+    </div>`;
+  bd.querySelector('input').addEventListener('keydown',e=>{if(e.key==='Enter')guardarNuevoCentro();});
+  document.body.appendChild(bd);
+  setTimeout(()=>document.getElementById('nuevoCTNombre')?.focus(),100);
+}
+
+function guardarNuevoCentro(){
+  const nombre=(document.getElementById('nuevoCTNombre')?.value||'').trim();
+  if(!nombre){alert('Ingresa el nombre del centro.');return;}
+  document.getElementById('nuevo-ct-backdrop')?.remove();
+  const idx=centros.length;
+  centros.push({n:nombre, s:ICONO_GENERICO});
+  state[idx]={ops:[],cons:{disponible:null,items:[]},mod:[],cif:[],equipos:[],demanda:null,updatedAt:null};
+  buildGrid();
+  fbSave();
+}
+
+function confirmarEliminarCentro(idx){
+  if(!confirm(`¿Eliminar el centro "${centros[idx].n}"?\nSe borrarán todos sus datos. Esta acción no se puede deshacer.`)) return;
+  // Limpiar referencias en ingenieros
+  equipoState.ingenieros.forEach(ing=>{
+    ing.areas=ing.areas.filter(a=>a!==idx).map(a=>a>idx?a-1:a);
+  });
+  centros.splice(idx,1);
+  // Rebuild state with shifted indices
+  const newState={};
+  Object.keys(state).forEach(k=>{
+    const ki=parseInt(k);
+    if(ki<idx) newState[ki]=state[ki];
+    else if(ki>idx) newState[ki-1]=state[ki];
+  });
+  Object.keys(state).forEach(k=>delete state[k]);
+  Object.assign(state,newState);
+  resetToHome();
+  fbSave();
 }
 
 function getResponsableCentro(idx){
@@ -1347,23 +1416,40 @@ function renderCons(){
 // ═══════════════════════════════════════════════════
 // RESULTADOS
 // ═══════════════════════════════════════════════════
+function guardarDispDemanda(){
+  if(selectedIdx===null) return;
+  const disp=parseFloat(s('consDisp').value);
+  const dem=parseFloat(s('consDemanda').value);
+  if(!isNaN(disp)&&disp>=0) cur().cons.disponible=disp;
+  if(!isNaN(dem)&&dem>=0) cur().demanda=dem;
+  fbSave();
+}
+
 function calcularResultados(){
-  const data = cur();
-  const disp = parseFloat(s('consDisp').value) || data.cons.disponible || 0;
-  data.cons.disponible = disp;
-  const totalOps = data.ops.reduce((a,o)=>a+o.min,0);
-  const totalCons = data.cons.items.reduce((a,c)=>a+c.min,0);
-  const tiempoEstandar = disp - totalCons;
-  const restante = tiempoEstandar - totalOps;
-  const pct = tiempoEstandar>0?(restante/tiempoEstandar*100):0;
-  const horas = restante/60;
+  const data=cur();
+  const disp=parseFloat(s('consDisp').value)||data.cons.disponible||0;
+  const demanda=parseFloat(s('consDemanda').value)||data.demanda||0;
+  data.cons.disponible=disp; data.demanda=demanda;
+  fbSave();
+
+  const totalOps=data.ops.reduce((a,o)=>a+o.min,0);
+  const totalCons=data.cons.items.reduce((a,c)=>a+c.min,0);
+  const tiempoReal=disp-totalCons;
+  // Tiempo ciclo = operación de mayor duración (cuello de botella)
+  const tiempoCiclo=data.ops.length>0?Math.max(...data.ops.map(o=>o.min)):0;
+  // Takt Time = tiempo real / demanda diaria (demanda mensual / 22 días)
+  const diasMes=22;
+  const demandaDia=demanda>0?demanda/diasMes:0;
+  const taktTime=demandaDia>0?(tiempoReal/demandaDia):0;
+
   s('resultsBlock').style.display='';
-  const ac = getAc(selectedIdx);
+  const ac=getAc(selectedIdx);
   s('resGrid').innerHTML=`
-    <div class="res-card"><div class="res-label">Suma operaciones</div><div class="res-value">${totalOps.toFixed(2)}</div><div class="res-unit">minutos</div></div>
-    <div class="res-card"><div class="res-label">Tiempo estándar restante</div><div class="res-value" style="color:${restante>=0?ac:'#e05c5c'}">${restante.toFixed(2)}</div><div class="res-unit">minutos</div></div>
-    <div class="res-card"><div class="res-label">% disponible</div><div class="res-value" style="color:${pct>=0?ac:'#e05c5c'}">${pct.toFixed(1)}%</div><div class="res-unit">del tiempo estándar</div></div>
-    <div class="res-card"><div class="res-label">Horas restantes</div><div class="res-value" style="color:${horas>=0?ac:'#e05c5c'}">${horas.toFixed(2)}</div><div class="res-unit">horas</div></div>`;
+    <div class="res-card"><div class="res-label">Suma Operaciones</div><div class="res-value">${totalOps.toFixed(2)}</div><div class="res-unit">minutos</div></div>
+    <div class="res-card"><div class="res-label">Tiempo Disponible</div><div class="res-value" style="color:${ac}">${disp.toFixed(2)}</div><div class="res-unit">minutos (sin consideraciones)</div></div>
+    <div class="res-card"><div class="res-label">Tiempo Real</div><div class="res-value" style="color:${tiempoReal>=0?ac:'#e05c5c'}">${tiempoReal.toFixed(2)}</div><div class="res-unit">minutos (disponible − consideraciones)</div></div>
+    <div class="res-card"><div class="res-label">Tiempo Ciclo</div><div class="res-value" style="color:${ac}">${tiempoCiclo>0?tiempoCiclo.toFixed(2):'—'}</div><div class="res-unit">${tiempoCiclo>0?'min · cuello de botella':'sin operaciones'}</div></div>
+    <div class="res-card"><div class="res-label">Takt Time</div><div class="res-value" style="color:${taktTime>0?ac:'var(--text-muted)'}">${taktTime>0?taktTime.toFixed(2):'—'}</div><div class="res-unit">${taktTime>0?'min / pieza · demanda '+demanda+' pzas/mes':'captura demanda mensual'}</div></div>`;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1718,9 +1804,19 @@ function saveGrupo(){
   const nombre=s('grupoNombre').value.trim();
   if(!nombre){alert('Ingresa el nombre del grupo.');return;}
   const editIdx=s('grupoEditIdx').value;
-  if(editIdx!=='') tabulador.grupos[parseInt(editIdx)]={nombre};
-  else tabulador.grupos.push({nombre});
+  let nuevoGrupoIdx=null;
+  if(editIdx!==''){
+    tabulador.grupos[parseInt(editIdx)]={nombre};
+  } else {
+    tabulador.grupos.push({nombre});
+    nuevoGrupoIdx=tabulador.grupos.length-1;
+  }
   closeModal('modal-grupo'); renderTabulador(); fbSave();
+  // Cascada: ofrecer agregar categoría al grupo recién creado
+  if(nuevoGrupoIdx!==null){
+    setTimeout(()=>openAddCategoriaParaGrupo(nuevoGrupoIdx),200);
+  }
+}
 }
 function editGrupo(i){
   s('grupoEditIdx').value=i; s('modal-grupo-title').textContent='Editar grupo';
@@ -1740,9 +1836,19 @@ function saveCategoria(){
   const grupoIdx=parseInt(s('catGrupo').value);
   if(!nombre||isNaN(grupoIdx)){alert('Completa todos los campos.');return;}
   const editIdx=s('catEditIdx').value;
-  if(editIdx!=='') tabulador.categorias[parseInt(editIdx)]={nombre,grupoIdx};
-  else tabulador.categorias.push({nombre,grupoIdx});
+  let nuevaCatIdx=null;
+  if(editIdx!==''){
+    tabulador.categorias[parseInt(editIdx)]={nombre,grupoIdx};
+  } else {
+    tabulador.categorias.push({nombre,grupoIdx});
+    nuevaCatIdx=tabulador.categorias.length-1;
+  }
   closeModal('modal-categoria'); renderTabulador(); fbSave();
+  // Cascada: ofrecer agregar nivel a la categoría recién creada
+  if(nuevaCatIdx!==null){
+    setTimeout(()=>openAddNivelParaCategoria(nuevaCatIdx),200);
+  }
+}
 }
 function editCategoria(i){
   const c=tabulador.categorias[i];
@@ -1769,9 +1875,19 @@ function saveNivel(){
   if(isNaN(num)||isNaN(catIdx)){alert('Selecciona categoría y nivel.');return;}
   const editIdx=s('nivelEditIdx').value;
   const entry={num,categoriaIdx:catIdx,desc,ascenso,autonomia,salario,incremento};
-  if(editIdx!=='') tabulador.niveles[parseInt(editIdx)]=entry;
-  else tabulador.niveles.push(entry);
-  closeModal('modal-nivel'); renderTabulador(); fbSave();
+  let savedIdx;
+  if(editIdx!==''){
+    savedIdx=parseInt(editIdx);
+    tabulador.niveles[savedIdx]=entry;
+    closeModal('modal-nivel'); renderTabulador(); fbSave();
+  } else {
+    tabulador.niveles.push(entry);
+    savedIdx=tabulador.niveles.length-1;
+    closeModal('modal-nivel'); renderTabulador(); fbSave();
+    // Cascada: mostrar opciones después de crear nivel
+    setTimeout(()=>showPostNivelOptions(savedIdx,catIdx),200);
+  }
+}
 }
 function editNivel(i){
   const n=tabulador.niveles[i];
@@ -1785,6 +1901,59 @@ function editNivel(i){
   openModal('modal-nivel');
 }
 function delNivel(i){ tabulador.niveles.splice(i,1); renderTabulador(); fbSave(); }
+
+// ── CASCADA: helpers ──────────────────────────────────────────
+// Abre modal de categoría preseleccionando el grupo
+function openAddCategoriaParaGrupo(grupoIdx){
+  s('catEditIdx').value='';
+  s('modal-cat-title').textContent='Agregar categoría a: '+tabulador.grupos[grupoIdx].nombre;
+  s('catNombre').value='';
+  populateCatGrupo();
+  s('catGrupo').value=grupoIdx;
+  openModal('modal-categoria');
+}
+
+// Abre modal de nivel preseleccionando la categoría y autocompletando el siguiente número
+function openAddNivelParaCategoria(catIdx){
+  const existentes=tabulador.niveles.filter(n=>n.categoriaIdx===catIdx);
+  const siguienteNum=existentes.length>0?Math.max(...existentes.map(n=>n.num))+1:1;
+  s('nivelEditIdx').value='';
+  s('modal-nivel-title').textContent='Agregar nivel — '+tabulador.categorias[catIdx].nombre;
+  s('nivelNum').value=siguienteNum;
+  s('nivelDesc').value=''; s('nivelAscenso').value='';
+  s('nivelAutonomia').value='Ninguna'; s('nivelSalario').value=''; s('nivelIncremento').value='';
+  s('nivelSalarioFinal').value='';
+  populateNivelCategoria();
+  s('nivelCategoria').value=catIdx;
+  s('nivelSalario').oninput=calcNivelFinal; s('nivelIncremento').oninput=calcNivelFinal;
+  openModal('modal-nivel');
+}
+
+// Después de crear un nivel: mini-panel con opciones
+function showPostNivelOptions(nivelIdx, catIdx){
+  const n=tabulador.niveles[nivelIdx];
+  const cat=tabulador.categorias[catIdx];
+  const bd=document.createElement('div');
+  bd.id='post-nivel-backdrop';
+  bd.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:3000;display:flex;align-items:center;justify-content:center;';
+  bd.innerHTML=`
+    <div style="background:var(--card-bg);border-radius:14px;padding:28px 24px;max-width:380px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.35);font-family:'Barlow Condensed',sans-serif;">
+      <div style="font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Nivel guardado ✓</div>
+      <div style="font-size:1.1rem;font-weight:700;color:var(--text-primary);margin-bottom:4px;">Nivel ${n.num} — ${cat.nombre}</div>
+      <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:22px;">¿Qué quieres hacer ahora?</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button onclick="closePostNivelOptions();setTimeout(()=>editNivel(${nivelIdx}),150)" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:11px 16px;font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">✎ Editar este nivel</button>
+        <button onclick="closePostNivelOptions();setTimeout(()=>openAddNivelParaCategoria(${catIdx}),150)" style="background:var(--hover-bg);color:var(--text-primary);border:1px solid var(--border-mid);border-radius:8px;padding:11px 16px;font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">+ Agregar otro nivel a esta categoría</button>
+        <button onclick="closePostNivelOptions()" style="background:transparent;color:var(--text-muted);border:none;border-radius:8px;padding:9px 16px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Listo, cerrar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(bd);
+}
+function closePostNivelOptions(){
+  const bd=document.getElementById('post-nivel-backdrop');
+  if(bd) bd.remove();
+}
+// ─────────────────────────────────────────────────────────────
 
 function renderTabulador(){
   const wrap=s('tabuladorWrap');
@@ -2020,6 +2189,7 @@ function _fbSerialize() {
     state: state,
     equipoState: equipoState,
     tabulador: tabulador,
+    centros: centros.map(c=>({n:c.n, s:c.s})),
     _savedAt: Date.now()
   };
 }
@@ -2027,9 +2197,18 @@ function _fbSerialize() {
 // Aplicar estado descargado
 function _fbApply(data) {
   if (!data) return;
+  if (data.centros && Array.isArray(data.centros) && data.centros.length>0) {
+    centros.length=0;
+    data.centros.forEach(c=>centros.push({n:c.n,s:c.s||ICONO_GENERICO}));
+  }
   if (data.state) {
+    // Ensure state has entries for all centros
+    centros.forEach((_,i)=>{
+      if(!state[i]) state[i]={ops:[],cons:{disponible:null,items:[]},mod:[],cif:[],equipos:[],demanda:null,updatedAt:null};
+    });
     Object.keys(data.state).forEach(k => {
-      if (state[k] !== undefined) Object.assign(state[k], data.state[k]);
+      const ki=parseInt(k);
+      if(ki<centros.length) Object.assign(state[ki], data.state[k]);
     });
   }
   if (data.equipoState) Object.assign(equipoState, data.equipoState);

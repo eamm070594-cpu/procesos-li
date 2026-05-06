@@ -1577,6 +1577,11 @@ let currentView='hoy';
 function showView(v){
   // Reset ingeniero/proyecto screens when navigating via main nav
   _currentIngenieroId=null;_currentProyectoId=null;
+  // Restaurar sidebar si venimos de Control CT
+  if(v!=='controlct'){
+    const sidebar=document.getElementById('sidebar');
+    if(sidebar) sidebar.style.display='';
+  }
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   const el=document.getElementById('view-'+v);
   if(el){el.classList.add('active');el.scrollTop=0}
@@ -3560,6 +3565,10 @@ function renderControlCT(){
   const frame = document.getElementById('cct-frame');
   const loading = document.getElementById('cct-loading');
   if(!frame) return;
+  // Ocultar sidebar para pantalla completa
+  const sidebar = document.getElementById('sidebar');
+  if(sidebar) sidebar.style.display='none';
+  document.getElementById('content')?.style.setProperty('margin-left','0');
   // Solo cargar una vez
   if(!frame.src || frame.src === window.location.href || frame.src === ''){
     loading.style.display = 'flex';
