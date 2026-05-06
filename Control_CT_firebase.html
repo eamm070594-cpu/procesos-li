@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>Transformación Operativa | Linea Italia</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+
+/* LIGHT THEME */
+:root{
+  --bg:#ffffff;--bg2:#f5f5f5;--bg3:#eeeeee;
+  --surface:rgba(0,0,0,0.03);
+  --border:rgba(0,0,0,0.13);--border2:rgba(0,0,0,0.08);
+  --text-primary:#111111;
+  --text-secondary:#333333;
+  --text-tertiary:#555555;
+  --text-muted:#777777;
+  --input-bg:rgba(0,0,0,0.04);
+  --sidebar-bg:#f0f0f0;
+  --modal-bg:#ffffff;
+  --hover-bg:rgba(0,0,0,0.06);
+  --logo-fill:#111111;--logo-bg:#ffffff;
+  --border-mid:rgba(0,0,0,0.18);
+}
+body.dark{
+  --bg:#000000;--bg2:#0a0a0a;--bg3:#141414;
+  --surface:rgba(255,255,255,0.03);
+  --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.06);
+  --text-primary:#ffffff;
+  --text-secondary:rgba(255,255,255,0.70);
+  --text-tertiary:rgba(255,255,255,0.45);
+  --text-muted:rgba(255,255,255,0.25);
+  --input-bg:rgba(255,255,255,0.04);
+  --sidebar-bg:#0d0d0d;
+  --modal-bg:#111111;
+  --hover-bg:rgba(255,255,255,0.05);
+  --logo-fill:#ffffff;--logo-bg:#000000;
+  --border-mid:rgba(255,255,255,0.15);
+}
+
+body{font-family:'Barlow Condensed',sans-serif;background:var(--bg);min-height:100vh;color:var(--text-primary);overflow-x:hidden;transition:background .25s,color .25s;}
+
+/* THEME TOGGLE */
+#themeToggle{position:fixed;top:14px;right:18px;z-index:9999;display:flex;align-items:center;gap:6px;border-radius:20px;padding:6px 12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;transition:background .15s,color .15s;background:#111;border:1px solid #333;color:#fff;}
+body.dark #themeToggle{background:#fff;border:1px solid #ddd;color:#111;}
+#themeToggle:hover{opacity:.85;}
+#themeToggle svg{width:13px;height:13px;flex-shrink:0;}
+
+/* PAGE */
+#page{display:flex;flex-direction:column;align-items:center;padding:2.4rem 1.5rem 3rem;min-height:100vh;}
+body.detail-mode #page{padding:0;flex-direction:row;align-items:stretch;}
+body.detail-mode #mainArea{padding:0!important;align-items:stretch!important;flex:1!important;min-width:0!important;}
+body.detail-mode #homeHeader{display:none;}
+#dashboardView{display:none;flex:1;flex-direction:column;overflow-y:auto;background:var(--bg);min-width:0;}
+#tabuladorView{display:none;flex:1;flex-direction:column;overflow-y:auto;background:var(--bg);min-width:0;}
+#equipoView{display:none;flex:1;flex-direction:column;overflow-y:auto;background:var(--bg);min-width:0;}
+
+/* HOME HEADER */
+#homeHeader{display:flex;flex-direction:column;align-items:center;width:100%;max-width:960px;}
+#logoSmall{margin-bottom:8px;}
+#logoSmall svg{width:58px;height:58px;display:block;}
+#siglasStatic{font-size:0.75rem;font-weight:700;letter-spacing:4px;color:var(--text-primary);text-transform:uppercase;margin-bottom:1.6rem;}
+.divider{width:100%;max-width:960px;height:1px;background:var(--border);margin-bottom:1.5rem;}
+
+/* SIDEBAR */
+#sideList{display:none;flex-direction:column;width:260px;min-width:260px;background:var(--sidebar-bg);height:100vh;position:sticky;top:0;overflow-y:auto;padding:22px 14px 24px;gap:4px;border-right:1px solid var(--border);flex-shrink:0;}
+body.detail-mode #sideList{display:flex;}
+#sideList::-webkit-scrollbar{width:3px;}
+#sideList::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.12);border-radius:2px;}
+.sidebar-logo{display:flex;flex-direction:column;align-items:flex-start;padding:0 6px 18px;gap:2px;border-bottom:1px solid var(--border);margin-bottom:8px;}
+.sidebar-app-name{font-size:0.58rem;font-weight:700;letter-spacing:3px;color:var(--text-primary);text-transform:uppercase;line-height:1.3;}
+.sidebar-back{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;color:var(--text-secondary);font-size:0.65rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;transition:background .12s,color .12s;margin-bottom:10px;}
+.sidebar-back:hover{background:var(--hover-bg);color:var(--text-primary);}
+.sidebar-back svg{width:13px;height:13px;flex-shrink:0;}
+.list-label{font-size:0.52rem;font-weight:700;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;padding:6px 12px;}
+.list-item{display:flex;align-items:center;gap:14px;padding:11px 14px;border-radius:10px;cursor:pointer;background:transparent;border:1px solid transparent;position:relative;transition:background .12s,border-color .12s;overflow:hidden;}
+.list-item::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;border-radius:0 3px 3px 0;background:var(--ac);opacity:0;transition:opacity .15s;}
+.list-item:hover{background:var(--hover-bg);}
+.list-item.active-item{background:var(--hover-bg);border-color:var(--text-muted);}
+.list-item.active-item::before{opacity:1;}
+.list-icon{width:20px;height:20px;flex-shrink:0;color:var(--ac);opacity:0.7;}
+.list-icon svg{width:100%;height:100%;}
+.list-item.active-item .list-icon{opacity:1;}
+.list-name{font-size:0.75rem;font-weight:700;letter-spacing:1.5px;color:var(--text-primary);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* GRID */
+#gridView{width:100%;max-width:960px;}
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;width:100%;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:1.6rem 0.5rem 1.2rem;text-align:center;cursor:pointer;position:relative;overflow:hidden;transition:transform .15s,border-color .15s,background .15s;}
+.card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;background:var(--ac);opacity:0;transition:opacity .18s;}
+.card:hover{transform:translateY(-3px);border-color:var(--ac);}
+.card:hover::before{opacity:1;}
+.card-icon{width:36px;height:36px;margin:0 auto 12px;color:var(--ac);}
+.card-icon svg{width:100%;height:100%;display:block;}
+.card-name{font-size:0.62rem;font-weight:700;letter-spacing:1.5px;color:var(--text-primary);text-transform:uppercase;line-height:1.3;}
+.card-stamp{font-size:0.48rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-top:6px;padding:2px 7px;border-radius:10px;display:inline-block;}
+.stamp-green{background:rgba(111,201,140,0.15);color:#3a9c5e;}
+.stamp-amber{background:rgba(232,168,64,0.15);color:#b07a10;}
+.stamp-red{background:rgba(224,92,92,0.15);color:#b03030;}
+.stamp-none{background:rgba(0,0,0,0.08);color:var(--text-secondary);}
+body.dark .stamp-green{color:#6fc98c;}
+body.dark .stamp-amber{color:#e8a840;}
+body.dark .stamp-red{color:#e05c5c;}
+body.dark .stamp-none{background:rgba(255,255,255,0.06);color:var(--text-muted);}
+
+@media(max-width:900px){.grid{grid-template-columns:repeat(3,1fr);}#sideList{width:200px;min-width:200px;}}
+@media(max-width:600px){.grid{grid-template-columns:repeat(2,1fr);}#sideList{width:170px;min-width:170px;}}
+
+/* DETAIL VIEW */
+#detailView{display:none;flex:1;flex-direction:column;overflow-y:auto;min-width:0;}
+#detailView.active{display:flex;}
+#detailHeader{display:flex;align-items:flex-start;gap:18px;background:var(--surface);border-bottom:1px solid var(--border);padding:18px 28px;flex-shrink:0;}
+#detailHeaderIcon{width:46px;height:46px;color:var(--selected-ac,#333);flex-shrink:0;background:rgba(0,0,0,0.05);border-radius:10px;padding:9px;box-sizing:border-box;}
+#detailHeaderIcon svg{width:100%;height:100%;}
+body.dark #detailHeaderIcon{background:rgba(255,255,255,0.06);}
+#detailHeaderName{font-size:1.8rem;font-weight:800;letter-spacing:6px;color:var(--text-primary);text-transform:uppercase;}
+#detailStamp{font-size:0.58rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;border-radius:10px;margin-left:4px;}
+
+/* TABS */
+.tabs-bar{display:flex;gap:4px;padding:16px 28px 0;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2);flex-wrap:wrap;}
+.tab-btn{font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text-tertiary);background:transparent;border:none;border-bottom:2px solid transparent;padding:8px 20px 12px;cursor:pointer;transition:color .15s,border-color .15s;}
+.tab-btn:hover{color:var(--text-primary);}
+.tab-btn.active{color:var(--text-primary);border-bottom-color:var(--selected-ac,#333);}
+
+/* TAB PANELS */
+.tab-panel{display:none;flex:1;flex-direction:column;padding:24px 28px 40px;gap:20px;overflow-y:auto;}
+.tab-panel.active{display:flex;}
+
+/* SECTION HEADER */
+.section-hd{font-size:0.65rem;font-weight:700;letter-spacing:3px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:6px;}
+
+/* FORMS */
+.form-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+.form-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;}
+.form-group label{font-size:0.6rem;font-weight:600;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;}
+.form-group input,.form-group select,.form-group textarea{font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;font-weight:500;letter-spacing:1px;background:var(--input-bg);border:1px solid var(--border-mid);border-radius:8px;padding:9px 12px;color:var(--text-primary);outline:none;transition:border-color .15s;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--selected-ac,var(--text-tertiary));}
+.form-group select option{background:var(--modal-bg);color:var(--text-primary);}
+.btn{font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:var(--hover-bg);border:1px solid var(--border-mid);border-radius:8px;padding:9px 18px;color:var(--text-primary);cursor:pointer;transition:background .15s;white-space:nowrap;}
+.btn:hover{background:var(--hover-bg);}
+.btn-accent{background:var(--hover-bg);border-color:var(--selected-ac,rgba(0,0,0,0.3));color:var(--selected-ac,#111);}
+body.dark .btn-accent{color:var(--selected-ac,#fff);}
+.btn-sm{padding:6px 12px;font-size:0.62rem;}
+.sep{height:1px;background:var(--border2);}
+
+/* ITEMS LIST */
+.items-list{display:flex;flex-direction:column;gap:6px;}
+.item-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px;}
+.item-num{font-size:0.58rem;font-weight:700;letter-spacing:1px;color:var(--text-secondary);min-width:20px;}
+.item-name{flex:1;font-size:0.82rem;font-weight:600;letter-spacing:1px;color:var(--text-primary);}
+.item-sub{font-size:0.72rem;color:var(--text-tertiary);margin-left:4px;}
+.item-min{font-size:0.75rem;font-weight:600;color:var(--selected-ac,#111);min-width:60px;text-align:right;}
+body.dark .item-min{color:var(--selected-ac,#fff);}
+.item-del{background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:0.75rem;padding:2px 6px;border-radius:4px;transition:color .12s,background .12s;}
+.item-del:hover{color:#e05c5c;background:rgba(224,92,92,0.1);}
+.item-edit{background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:0.75rem;padding:2px 6px;border-radius:4px;transition:color .12s,background .12s;}
+.item-edit:hover{color:var(--selected-ac,#333);background:var(--hover-bg);}
+
+/* RESULTS */
+.results-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.res-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;}
+.res-label{font-size:0.55rem;font-weight:700;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:6px;}
+.res-value{font-size:1.5rem;font-weight:800;letter-spacing:2px;color:var(--selected-ac,#111);}
+body.dark .res-value{color:var(--selected-ac,#fff);}
+.res-unit{font-size:0.62rem;font-weight:600;color:var(--text-secondary);margin-top:2px;letter-spacing:1px;}
+
+/* TABLE */
+.data-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+.data-table th{font-size:0.58rem;font-weight:700;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;}
+.data-table td{padding:10px 12px;border-bottom:1px solid var(--border2);color:var(--text-primary);vertical-align:middle;}
+.data-table tr:hover td{background:var(--surface);}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.58rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+
+/* CHART */
+.chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+.chart-title{font-size:0.62rem;font-weight:700;letter-spacing:2.5px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:12px;}
+
+/* MODAL */
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:500;align-items:center;justify-content:center;}
+.modal-backdrop.open{display:flex;}
+.modal-box{background:var(--modal-bg);border:1px solid var(--border-mid);border-radius:14px;padding:28px 28px 22px;width:100%;max-width:520px;margin:20px;display:flex;flex-direction:column;gap:16px;max-height:90vh;overflow-y:auto;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-size:0.72rem;font-weight:700;letter-spacing:3px;color:var(--text-secondary);text-transform:uppercase;}
+.modal-close{background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:1.1rem;line-height:1;padding:2px 6px;border-radius:4px;transition:color .12s;}
+.modal-close:hover{color:var(--text-primary);}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;padding-top:4px;border-top:1px solid var(--border2);}
+
+/* ACTION BAR */
+.tab-action-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.tab-action-bar .section-hd{margin-bottom:0;}
+.btn-add{display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:var(--input-bg);border:1px solid var(--selected-ac,rgba(0,0,0,0.2));border-radius:8px;padding:7px 14px;color:var(--selected-ac,#333);cursor:pointer;transition:background .15s;white-space:nowrap;}
+body.dark .btn-add{color:var(--selected-ac,#fff);}
+.btn-add:hover{background:var(--hover-bg);}
+.btn-add svg{width:12px;height:12px;flex-shrink:0;}
+
+.footer{margin-top:2rem;font-size:0.55rem;letter-spacing:3px;text-transform:uppercase;text-align:center;color:var(--text-tertiary);}
+
+/* LAYOUT */
+#layoutCostoResult{display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;text-align:center;min-width:180px;}
+
+/* DASHBOARD */
+.dash-header{display:flex;align-items:center;gap:16px;padding:20px 28px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
+.dash-title{font-size:1.6rem;font-weight:800;letter-spacing:6px;color:var(--text-primary);text-transform:uppercase;}
+.dash-subtitle{font-size:0.6rem;letter-spacing:3px;color:var(--text-secondary);text-transform:uppercase;margin-top:2px;}
+.dash-back{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;cursor:pointer;color:var(--text-secondary);font-size:0.62rem;font-weight:600;border:1px solid var(--border);background:transparent;transition:background .12s,color .12s;}
+.dash-back:hover{background:var(--hover-bg);color:var(--text-primary);}
+.dash-body{padding:24px 28px 48px;display:flex;flex-direction:column;gap:28px;}
+.dash-section-title{font-size:0.62rem;font-weight:700;letter-spacing:3px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:10px;}
+.dash-chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px 22px;}
+
+/* EQUIPO VIEW */
+.equipo-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;}
+.equipo-section-title{font-size:0.65rem;font-weight:700;letter-spacing:3px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.ingeniero-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:16px;transition:border-color .15s;}
+.ingeniero-card:hover{border-color:var(--border-mid);}
+.ing-avatar{width:40px;height:40px;border-radius:50%;background:var(--selected-ac,#333);display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;color:#fff;flex-shrink:0;text-transform:uppercase;}
+.ing-name{font-size:0.9rem;font-weight:700;letter-spacing:1px;color:var(--text-primary);text-transform:uppercase;}
+.ing-role{font-size:0.65rem;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;}
+.ing-areas{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+.area-chip{font-size:0.58rem;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:6px;background:var(--hover-bg);border:1px solid var(--border);color:var(--text-primary);}
+
+/* TABULADOR */
+.tab-group-block{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden;}
+.tab-group-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--bg2);border-bottom:1px solid var(--border);}
+.tab-group-name{font-size:0.8rem;font-weight:800;letter-spacing:3px;color:var(--text-primary);text-transform:uppercase;}
+.tab-group-body{padding:0;}
+.tab-nivel-row{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--border2);}
+.tab-nivel-row:last-child{border-bottom:none;}
+.tab-nivel-cell{padding:10px 14px;font-size:0.75rem;color:var(--text-primary);border-right:1px solid var(--border2);}
+.tab-nivel-cell:last-child{border-right:none;}
+.tab-nivel-num{min-width:50px;font-weight:800;color:var(--selected-ac,#333);font-size:0.85rem;flex-shrink:0;}
+body.dark .tab-nivel-num{color:var(--selected-ac,#fff);}
+.tab-nivel-cat{min-width:180px;font-weight:600;}
+.tab-nivel-desc{flex:1;color:var(--text-secondary);font-size:0.72rem;}
+.tab-nivel-ascenso{min-width:160px;color:var(--text-tertiary);font-size:0.72rem;}
+.tab-nivel-auto{min-width:80px;color:var(--text-tertiary);font-size:0.72rem;}
+.tab-nivel-salario{min-width:100px;font-weight:700;color:var(--selected-ac,#333);text-align:right;}
+body.dark .tab-nivel-salario{color:var(--selected-ac,#fff);}
+.tab-header-row{display:flex;background:var(--bg3);border-bottom:1px solid var(--border);}
+.tab-header-cell{padding:8px 14px;font-size:0.55rem;font-weight:700;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;border-right:1px solid var(--border2);}
+.tab-header-cell:last-child{border-right:none;}
+
+/* TABULADOR CENTRO */
+.centro-tab-table{width:100%;border-collapse:collapse;}
+.centro-tab-table th{font-size:0.58rem;font-weight:700;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;}
+.centro-tab-table td{padding:9px 12px;border-bottom:1px solid var(--border2);color:var(--text-primary);font-size:0.78rem;}
+.centro-tab-table tr:hover td{background:var(--surface);}
+
+/* ALERT BAR */
+.dash-alert-bar{background:rgba(224,92,92,0.08);border:1px solid rgba(224,92,92,0.25);border-radius:10px;padding:12px 18px;display:flex;align-items:flex-start;gap:12px;}
+.dash-alert-title{font-size:0.62rem;font-weight:700;letter-spacing:2px;color:#c03030;text-transform:uppercase;margin-bottom:6px;}
+body.dark .dash-alert-title{color:#e05c5c;}
+.dash-alert-list{display:flex;flex-wrap:wrap;gap:6px;}
+.dash-alert-item{display:flex;align-items:center;gap:6px;background:rgba(224,92,92,0.1);border:1px solid rgba(224,92,92,0.2);border-radius:6px;padding:4px 10px;font-size:0.62rem;}
+
+/* FERRETI PANEL */
+#ferreti-view{display:none;position:fixed;inset:0;z-index:800;background:var(--bg);flex-direction:column;overflow:hidden;}
+#ferreti-view.open{display:flex;}
+#ferreti-back-bar{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:9999;flex-shrink:0;}
+#ferreti-back-btn{display:flex;align-items:center;gap:7px;font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);background:var(--hover-bg);border:1px solid var(--border-mid);border-radius:8px;padding:6px 14px;cursor:pointer;}
+#ferreti-back-btn svg{width:13px;height:13px;}
+#ferreti-back-label{font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text-secondary);}
+</style>
+</head>
+<body>
+
+<button id="themeToggle" onclick="toggleTheme()">
+  <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  <span id="themeLabel">Oscuro</span>
+</button>
+
+<div id="page">
+  <div id="sideList"></div>
+  <div id="mainArea" style="display:flex;flex-direction:column;align-items:center;padding:2.4rem 1.5rem 3rem;flex:1;min-width:0;">
+    <div id="homeHeader">
+      <div id="logoSmall">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="200" height="200" fill="var(--logo-bg)"/>
+          <rect x="0" y="0" width="200" height="200" fill="none" stroke="var(--logo-fill)" stroke-width="20"/>
+          <rect x="48" y="45" width="19" height="105" fill="var(--logo-fill)"/>
+          <rect x="48" y="131" width="55" height="19" fill="var(--logo-fill)"/>
+          <rect x="133" y="45" width="19" height="105" fill="var(--logo-fill)"/>
+        </svg>
+      </div>
+      <div id="siglasStatic">TRANSFORMACIÓN OPERATIVA</div>
+      <div class="divider"></div>
+    </div>
+    <div id="gridView"><div class="grid" id="grid"></div></div>
+
+    <!-- DETAIL VIEW -->
+    <div id="detailView">
+      <div id="detailHeader">
+        <div id="detailHeaderIcon"></div>
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div id="detailHeaderName"></div>
+            <span id="detailResponsable" style="display:flex;flex-direction:column;gap:1px;">
+              <span style="font-size:0.45rem;font-weight:700;letter-spacing:2.5px;color:var(--text-muted);text-transform:uppercase;">Responsable</span>
+              <span id="detailResponsableNombre" style="font-size:0.75rem;font-weight:600;letter-spacing:2px;color:var(--text-tertiary);text-transform:uppercase;"></span>
+            </span>
+            <span id="detailStamp"></span>
+          </div>
+          <div id="detailFichaInfo" style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;"></div>
+        </div>
+      </div>
+
+      <div class="tabs-bar" id="mainTabsBar">
+        <button class="tab-btn active" data-tab="dist" onclick="switchTab('dist')">Distribución</button>
+        <button class="tab-btn" data-tab="cif" onclick="switchTab('cif')">CIF</button>
+        <button class="tab-btn" data-tab="resumen" onclick="switchTab('resumen')">Resumen</button>
+        <button class="tab-btn" data-tab="layout" onclick="switchTab('layout')">Layout</button>
+        <button class="tab-btn" data-tab="equipos" onclick="switchTab('equipos')">Equipos</button>
+        <button class="tab-btn" data-tab="tabulador" onclick="switchTab('tabulador')">Tabulador</button>
+      </div>
+
+      <!-- TAB: DISTRIBUCIÓN (unified) -->
+      <div class="tab-panel active" id="tab-dist">
+        <!-- SALARIO / MOD -->
+        <div>
+          <div class="tab-action-bar">
+            <span class="section-hd">Personal (Salarios MOD)</span>
+            <button class="btn-add" onclick="openModal('modal-mod')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Añadir operario
+            </button>
+          </div>
+          <div id="modListWrap"><div class="items-list"><div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin personal registrado</div></div></div>
+        </div>
+        <div class="sep"></div>
+        <!-- OPERACIONES -->
+        <div>
+          <div class="tab-action-bar">
+            <span class="section-hd">Operaciones registradas</span>
+            <button class="btn-add" onclick="openModal('modal-ops')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Añadir operación
+            </button>
+          </div>
+          <div class="items-list" id="opsList"><div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin operaciones registradas</div></div>
+        </div>
+        <div class="sep"></div>
+        <!-- CONSIDERACIONES -->
+        <div>
+          <div class="tab-action-bar">
+            <span class="section-hd">Consideraciones de tiempo</span>
+            <button class="btn-add" onclick="openModal('modal-cons')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Añadir consideración
+            </button>
+          </div>
+          <div class="items-list" id="consList"><div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin consideraciones</div></div>
+        </div>
+        <div>
+          <button class="btn btn-accent" style="width:100%;" onclick="calcularResultados()">Calcular resultados</button>
+        </div>
+        <div id="resultsBlock" style="display:none;">
+          <div class="section-hd">Resultados</div>
+          <div class="results-grid" id="resGrid"></div>
+        </div>
+        <div class="footer">Linea Italia — Eccellenza in Mobile</div>
+      </div>
+
+      <!-- TAB: CIF -->
+      <div class="tab-panel" id="tab-cif">
+        <div class="tab-action-bar">
+          <span class="section-hd">Conceptos registrados</span>
+          <button class="btn-add" onclick="openModal('modal-cif')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo concepto
+          </button>
+        </div>
+        <div id="cifTablaWrap"><div style="text-align:center;padding:32px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin conceptos registrados</div></div>
+        <div id="cifTotalesBlock" style="display:none;">
+          <div class="sep"></div>
+          <div class="section-hd">Resumen CIF</div>
+          <div id="cifTotalesGrid" class="results-grid" style="grid-template-columns:repeat(3,1fr);"></div>
+          <div style="margin-top:16px;" class="chart-wrap">
+            <div class="chart-title">Distribución del CIF por concepto</div>
+            <div style="position:relative;width:100%;height:320px;"><canvas id="cifChart"></canvas></div>
+          </div>
+        </div>
+        <div class="footer">Linea Italia — Eccellenza in Mobile</div>
+      </div>
+
+      <!-- TAB: RESUMEN -->
+      <div class="tab-panel" id="tab-resumen">
+        <div class="section-hd">Resumen del centro de trabajo</div>
+        <div id="resumenGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;"></div>
+        <div id="costoTotalCard" style="display:none;">
+          <div class="sep"></div>
+          <!-- BALANCE: Real vs Ideal -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <!-- Costo real -->
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;">
+              <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:6px;">Costo del Centro de Trabajo</div>
+              <div id="costoTotalValor" style="font-size:2.4rem;font-weight:800;letter-spacing:3px;color:var(--selected-ac,#111);"></div>
+              <div class="res-unit" style="margin-top:2px;">pesos por hora</div>
+              <div style="margin-top:12px;border-top:1px solid var(--border2);padding-top:10px;">
+                <div class="res-label" style="margin-bottom:4px;">Desglose</div>
+                <div id="costoDesglose" style="font-size:0.72rem;color:var(--text-tertiary);line-height:1.8;letter-spacing:.5px;"></div>
+              </div>
+            </div>
+            <!-- Costo ideal (forecast) -->
+            <div style="background:var(--surface);border:1px solid rgba(111,201,140,0.35);border-radius:14px;padding:20px 24px;position:relative;">
+              <div style="position:absolute;top:14px;right:14px;background:rgba(111,201,140,0.15);border:1px solid rgba(111,201,140,0.3);border-radius:6px;padding:2px 8px;font-size:0.52rem;font-weight:700;letter-spacing:1.5px;color:#3a9c5e;text-transform:uppercase;">Forecast</div>
+              <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:6px;">Costo Ideal del Centro</div>
+              <div id="costoIdealValor" style="font-size:2.4rem;font-weight:800;letter-spacing:3px;color:#6fc98c;"></div>
+              <div class="res-unit" style="margin-top:2px;">pesos por hora objetivo</div>
+              <div style="margin-top:12px;border-top:1px solid var(--border2);padding-top:10px;">
+                <div class="res-label" style="margin-bottom:6px;">Inputs del Forecast</div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <div class="form-row" style="gap:8px;">
+                    <div class="form-group" style="flex:0 0 130px;"><label>MOD ideal ($/mes)</label><input type="number" id="forecastMOD" placeholder="0" min="0" step="100" oninput="calcForecast()" style="font-size:0.78rem;padding:6px 10px;"></div>
+                    <div class="form-group" style="flex:0 0 130px;"><label>CIF ideal ($/mes)</label><input type="number" id="forecastCIF" placeholder="0" min="0" step="100" oninput="calcForecast()" style="font-size:0.78rem;padding:6px 10px;"></div>
+                  </div>
+                  <div class="form-row" style="gap:8px;">
+                    <div class="form-group" style="flex:0 0 100px;"><label>Horas/día</label><input type="number" id="forecastHoras" placeholder="8" min="1" step="0.5" oninput="calcForecast()" style="font-size:0.78rem;padding:6px 10px;"></div>
+                    <div class="form-group" style="flex:0 0 100px;"><label>Días/mes</label><input type="number" id="forecastDias" placeholder="22" min="1" step="1" oninput="calcForecast()" style="font-size:0.78rem;padding:6px 10px;"></div>
+                    <div class="form-group" style="flex:0 0 100px;"><label>Operarios</label><input type="number" id="forecastOperarios" placeholder="1" min="1" step="1" oninput="calcForecast()" style="font-size:0.78rem;padding:6px 10px;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Balance indicator -->
+          <div id="balanceBlock" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;">
+              <div class="res-label" style="margin-bottom:4px;">Balance Real vs. Ideal</div>
+              <div id="balanceTexto" style="font-size:1.1rem;font-weight:800;letter-spacing:2px;"></div>
+            </div>
+            <div id="balanceBarra" style="flex:2;min-width:160px;"></div>
+          </div>
+        </div>
+        <div id="resumenEmpty" style="text-align:center;padding:32px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Registra datos en Distribución y CIF para ver el resumen</div>
+        <div class="footer">Linea Italia — Eccellenza in Mobile</div>
+      </div>
+
+      <!-- TAB: LAYOUT -->
+      <div class="tab-panel" id="tab-layout">
+        <div>
+          <div class="section-hd">Datos del área</div>
+          <div class="form-row" style="align-items:flex-end;">
+            <div class="form-group" style="flex:0 0 180px;"><label>Área total (m²)</label><input type="number" id="layoutAreaM2" placeholder="Ej. 120" min="0" step="0.1" oninput="calcLayoutCosto()"></div>
+            <div class="form-group" style="flex:0 0 200px;"><label>Costo por m² ($ / mes)</label><input type="number" id="layoutCostoPorM2" placeholder="Ej. 85.00" min="0" step="0.01" oninput="calcLayoutCosto()"></div>
+            <div id="layoutCostoResult" style="text-align:center;min-width:180px;">
+              <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:var(--text-tertiary);text-transform:uppercase;margin-bottom:4px;">Costo mensual del área</div>
+              <div id="layoutCostoValor" style="font-size:1.4rem;font-weight:800;color:var(--selected-ac,#111);letter-spacing:2px;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div>
+            <div class="tab-action-bar" style="margin-bottom:10px;">
+              <span class="section-hd">Área limpia (sin maquinaria)</span>
+              <button class="btn-add" onclick="document.getElementById('layoutImgLimpia').click()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Subir imagen
+              </button>
+            </div>
+            <input type="file" id="layoutImgLimpia" accept="image/*" style="display:none" onchange="loadLayoutImg(event,'layoutImgLimpiaPreview','layoutImgLimpiaEmpty')">
+            <div id="layoutImgLimpiaEmpty" style="border:1px dashed var(--border);border-radius:10px;padding:40px 20px;text-align:center;color:var(--text-tertiary);">
+              <div style="font-size:2rem;margin-bottom:8px;">🏗</div>
+              <div style="font-size:0.62rem;letter-spacing:2px;text-transform:uppercase;">Plano o foto del área vacía</div>
+            </div>
+            <div id="layoutImgLimpiaPreview" style="display:none;position:relative;">
+              <img id="layoutImgLimpiaImg" style="width:100%;height:auto;max-height:340px;object-fit:contain;border-radius:10px;border:1px solid var(--border);">
+              <button onclick="clearLayoutImg('layoutImgLimpiaImg','layoutImgLimpiaPreview','layoutImgLimpiaEmpty')" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;padding:4px 8px;cursor:pointer;font-size:0.65rem;">✕ Quitar</button>
+            </div>
+          </div>
+          <div>
+            <div class="tab-action-bar" style="margin-bottom:10px;">
+              <span class="section-hd">Área con maquinaria</span>
+              <button class="btn-add" onclick="document.getElementById('layoutImgMaquinaria').click()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Subir imagen
+              </button>
+            </div>
+            <input type="file" id="layoutImgMaquinaria" accept="image/*" style="display:none" onchange="loadLayoutImg(event,'layoutImgMaquinariaPreview','layoutImgMaquinariaEmpty')">
+            <div id="layoutImgMaquinariaEmpty" style="border:1px dashed var(--border);border-radius:10px;padding:40px 20px;text-align:center;color:var(--text-tertiary);">
+              <div style="font-size:2rem;margin-bottom:8px;">⚙️</div>
+              <div style="font-size:0.62rem;letter-spacing:2px;text-transform:uppercase;">Plano o foto con equipos instalados</div>
+            </div>
+            <div id="layoutImgMaquinariaPreview" style="display:none;position:relative;">
+              <img id="layoutImgMaquinariaImg" style="width:100%;height:auto;max-height:340px;object-fit:contain;border-radius:10px;border:1px solid var(--border);">
+              <button onclick="clearLayoutImg('layoutImgMaquinariaImg','layoutImgMaquinariaPreview','layoutImgMaquinariaEmpty')" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;padding:4px 8px;cursor:pointer;font-size:0.65rem;">✕ Quitar</button>
+            </div>
+          </div>
+        </div>
+        <div class="footer">Linea Italia — Eccellenza in Mobile</div>
+      </div>
+
+      <!-- TAB: EQUIPOS -->
+      <div class="tab-panel" id="tab-equipos">
+        <div class="tab-action-bar">
+          <span class="section-hd">Equipos y activos del centro</span>
+          <button class="btn-add" onclick="openModal('modal-equipo')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo equipo
+          </button>
+        </div>
+        <div id="equiposListWrap"><div style="text-align:center;padding:32px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin equipos registrados</div></div>
+        <div class="footer">Linea Italia — Eccellenza in Mobile</div>
+      </div>
+
+      <!-- TAB: TABULADOR (vista del centro) -->
+      <div class="tab-panel" id="tab-tabulador">
+        <div class="section-hd">Personal vinculado al tabulador</div>
+        <div id="tabuladorCentroWrap"><div style="text-align:center;padding:32px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin personal registrado en este centro</div></div>
+        <div class="footer">Linea Italia — Eccellenza in Mobile</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD GENERAL -->
+  <div id="dashboardView">
+    <div class="dash-header">
+      <div style="flex:1;"><div class="dash-title">Dashboard General</div><div class="dash-subtitle">Comparativo de todos los centros de trabajo</div></div>
+      <button class="dash-back" onclick="closeDashboard()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Volver
+      </button>
+    </div>
+    <div class="dash-body">
+      <div id="dashKpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;"></div>
+      <!-- COSTO TOTAL PLANTA -->
+      <div id="dashCostoPlanta" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 28px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+          <div>
+            <div style="font-size:0.55rem;font-weight:700;letter-spacing:3px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:6px;">Costo Total de la Planta</div>
+            <div id="dashCostoPlantaValor" style="font-size:2.8rem;font-weight:800;letter-spacing:4px;color:#5bb8e8;"></div>
+            <div style="font-size:0.62rem;color:var(--text-tertiary);margin-top:2px;letter-spacing:1px;">pesos por hora (suma de todos los centros)</div>
+          </div>
+          <div style="display:flex;gap:24px;flex-wrap:wrap;">
+            <div style="text-align:center;">
+              <div style="font-size:0.52rem;font-weight:700;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">MOD Total</div>
+              <div id="dashModTotal" style="font-size:1.2rem;font-weight:800;color:#5bb8e8;letter-spacing:1px;"></div>
+              <div style="font-size:0.6rem;color:var(--text-tertiary);">/ mes</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:0.52rem;font-weight:700;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">CIF Total</div>
+              <div id="dashCifTotal" style="font-size:1.2rem;font-weight:800;color:#e8a840;letter-spacing:1px;"></div>
+              <div style="font-size:0.6rem;color:var(--text-tertiary);">/ mes</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:0.52rem;font-weight:700;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">Centros activos</div>
+              <div id="dashCentrosActivos" style="font-size:1.2rem;font-weight:800;color:#6fc98c;letter-spacing:1px;"></div>
+              <div style="font-size:0.6rem;color:var(--text-tertiary);">con datos</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="dashAlertBar" style="display:none;"></div>
+      <div class="dash-chart-card">
+        <div class="dash-section-title">Costo por hora — todos los centros</div>
+        <div style="position:relative;width:100%;height:400px;"><canvas id="dashMainChart"></canvas></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr;gap:20px;">
+        <div class="dash-chart-card"><div class="dash-section-title">MOD mensual por centro</div><div style="position:relative;width:100%;" id="dashModWrap"><canvas id="dashModChart"></canvas></div></div>
+        <div class="dash-chart-card"><div class="dash-section-title">CIF mensual por centro</div><div style="position:relative;width:100%;" id="dashCifWrap"><canvas id="dashCifChart"></canvas></div></div>
+      </div>
+      <div class="dash-chart-card">
+        <div class="dash-section-title">Tabla comparativa</div>
+        <div style="overflow-x:auto;"><table class="data-table" id="dashTable" style="min-width:700px;"></table></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABULADOR VIEW -->
+  <div id="tabuladorView">
+    <div class="dash-header">
+      <div style="flex:1;"><div class="dash-title">Tabulador</div><div class="dash-subtitle">Niveles y categorías salariales</div></div>
+      <button class="dash-back" onclick="closeTabulador()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Volver
+      </button>
+    </div>
+    <div class="dash-body">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+        <button class="btn-add" id="btnAddGrupo" onclick="openModal('modal-grupo')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nuevo Grupo
+        </button>
+        <button class="btn-add" id="btnAddCategoria" onclick="openModal('modal-categoria')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nueva Categoría
+        </button>
+        <button class="btn-add" id="btnAddNivel" onclick="openModal('modal-nivel')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nuevo Nivel
+        </button>
+      </div>
+      <div id="tabuladorWrap"></div>
+    </div>
+  </div>
+
+  <!-- EQUIPO VIEW -->
+  <div id="equipoView">
+    <div class="dash-header">
+      <div style="flex:1;"><div class="dash-title">Equipo</div><div class="dash-subtitle">Ingenieros responsables y áreas designadas</div></div>
+      <button class="dash-back" onclick="closeEquipo()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Volver
+      </button>
+    </div>
+    <div class="dash-body">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+        <button class="btn-add" id="btnAddIngeniero" onclick="openModal('modal-ingeniero')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Registrar Ingeniero
+        </button>
+      </div>
+      <div class="equipo-section">
+        <div class="equipo-section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          Gerencia
+        </div>
+        <div id="gerenciaWrap"><div style="color:var(--text-tertiary);font-size:0.75rem;letter-spacing:1px;">Sin gerente designado</div></div>
+      </div>
+      <div class="equipo-section">
+        <div class="equipo-section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Ingenieros y Áreas
+        </div>
+        <div id="ingenierosList" style="display:flex;flex-direction:column;gap:10px;">
+          <div style="color:var(--text-tertiary);font-size:0.75rem;letter-spacing:1px;">Sin ingenieros registrados</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Modal: MOD / Salario -->
+<div class="modal-backdrop" id="modal-mod" onclick="closeModalIfBackdrop(event,'modal-mod')">
+  <div class="modal-box">
+    <div class="modal-header"><span class="modal-title" id="modal-mod-title">Añadir operario</span><button class="modal-close" onclick="closeModal('modal-mod')">✕</button></div>
+    <input type="hidden" id="modEditIdx" value="">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="form-group"><label>Puesto</label><input type="text" id="modPuesto" placeholder="Ej. Operador CNC"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Grupo</label><select id="modGrupo" onchange="onModGrupoChange()"><option value="">— Sin tabulador —</option></select></div>
+        <div class="form-group"><label>Categoría</label><select id="modCategoria" onchange="onModCategoriaChange()"><option value="">— Seleccionar grupo primero —</option></select></div>
+      </div>
+      <div id="modSalarioPreview" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
+        <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:4px;">Salario mensual (del tabulador)</div>
+        <div id="modSalarioValor" style="font-size:1.3rem;font-weight:800;color:var(--selected-ac,#333);letter-spacing:2px;"></div>
+        <div style="font-size:0.62rem;color:var(--text-tertiary);margin-top:2px;" id="modSalarioDetalle"></div>
+      </div>
+      <div id="modSalarioManualWrap">
+        <div class="form-group"><label>Costo mensual manual ($) <span style="color:var(--text-tertiary);font-size:0.6rem;">(si no hay nivel en tabulador)</span></label><input type="number" id="modCostoManual" placeholder="0.00" min="0" step="0.01"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-mod')">Cancelar</button>
+      <button class="btn btn-accent" onclick="savePersonal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Operación -->
+<div class="modal-backdrop" id="modal-ops" onclick="closeModalIfBackdrop(event,'modal-ops')">
+  <div class="modal-box">
+    <div class="modal-header"><span class="modal-title" id="modal-ops-title">Nueva operación</span><button class="modal-close" onclick="closeModal('modal-ops')">✕</button></div>
+    <input type="hidden" id="opsEditIdx" value="">
+    <div class="form-row">
+      <div class="form-group" style="flex:2;min-width:180px;"><label>Nombre de la operación</label><input type="text" id="opName" placeholder="Ej. Corte de piezas"></div>
+      <div class="form-group" style="flex:0 0 120px;"><label>Minutos</label><input type="number" id="opMin" placeholder="0" min="0" step="0.01"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-ops')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveOperacion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Consideración -->
+<div class="modal-backdrop" id="modal-cons" onclick="closeModalIfBackdrop(event,'modal-cons')">
+  <div class="modal-box">
+    <div class="modal-header"><span class="modal-title" id="modal-cons-title">Consideración de tiempo</span><button class="modal-close" onclick="closeModal('modal-cons')">✕</button></div>
+    <input type="hidden" id="consEditIdx" value="">
+    <div class="form-row">
+      <div class="form-group" style="flex:0 0 160px;"><label>Tiempo disponible (min)</label><input type="number" id="consDisp" placeholder="480" min="0" step="1"></div>
+      <div class="form-group" style="flex:2;min-width:140px;"><label>Nombre</label><input type="text" id="consName" placeholder="Ej. Descanso"></div>
+      <div class="form-group" style="flex:0 0 100px;"><label>Minutos</label><input type="number" id="consMin" placeholder="0" min="0" step="0.01"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-cons')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveConsideracion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: CIF -->
+<div class="modal-backdrop" id="modal-cif" onclick="closeModalIfBackdrop(event,'modal-cif')">
+  <div class="modal-box">
+    <div class="modal-header"><span class="modal-title" id="modal-cif-title">Concepto CIF</span><button class="modal-close" onclick="closeModal('modal-cif')">✕</button></div>
+    <input type="hidden" id="cifEditIdx" value="">
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="form-group"><label>Concepto</label>
+        <select id="cifConcepto">
+          <option value="">— Seleccionar —</option>
+          <option>MOI</option><option>Energía</option><option>Agua</option><option>Gas</option>
+          <option>Renta</option><option>Fumigación</option><option>Capacitación</option>
+          <option>Uniformes</option><option>Internet / Software</option><option>Papelería</option>
+          <option>Sindicato</option><option>Materiales indirectos</option><option>Depreciaciones</option>
+          <option>MTTO</option><option>Servicios generales</option><option>Herramientas consumibles</option>
+          <option>Diversos</option><option>TICs</option><option>Seguridad y fianzas</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:0 0 180px;"><label>Monto mensual ($)</label><input type="number" id="cifMonto" placeholder="0.00" min="0" step="0.01"></div>
+        <div class="form-group" style="flex:1;"><label>Nota (opcional)</label><input type="text" id="cifNota" placeholder="Proveedor, contrato..."></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-cif')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveCIF()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Equipo/Activo -->
+<div class="modal-backdrop" id="modal-equipo" onclick="closeModalIfBackdrop(event,'modal-equipo')">
+  <div class="modal-box" style="max-width:580px;">
+    <div class="modal-header"><span class="modal-title" id="modalEquipoTitle">Registrar equipo</span><button class="modal-close" onclick="closeModal('modal-equipo')">✕</button></div>
+    <input type="hidden" id="equipoEditIdx" value="">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="form-row">
+        <div class="form-group" style="flex:2;"><label>Nombre del equipo</label><input type="text" id="equipoNombre" placeholder="Ej. Router CNC-01"></div>
+        <div class="form-group" style="flex:0 0 140px;"><label>Tipo</label>
+          <select id="equipoTipo"><option>Máquina</option><option>Herramienta</option><option>Equipo de medición</option><option>Vehículo</option><option>Mobiliario</option><option>Otro</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2;"><label>Marca / Modelo</label><input type="text" id="equipoModelo" placeholder="Fanuc / VF-2SS"></div>
+        <div class="form-group" style="flex:0 0 100px;"><label>Año</label><input type="number" id="equipoAnio" placeholder="2020" min="1950" max="2099" step="1"></div>
+        <div class="form-group" style="flex:0 0 150px;"><label>Valor en libros ($)</label><input type="number" id="equipoValor" placeholder="0.00" min="0" step="0.01"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:1;"><label>Último mantenimiento</label><input type="date" id="equipoUltimoMtto"></div>
+        <div class="form-group" style="flex:1;"><label>Próximo mantenimiento</label><input type="date" id="equipoProxMtto"></div>
+      </div>
+      <div class="form-group"><label>Notas (opcional)</label><input type="text" id="equipoNotas" placeholder="En garantía, requiere calibración..."></div>
+      <div class="form-group"><label>Página del equipo (opcional)</label><input type="text" id="equipoUrl" placeholder="FERRETI.html o URL completa"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-equipo')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveEquipo()">Guardar equipo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ingeniero (Equipo) -->
+<div class="modal-backdrop" id="modal-ingeniero" onclick="closeModalIfBackdrop(event,'modal-ingeniero')">
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-header"><span class="modal-title" id="modal-ing-title">Registrar miembro del equipo</span><button class="modal-close" onclick="closeModal('modal-ingeniero')">✕</button></div>
+    <input type="hidden" id="ingEditIdx" value="">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="form-row">
+        <div class="form-group" style="flex:2;"><label>Nombre completo</label><input type="text" id="ingNombre" placeholder="Ej. Juan Pérez García"></div>
+        <div class="form-group" style="flex:0 0 160px;"><label>Rol</label>
+          <select id="ingRol" onchange="onIngRolChange()">
+            <option value="ingeniero">Ingeniero</option>
+            <option value="gerente">Gerente</option>
+          </select>
+        </div>
+      </div>
+      <div id="ingAreasWrap" class="form-group"><label>Áreas designadas <span style="color:var(--text-tertiary);font-size:0.6rem;">(solo ingenieros)</span></label><div id="ingAreasCheck" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;padding:10px;background:var(--input-bg);border:1px solid var(--border-mid);border-radius:8px;"></div></div>
+      <div id="ingGerenteNote" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:0.72rem;color:var(--text-secondary);letter-spacing:1px;">
+        El gerente tiene visibilidad sobre <strong>todos los centros de trabajo</strong> por defecto.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-ingeniero')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveIngeniero()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Grupo Tabulador -->
+<div class="modal-backdrop" id="modal-grupo" onclick="closeModalIfBackdrop(event,'modal-grupo')">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header"><span class="modal-title" id="modal-grupo-title">Nuevo grupo</span><button class="modal-close" onclick="closeModal('modal-grupo')">✕</button></div>
+    <input type="hidden" id="grupoEditIdx" value="">
+    <div class="form-group"><label>Nombre del grupo</label><input type="text" id="grupoNombre" placeholder="Ej. Sindicalizado, Ayudante, Técnico..."></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-grupo')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveGrupo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Categoría Tabulador -->
+<div class="modal-backdrop" id="modal-categoria" onclick="closeModalIfBackdrop(event,'modal-categoria')">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-header"><span class="modal-title" id="modal-cat-title">Nueva categoría</span><button class="modal-close" onclick="closeModal('modal-categoria')">✕</button></div>
+    <input type="hidden" id="catEditIdx" value="">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="form-group"><label>Nombre de la categoría sindical</label><input type="text" id="catNombre" placeholder="Ej. Sindicalizado a prueba"></div>
+      <div class="form-group"><label>Grupo al que pertenece</label><select id="catGrupo"><option value="">— Seleccionar grupo —</option></select></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-categoria')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveCategoria()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nivel Tabulador -->
+<div class="modal-backdrop" id="modal-nivel" onclick="closeModalIfBackdrop(event,'modal-nivel')">
+  <div class="modal-box" style="max-width:600px;">
+    <div class="modal-header"><span class="modal-title" id="modal-nivel-title">Nuevo nivel</span><button class="modal-close" onclick="closeModal('modal-nivel')">✕</button></div>
+    <input type="hidden" id="nivelEditIdx" value="">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="form-row">
+        <div class="form-group" style="flex:0 0 80px;"><label>Nivel #</label><input type="number" id="nivelNum" placeholder="1" min="1" step="1"></div>
+        <div class="form-group" style="flex:1;"><label>Categoría sindical</label><select id="nivelCategoria"><option value="">— Seleccionar —</option></select></div>
+      </div>
+      <div class="form-group"><label>Qué puede hacer</label><textarea id="nivelDesc" placeholder="Descripción de funciones..." style="font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;background:var(--input-bg);border:1px solid var(--border-mid);border-radius:8px;padding:9px 12px;color:var(--text-primary);outline:none;min-height:70px;resize:vertical;width:100%;"></textarea></div>
+      <div class="form-row">
+        <div class="form-group" style="flex:1;"><label>Criterio de ascenso</label><input type="text" id="nivelAscenso" placeholder="Ej. 1 mes + evaluación"></div>
+        <div class="form-group" style="flex:0 0 140px;"><label>Autonomía</label>
+          <select id="nivelAutonomia"><option>Ninguna</option><option>Muy baja</option><option>Baja</option><option>Media</option><option>Alta</option><option>Total</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:0 0 160px;"><label>Salario diario ($)</label><input type="number" id="nivelSalario" placeholder="0.00" min="0" step="0.01"></div>
+        <div class="form-group" style="flex:0 0 160px;"><label>Incremento (%)</label><input type="number" id="nivelIncremento" placeholder="2.5" min="0" step="0.1"></div>
+        <div class="form-group" style="flex:1;"><label>Salario con incremento</label><input type="text" id="nivelSalarioFinal" placeholder="Auto-calculado" readonly style="background:var(--bg3)!important;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-nivel')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveNivel()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FERRETI PANEL (simplified placeholder) -->
+<div id="ferreti-view">
+  <div id="ferreti-back-bar">
+    <button id="ferreti-back-btn" onclick="closeFerretiPanel()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Volver a Telas
+    </button>
+    <span id="ferreti-back-label">Centro de Telas — Equipos</span>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:3rem;color:var(--text-tertiary);font-size:0.75rem;letter-spacing:3px;text-transform:uppercase;">
+    FERRETI — Sistema de gestión cargando...
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// CENTROS DE TRABAJO
+// ═══════════════════════════════════════════════════
+const centros = [
+  { n:"Carpintería",     s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="1"/><path d="M3 7h18M3 12h18M3 17h18"/></svg>` },
+  { n:"Láser",           s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="7.05" y2="7.05"/><line x1="16.95" y1="16.95" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="7.05" y2="16.95"/><line x1="16.95" y1="7.05" x2="19.78" y2="4.22"/></svg>` },
+  { n:"Troqueles",       s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v4l3 2 3-2V3M9 21v-4l3-2 3 2v4"/><line x1="3" y1="9" x2="7" y2="9"/><line x1="17" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="7" y2="15"/><line x1="17" y1="15" x2="21" y2="15"/></svg>` },
+  { n:"Enchapado",       s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="3" width="20" height="4" rx=".5"/><rect x="2" y="10" width="20" height="4" rx=".5"/><rect x="2" y="17" width="20" height="4" rx=".5"/></svg>` },
+  { n:"Est. Mamparas",   s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="3" width="9" height="18" rx=".5"/><rect x="13" y="3" width="9" height="18" rx=".5"/></svg>` },
+  { n:"Est. Sillas",     s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 9V4h14v5"/><rect x="3" y="9" width="18" height="4" rx=".5"/><line x1="7" y1="13" x2="7" y2="21"/><line x1="17" y1="13" x2="17" y2="21"/></svg>` },
+  { n:"Est. Muebles",    s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx=".5"/><line x1="2" y1="14" x2="22" y2="14"/><line x1="12" y1="7" x2="12" y2="21"/></svg>` },
+  { n:"Cajas",           s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>` },
+  { n:"Habilitado",      s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>` },
+  { n:"Pintura",         s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M19 4a2 2 0 0 0-2-2H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h2v2a2 2 0 0 0 4 0v-2h8a2 2 0 0 0 2-2V4z"/><line x1="5" y1="8" x2="15" y2="8"/><line x1="5" y1="12" x2="12" y2="12"/></svg>` },
+  { n:"Telas",           s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 6c2-2 4 0 6-2s4 2 6 0 4-2 6 0M2 12c2-2 4 0 6-2s4 2 6 0 4-2 6 0M2 18c2-2 4 0 6-2s4 2 6 0 4-2 6 0"/></svg>` },
+  { n:"Ens. Muebles",    s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="8" width="20" height="12" rx=".5"/><path d="M6 8V5h12v3"/><line x1="6" y1="20" x2="6" y2="22"/><line x1="18" y1="20" x2="18" y2="22"/><line x1="2" y1="14" x2="22" y2="14"/></svg>` },
+  { n:"Ens. Sillas",     s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 3v6M18 3v6"/><rect x="4" y="9" width="16" height="4" rx=".5"/><path d="M6 13v8M18 13v8"/></svg>` },
+  { n:"Ens. Sillones",   s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 11V8a3 3 0 0 1 6 0v3M16 11V8a3 3 0 0 1 6 0v3"/><rect x="2" y="11" width="20" height="7" rx="1"/><path d="M5 18v2M19 18v2"/><line x1="2" y1="15" x2="22" y2="15"/></svg>` },
+  { n:"Ens. Libreros",   s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="2" width="5" height="20" rx=".5"/><rect x="9" y="6" width="5" height="16" rx=".5"/><rect x="16" y="4" width="6" height="18" rx=".5"/><line x1="2" y1="22" x2="22" y2="22"/></svg>` },
+  { n:"Ens. Mamparas",   s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="2" width="9" height="20" rx=".5"/><rect x="13" y="2" width="9" height="20" rx=".5"/></svg>` },
+  { n:"Ens. Archiveros", s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="2" width="20" height="5" rx=".5"/><rect x="2" y="9" width="20" height="5" rx=".5"/><rect x="2" y="16" width="20" height="6" rx=".5"/><line x1="8" y1="4.5" x2="16" y2="4.5"/><line x1="8" y1="11.5" x2="16" y2="11.5"/></svg>` },
+];
+
+// Special pages (not work centres)
+const SPECIAL = {
+  equipo: { n:"Equipo", s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>` },
+  dashboard: { n:"Dashboard General", s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>` },
+  tabulador: { n:"Tabulador", s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="3" width="20" height="18" rx="1"/><line x1="2" y1="9" x2="22" y2="9"/><line x1="2" y1="15" x2="22" y2="15"/><line x1="8" y1="9" x2="8" y2="21"/></svg>` },
+};
+
+const acs = ["#e8a840","#5bb8e8","#e05c5c","#6fc98c","#c87de8","#e88a40","#40c8e8","#e8c840","#e87840","#40e8b8","#e84060","#a0c840","#5870e8","#e8a040","#40e870","#e84898","#60b8e8","#ffffff"];
+function getAc(i){ return acs[i % acs.length]; }
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+const state = {};
+centros.forEach((_, i) => {
+  state[i] = { ops:[], cons:{ disponible:null, items:[] }, mod:[], cif:[], equipos:[], updatedAt:null };
+});
+
+// Equipo (ingenieros)
+const equipoState = { ingenieros:[] }; // {nombre, rol, areas:[idx,...]}
+
+// Tabulador global
+const tabulador = { grupos:[], categorias:[], niveles:[] };
+// grupos: {nombre}
+// categorias: {nombre, grupoIdx}
+// niveles: {num, categoriaIdx, desc, ascenso, autonomia, salario, incremento}
+
+let selectedIdx = null;
+let cifChartInstance = null;
+let dashMainChart = null, dashModChart = null, dashCifChart = null;
+
+function s(id){ return document.getElementById(id); }
+function cur(){ return state[selectedIdx]; }
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+function openModal(id){
+  if (id === 'modal-mod') {
+    s('modEditIdx').value = '';
+    s('modal-mod-title').textContent = 'Añadir operario';
+    s('modPuesto').value = '';
+    s('modCostoManual').value = '';
+    s('modSalarioPreview').style.display = 'none';
+    populateModGrupo();
+    s('modGrupo').value = '';
+    s('modCategoria').innerHTML = '<option value="">— Seleccionar grupo primero —</option>';
+  }
+  if (id === 'modal-ops') {
+    s('opsEditIdx').value = '';
+    s('modal-ops-title').textContent = 'Nueva operación';
+    s('opName').value = ''; s('opMin').value = '';
+  }
+  if (id === 'modal-cons') {
+    s('consEditIdx').value = '';
+    s('modal-cons-title').textContent = 'Nueva consideración';
+    s('consName').value = ''; s('consMin').value = '';
+    const disp = cur() && cur().cons.disponible !== null ? cur().cons.disponible : '';
+    s('consDisp').value = disp;
+  }
+  if (id === 'modal-cif') {
+    s('cifEditIdx').value = '';
+    s('modal-cif-title').textContent = 'Nuevo concepto CIF';
+    s('cifConcepto').value = ''; s('cifMonto').value = ''; s('cifNota').value = '';
+  }
+  if (id === 'modal-equipo') {
+    s('equipoEditIdx').value = '';
+    s('modalEquipoTitle').textContent = 'Registrar equipo';
+    ['equipoNombre','equipoModelo','equipoAnio','equipoValor','equipoUltimoMtto','equipoProxMtto','equipoNotas','equipoUrl'].forEach(id2 => s(id2).value = '');
+    s('equipoTipo').value = 'Máquina';
+  }
+  if (id === 'modal-ingeniero') {
+    s('ingEditIdx').value = '';
+    s('modal-ing-title').textContent = 'Registrar miembro del equipo';
+    s('ingNombre').value = ''; s('ingRol').value = 'ingeniero';
+    buildAreasCheck(-1);
+    s('ingAreasWrap').style.display = '';
+    s('ingGerenteNote').style.display = 'none';
+  }
+  if (id === 'modal-grupo') {
+    s('grupoEditIdx').value = '';
+    s('modal-grupo-title').textContent = 'Nuevo grupo';
+    s('grupoNombre').value = '';
+  }
+  if (id === 'modal-categoria') {
+    s('catEditIdx').value = '';
+    s('modal-cat-title').textContent = 'Nueva categoría';
+    s('catNombre').value = '';
+    populateCatGrupo();
+  }
+  if (id === 'modal-nivel') {
+    s('nivelEditIdx').value = '';
+    s('modal-nivel-title').textContent = 'Nuevo nivel';
+    ['nivelNum','nivelDesc','nivelAscenso','nivelSalario','nivelIncremento','nivelSalarioFinal'].forEach(id2 => s(id2).value = '');
+    s('nivelAutonomia').value = 'Ninguna';
+    populateNivelCategoria();
+    s('nivelSalario').oninput = calcNivelFinal;
+    s('nivelIncremento').oninput = calcNivelFinal;
+  }
+  document.getElementById(id).classList.add('open');
+  const first = document.getElementById(id).querySelector('input:not([readonly]),select,textarea');
+  if (first) setTimeout(() => first.focus(), 60);
+}
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function closeModalIfBackdrop(e, id){ if (e.target === document.getElementById(id)) closeModal(id); }
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    ['modal-mod','modal-ops','modal-cons','modal-cif','modal-equipo','modal-ingeniero','modal-grupo','modal-categoria','modal-nivel'].forEach(id => closeModal(id));
+  }
+});
+
+// ═══════════════════════════════════════════════════
+// STAMP
+// ═══════════════════════════════════════════════════
+function getDaysSince(ts){ if(!ts) return null; return Math.floor((Date.now()-ts)/86400000); }
+function stampInfo(idx){
+  const days = getDaysSince(state[idx] && state[idx].updatedAt);
+  if(days===null) return {cls:'stamp-none',label:'Sin datos'};
+  if(days===0)    return {cls:'stamp-green',label:'Hoy'};
+  if(days<=3)     return {cls:'stamp-green',label:'Hace '+days+(days===1?' día':' días')};
+  if(days<=7)     return {cls:'stamp-amber',label:'Hace '+days+' días'};
+  return              {cls:'stamp-red',label:'Hace '+days+' días'};
+}
+function markUpdated(){ if(selectedIdx===null) return; state[selectedIdx].updatedAt=Date.now(); refreshStamp(selectedIdx); fbSave(); }
+function refreshStamp(idx){
+  const chip = document.getElementById('stamp-'+idx);
+  if(chip){ const info=stampInfo(idx); chip.className='card-stamp '+info.cls; chip.textContent=info.label; }
+  const ds = s('detailStamp');
+  if(ds && selectedIdx===idx){ const info=stampInfo(idx); ds.className=info.cls; ds.textContent=info.label; }
+}
+
+// ═══════════════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════════════
+function toggleTheme(){
+  const isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('ct-theme', isDark?'dark':'light');
+  updateThemeBtn(isDark);
+}
+function updateThemeBtn(isDark){
+  const label=s('themeLabel'), icon=s('themeIcon');
+  if(!label||!icon) return;
+  if(isDark){
+    label.textContent='Claro';
+    icon.innerHTML=`<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>`;
+  } else {
+    label.textContent='Oscuro';
+    icon.innerHTML=`<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
+  }
+}
+(function(){ const saved=localStorage.getItem('ct-theme'); if(saved==='dark') document.body.classList.add('dark'); document.addEventListener('DOMContentLoaded',()=>updateThemeBtn(document.body.classList.contains('dark'))); })();
+
+// ═══════════════════════════════════════════════════
+// GRID
+// ═══════════════════════════════════════════════════
+function buildGrid(){
+  const equipoAc = '#9b8fe8';
+  const dashAc = '#ffffff';
+  const tabAc = '#e8c840';
+  s('grid').innerHTML =
+    // EQUIPO card (first)
+    `<div class="card" style="--ac:${equipoAc};" onclick="openEquipo()">
+      <div class="card-icon">${SPECIAL.equipo.s}</div>
+      <div class="card-name">${SPECIAL.equipo.n}</div>
+      <div class="card-stamp stamp-none">Gestión</div>
+    </div>` +
+    centros.map((c, i) => {
+      const ac = getAc(i);
+      const si = stampInfo(i);
+      const respName = getResponsableCentro(i);
+      return `<div class="card" style="--ac:${ac};" onclick="selectCentro(${i})">
+        <div class="card-icon">${c.s}</div>
+        <div class="card-name">${c.n}</div>
+        ${respName ? `<div class="card-stamp stamp-green" style="font-size:0.44rem;">${respName}</div>` : ''}
+        <div id="stamp-${i}" class="card-stamp ${si.cls}">${si.label}</div>
+      </div>`;
+    }).join('') +
+    // Dashboard
+    `<div class="card" style="--ac:${dashAc};" onclick="openDashboard()">
+      <div class="card-icon">${SPECIAL.dashboard.s}</div>
+      <div class="card-name">${SPECIAL.dashboard.n}</div>
+      <div class="card-stamp stamp-none">General</div>
+    </div>` +
+    // Tabulador
+    `<div class="card" style="--ac:${tabAc};" onclick="openTabulador()">
+      <div class="card-icon">${SPECIAL.tabulador.s}</div>
+      <div class="card-name">${SPECIAL.tabulador.n}</div>
+      <div class="card-stamp stamp-none" style="background:rgba(232,200,64,0.15);color:#a07a00;">Salarial</div>
+    </div>`;
+}
+
+function getResponsableCentro(idx){
+  const ing = equipoState.ingenieros.find(i => i.areas.includes(idx));
+  if(!ing) return '';
+  const parts = ing.nombre.trim().split(' ');
+  return parts.length >= 2 ? parts[0]+' '+parts[1] : ing.nombre;
+}
+
+// ═══════════════════════════════════════════════════
+// SELECT CENTRO
+// ═══════════════════════════════════════════════════
+function selectCentro(idx){
+  selectedIdx = idx;
+  const ac = getAc(idx);
+  document.documentElement.style.setProperty('--selected-ac', ac);
+
+  buildSidebar(idx);
+  s('detailHeaderIcon').innerHTML = centros[idx].s;
+  s('detailHeaderIcon').style.color = ac;
+  s('detailHeaderName').textContent = centros[idx].n;
+
+  // Show responsable
+  const respName = getFullResponsableCentro(idx);
+  const respEl = s('detailResponsable');
+  const respNombreEl = s('detailResponsableNombre');
+  if(respEl && respNombreEl){
+    if(respName){
+      respNombreEl.textContent = respName;
+      respEl.style.display = 'flex';
+    } else {
+      respNombreEl.textContent = '';
+      respEl.style.display = 'none';
+    }
+  }
+
+  document.body.classList.add('detail-mode');
+  s('gridView').style.display = 'none';
+  s('detailView').classList.add('active');
+  s('dashboardView').style.display = 'none';
+  s('tabuladorView').style.display = 'none';
+  s('equipoView').style.display = 'none';
+  s('mainArea').removeAttribute('style');
+
+  refreshStamp(idx);
+  switchTab('dist');
+  renderMod();
+  renderOps();
+  renderCons();
+  renderCIF();
+  renderEquipos();
+  renderTabuladorCentro();
+  s('resultsBlock').style.display = 'none';
+
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function getFullResponsableCentro(idx){
+  const ing = equipoState.ingenieros.find(i => i.areas.includes(idx));
+  return ing ? ing.nombre : '';
+}
+
+function buildSidebar(activeIdx){
+  s('sideList').innerHTML =
+    `<div class="sidebar-logo">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style="width:38px;height:38px;display:block;margin-bottom:6px;">
+        <rect x="0" y="0" width="200" height="200" fill="var(--logo-bg)"/>
+        <rect x="0" y="0" width="200" height="200" fill="none" stroke="var(--logo-fill)" stroke-width="20"/>
+        <rect x="48" y="45" width="19" height="105" fill="var(--logo-fill)"/>
+        <rect x="48" y="131" width="55" height="19" fill="var(--logo-fill)"/>
+        <rect x="133" y="45" width="19" height="105" fill="var(--logo-fill)"/>
+      </svg>
+      <div class="sidebar-app-name">Transformación<br>Operativa</div>
+    </div>
+    <div class="sidebar-back" onclick="goBack()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Volver
+    </div>
+    <div class="list-label">Equipo</div>
+    <div class="list-item${activeIdx==='equipo'?' active-item':''}" style="--ac:#9b8fe8;" onclick="openEquipo()">
+      <div class="list-icon">${SPECIAL.equipo.s}</div>
+      <div class="list-name">Equipo</div>
+    </div>
+    <div class="list-label">Centros de Trabajo</div>` +
+    centros.map((c,i) => `
+      <div class="list-item${i===activeIdx?' active-item':''}" style="--ac:${getAc(i)};" onclick="selectCentro(${i})">
+        <div class="list-icon">${c.s}</div>
+        <div class="list-name">${c.n}</div>
+      </div>`).join('') +
+    `<div class="list-label" style="margin-top:10px;">General</div>
+    <div class="list-item${activeIdx==='dashboard'?' active-item':''}" style="--ac:#fff;" onclick="openDashboard()">
+      <div class="list-icon">${SPECIAL.dashboard.s}</div>
+      <div class="list-name">Dashboard</div>
+    </div>
+    <div class="list-item${activeIdx==='tabulador'?' active-item':''}" style="--ac:#e8c840;" onclick="openTabulador()">
+      <div class="list-icon">${SPECIAL.tabulador.s}</div>
+      <div class="list-name">Tabulador</div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════
+function switchTab(tab){
+  const tabs=['dist','cif','resumen','layout','equipos','tabulador'];
+  s('mainTabsBar').querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===tab));
+  tabs.forEach(t => { const el=s('tab-'+t); if(el) el.classList.toggle('active', t===tab); });
+  if(tab==='resumen') calcResumen();
+  if(tab==='tabulador') renderTabuladorCentro();
+}
+
+// ═══════════════════════════════════════════════════
+// MOD / SALARIO — tabulador linked
+// ═══════════════════════════════════════════════════
+function populateModGrupo(){
+  const sel=s('modGrupo');
+  sel.innerHTML=`<option value="">— Sin tabulador —</option>`+tabulador.grupos.map((g,i)=>`<option value="${i}">${g.nombre}</option>`).join('');
+}
+function onModGrupoChange(){
+  const gi=s('modGrupo').value;
+  const sel=s('modCategoria');
+  if(gi===''){sel.innerHTML='<option value="">— Seleccionar grupo primero —</option>';s('modSalarioPreview').style.display='none';return;}
+  const cats=tabulador.categorias.filter(c=>c.grupoIdx===parseInt(gi));
+  sel.innerHTML='<option value="">— Seleccionar categoría —</option>'+cats.map(c=>{const ci=tabulador.categorias.indexOf(c);return`<option value="${ci}">${c.nombre}</option>`;}).join('');
+  s('modSalarioPreview').style.display='none';
+}
+function onModCategoriaChange(){
+  const ci=s('modCategoria').value;
+  if(ci===''){s('modSalarioPreview').style.display='none';return;}
+  const nivel=tabulador.niveles.find(n=>n.categoriaIdx===parseInt(ci));
+  if(nivel){
+    const salFinal=nivel.salario*(1+nivel.incremento/100);
+    const salMensual=salFinal*22;
+    s('modSalarioValor').textContent='$'+salMensual.toLocaleString('es-MX',{minimumFractionDigits:2});
+    s('modSalarioDetalle').textContent='$'+salFinal.toFixed(2)+'/día × 22 días | Nivel '+nivel.num+' | Autonomía: '+nivel.autonomia;
+    s('modSalarioPreview').style.display='';
+    s('modCostoManual').value='';
+  } else {
+    s('modSalarioPreview').style.display='none';
+  }
+}
+function getSalarioFromModal(){
+  // Try to get salary from tabulador first
+  const ci=s('modCategoria').value;
+  if(ci!==''){
+    const nivel=tabulador.niveles.find(n=>n.categoriaIdx===parseInt(ci));
+    if(nivel){
+      const salFinal=nivel.salario*(1+nivel.incremento/100);
+      return salFinal*22;
+    }
+  }
+  return parseFloat(s('modCostoManual').value)||0;
+}
+function savePersonal(){
+  const puesto = s('modPuesto').value.trim();
+  if(!puesto){ alert('Ingresa el puesto.'); return; }
+  const costo = getSalarioFromModal();
+  const grupoIdx = s('modGrupo').value !== '' ? parseInt(s('modGrupo').value) : null;
+  const catIdx = s('modCategoria').value !== '' ? parseInt(s('modCategoria').value) : null;
+  const editIdx = s('modEditIdx').value;
+  const entry = { puesto, costo, grupoIdx, catIdx };
+  if(editIdx !== '') cur().mod[parseInt(editIdx)] = entry;
+  else cur().mod.push(entry);
+  markUpdated(); closeModal('modal-mod'); renderMod(); renderTabuladorCentro();
+}
+function editPersonal(i){
+  const m = cur().mod[i];
+  s('modEditIdx').value = i;
+  s('modal-mod-title').textContent = 'Editar operario';
+  s('modPuesto').value = m.puesto;
+  s('modCostoManual').value = '';
+  s('modSalarioPreview').style.display = 'none';
+  populateModGrupo();
+  if(m.grupoIdx !== null && m.grupoIdx !== undefined){
+    s('modGrupo').value = m.grupoIdx;
+    onModGrupoChange();
+    if(m.catIdx !== null && m.catIdx !== undefined){
+      s('modCategoria').value = m.catIdx;
+      onModCategoriaChange();
+    }
+  } else {
+    s('modGrupo').value = '';
+    s('modCategoria').innerHTML = '<option value="">— Seleccionar grupo primero —</option>';
+    s('modCostoManual').value = m.costo || '';
+  }
+  openModal('modal-mod');
+}
+function delPersonal(i){ cur().mod.splice(i,1); markUpdated(); renderMod(); renderTabuladorCentro(); }
+function renderMod(){
+  const mod = cur().mod;
+  const wrap = s('modListWrap');
+  if(!mod.length){ wrap.innerHTML=`<div class="items-list"><div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin personal registrado</div></div>`; return; }
+  wrap.innerHTML = `<div class="items-list">`+mod.map((m,i)=>{
+    const cat=m.catIdx!==null&&m.catIdx!==undefined?tabulador.categorias[m.catIdx]:null;
+    const grupo=cat&&m.grupoIdx!==null?tabulador.grupos[m.grupoIdx]:null;
+    const tag=grupo?`<span style="font-size:0.58rem;background:var(--hover-bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--text-secondary);">${grupo.nombre}</span>`:''
+    return`<div class="item-row">
+      <div class="item-num">${String(i+1).padStart(2,'0')}</div>
+      <div class="item-name">${m.puesto} ${tag}</div>
+      <div class="item-min">$${(m.costo||0).toLocaleString('es-MX',{minimumFractionDigits:2})}</div>
+      <button class="item-edit" onclick="editPersonal(${i})" title="Editar">✎</button>
+      <button class="item-del" onclick="delPersonal(${i})" title="Eliminar">✕</button>
+    </div>`;
+  }).join('')+`</div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// OPERACIONES
+// ═══════════════════════════════════════════════════
+function saveOperacion(){
+  const nombre = s('opName').value.trim();
+  const min = parseFloat(s('opMin').value);
+  if(!nombre || isNaN(min) || min<0){ alert('Ingresa nombre y minutos.'); return; }
+  const editIdx = s('opsEditIdx').value;
+  const entry = {nombre, min};
+  if(editIdx !== '') cur().ops[parseInt(editIdx)] = entry;
+  else cur().ops.push(entry);
+  markUpdated(); closeModal('modal-ops'); renderOps();
+}
+function editOperacion(i){
+  const o = cur().ops[i];
+  s('opsEditIdx').value = i;
+  s('modal-ops-title').textContent = 'Editar operación';
+  s('opName').value = o.nombre; s('opMin').value = o.min;
+  openModal('modal-ops');
+}
+function delOperacion(i){ cur().ops.splice(i,1); renderOps(); }
+function renderOps(){
+  const ops = cur().ops;
+  const c = s('opsList');
+  if(!ops.length){ c.innerHTML=`<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin operaciones registradas</div>`; return; }
+  c.innerHTML = ops.map((o,i)=>`
+    <div class="item-row">
+      <div class="item-num">${String(i+1).padStart(2,'0')}</div>
+      <div class="item-name">${o.nombre}</div>
+      <div class="item-min">${o.min.toFixed(2)} min</div>
+      <button class="item-edit" onclick="editOperacion(${i})">✎</button>
+      <button class="item-del" onclick="delOperacion(${i})">✕</button>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// CONSIDERACIONES
+// ═══════════════════════════════════════════════════
+function saveConsideracion(){
+  const disp = parseFloat(s('consDisp').value);
+  if(!isNaN(disp) && disp>=0) cur().cons.disponible = disp;
+  const nombre = s('consName').value.trim();
+  const min = parseFloat(s('consMin').value);
+  const editIdx = s('consEditIdx').value;
+  if(nombre && !isNaN(min) && min>=0){
+    const entry={nombre,min};
+    if(editIdx !== '') cur().cons.items[parseInt(editIdx)] = entry;
+    else cur().cons.items.push(entry);
+  }
+  markUpdated(); closeModal('modal-cons'); renderCons();
+}
+function editConsideracion(i){
+  const c = cur().cons.items[i];
+  s('consEditIdx').value = i;
+  s('modal-cons-title').textContent = 'Editar consideración';
+  s('consDisp').value = cur().cons.disponible !== null ? cur().cons.disponible : '';
+  s('consName').value = c.nombre; s('consMin').value = c.min;
+  openModal('modal-cons');
+}
+function delConsideracion(i){ cur().cons.items.splice(i,1); renderCons(); }
+function renderCons(){
+  const items = cur().cons.items;
+  const c = s('consList');
+  if(!items.length){ c.innerHTML=`<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin consideraciones</div>`; return; }
+  c.innerHTML = items.map((x,i)=>`
+    <div class="item-row">
+      <div class="item-name">${x.nombre}</div>
+      <div class="item-min">${x.min.toFixed(2)} min</div>
+      <button class="item-edit" onclick="editConsideracion(${i})">✎</button>
+      <button class="item-del" onclick="delConsideracion(${i})">✕</button>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// RESULTADOS
+// ═══════════════════════════════════════════════════
+function calcularResultados(){
+  const data = cur();
+  const disp = parseFloat(s('consDisp').value) || data.cons.disponible || 0;
+  data.cons.disponible = disp;
+  const totalOps = data.ops.reduce((a,o)=>a+o.min,0);
+  const totalCons = data.cons.items.reduce((a,c)=>a+c.min,0);
+  const tiempoEstandar = disp - totalCons;
+  const restante = tiempoEstandar - totalOps;
+  const pct = tiempoEstandar>0?(restante/tiempoEstandar*100):0;
+  const horas = restante/60;
+  s('resultsBlock').style.display='';
+  const ac = getAc(selectedIdx);
+  s('resGrid').innerHTML=`
+    <div class="res-card"><div class="res-label">Suma operaciones</div><div class="res-value">${totalOps.toFixed(2)}</div><div class="res-unit">minutos</div></div>
+    <div class="res-card"><div class="res-label">Tiempo estándar restante</div><div class="res-value" style="color:${restante>=0?ac:'#e05c5c'}">${restante.toFixed(2)}</div><div class="res-unit">minutos</div></div>
+    <div class="res-card"><div class="res-label">% disponible</div><div class="res-value" style="color:${pct>=0?ac:'#e05c5c'}">${pct.toFixed(1)}%</div><div class="res-unit">del tiempo estándar</div></div>
+    <div class="res-card"><div class="res-label">Horas restantes</div><div class="res-value" style="color:${horas>=0?ac:'#e05c5c'}">${horas.toFixed(2)}</div><div class="res-unit">horas</div></div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// CIF
+// ═══════════════════════════════════════════════════
+const CIF_COLORS=['#e8a840','#5bb8e8','#e05c5c','#6fc98c','#c87de8','#e88a40','#40c8e8','#e8c840','#e87840','#40e8b8','#e84060','#a0c840','#5870e8','#e8a040','#40e870','#e84898','#60b8e8','#c8e840','#e840c8'];
+function saveCIF(){
+  const concepto=s('cifConcepto').value;
+  const monto=parseFloat(s('cifMonto').value);
+  const nota=s('cifNota').value.trim();
+  if(!concepto||isNaN(monto)||monto<0){alert('Selecciona concepto e ingresa monto.');return;}
+  const editIdx=s('cifEditIdx').value;
+  const entry={concepto,monto,nota};
+  if(editIdx!=='') cur().cif[parseInt(editIdx)]=entry;
+  else cur().cif.push(entry);
+  markUpdated(); closeModal('modal-cif'); renderCIF();
+}
+function editCIF(i){
+  const c=cur().cif[i];
+  s('cifEditIdx').value=i; s('modal-cif-title').textContent='Editar CIF';
+  s('cifConcepto').value=c.concepto; s('cifMonto').value=c.monto; s('cifNota').value=c.nota||'';
+  openModal('modal-cif');
+}
+function delCIF(i){ cur().cif.splice(i,1); renderCIF(); }
+function renderCIF(){
+  const cif=cur().cif;
+  const wrap=s('cifTablaWrap'), totBlock=s('cifTotalesBlock');
+  if(!cif.length){wrap.innerHTML=`<div style="text-align:center;padding:32px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin conceptos registrados</div>`;totBlock.style.display='none';return;}
+  const total=cif.reduce((a,c)=>a+c.monto,0);
+  wrap.innerHTML=`<div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>#</th><th>Concepto</th><th>Monto mensual</th><th>%</th><th>Nota</th><th></th></tr></thead><tbody>
+  ${cif.map((c,i)=>{
+    const pct=total>0?(c.monto/total*100).toFixed(1):'0.0';
+    const col=CIF_COLORS[i%CIF_COLORS.length];
+    return`<tr><td style="color:var(--text-tertiary);font-size:0.7rem;">${String(i+1).padStart(2,'0')}</td>
+      <td><span style="display:inline-flex;align-items:center;gap:7px;"><span style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0;"></span><span style="font-weight:600;">${c.concepto}</span></span></td>
+      <td style="color:var(--selected-ac,#333);font-weight:700;">$${c.monto.toLocaleString('es-MX',{minimumFractionDigits:2})}</td>
+      <td style="color:var(--text-tertiary);">${pct}%</td>
+      <td style="color:var(--text-tertiary);font-size:0.72rem;">${c.nota||'—'}</td>
+      <td style="display:flex;gap:4px;"><button class="item-edit" onclick="editCIF(${i})">✎</button><button class="item-del" onclick="delCIF(${i})">✕</button></td></tr>`;
+  }).join('')}</tbody></table></div>`;
+  totBlock.style.display='';
+  const maxCIF=cif.reduce((a,c)=>c.monto>a.monto?c:a,cif[0]);
+  s('cifTotalesGrid').innerHTML=`
+    <div class="res-card"><div class="res-label">Total CIF mensual</div><div class="res-value">$${total.toLocaleString('es-MX',{minimumFractionDigits:0})}</div><div class="res-unit">pesos / mes</div></div>
+    <div class="res-card"><div class="res-label">Conceptos</div><div class="res-value">${cif.length}</div><div class="res-unit">partidas</div></div>
+    <div class="res-card"><div class="res-label">Concepto mayor</div><div class="res-value" style="font-size:0.95rem;">${maxCIF.concepto}</div><div class="res-unit">$${maxCIF.monto.toLocaleString('es-MX',{minimumFractionDigits:2})}</div></div>`;
+  if(cifChartInstance){cifChartInstance.destroy();cifChartInstance=null;}
+  cifChartInstance=new Chart(s('cifChart'),{type:'doughnut',data:{labels:cif.map(c=>c.concepto),datasets:[{data:cif.map(c=>c.monto),backgroundColor:cif.map((_,i)=>CIF_COLORS[i%CIF_COLORS.length]),borderColor:document.body.classList.contains('dark')?'#0a0a0a':'#f0f0f0',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+ctx.label+': $'+ctx.parsed.toLocaleString('es-MX',{minimumFractionDigits:2})}}}}});
+}
+
+// ═══════════════════════════════════════════════════
+// RESUMEN
+// ═══════════════════════════════════════════════════
+function calcResumen(){
+  if(selectedIdx===null)return;
+  const data=cur();
+  // Fixed defaults: 1 turno, 8h/día, 22 días, operarios = # de personal registrado
+  const horasDia=8, diasMes=22;
+  const opTot=Math.max(1,data.mod.length);
+  const horasMes=horasDia*diasMes*opTot;
+  const modMensual=data.mod.reduce((a,m)=>a+(m.costo||0),0);
+  const cifMensual=data.cif.reduce((a,c)=>a+c.monto,0);
+  const totalOpsMin=data.ops.reduce((a,o)=>a+o.min,0);
+  const tc=totalOpsMin>0?totalOpsMin:null;
+  const capDia=tc&&tc>0?Math.floor((horasDia*60)/tc):null;
+  const costoHora=horasMes>0?(modMensual+cifMensual)/horasMes:0;
+  const hasData=modMensual>0||cifMensual>0||data.ops.length>0;
+  s('resumenEmpty').style.display=hasData?'none':'';
+  const ac=getAc(selectedIdx);
+  s('resumenGrid').innerHTML=[
+    {label:'MOD mensual',value:'$'+modMensual.toLocaleString('es-MX',{minimumFractionDigits:2}),unit:'pesos / mes',color:ac},
+    {label:'CIF mensual',value:'$'+cifMensual.toLocaleString('es-MX',{minimumFractionDigits:2}),unit:'pesos / mes',color:ac},
+    {label:'Operarios registrados',value:opTot,unit:'personal MOD en el centro',color:ac},
+    {label:'Horas / mes',value:horasMes.toLocaleString('es-MX'),unit:'8h × '+diasMes+' días × '+opTot+' operarios',color:ac},
+    {label:'Capacidad por día',value:capDia!==null?capDia:'—',unit:capDia!==null?'unidades / día':'sin tiempo ciclo',color:ac},
+    {label:'Tiempo ciclo',value:tc!==null?tc.toFixed(2):'—',unit:tc!==null?'minutos / unidad':'sin operaciones',color:ac},
+  ].map(k=>`<div class="res-card"><div class="res-label">${k.label}</div><div class="res-value" style="color:${k.color};">${k.value}</div><div class="res-unit">${k.unit}</div></div>`).join('');
+  if(costoHora>0){
+    s('costoTotalCard').style.display='';
+    s('costoTotalValor').textContent='$'+costoHora.toFixed(2);
+    s('costoDesglose').innerHTML='MOD: $'+modMensual.toLocaleString('es-MX',{minimumFractionDigits:2})+' / mes<br>CIF: $'+cifMensual.toLocaleString('es-MX',{minimumFractionDigits:2})+' / mes<br>8h × '+diasMes+' días × '+opTot+' operarios';
+    calcForecast();
+  } else s('costoTotalCard').style.display='none';
+}
+function calcForecast(){
+  const modI=parseFloat(s('forecastMOD').value)||0;
+  const cifI=parseFloat(s('forecastCIF').value)||0;
+  const hI=parseFloat(s('forecastHoras').value)||8;
+  const dI=parseFloat(s('forecastDias').value)||22;
+  const opI=parseFloat(s('forecastOperarios').value)||1;
+  if(modI===0&&cifI===0){s('costoIdealValor').textContent='—';s('balanceBlock').style.display='none';return;}
+  const horasMesI=hI*dI*opI;
+  const costoIdeal=horasMesI>0?(modI+cifI)/horasMesI:0;
+  s('costoIdealValor').textContent=costoIdeal>0?'$'+costoIdeal.toFixed(2):'—';
+  // Balance
+  const costoReal=parseFloat((s('costoTotalValor').textContent||'0').replace('$','').replace(/,/g,''))||0;
+  if(costoReal>0&&costoIdeal>0){
+    const diff=costoReal-costoIdeal;
+    const pct=((diff/costoIdeal)*100);
+    const isOver=diff>0;
+    const color=isOver?'#e05c5c':'#6fc98c';
+    s('balanceBlock').style.display='flex';
+    s('balanceTexto').innerHTML=`<span style="color:${color};">${isOver?'▲ Sobrecosto':'▼ Por debajo del ideal'}</span> <span style="font-size:0.8rem;color:var(--text-secondary);font-weight:600;"> $${Math.abs(diff).toFixed(2)}/h (${Math.abs(pct).toFixed(1)}%)</span>`;
+    // Progress bar
+    const pctBar=Math.min(100,Math.max(0,isOver?(costoIdeal/costoReal*100):100));
+    const pctOver=isOver?(diff/costoReal*100):0;
+    s('balanceBarra').innerHTML=`<div style="width:100%;height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;position:relative;">
+      <div style="width:${pctBar}%;height:100%;background:#6fc98c;border-radius:5px;"></div>
+      ${isOver?`<div style="position:absolute;right:0;top:0;width:${pctOver}%;height:100%;background:#e05c5c;border-radius:5px;"></div>`:''}
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:0.6rem;color:var(--text-tertiary);">
+      <span>Ideal: $${costoIdeal.toFixed(2)}/h</span><span>Real: $${costoReal.toFixed(2)}/h</span>
+    </div>`;
+  } else s('balanceBlock').style.display='none';
+}
+
+// ═══════════════════════════════════════════════════
+// LAYOUT
+// ═══════════════════════════════════════════════════
+function loadLayoutImg(event,previewId,emptyId){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{const imgId=previewId.replace('Preview','Img');const img=document.getElementById(imgId);if(img)img.src=e.target.result;document.getElementById(previewId).style.display='';document.getElementById(emptyId).style.display='none';markUpdated();};
+  reader.readAsDataURL(file);
+}
+function clearLayoutImg(imgId,previewId,emptyId){const img=document.getElementById(imgId);if(img)img.src='';document.getElementById(previewId).style.display='none';document.getElementById(emptyId).style.display='';}
+function calcLayoutCosto(){const area=parseFloat(s('layoutAreaM2').value)||0,costo=parseFloat(s('layoutCostoPorM2').value)||0,result=s('layoutCostoResult');if(area>0&&costo>0){result.style.display='';s('layoutCostoValor').textContent='$'+(area*costo).toLocaleString('es-MX',{minimumFractionDigits:2});}else result.style.display='none';}
+
+// ═══════════════════════════════════════════════════
+// EQUIPOS
+// ═══════════════════════════════════════════════════
+function mttoStatus(proxMtto){
+  if(!proxMtto)return{cls:'stamp-none',label:'Sin fecha',dot:'var(--text-muted)'};
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const prox=new Date(proxMtto+'T00:00:00');
+  const diff=Math.ceil((prox-hoy)/86400000);
+  if(diff<0)return{cls:'stamp-red',label:'Vencido '+Math.abs(diff)+'d',dot:'#e05c5c'};
+  if(diff<=15)return{cls:'stamp-amber',label:'En '+diff+' días',dot:'#e8a840'};
+  return{cls:'stamp-green',label:'Vigente',dot:'#6fc98c'};
+}
+function openEditEquipo(i){
+  const e=cur().equipos[i];
+  s('equipoEditIdx').value=i; s('modalEquipoTitle').textContent='Editar equipo';
+  s('equipoNombre').value=e.nombre||''; s('equipoTipo').value=e.tipo||'Máquina';
+  s('equipoModelo').value=e.modelo||''; s('equipoAnio').value=e.anio||'';
+  s('equipoValor').value=e.valor||''; s('equipoUltimoMtto').value=e.ultimoMtto||'';
+  s('equipoProxMtto').value=e.proxMtto||''; s('equipoNotas').value=e.notas||''; s('equipoUrl').value=e.url||'';
+  openModal('modal-equipo');
+}
+function saveEquipo(){
+  const nombre=s('equipoNombre').value.trim();if(!nombre){alert('Ingresa el nombre.');return;}
+  const eq={nombre,tipo:s('equipoTipo').value,modelo:s('equipoModelo').value.trim(),anio:s('equipoAnio').value,valor:parseFloat(s('equipoValor').value)||0,ultimoMtto:s('equipoUltimoMtto').value,proxMtto:s('equipoProxMtto').value,notas:s('equipoNotas').value.trim(),url:s('equipoUrl').value.trim()};
+  const editIdx=s('equipoEditIdx').value;
+  if(editIdx!=='')cur().equipos[parseInt(editIdx)]=eq;else cur().equipos.push(eq);
+  s('equipoEditIdx').value=''; s('modalEquipoTitle').textContent='Registrar equipo';
+  markUpdated();closeModal('modal-equipo');renderEquipos();
+}
+function delEquipo(i){cur().equipos.splice(i,1);renderEquipos();}
+function renderEquipos(){
+  const equipos=cur().equipos;
+  const wrap=s('equiposListWrap');
+  if(!equipos.length){wrap.innerHTML=`<div style="text-align:center;padding:32px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin equipos registrados</div>`;return;}
+  const ac=getAc(selectedIdx);
+  wrap.innerHTML=`<div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Estado</th><th>Nombre</th><th>Tipo</th><th>Modelo</th><th>Año</th><th>Valor</th><th>Últ. MTTO</th><th>Próx. MTTO</th><th>Notas</th><th>Página</th><th></th></tr></thead><tbody>
+  ${equipos.map((e,i)=>{
+    const st=mttoStatus(e.proxMtto);
+    return`<tr>
+      <td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:9px;height:9px;border-radius:50%;background:${st.dot};display:inline-block;"></span><span class="card-stamp ${st.cls}" style="margin:0;">${st.label}</span></span></td>
+      <td style="font-weight:700;">${e.nombre}</td><td style="color:var(--text-tertiary);">${e.tipo}</td>
+      <td>${e.modelo||'—'}</td><td>${e.anio||'—'}</td>
+      <td style="color:${e.valor>0?ac:'var(--text-tertiary)'};">${e.valor>0?'$'+e.valor.toLocaleString('es-MX',{minimumFractionDigits:2}):'—'}</td>
+      <td style="font-size:0.78rem;">${e.ultimoMtto?new Date(e.ultimoMtto+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}):'—'}</td>
+      <td style="font-size:0.78rem;">${e.proxMtto?new Date(e.proxMtto+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}):'—'}</td>
+      <td style="color:var(--text-tertiary);font-size:0.72rem;">${e.notas||'—'}</td>
+      <td>${e.url?`<button onclick="openFerretiPanel()" style="display:inline-flex;align-items:center;gap:5px;font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${ac};background:var(--hover-bg);border:1px solid ${ac}55;border-radius:6px;padding:4px 10px;cursor:pointer;">${e.nombre}</button>`:'<span style="color:var(--text-muted);font-size:0.7rem;">—</span>'}</td>
+      <td style="display:flex;gap:4px;"><button class="item-edit" onclick="openEditEquipo(${i})">✎</button><button class="item-del" onclick="delEquipo(${i})">✕</button></td>
+    </tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// TABULADOR CENTRO (tab view, read-only)
+// ═══════════════════════════════════════════════════
+function renderTabuladorCentro(){
+  if(selectedIdx===null)return;
+  const mod=cur().mod;
+  const wrap=s('tabuladorCentroWrap');
+  if(!mod.length){wrap.innerHTML=`<div style="text-align:center;padding:32px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin personal registrado en este centro</div>`;return;}
+  // Find matching nivel for each person
+  const rows=mod.map((m,i)=>{
+    // Find nivel by puesto name match in categorias
+    const nivel=findNivelByPuesto(m.puesto);
+    const nivelNum=nivel?nivel.num:'—';
+    const cat=nivel?tabulador.categorias[nivel.categoriaIdx]:null;
+    const grupo=cat?tabulador.grupos[cat.grupoIdx]:null;
+    const salDiario=nivel?nivel.salario.toFixed(2):m.costo?((m.costo/22)).toFixed(2):'—';
+    const salMensual='$'+m.costo.toLocaleString('es-MX',{minimumFractionDigits:2});
+    return`<tr>
+      <td style="font-weight:700;">${m.puesto}</td>
+      <td>${grupo?grupo.nombre:'—'}</td>
+      <td>${cat?cat.nombre:'—'}</td>
+      <td style="font-weight:700;color:var(--selected-ac,#333);">${nivelNum}</td>
+      <td>${nivel?nivel.autonomia:'—'}</td>
+      <td style="font-weight:700;color:var(--selected-ac,#333);">${salMensual}</td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML=`<div style="overflow-x:auto;"><table class="centro-tab-table"><thead><tr><th>Puesto</th><th>Grupo</th><th>Categoría</th><th>Nivel</th><th>Autonomía</th><th>Costo mensual</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function findNivelByPuesto(puesto){
+  // Find a nivel whose categoria name resembles the puesto
+  for(const n of tabulador.niveles){
+    const cat=tabulador.categorias[n.categoriaIdx];
+    if(cat && cat.nombre.toLowerCase()===puesto.toLowerCase()) return n;
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════
+// EQUIPO (ingenieros)
+// ═══════════════════════════════════════════════════
+function openEquipo(){
+  document.body.classList.add('detail-mode');
+  s('mainArea').style.display='none';
+  s('dashboardView').style.display='none';
+  s('tabuladorView').style.display='none';
+  s('equipoView').style.display='flex';
+  buildSidebar('equipo');
+  renderIngenieros();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function closeEquipo(){ resetToHome(); }
+
+function buildAreasCheck(editIdx){
+  const ingenieroAreasDiv=s('ingAreasCheck');
+  let existingAreas=[];
+  if(editIdx>=0) existingAreas=equipoState.ingenieros[editIdx].areas||[];
+  ingenieroAreasDiv.innerHTML=centros.map((c,i)=>`
+    <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;background:var(--hover-bg);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:0.65rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-primary);">
+      <input type="checkbox" name="ing-area" value="${i}" ${existingAreas.includes(i)?'checked':''} style="accent-color:var(--selected-ac,#333);">
+      ${c.n}
+    </label>`).join('');
+}
+function onIngRolChange(){
+  const rol=s('ingRol').value;
+  if(rol==='gerente'){
+    s('ingAreasWrap').style.display='none';
+    s('ingGerenteNote').style.display='';
+  } else {
+    s('ingAreasWrap').style.display='';
+    s('ingGerenteNote').style.display='none';
+  }
+}
+
+function saveIngeniero(){
+  const nombre=s('ingNombre').value.trim();
+  const rol=s('ingRol').value;
+  if(!nombre){alert('Ingresa el nombre.');return;}
+  // Gerente has all areas by default; ingeniero has checked areas
+  let checked=[];
+  if(rol==='gerente'){
+    checked=centros.map((_,i)=>i); // all areas
+  } else {
+    checked=Array.from(document.querySelectorAll('input[name="ing-area"]:checked')).map(c=>parseInt(c.value));
+  }
+  const editIdx=s('ingEditIdx').value;
+  const entry={nombre,rol,areas:checked};
+  if(editIdx!=='') equipoState.ingenieros[parseInt(editIdx)]=entry;
+  else equipoState.ingenieros.push(entry);
+  closeModal('modal-ingeniero'); renderIngenieros(); buildGrid(); fbSave();
+}
+function editIngeniero(i){
+  const ing=equipoState.ingenieros[i];
+  s('ingEditIdx').value=i; s('modal-ing-title').textContent='Editar miembro';
+  s('ingNombre').value=ing.nombre; s('ingRol').value=ing.rol;
+  buildAreasCheck(i);
+  if(ing.rol==='gerente'){
+    s('ingAreasWrap').style.display='none';
+    s('ingGerenteNote').style.display='';
+  } else {
+    s('ingAreasWrap').style.display='';
+    s('ingGerenteNote').style.display='none';
+  }
+  openModal('modal-ingeniero');
+}
+function delIngeniero(i){ equipoState.ingenieros.splice(i,1); renderIngenieros(); buildGrid(); fbSave(); }
+function renderIngenieros(){
+  const gerentes=equipoState.ingenieros.filter(i=>i.rol==='gerente');
+  const ingenieros=equipoState.ingenieros.filter(i=>i.rol==='ingeniero');
+  const gerWrap=s('gerenciaWrap');
+  if(gerentes.length){
+    gerWrap.innerHTML=gerentes.map(g=>{const idx=equipoState.ingenieros.indexOf(g);return ingCard(g,idx,true);}).join('');
+  } else gerWrap.innerHTML=`<div style="color:var(--text-tertiary);font-size:0.75rem;letter-spacing:1px;">Sin gerente designado</div>`;
+  const ingWrap=s('ingenierosList');
+  if(ingenieros.length){
+    ingWrap.innerHTML=ingenieros.map(g=>{const idx=equipoState.ingenieros.indexOf(g);return ingCard(g,idx,false);}).join('');
+  } else ingWrap.innerHTML=`<div style="color:var(--text-tertiary);font-size:0.75rem;letter-spacing:1px;">Sin ingenieros registrados</div>`;
+}
+function ingCard(g, idx, isGerente){
+  const initials=g.nombre.trim().split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  const rolLabel=isGerente?'Gerente':'Ingeniero';
+  const areaChips=isGerente
+    ?`<span class="area-chip" style="background:rgba(155,143,232,0.15);border-color:rgba(155,143,232,0.3);color:#9b8fe8;">Todos los centros</span>`
+    :g.areas.map(ai=>`<span class="area-chip">${centros[ai].n}</span>`).join('');
+  return`<div class="ingeniero-card">
+    <div class="ing-avatar" style="background:${isGerente?'#9b8fe8':getAc(idx)};">${initials}</div>
+    <div style="flex:1;">
+      <div class="ing-name">${g.nombre}</div>
+      <div class="ing-role">${rolLabel}</div>
+      ${areaChips?`<div class="ing-areas">${areaChips}</div>`:''}
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="item-edit" onclick="editIngeniero(${idx})">✎</button>
+      <button class="item-del" onclick="delIngeniero(${idx})">✕</button>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// TABULADOR (global)
+// ═══════════════════════════════════════════════════
+function openTabulador(){
+  document.body.classList.add('detail-mode');
+  s('mainArea').style.display='none';
+  s('dashboardView').style.display='none';
+  s('equipoView').style.display='none';
+  s('tabuladorView').style.display='flex';
+  buildSidebar('tabulador');
+  document.documentElement.style.setProperty('--selected-ac','#e8c840');
+  renderTabulador();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function closeTabulador(){ resetToHome(); }
+
+function populateCatGrupo(){
+  const sel=s('catGrupo');
+  sel.innerHTML=`<option value="">— Seleccionar grupo —</option>`+tabulador.grupos.map((g,i)=>`<option value="${i}">${g.nombre}</option>`).join('');
+}
+function populateNivelCategoria(){
+  const sel=s('nivelCategoria');
+  sel.innerHTML=`<option value="">— Seleccionar categoría —</option>`+tabulador.categorias.map((c,i)=>{
+    const g=tabulador.grupos[c.grupoIdx];
+    return`<option value="${i}">${g?g.nombre+' — ':''} ${c.nombre}</option>`;
+  }).join('');
+}
+function calcNivelFinal(){
+  const sal=parseFloat(s('nivelSalario').value)||0;
+  const inc=parseFloat(s('nivelIncremento').value)||0;
+  s('nivelSalarioFinal').value=sal>0?'$'+(sal*(1+inc/100)).toFixed(2):'';
+}
+
+function saveGrupo(){
+  const nombre=s('grupoNombre').value.trim();
+  if(!nombre){alert('Ingresa el nombre del grupo.');return;}
+  const editIdx=s('grupoEditIdx').value;
+  if(editIdx!=='') tabulador.grupos[parseInt(editIdx)]={nombre};
+  else tabulador.grupos.push({nombre});
+  closeModal('modal-grupo'); renderTabulador(); fbSave();
+}
+function editGrupo(i){
+  s('grupoEditIdx').value=i; s('modal-grupo-title').textContent='Editar grupo';
+  s('grupoNombre').value=tabulador.grupos[i].nombre;
+  openModal('modal-grupo');
+}
+function delGrupo(i){
+  tabulador.grupos.splice(i,1);
+  // Update category references
+  tabulador.categorias=tabulador.categorias.filter(c=>c.grupoIdx!==i);
+  tabulador.categorias.forEach(c=>{ if(c.grupoIdx>i) c.grupoIdx--; });
+  renderTabulador(); fbSave();
+}
+
+function saveCategoria(){
+  const nombre=s('catNombre').value.trim();
+  const grupoIdx=parseInt(s('catGrupo').value);
+  if(!nombre||isNaN(grupoIdx)){alert('Completa todos los campos.');return;}
+  const editIdx=s('catEditIdx').value;
+  if(editIdx!=='') tabulador.categorias[parseInt(editIdx)]={nombre,grupoIdx};
+  else tabulador.categorias.push({nombre,grupoIdx});
+  closeModal('modal-categoria'); renderTabulador(); fbSave();
+}
+function editCategoria(i){
+  const c=tabulador.categorias[i];
+  s('catEditIdx').value=i; s('modal-cat-title').textContent='Editar categoría';
+  s('catNombre').value=c.nombre;
+  populateCatGrupo(); s('catGrupo').value=c.grupoIdx;
+  openModal('modal-categoria');
+}
+function delCategoria(i){
+  tabulador.categorias.splice(i,1);
+  tabulador.niveles=tabulador.niveles.filter(n=>n.categoriaIdx!==i);
+  tabulador.niveles.forEach(n=>{ if(n.categoriaIdx>i) n.categoriaIdx--; });
+  renderTabulador(); fbSave();
+}
+
+function saveNivel(){
+  const num=parseInt(s('nivelNum').value);
+  const catIdx=parseInt(s('nivelCategoria').value);
+  const desc=s('nivelDesc').value.trim();
+  const ascenso=s('nivelAscenso').value.trim();
+  const autonomia=s('nivelAutonomia').value;
+  const salario=parseFloat(s('nivelSalario').value)||0;
+  const incremento=parseFloat(s('nivelIncremento').value)||0;
+  if(isNaN(num)||isNaN(catIdx)){alert('Selecciona categoría y nivel.');return;}
+  const editIdx=s('nivelEditIdx').value;
+  const entry={num,categoriaIdx:catIdx,desc,ascenso,autonomia,salario,incremento};
+  if(editIdx!=='') tabulador.niveles[parseInt(editIdx)]=entry;
+  else tabulador.niveles.push(entry);
+  closeModal('modal-nivel'); renderTabulador(); fbSave();
+}
+function editNivel(i){
+  const n=tabulador.niveles[i];
+  s('nivelEditIdx').value=i; s('modal-nivel-title').textContent='Editar nivel';
+  s('nivelNum').value=n.num; s('nivelDesc').value=n.desc||'';
+  s('nivelAscenso').value=n.ascenso||''; s('nivelAutonomia').value=n.autonomia||'Ninguna';
+  s('nivelSalario').value=n.salario||''; s('nivelIncremento').value=n.incremento||'';
+  populateNivelCategoria(); s('nivelCategoria').value=n.categoriaIdx;
+  calcNivelFinal();
+  s('nivelSalario').oninput=calcNivelFinal; s('nivelIncremento').oninput=calcNivelFinal;
+  openModal('modal-nivel');
+}
+function delNivel(i){ tabulador.niveles.splice(i,1); renderTabulador(); fbSave(); }
+
+function renderTabulador(){
+  const wrap=s('tabuladorWrap');
+  if(!tabulador.grupos.length){
+    wrap.innerHTML=`<div style="text-align:center;padding:48px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Agrega un grupo para comenzar el tabulador</div>`;
+    return;
+  }
+  const isDark=document.body.classList.contains('dark');
+  wrap.innerHTML=tabulador.grupos.map((g,gi)=>{
+    const cats=tabulador.categorias.filter(c=>c.grupoIdx===gi);
+    if(!cats.length) return`<div class="tab-group-block">
+      <div class="tab-group-header">
+        <span class="tab-group-name">Grupo ${gi+1} — ${g.nombre}</span>
+        <div style="display:flex;gap:6px;">
+          <button class="item-edit" onclick="editGrupo(${gi})">✎</button>
+          <button class="item-del" onclick="delGrupo(${gi})">✕</button>
+        </div>
+      </div>
+      <div style="padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;text-align:center;">Sin categorías en este grupo. Agrega una categoría.</div>
+    </div>`;
+
+    const nivelesPorCat=cats.map(cat=>{
+      const catIdx=tabulador.categorias.indexOf(cat);
+      const nivs=tabulador.niveles.filter(n=>n.categoriaIdx===catIdx).sort((a,b)=>a.num-b.num);
+      if(!nivs.length) return '';
+      return nivs.map(n=>{
+        const ni=tabulador.niveles.indexOf(n);
+        const salFinal=n.salario>0?(n.salario*(1+n.incremento/100)).toFixed(2):'—';
+        return`<div class="tab-nivel-row">
+          <div class="tab-nivel-cell tab-nivel-num">${n.num}</div>
+          <div class="tab-nivel-cell tab-nivel-cat">${cat.nombre}</div>
+          <div class="tab-nivel-cell tab-nivel-desc">${n.desc||'—'}</div>
+          <div class="tab-nivel-cell tab-nivel-ascenso">${n.ascenso||'—'}</div>
+          <div class="tab-nivel-cell tab-nivel-auto">${n.autonomia}</div>
+          <div class="tab-nivel-cell tab-nivel-salario">$${salFinal}</div>
+          <div class="tab-nivel-cell" style="display:flex;gap:4px;">
+            <button class="item-edit" onclick="editNivel(${ni})">✎</button>
+            <button class="item-del" onclick="delNivel(${ni})">✕</button>
+          </div>
+        </div>`;
+      }).join('');
+    }).join('');
+
+    return`<div class="tab-group-block">
+      <div class="tab-group-header">
+        <span class="tab-group-name">Grupo ${gi+1} — ${g.nombre}</span>
+        <div style="display:flex;gap:6px;">
+          <button class="item-edit" onclick="editGrupo(${gi})">✎</button>
+          <button class="item-del" onclick="delGrupo(${gi})">✕</button>
+        </div>
+      </div>
+      <div class="tab-header-row">
+        <div class="tab-header-cell" style="min-width:50px;">Nivel</div>
+        <div class="tab-header-cell" style="min-width:180px;">Categoría Sindical</div>
+        <div class="tab-header-cell" style="flex:1;">Qué puede hacer</div>
+        <div class="tab-header-cell" style="min-width:160px;">Criterio de ascenso</div>
+        <div class="tab-header-cell" style="min-width:80px;">Autonomía</div>
+        <div class="tab-header-cell" style="min-width:100px;">Salario c/inc.</div>
+        <div class="tab-header-cell" style="min-width:80px;"></div>
+      </div>
+      ${nivelesPorCat||`<div style="padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;text-align:center;">Sin niveles. Agrega un nivel vinculando una categoría de este grupo.</div>`}
+      <div style="padding:10px 14px;border-top:1px solid var(--border2);display:flex;gap:6px;flex-wrap:wrap;">
+        ${cats.map((cat,ci)=>{
+          const catIdx=tabulador.categorias.indexOf(cat);
+          return`<span style="display:inline-flex;align-items:center;gap:6px;background:var(--hover-bg);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:0.58rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-primary);">
+            ${cat.nombre}
+            <button class="item-edit" style="font-size:0.65rem;padding:0 3px;" onclick="editCategoria(${catIdx})">✎</button>
+            <button class="item-del" style="font-size:0.65rem;padding:0 3px;" onclick="delCategoria(${catIdx})">✕</button>
+          </span>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════
+function getCentroMetrics(i){
+  const data=state[i];
+  const horasDia=8,diasMes=22;
+  const operarios=Math.max(1,data.mod.length||1);
+  const modMensual=data.mod.reduce((a,m)=>a+m.costo,0);
+  const cifMensual=data.cif.reduce((a,c)=>a+c.monto,0);
+  const totalOpsMin=data.ops.reduce((a,o)=>a+o.min,0);
+  const tc=totalOpsMin>0?totalOpsMin:null;
+  const horasMes=horasDia*diasMes*operarios;
+  const costoHora=horasMes>0?(modMensual+cifMensual)/horasMes:0;
+  const capDia=tc?Math.floor((horasDia*60)/tc):0;
+  return{modMensual,cifMensual,tc,costoHora,capDia,operarios};
+}
+function openDashboard(){
+  document.body.classList.add('detail-mode');
+  s('mainArea').style.display='none';
+  s('dashboardView').style.display='flex';
+  s('tabuladorView').style.display='none';
+  s('equipoView').style.display='none';
+  buildSidebar('dashboard');
+  renderDashboard();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function closeDashboard(){ resetToHome(); }
+function renderDashboard(){
+  const metrics=centros.map((_,i)=>getCentroMetrics(i));
+  const labels=centros.map(c=>c.n);
+  const colors=centros.map((_,i)=>getAc(i));
+  const isDark=document.body.classList.contains('dark');
+  const tickColor=isDark?'rgba(255,255,255,0.4)':'rgba(0,0,0,0.5)';
+  const gridColor=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.07)';
+
+  const conCosto=metrics.filter(m=>m.costoHora>0);
+  const costoProm=conCosto.length>0?conCosto.reduce((a,m)=>a+m.costoHora,0)/conCosto.length:0;
+  const capTotal=metrics.reduce((a,m)=>a+m.capDia,0);
+  const desact=centros.filter((_,i)=>{ const d=getDaysSince(state[i].updatedAt); return d===null||d>7; }).length;
+  const modTotalPlanta=metrics.reduce((a,m)=>a+m.modMensual,0);
+  const cifTotalPlanta=metrics.reduce((a,m)=>a+m.cifMensual,0);
+  // Costo total planta: sum of all (mod+cif)/horasMes for each centro
+  const costoTotalPlanta=metrics.reduce((a,m)=>{
+    const hm=8*22*Math.max(1,m.operarios);
+    return a+(hm>0?(m.modMensual+m.cifMensual)/hm:0);
+  },0);
+
+  s('dashKpis').innerHTML=[
+    {label:'Costo promedio / hora',value:costoProm>0?'$'+costoProm.toFixed(2):'—',unit:costoProm>0?conCosto.length+' centros con datos':'sin datos',color:'#5bb8e8'},
+    {label:'Capacidad total / día',value:capTotal>0?capTotal.toLocaleString('es-MX'):'—',unit:'unidades combinadas',color:'#6fc98c'},
+    {label:'Centros registrados',value:centros.length,unit:'centros de trabajo',color:'#e8a840'},
+    {label:'Centros desactualizados',value:desact,unit:desact===0?'todos al día ✓':'más de 7 días',color:desact===0?'#6fc98c':desact<=3?'#e8a840':'#e05c5c'},
+  ].map(k=>`<div class="res-card"><div class="res-label">${k.label}</div><div class="res-value" style="color:${k.color};font-size:1.4rem;">${k.value}</div><div class="res-unit">${k.unit}</div></div>`).join('');
+
+  // Costo total planta block
+  const plantaBlock=s('dashCostoPlanta');
+  if(costoTotalPlanta>0||modTotalPlanta>0||cifTotalPlanta>0){
+    plantaBlock.style.display='';
+    s('dashCostoPlantaValor').textContent=costoTotalPlanta>0?'$'+costoTotalPlanta.toFixed(2):'—';
+    s('dashModTotal').textContent='$'+modTotalPlanta.toLocaleString('es-MX',{minimumFractionDigits:2});
+    s('dashCifTotal').textContent='$'+cifTotalPlanta.toLocaleString('es-MX',{minimumFractionDigits:2});
+    s('dashCentrosActivos').textContent=conCosto.length;
+  } else plantaBlock.style.display='none';
+
+  const alertBar=s('dashAlertBar');
+  const staleList=centros.map((c,i)=>{const d=getDaysSince(state[i].updatedAt);if(d===null||d>7)return{name:c.n,days:d===null?'sin datos':d+' días'};return null;}).filter(Boolean);
+  if(staleList.length>0){
+    alertBar.className='dash-alert-bar'; alertBar.style.display='flex';
+    alertBar.innerHTML=`<div style="flex:1;"><div class="dash-alert-title">${staleList.length} centro${staleList.length>1?'s':''} sin actualizar</div><div class="dash-alert-list">${staleList.map(i=>`<div class="dash-alert-item"><span style="font-weight:700;color:var(--text-primary);">${i.name}</span><span style="color:#c03030;font-weight:700;">${i.days}</span></div>`).join('')}</div></div>`;
+  } else alertBar.style.display='none';
+
+  if(dashMainChart){dashMainChart.destroy();dashMainChart=null;}
+  if(dashModChart){dashModChart.destroy();dashModChart=null;}
+  if(dashCifChart){dashCifChart.destroy();dashCifChart=null;}
+
+  const costoData=metrics.map(m=>parseFloat(m.costoHora.toFixed(2)));
+  dashMainChart=new Chart(s('dashMainChart'),{type:'bar',data:{labels,datasets:[{label:'Costo/hora ($)',data:costoData,backgroundColor:colors.map(c=>c+'88'),borderColor:colors,borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.y.toFixed(2)+'/h'}}},scales:{x:{ticks:{color:tickColor,font:{family:"'Barlow Condensed',sans-serif",size:11},maxRotation:35},grid:{color:gridColor},border:{color:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.1)'}},y:{ticks:{color:tickColor,font:{family:"'Barlow Condensed',sans-serif",size:11},callback:v=>'$'+v},grid:{color:gridColor}}}}});
+
+  const subH=Math.max(320,labels.length*36+60);
+  s('dashModWrap').style.height=subH+'px';
+  s('dashCifWrap').style.height=subH+'px';
+  const subOpts={indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:tickColor,font:{family:"'Barlow Condensed',sans-serif",size:11},callback:v=>'$'+Number(v).toLocaleString('es-MX')},grid:{color:gridColor},border:{color:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.1)'}},y:{ticks:{color:tickColor,font:{family:"'Barlow Condensed',sans-serif",size:11,weight:'600'}},grid:{display:false}}}};
+  dashModChart=new Chart(s('dashModChart'),{type:'bar',data:{labels,datasets:[{data:metrics.map(m=>m.modMensual),backgroundColor:'rgba(91,184,232,0.55)',borderColor:'#5bb8e8',borderWidth:1,borderRadius:4}]},options:{...subOpts,plugins:{...subOpts.plugins,tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.x.toLocaleString('es-MX')}}}}});
+  dashCifChart=new Chart(s('dashCifChart'),{type:'bar',data:{labels,datasets:[{data:metrics.map(m=>m.cifMensual),backgroundColor:'rgba(232,168,64,0.55)',borderColor:'#e8a840',borderWidth:1,borderRadius:4}]},options:{...subOpts,plugins:{...subOpts.plugins,tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.x.toLocaleString('es-MX')}}}}});
+
+  s('dashTable').innerHTML=`<thead><tr><th>Centro</th><th>Responsable</th><th>MOD/mes</th><th>CIF/mes</th><th>Costo/hora</th><th>Actualización</th></tr></thead><tbody>${centros.map((c,i)=>{
+    const m=metrics[i],ac=getAc(i),si=stampInfo(i);
+    const resp=getFullResponsableCentro(i)||'—';
+    return`<tr><td><span style="display:inline-flex;align-items:center;gap:7px;"><span style="width:8px;height:8px;border-radius:50%;background:${ac};flex-shrink:0;"></span><span style="font-weight:600;">${c.n}</span></span></td>
+      <td style="color:var(--text-tertiary);">${resp}</td>
+      <td style="color:${m.modMensual>0?'#5bb8e8':'var(--text-muted)'};">${m.modMensual>0?'$'+m.modMensual.toLocaleString('es-MX',{minimumFractionDigits:2}):'—'}</td>
+      <td style="color:${m.cifMensual>0?'#e8a840':'var(--text-muted)'};">${m.cifMensual>0?'$'+m.cifMensual.toLocaleString('es-MX',{minimumFractionDigits:2}):'—'}</td>
+      <td style="font-weight:700;color:${m.costoHora>0?ac:'var(--text-muted)'};">${m.costoHora>0?'$'+m.costoHora.toFixed(2):'—'}</td>
+      <td><span class="card-stamp ${si.cls}">${si.label}</span></td>
+    </tr>`;
+  }).join('')}</tbody>`;
+}
+
+// ═══════════════════════════════════════════════════
+// FERRETI
+// ═══════════════════════════════════════════════════
+function openFerretiPanel(){ s('ferreti-view').classList.add('open'); }
+function closeFerretiPanel(){ s('ferreti-view').classList.remove('open'); }
+
+// ═══════════════════════════════════════════════════
+// BACK / RESET
+// ═══════════════════════════════════════════════════
+function resetToHome(){
+  s('dashboardView').style.display='none';
+  s('tabuladorView').style.display='none';
+  s('equipoView').style.display='none';
+  s('detailView').classList.remove('active');
+  s('sideList').innerHTML='';
+  s('mainArea').removeAttribute('style');
+  s('mainArea').style.cssText='display:flex;flex-direction:column;align-items:center;padding:2.4rem 1.5rem 3rem;flex:1;min-width:0;';
+  s('gridView').style.display='';
+  s('homeHeader').style.display='';
+  document.body.classList.remove('detail-mode');
+  selectedIdx=null;
+  buildGrid();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function goBack(){ resetToHome(); }
+
+// ═══════════════════════════════════════════════════
+// FIREBASE — SINCRONIZACIÓN
+// ═══════════════════════════════════════════════════
+const FB_CONFIG = {
+  databaseURL: 'https://ingenieria-de-procesos-24ba4-default-rtdb.firebaseio.com'
+};
+firebase.initializeApp(FB_CONFIG);
+const _fbDB = firebase.database();
+const _fbRef = _fbDB.ref('control_ct');
+
+let _fbSyncBusy = false;
+let _fbPendingSave = false;
+let _fbSaveTimer = null;
+
+// Indicador de sync en la UI
+function _fbUpdateSyncUI(state) {
+  const pill = document.getElementById('fb-sync-pill');
+  if (!pill) return;
+  const map = {
+    ok:      { bg:'rgba(111,201,140,0.15)', color:'#3a9c5e', dot:'#6fc98c', label:'Sincronizado' },
+    saving:  { bg:'rgba(232,168,64,0.15)',  color:'#b07a10', dot:'#e8a840', label:'Guardando…'  },
+    error:   { bg:'rgba(224,92,92,0.15)',   color:'#b03030', dot:'#e05c5c', label:'Error sync'  },
+    offline: { bg:'rgba(0,0,0,0.07)',       color:'#777',    dot:'#aaa',    label:'Sin conexión'},
+  };
+  const st = map[state] || map.offline;
+  pill.style.background = st.bg;
+  pill.style.color = st.color;
+  pill.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:${st.dot};display:inline-block;margin-right:5px;flex-shrink:0;"></span>${st.label}`;
+}
+
+// Serializar estado completo
+function _fbSerialize() {
+  return {
+    state: state,
+    equipoState: equipoState,
+    tabulador: tabulador,
+    _savedAt: Date.now()
+  };
+}
+
+// Aplicar estado descargado
+function _fbApply(data) {
+  if (!data) return;
+  if (data.state) {
+    Object.keys(data.state).forEach(k => {
+      if (state[k] !== undefined) Object.assign(state[k], data.state[k]);
+    });
+  }
+  if (data.equipoState) Object.assign(equipoState, data.equipoState);
+  if (data.tabulador) Object.assign(tabulador, data.tabulador);
+}
+
+// Guardar en Firebase (debounce 1s)
+function fbSave() {
+  _fbPendingSave = true;
+  clearTimeout(_fbSaveTimer);
+  _fbSaveTimer = setTimeout(async () => {
+    if (_fbSyncBusy) return;
+    _fbSyncBusy = true;
+    _fbUpdateSyncUI('saving');
+    try {
+      await _fbRef.set(_fbSerialize());
+      _fbPendingSave = false;
+      _fbUpdateSyncUI('ok');
+    } catch(e) {
+      console.error('[FB-CT] save error:', e.message);
+      _fbUpdateSyncUI('error');
+    }
+    _fbSyncBusy = false;
+  }, 1000);
+}
+
+// Cargar desde Firebase al iniciar
+async function fbLoad() {
+  _fbUpdateSyncUI('saving');
+  try {
+    const snap = await _fbRef.get();
+    const data = snap.val();
+    if (data) {
+      // Normalizar arrays (Firebase puede convertirlos a objetos)
+      if (data.state) {
+        Object.keys(data.state).forEach(k => {
+          const d = data.state[k];
+          if (d && !Array.isArray(d.ops)) d.ops = d.ops ? Object.values(d.ops) : [];
+          if (d && !Array.isArray(d.mod)) d.mod = d.mod ? Object.values(d.mod) : [];
+          if (d && !Array.isArray(d.cif)) d.cif = d.cif ? Object.values(d.cif) : [];
+          if (d && !Array.isArray(d.equipos)) d.equipos = d.equipos ? Object.values(d.equipos) : [];
+          if (d && d.cons && !Array.isArray(d.cons.items)) d.cons.items = d.cons.items ? Object.values(d.cons.items) : [];
+        });
+      }
+      if (data.equipoState && !Array.isArray(data.equipoState.ingenieros))
+        data.equipoState.ingenieros = data.equipoState.ingenieros ? Object.values(data.equipoState.ingenieros) : [];
+      if (data.tabulador) {
+        ['grupos','categorias','niveles'].forEach(k => {
+          if (!Array.isArray(data.tabulador[k])) data.tabulador[k] = data.tabulador[k] ? Object.values(data.tabulador[k]) : [];
+        });
+      }
+      _fbApply(data);
+      _fbUpdateSyncUI('ok');
+      console.log('[FB-CT] datos cargados ✓');
+    } else {
+      _fbUpdateSyncUI('ok');
+      console.log('[FB-CT] sin datos remotos, iniciando vacío');
+    }
+  } catch(e) {
+    console.error('[FB-CT] load error:', e.message);
+    _fbUpdateSyncUI('error');
+  }
+}
+
+// Escuchar cambios en tiempo real
+_fbRef.on('value', snap => {
+  if (_fbSyncBusy || _fbPendingSave) return;
+  const remote = snap.val();
+  if (!remote) return;
+  const localTs = _fbSerialize()._savedAt || 0;
+  const remoteTs = remote._savedAt || 0;
+  if (remoteTs > localTs + 3000) {
+    console.log('[FB-CT] cambio remoto detectado, actualizando…');
+    if (remote.state) {
+      Object.keys(remote.state).forEach(k => {
+        const d = remote.state[k];
+        if (d && !Array.isArray(d.ops)) d.ops = d.ops ? Object.values(d.ops) : [];
+        if (d && !Array.isArray(d.mod)) d.mod = d.mod ? Object.values(d.mod) : [];
+        if (d && !Array.isArray(d.cif)) d.cif = d.cif ? Object.values(d.cif) : [];
+        if (d && !Array.isArray(d.equipos)) d.equipos = d.equipos ? Object.values(d.equipos) : [];
+        if (d && d.cons && !Array.isArray(d.cons.items)) d.cons.items = d.cons.items ? Object.values(d.cons.items) : [];
+      });
+    }
+    if (remote.equipoState && !Array.isArray(remote.equipoState.ingenieros))
+      remote.equipoState.ingenieros = remote.equipoState.ingenieros ? Object.values(remote.equipoState.ingenieros) : [];
+    if (remote.tabulador) {
+      ['grupos','categorias','niveles'].forEach(k => {
+        if (!Array.isArray(remote.tabulador[k])) remote.tabulador[k] = remote.tabulador[k] ? Object.values(remote.tabulador[k]) : [];
+      });
+    }
+    _fbApply(remote);
+    // Re-render current view if open
+    if (selectedIdx !== null) {
+      renderMod(); renderOps(); renderCons(); renderCIF(); renderEquipos(); renderTabuladorCentro();
+    }
+    buildGrid();
+    _fbUpdateSyncUI('ok');
+  }
+});
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', async () => {
+  // Add sync pill to top bar
+  const pill = document.createElement('div');
+  pill.id = 'fb-sync-pill';
+  pill.style.cssText = 'position:fixed;bottom:16px;right:18px;z-index:9998;display:inline-flex;align-items:center;padding:5px 12px;border-radius:20px;font-family:"Barlow Condensed",sans-serif;font-size:0.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(0,0,0,0.12);transition:background .2s,color .2s;';
+  document.body.appendChild(pill);
+  _fbUpdateSyncUI('saving');
+
+  // Load from Firebase
+  await fbLoad();
+
+  // Build grid with loaded data
+  buildGrid();
+});
+</script>
+</body>
+</html>
