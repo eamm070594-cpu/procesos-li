@@ -1071,7 +1071,8 @@ function openModal(id, isNew=true){
       s('etapaEditIdx').value = '';
       s('modal-etapa-title').textContent = 'Nueva etapa';
       s('etapaNombre').value = '';
-      s('etapaDia').value = ((cur().etapas||[]).length>0 ? Math.max(...(cur().etapas||[]).map(e=>e.dia)) : 0)+1;
+      const etapasActuales = (cur()&&cur().etapas)||[];
+      s('etapaDia').value = (etapasActuales.length>0 ? Math.max(...etapasActuales.map(e=>e.dia)) : 0)+1;
       s('etapaModo').value = 'serie';
     }
     if (id === 'modal-ops') {
@@ -1151,7 +1152,7 @@ function stampInfo(idx){
   if(days<=7)     return {cls:'stamp-amber',label:'Hace '+days+' días'};
   return              {cls:'stamp-red',label:'Hace '+days+' días'};
 }
-function markUpdated(){ if(selectedIdx===null) return; state[selectedIdx].updatedAt=Date.now(); refreshStamp(selectedIdx); }
+function markUpdated(){ if(selectedIdx===null) return; state[selectedIdx].updatedAt=Date.now(); refreshStamp(selectedIdx); fbSave(); }
 function refreshStamp(idx){
   const chip = document.getElementById('stamp-'+idx);
   if(chip){ const info=stampInfo(idx); chip.className='card-stamp '+info.cls; chip.textContent=info.label; }
@@ -1471,6 +1472,7 @@ function renderMod(){
 // ETAPAS
 // ═══════════════════════════════════════════════════
 function saveEtapa(){
+  if(selectedIdx===null||!cur()){ alert('Primero abre un centro de trabajo.'); return; }
   const nombre = s('etapaNombre').value.trim();
   const dia = parseInt(s('etapaDia').value)||1;
   const modo = s('etapaModo').value||'serie';
