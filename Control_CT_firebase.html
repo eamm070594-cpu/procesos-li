@@ -807,23 +807,31 @@ body.dark .dash-alert-title{color:#e05c5c;}
     <div class="modal-header"><span class="modal-title" id="modal-ops-title">Nueva operación</span><button class="modal-close" onclick="closeModal('modal-ops')">✕</button></div>
     <input type="hidden" id="opsEditIdx" value="">
     <div class="form-row">
-      <div class="form-group" style="flex:2;min-width:180px;"><label>Nombre de la operación</label><input type="text" id="opName" placeholder="Ej. Corte de piezas"></div>
-      <div class="form-group" style="flex:0 0 120px;"><label>Minutos</label><input type="number" id="opMin" placeholder="0" min="0" step="0.01"></div>
+      <div class="form-group" style="flex:2;min-width:180px;"><label>Nombre</label><input type="text" id="opName" placeholder="Ej. Dobla pata"></div>
+      <div class="form-group" style="flex:0 0 100px;"><label>Minutos</label><input type="number" id="opMin" placeholder="0" min="0" step="0.01"></div>
     </div>
     <div class="form-row">
-      <div class="form-group" style="flex:0 0 120px;">
-        <label>Recursos simultáneos</label>
+      <div class="form-group" style="flex:0 0 100px;">
+        <label>Recursos</label>
         <input type="number" id="opRecursos" placeholder="1" min="1" step="1" value="1">
-        <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">personas/máquinas en paralelo</div>
       </div>
-      <div class="form-group" style="flex:0 0 120px;">
-        <label>Día del proceso</label>
+      <div class="form-group" style="flex:0 0 100px;">
+        <label>Día</label>
         <input type="number" id="opDia" placeholder="1" min="1" step="1" value="1">
+      </div>
+      <div class="form-group" style="flex:0 0 110px;">
+        <label>Pzas/producto</label>
+        <input type="number" id="opPiezas" placeholder="1" min="1" step="1" value="1">
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">ej. 4 patas/silla</div>
+      </div>
+      <div class="form-group" style="flex:1;min-width:100px;">
+        <label>TC real</label>
+        <div id="opTcPreview" style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--accent);padding:9px 12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border2);">—</div>
       </div>
     </div>
     <div class="form-group">
-      <label>Depende de (operaciones predecesoras)</label>
-      <div id="opDependenciasWrap" style="display:flex;flex-direction:column;gap:5px;margin-top:4px;max-height:140px;overflow-y:auto;"></div>
+      <label>Depende de</label>
+      <div id="opDependenciasWrap" style="display:flex;flex-direction:column;gap:5px;margin-top:4px;max-height:160px;overflow-y:auto;"></div>
       <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Sin selección = operación de inicio</div>
     </div>
     <div class="modal-footer">
@@ -1071,79 +1079,262 @@ function toggleBloque(id){
   }
 }
 
-// ── DIAGRAMA DE FLUJO ─────────────────────────────
+// ── DIAGRAMA DE FLUJO CON FLECHAS SVG ─────────────
 function renderDiagrama(){
   const wrap = s('diagramaWrap'); if(!wrap) return;
   const ops = (cur()&&cur().ops)||[];
-  if(!ops.length){ wrap.innerHTML=`<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Sin operaciones</div>`; return; }
+  const opsActivas = ops.filter(o=>o.activa!==false);
+  if(!opsActivas.length){ wrap.innerHTML=`<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Sin operaciones activas</div>`; return; }
 
-  const critPath = calcCaminoCritico(ops);
-  const diasUnicos = [...new Set(ops.map(o=>o.dia||1))].sort((a,b)=>a-b);
+  const critPath = calcCaminoCritico(opsActivas);
+  const n = opsActivas.length;
 
-  let html = `<div style="display:flex;gap:0;align-items:stretch;">`;
+  // Calcular nivel de cada op
+  const nivel = new Array(n).fill(0);
+  const visitedN = new Set();
+  function calcNivel(i){
+    if(visitedN.has(i)) return nivel[i];
+    visitedN.add(i);
+    const deps = (opsActivas[i].depende||[]).map(d=>opsActivas.findIndex(o=>o===ops[d])).filter(d=>d>=0);
+    if(!deps.length){ nivel[i]=0; return 0; }
+    nivel[i] = Math.max(...deps.map(d=>calcNivel(d)))+1;
+    return nivel[i];
+  }
+  for(let i=0;i<n;i++) calcNivel(i);
 
-  diasUnicos.forEach((dia, dIdx)=>{
-    const opsDia = ops.filter(o=>(o.dia||1)===dia);
-    html += `<div style="display:flex;flex-direction:column;align-items:center;min-width:0;">`;
-    if(dIdx>0) html += `<div style="display:flex;align-items:center;padding:0 4px;"><div style="width:28px;height:2px;background:var(--border-mid);"></div></div>`;
+  const maxNivel = Math.max(...nivel,0);
+  const columnas = [];
+  for(let lv=0;lv<=maxNivel;lv++) columnas.push(opsActivas.filter((_,i)=>nivel[i]===lv));
 
-    html += `<div style="background:var(--surface2);border-radius:8px;padding:6px 10px;margin-bottom:6px;text-align:center;">
-      <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Día ${dia}</span>
-    </div>`;
+  // EF
+  const ef = new Array(n).fill(0);
+  const visitedEF = new Set();
+  function calcEF(i){
+    if(visitedEF.has(i)) return ef[i];
+    visitedEF.add(i);
+    const deps = (opsActivas[i].depende||[]).map(d=>opsActivas.findIndex(o=>o===ops[d])).filter(d=>d>=0);
+    const maxPred = deps.length>0?Math.max(...deps.map(d=>calcEF(d))):0;
+    ef[i] = maxPred + (opsActivas[i].min||0)*(opsActivas[i].piezas||1)/(opsActivas[i].recursos||1);
+    return ef[i];
+  }
+  for(let i=0;i<n;i++) calcEF(i);
 
-    html += `<div style="display:flex;flex-direction:column;gap:8px;align-items:center;">`;
-    opsDia.forEach(o=>{
-      const i = ops.indexOf(o);
-      const enCamino = critPath.includes(i);
-      const tcReal = ((o.min||0)/(o.recursos||1)).toFixed(2);
-      const depNames = (o.depende||[]).map(d=>ops[d]?ops[d].nombre.split(' ')[0]:'?').join('+');
-      const inactive = o.activa===false;
-      html += `<div style="
-        background:var(--surface);
-        border:2px solid ${enCamino&&!inactive?'var(--bad)':'var(--border2)'};
-        border-radius:var(--r);
-        padding:10px 14px;
-        min-width:120px;
-        max-width:160px;
-        text-align:center;
-        opacity:${inactive?'0.4':'1'};
-        box-shadow:${enCamino&&!inactive?'0 0 0 3px rgba(217,53,53,0.12)':'var(--shadow)'};
-        position:relative;
-      ">
-        ${enCamino&&!inactive?'<div style="position:absolute;top:-8px;right:-8px;background:var(--bad);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:2px 5px;">CRÍTICO</div>':''}
-        <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">${o.nombre}</div>
-        <div style="font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;">${tcReal} min</div>
-        ${o.recursos>1?`<div style="font-size:10px;color:var(--ok);margin-top:2px;">×${o.recursos} recursos</div>`:''}
-        ${depNames?`<div style="font-size:10px;color:var(--text-muted);margin-top:3px;border-top:1px solid var(--border2);padding-top:3px;">← ${depNames}</div>`:'<div style="font-size:10px;color:var(--text-muted);margin-top:3px;">inicio</div>'}
-      </div>`;
+  const accentColors=['#d4622a','#5bb8e8','#6fc98c','#c87de8','#e8a840','#e05c5c'];
+  const BOX_W=160, BOX_GAP=20, COL_GAP=60, BOX_MIN_H=110;
+  const ARROW_W=COL_GAP;
+
+  // Build HTML — position:relative container, boxes absolute
+  const colWidths = columnas.map(()=>BOX_W);
+  const totalWidth = columnas.reduce((a,c,i)=>a+BOX_W+(i>0?COL_GAP:0),0);
+
+  // Compute box positions
+  const positions = []; // [{x,y,w,h,cx,cy}] per op index in opsActivas
+  let xCursor = 0;
+  columnas.forEach((col,lv)=>{
+    if(lv>0) xCursor += COL_GAP;
+    const colHeight = col.length*(BOX_MIN_H+BOX_GAP)-BOX_GAP;
+    let yCursor = 0;
+    col.forEach(o=>{
+      const i = opsActivas.indexOf(o);
+      positions[i] = {x:xCursor, y:yCursor, w:BOX_W, h:BOX_MIN_H, cx:xCursor+BOX_W/2, cy:yCursor+BOX_MIN_H/2};
+      yCursor += BOX_MIN_H+BOX_GAP;
     });
-    html += `</div></div>`;
+    xCursor += BOX_W;
+  });
 
-    // Flecha entre días
-    if(dIdx < diasUnicos.length-1){
-      html += `<div style="display:flex;align-items:center;justify-content:center;padding:0 4px;align-self:center;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><path d="M5 12h14M14 6l6 6-6 6"/></svg>
-      </div>`;
+  // Compute column X positions for day separators
+  const colXPositions = []; // x start of each column
+  let xTemp = 0;
+  columnas.forEach((col,lv)=>{
+    if(lv>0) xTemp += COL_GAP;
+    colXPositions.push(xTemp);
+    xTemp += BOX_W;
+  });
+
+  // Find day transitions — where day changes between adjacent columns
+  const daySepLines = [];
+  columnas.forEach((col,lv)=>{
+    if(lv===0) return;
+    const prevDia = Math.min(...columnas[lv-1].map(o=>o.dia||1));
+    const curDia = Math.min(...col.map(o=>o.dia||1));
+    if(curDia !== prevDia){
+      // Draw separator between prev col end and this col start
+      const sepX = colXPositions[lv] - COL_GAP/2;
+      daySepLines.push({x:sepX, dia:curDia});
     }
   });
 
-  html += `</div>`;
+  const totalHeight = Math.max(...positions.map(p=>p?p.y+p.h:0),200)+40;
 
-  // Leyenda
-  html += `<div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;">
-    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);">
-      <div style="width:12px;height:12px;border:2px solid var(--bad);border-radius:3px;"></div>Camino crítico
-    </div>
-    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);">
-      <div style="width:12px;height:12px;border:2px solid var(--border2);border-radius:3px;"></div>No crítico
-    </div>
-    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ok);">
-      <span>×N</span>Recursos en paralelo
-    </div>
+  // Render container
+  let html = `<div id="diagrama-container" style="position:relative;width:${totalWidth}px;min-height:${totalHeight}px;margin-bottom:12px;">`;
+
+  // Day separator lines (behind boxes)
+  daySepLines.forEach(sep=>{
+    html += `<div style="position:absolute;left:${sep.x}px;top:0;bottom:0;width:2px;background:var(--border2);z-index:0;"></div>
+    <div style="position:absolute;left:${sep.x-24}px;top:8px;z-index:1;background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:2px 8px;white-space:nowrap;font-size:9px;font-weight:700;color:var(--text-muted);letter-spacing:.05em;">Día ${sep.dia}</div>`;
+  });
+
+  // Boxes
+  opsActivas.forEach((o,i)=>{
+    const p = positions[i]; if(!p) return;
+    const enCamino = critPath.includes(i);
+    const tcReal = ((o.min||0)*(o.piezas||1)/(o.recursos||1));
+    const lv = nivel[i];
+    const colorTC = enCamino?'var(--bad)':accentColors[lv%accentColors.length];
+    const asigIdx = (cur().asignaciones&&cur().asignaciones[ops.indexOf(o)])||[];
+    const asigNombre = asigIdx.length>0&&cur().mod[asigIdx[0]]?cur().mod[asigIdx[0]].puesto:'—';
+    const dia = o.dia||1;
+    const col = columnas[lv];
+    const hasSeries = col.filter(x=>(x.dia||1)===dia).length>1;
+    const seqNum = hasSeries ? col.indexOf(o)+1 : null;
+
+    html += `<div id="diag-box-${i}" onclick="abrirAsigDiagrama(${i})" style="
+      position:absolute;left:${p.x}px;top:${p.y}px;width:${BOX_W}px;
+      background:var(--surface);
+      border:2px solid ${enCamino?'var(--bad)':'var(--border2)'};
+      border-radius:var(--r);padding:10px 12px;
+      box-shadow:${enCamino?'0 0 0 3px rgba(217,53,53,0.1)':'var(--shadow)'};
+      cursor:pointer;transition:transform .1s;
+      box-sizing:border-box;
+    " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform=''">
+      ${enCamino?`<div style="position:absolute;top:-9px;right:8px;background:var(--bad);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:2px 6px;">CRÍTICO</div>`:''}
+      ${seqNum?`<div style="position:absolute;top:-9px;left:8px;background:var(--accent);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:2px 6px;">${seqNum}</div>`:''}
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:5px;">
+        <span style="font-size:9px;padding:1px 5px;border-radius:10px;background:var(--surface2);color:var(--text-muted);font-weight:600;">Día ${dia}</span>
+        ${o.recursos>1?`<span style="font-size:9px;padding:1px 5px;border-radius:10px;background:var(--ok-bg);color:var(--ok);font-weight:700;">×${o.recursos}</span>`:''}
+      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:5px;line-height:1.3;">${o.nombre}</div>
+      <div style="font-family:var(--font-mono);font-size:1rem;font-weight:700;color:${colorTC};">${tcReal.toFixed(2)} min</div>
+      <div style="margin-top:6px;padding-top:5px;border-top:1px solid var(--border2);font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+        <span style="font-size:12px;">👤</span>
+        <span id="diag-op-${i}">${asigNombre}</span>
+      </div>
+    </div>`;
+  });
+
+  // SVG arrows overlay
+  html += `<svg id="diagrama-svg" style="position:absolute;top:0;left:0;width:${totalWidth}px;height:${totalHeight}px;pointer-events:none;overflow:visible;" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow-normal" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="var(--border-mid)"/>
+      </marker>
+      <marker id="arrow-critical" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="var(--bad)"/>
+      </marker>
+    </defs>`;
+
+  // Draw arrows: for each op, draw line from its right edge to each successor's left edge
+  opsActivas.forEach((o,i)=>{
+    const pFrom = positions[i]; if(!pFrom) return;
+    // Find successors
+    opsActivas.forEach((succ,j)=>{
+      const succDeps = (succ.depende||[]).map(d=>opsActivas.findIndex(x=>x===ops[d])).filter(d=>d>=0);
+      if(!succDeps.includes(i)) return;
+      const pTo = positions[j]; if(!pTo) return;
+      const enCamino = critPath.includes(i)&&critPath.includes(j);
+      const color = enCamino?'var(--bad)':'var(--border-mid)';
+      const strokeW = enCamino?2:1.5;
+      const marker = enCamino?'arrow-critical':'arrow-normal';
+
+      // From right-center of source to left-center of target
+      const x1 = pFrom.x+BOX_W;
+      const y1 = pFrom.y+BOX_MIN_H/2;
+      const x2 = pTo.x-2;
+      const y2 = pTo.y+BOX_MIN_H/2;
+      const cx1 = x1+(x2-x1)*0.4;
+      const cx2 = x2-(x2-x1)*0.4;
+
+      html += `<path d="M${x1},${y1} C${cx1},${y1} ${cx2},${y2} ${x2},${y2}" 
+        stroke="${color}" stroke-width="${strokeW}" fill="none" 
+        marker-end="url(#${marker})" stroke-dasharray="${enCamino?'none':'none'}"/>`;
+    });
+  });
+
+  html += `</svg></div>`;
+
+  // Critical path summary
+  const tcTotal = n>0?Math.max(...ef):0;
+  html += `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface2);border-radius:var(--r);flex-wrap:wrap;margin-bottom:8px;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Camino crítico</div>
+    <div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--bad);">${tcTotal.toFixed(2)} min</div>
+    <div style="font-size:12px;color:var(--text-muted);">${critPath.map(i=>opsActivas[i]?.nombre||'').filter(Boolean).join(' → ')}</div>
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);"><div style="width:12px;height:2px;background:var(--bad);"></div>Camino crítico</div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);"><div style="width:12px;height:2px;background:var(--border-mid);"></div>Flujo normal</div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ok);">×N Recursos paralelos</div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);">👤 Toca una caja para asignar operador</div>
   </div>`;
 
   wrap.innerHTML = html;
 }
+
+function abrirAsigDiagrama(opActIdx){
+  const data = cur();
+  const opsActivas = data.ops.filter(o=>o.activa!==false);
+  const o = opsActivas[opActIdx];
+  if(!o) return;
+  const opIdx = data.ops.indexOf(o);
+
+  // Remove existing panel
+  const existing = document.getElementById('diag-asig-panel');
+  if(existing){ existing.remove(); if(existing.dataset.opIdx===String(opIdx)) return; }
+
+  const habs = (m)=>{ const h=m.habilidades||[]; return h.length===0||h.includes(opIdx); };
+  const modPresentes = data.mod.filter(m=>m.presente!==false&&habs(m));
+  const asigs = (data.asignaciones&&data.asignaciones[opIdx])||[];
+
+  const panel = document.createElement('div');
+  panel.id = 'diag-asig-panel';
+  panel.dataset.opIdx = opIdx;
+  panel.style.cssText = `position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:4000;
+    background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);
+    padding:16px 20px;min-width:280px;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.25);`;
+
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);">${o.nombre}</div>
+      <button onclick="document.getElementById('diag-asig-panel').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;">✕</button>
+    </div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">Asignar operador</div>
+    ${modPresentes.length?modPresentes.map(m=>{
+      const mIdx=data.mod.indexOf(m);
+      const checked=asigs.includes(mIdx);
+      return `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--r);cursor:pointer;font-size:13px;" onmouseover="this.style.background='var(--hover-bg)'" onmouseout="this.style.background=''">
+        <input type="checkbox" ${checked?'checked':''} onchange="toggleAsigDiagrama(${opIdx},${mIdx},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);">
+        <span style="color:var(--text-primary);">${m.puesto}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text-muted);">$${(m.costo||0).toLocaleString('es-MX',{maximumFractionDigits:0})}</span>
+      </label>`;
+    }).join(''):`<div style="font-size:12px;color:var(--text-muted);">Sin operadores disponibles con esta habilidad</div>`}
+  `;
+  document.body.appendChild(panel);
+  // Close on outside click
+  setTimeout(()=>document.addEventListener('click', function handler(e){
+    if(!panel.contains(e.target)&&!e.target.closest('[id^=diag-box-]')){
+      panel.remove(); document.removeEventListener('click',handler);
+    }
+  }),100);
+}
+
+function toggleAsigDiagrama(opIdx, mIdx, val){
+  if(!cur().asignaciones) cur().asignaciones={};
+  if(!cur().asignaciones[opIdx]) cur().asignaciones[opIdx]=[];
+  if(val){ if(!cur().asignaciones[opIdx].includes(mIdx)) cur().asignaciones[opIdx].push(mIdx); }
+  else { cur().asignaciones[opIdx]=cur().asignaciones[opIdx].filter(i=>i!==mIdx); }
+  markUpdated();
+  renderAsignacion();
+  // Update name in box
+  const data=cur();
+  const opsActivas=data.ops.filter(o=>o.activa!==false);
+  const opActIdx=opsActivas.findIndex(o=>data.ops.indexOf(o)===opIdx);
+  const asigIdx=cur().asignaciones[opIdx]||[];
+  const nombre=asigIdx.length>0&&cur().mod[asigIdx[0]]?cur().mod[asigIdx[0]].puesto:'—';
+  const nameEl=document.getElementById('diag-op-'+opActIdx);
+  if(nameEl) nameEl.textContent=nombre;
+  if(s('resultsBlock')&&s('resultsBlock').style.display!=='none') calcularResultados();
+}
+
 
 function volverAIP(){
   // Si está dentro de un iframe de Ingeniería de Procesos
@@ -1185,7 +1376,17 @@ function openModal(id, isNew=true){
       s('opName').value = ''; s('opMin').value = '';
       s('opRecursos').value = '1';
       s('opDia').value = '1';
+      s('opPiezas').value = '1';
+      s('opTcPreview').textContent = '—';
       buildDependenciasCheck('');
+      ['opMin','opRecursos','opPiezas'].forEach(fid=>{
+        s(fid).oninput = ()=>{
+          const min=parseFloat(s('opMin').value)||0;
+          const rec=parseInt(s('opRecursos').value)||1;
+          const pzas=parseInt(s('opPiezas').value)||1;
+          s('opTcPreview').textContent = min>0?((min*pzas)/rec).toFixed(2)+' min':'—';
+        };
+      });
     }
     if (id === 'modal-cons') {
       s('consEditIdx').value = '';
@@ -1645,13 +1846,16 @@ function buildDependenciasCheck(editIdx){
   const currentIdx = editIdx!=='' ? parseInt(editIdx) : -1;
   const otrasOps = ops.filter((_,i)=>i!==currentIdx);
   if(!otrasOps.length){ wrap.innerHTML=`<div style="font-size:12px;color:var(--text-muted);">No hay otras operaciones aún</div>`; return; }
-  const deps = currentIdx>=0 ? (ops[currentIdx].depende||[]) : [];
+  // Normalizar deps a números (Firebase puede enviarlos como strings)
+  const deps = (currentIdx>=0 ? (ops[currentIdx].depende||[]) : []).map(d=>parseInt(d));
   wrap.innerHTML = otrasOps.map(o=>{
     const i = ops.indexOf(o);
     const checked = deps.includes(i) ? 'checked' : '';
+    const dia = o.dia||1;
     return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:3px 6px;border-radius:6px;" onmouseover="this.style.background='var(--hover-bg)'" onmouseout="this.style.background=''">
       <input type="checkbox" ${checked} data-depidx="${i}" style="width:15px;height:15px;accent-color:var(--accent);">
       <span style="color:var(--text-primary);">${o.nombre}</span>
+      <span style="font-size:10px;padding:1px 5px;border-radius:4px;background:var(--surface2);color:var(--text-muted);">Día ${dia}</span>
       <span style="margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${o.min.toFixed(2)} min</span>
     </label>`;
   }).join('');
@@ -1663,11 +1867,12 @@ function saveOperacion(){
   const min = parseFloat(s('opMin').value);
   const recursos = parseInt(s('opRecursos').value)||1;
   const dia = parseInt(s('opDia').value)||1;
+  const piezas = parseInt(s('opPiezas').value)||1;
   if(!nombre || isNaN(min) || min<0){ alert('Ingresa nombre y minutos.'); return; }
   const checks = s('opDependenciasWrap').querySelectorAll('input[type=checkbox]');
   const depende = Array.from(checks).filter(c=>c.checked).map(c=>parseInt(c.dataset.depidx));
   const editIdx = s('opsEditIdx').value;
-  const entry = {nombre, min, recursos, dia, depende, activa:true};
+  const entry = {nombre, min, recursos, dia, piezas, depende, activa:true};
   if(editIdx !== '') cur().ops[parseInt(editIdx)] = {...(cur().ops[parseInt(editIdx)]||{}), ...entry};
   else cur().ops.push(entry);
   markUpdated(); closeModal('modal-ops'); renderOps(); renderAsignacion();
@@ -1679,6 +1884,18 @@ function editOperacion(i){
   s('opName').value = o.nombre; s('opMin').value = o.min;
   s('opRecursos').value = o.recursos||1;
   s('opDia').value = o.dia||1;
+  s('opPiezas').value = o.piezas||1;
+  const pzas = o.piezas||1;
+  const tc = ((o.min||0)*pzas)/(o.recursos||1);
+  s('opTcPreview').textContent = tc>0?tc.toFixed(2)+' min':'—';
+  ['opMin','opRecursos','opPiezas'].forEach(fid=>{
+    s(fid).oninput = ()=>{
+      const min=parseFloat(s('opMin').value)||0;
+      const rec=parseInt(s('opRecursos').value)||1;
+      const pz=parseInt(s('opPiezas').value)||1;
+      s('opTcPreview').textContent = min>0?((min*pz)/rec).toFixed(2)+' min':'—';
+    };
+  });
   buildDependenciasCheck(i);
   openModal('modal-ops', false);
 }
@@ -1715,8 +1932,8 @@ function renderOps(){
           ${depNames?`<div style="font-size:10px;color:var(--text-muted);margin-top:1px;">Depende de: ${depNames}</div>`:'<div style="font-size:10px;color:var(--text-muted);">Inicio</div>'}
         </div>
         <div style="text-align:right;flex-shrink:0;">
-          <div class="item-min">${tcReal} min</div>
-          ${o.recursos>1?`<div style="font-size:10px;color:var(--text-muted);">${o.min.toFixed(2)}÷${o.recursos}</div>`:''}
+          <div class="item-min">${tcReal} min${(o.piezas||1)>1?` <span style="font-size:9px;color:var(--ok);">×${o.piezas}pzas</span>`:''}</div>
+          ${o.recursos>1||( o.piezas&&o.piezas>1)?`<div style="font-size:10px;color:var(--text-muted);">${o.min}${o.piezas>1?'×'+o.piezas:''} ÷ ${o.recursos} rec</div>`:''}
         </div>
         <button class="item-edit" onclick="editOperacion(${i})">✎</button>
         <button class="item-del" onclick="delOperacion(${i})">✕</button>
@@ -1741,7 +1958,7 @@ function calcCaminoCritico(ops){
     if(visited.has(i)) return;
     const deps = ops[i].depende||[];
     deps.forEach(d=>{ if(d>=0&&d<n) visit(d); });
-    const tc = (ops[i].min||0)/(ops[i].recursos||1);
+    const tc = (ops[i].min||0)*(ops[i].piezas||1)/(ops[i].recursos||1);
     const maxPred = deps.length>0 ? Math.max(...deps.filter(d=>d>=0&&d<n).map(d=>ef[d]), 0) : 0;
     es[i] = maxPred;
     ef[i] = maxPred + tc;
@@ -1758,7 +1975,7 @@ function calcCaminoCritico(ops){
   for(let i=n-1;i>=0;i--){
     const successors = ops.map((o,j)=>((o.depende||[]).includes(i)?j:-1)).filter(j=>j>=0);
     if(successors.length>0) lf[i] = Math.min(...successors.map(j=>ls[j]));
-    ls[i] = lf[i] - (ops[i].min||0)/(ops[i].recursos||1);
+    ls[i] = lf[i] - (ops[i].min||0)*(ops[i].piezas||1)/(ops[i].recursos||1);
   }
 
   // Critical path = ops where ES == LS (float = 0)
@@ -1864,7 +2081,7 @@ function renderAsignacion(){
   modPresentes.forEach(m=>{ cargaOp[data.mod.indexOf(m)] = 0; });
   opsActivas.forEach(o=>{
     const opIdx = data.ops.indexOf(o);
-    const asigs = data.asignaciones[opIdx] || [];
+    const asigs = (data.asignaciones[opIdx] || data.asignaciones[String(opIdx)] || []).map(x=>parseInt(x));
     asigs.forEach(mIdx=>{ if(cargaOp[mIdx]!==undefined) cargaOp[mIdx]+=o.min; });
   });
   const maxCarga = Math.max(...Object.values(cargaOp), 0.01);
@@ -1878,32 +2095,45 @@ function renderAsignacion(){
   let html = `<div style="overflow-x:auto;"><table class="asig-table">
     <thead><tr>
       <th>Operación</th>
-      <th style="text-align:right;color:var(--accent);">Tiempo</th>
+      <th style="text-align:right;color:var(--accent);">TC real</th>
       ${modPresentes.map(m=>`<th class="op-col">${m.puesto.split(' ')[0]}</th>`).join('')}
     </tr></thead>
     <tbody>`;
 
-  opsActivas.forEach(o=>{
-    const opIdx = data.ops.indexOf(o);
-    const asigs = data.asignaciones[opIdx] || [];
-    const asignada = asigs.length > 0;
-    html += `<tr style="${!asignada?'background:var(--warn-bg);':''}">
-      <td style="font-weight:500;color:var(--text-primary);">${o.nombre}${!asignada?'<span style="margin-left:6px;font-size:10px;color:var(--warn);font-weight:700;">⚠ sin asignar</span>':''}</td>
-      <td style="text-align:right;font-family:var(--font-mono);font-weight:600;color:var(--accent);">${o.min.toFixed(2)} min</td>
-      ${modPresentes.map(m=>{
-        const mIdx = data.mod.indexOf(m);
-        const habs = m.habilidades||[];
-        const puedeHacer = habs.length===0 || habs.includes(opIdx);
-        const checked = asigs.includes(mIdx) ? 'checked' : '';
-        const disabled = !puedeHacer ? 'disabled' : '';
-        const title = !puedeHacer ? `${m.puesto} no tiene habilidad para esta operación` : '';
-        return `<td class="op-cell" title="${title}">
-          ${puedeHacer
-            ? `<input type="checkbox" class="asig-cb" ${checked} onchange="toggleAsignacion(${opIdx},${mIdx},this.checked)">`
-            : `<span style="font-size:16px;" title="${title}">🚫</span>`}
-        </td>`;
-      }).join('')}
+  // Group by day
+  const diasUnicos = [...new Set(opsActivas.map(o=>o.dia||1))].sort((a,b)=>a-b);
+  diasUnicos.forEach(dia=>{
+    const opsDia = opsActivas.filter(o=>(o.dia||1)===dia);
+    // Day header row
+    html += `<tr style="background:var(--surface2);">
+      <td colspan="${modPresentes.length+2}" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);padding:6px 12px;">📅 Día ${dia}</td>
     </tr>`;
+    opsDia.forEach(o=>{
+      const opIdx = data.ops.indexOf(o);
+      const asigs = (data.asignaciones[opIdx] || data.asignaciones[String(opIdx)] || []).map(x=>parseInt(x));
+      const asignada = asigs.length > 0;
+      const tcReal = ((o.min||0)*(o.piezas||1)/(o.recursos||1));
+      html += `<tr style="${!asignada?'background:var(--warn-bg);':''}">
+        <td style="font-weight:500;color:var(--text-primary);">
+          ${o.nombre}
+          ${o.recursos>1?`<span style="margin-left:4px;font-size:10px;background:var(--ok-bg);color:var(--ok);border-radius:4px;padding:1px 5px;font-weight:700;">×${o.recursos}</span>`:''}
+          ${!asignada?'<span style="margin-left:6px;font-size:10px;color:var(--warn);font-weight:700;">⚠</span>':''}
+        </td>
+        <td style="text-align:right;font-family:var(--font-mono);font-weight:600;color:var(--accent);">${tcReal.toFixed(2)} min</td>
+        ${modPresentes.map(m=>{
+          const mIdx = data.mod.indexOf(m);
+          const habs = m.habilidades||[];
+          const puedeHacer = habs.length===0 || habs.includes(opIdx);
+          const checked = asigs.includes(mIdx) ? 'checked' : '';
+          const title = !puedeHacer ? `${m.puesto} no tiene habilidad` : '';
+          return `<td class="op-cell" title="${title}">
+            ${puedeHacer
+              ? `<input type="checkbox" class="asig-cb" ${checked} onchange="toggleAsignacion(${opIdx},${mIdx},this.checked)">`
+              : `<span style="font-size:14px;">🚫</span>`}
+          </td>`;
+        }).join('')}
+      </tr>`;
+    });
   });
 
   // Fila de totales por operador
@@ -2034,7 +2264,7 @@ function calcularResultados(){
         .map(d=>opsActivas.findIndex(o=>o===data.ops[d]))
         .filter(d=>d>=0);
       deps.forEach(d=>visit(d));
-      const tc = (opsActivas[i].min||0)/(opsActivas[i].recursos||1);
+      const tc = (opsActivas[i].min||0)*(opsActivas[i].piezas||1)/(opsActivas[i].recursos||1);
       const maxPred = deps.length>0 ? Math.max(...deps.map(d=>ef[d]),0) : 0;
       ef[i] = maxPred + tc;
       visited.add(i);
@@ -2049,17 +2279,23 @@ function calcularResultados(){
   if(hayAsignacion){
     opsActivas.forEach(o=>{
       const opIdx = data.ops.indexOf(o);
-      const tcOp = (o.min||0)/(o.recursos||1);
-      (asigs[opIdx]||[]).forEach(mIdx=>{ if(cargaPorOp[mIdx]!==undefined) cargaPorOp[mIdx]+=tcOp; });
+      const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
+      // Normalize: asigs keys and values may be strings from Firebase
+      const opAsigs = asigs[opIdx] || asigs[String(opIdx)] || [];
+      opAsigs.map(x=>parseInt(x)).forEach(mIdx=>{
+        if(cargaPorOp[mIdx]!==undefined) cargaPorOp[mIdx]+=tcOp;
+      });
     });
   } else {
     const tcProm = numOperadores>0 ? totalOps/numOperadores : 0;
     modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = tcProm; });
   }
+  // TC para CAPACIDAD = operador más cargado (total del turno)
   const tcOperadores = hayAsignacion ? Math.max(...Object.values(cargaPorOp),0) : 0;
-
-  // TC final = max(camino crítico, operador más cargado)
-  const tiempoCiclo = Math.max(tcCaminoCritico, tcOperadores, 0.001);
+  // TC para mostrar en tiempos = operador más cargado (es el cuello real de producción)
+  const tiempoCiclo = tcOperadores>0 ? tcOperadores : (tcCaminoCritico||0.001);
+  // Lead Time = camino crítico (tiempo de una pieza de inicio a fin)
+  const leadTimeCritico = tcCaminoCritico;
   const tcBalanceo = numOperadores>0 ? totalOps/numOperadores : 0;
 
   // Días del ciclo
@@ -2068,18 +2304,20 @@ function calcularResultados(){
 
   // Label
   let tcLabel = '';
-  if(tcCaminoCritico >= tcOperadores){
+  if(tcOperadores>0){
+    tcLabel = `Operador más cargado: ${tcOperadores.toFixed(2)} min`;
+  } else {
     const opsCriticas = critPath.map(i=>opsActivas[i]?.nombre||'').filter(Boolean);
     tcLabel = `Camino crítico: ${opsCriticas.join(' → ')} (${tcCaminoCritico.toFixed(2)} min)`;
-  } else {
-    tcLabel = `Operador más cargado: ${tcOperadores.toFixed(2)} min`;
   }
   const etapasInfo = []; // compatibilidad
   const hayEtapas = hayMultiDia;
 
   // Capacidad: en paralelo se multiplica por operadores, en multi-día se divide por días del ciclo
   const piezasPorCiclo = (!hayMultiDia && modo==='paralelo') ? numOperadores : 1;
-  const capDia = tiempoCiclo>0 ? Math.floor(tiempoReal/tiempoCiclo)*piezasPorCiclo : 0;
+  // capDia: para multi-día = mínimo de todos los días (cuello real)
+  // Se recalcula después de calcular capPorDia
+  let capDia = tiempoCiclo>0 ? Math.floor(tiempoReal/tiempoCiclo)*piezasPorCiclo : 0;
 
   // Capacidad y WIP por día (proceso multi-día)
   let capPorDia = [], wipPorDia = [], utilizPorDia = [], leadTimeDias = diasCiclo;
@@ -2088,30 +2326,46 @@ function calcularResultados(){
     let capAnterior = null;
     diasUnicos.forEach(dia=>{
       const opsDia = opsActivas.filter(o=>(o.dia||1)===dia);
-      // TC del día = camino crítico solo con ops de ese día
-      // Simplificado: max(tc de cada op activa en ese día, considerando recursos)
-      let tcDia = 0;
-      // Ops en paralelo (sin dependencia entre sí en el mismo día) → max de sus TC
-      // Ops en serie (con dependencia) → suma
-      // Usamos el camino crítico del día
-      const opsDiaIds = opsDia.map(o=>data.ops.indexOf(o));
-      // Forward pass solo con ops del día
-      const efDia = {};
-      opsDia.forEach(o=>{
-        const i = data.ops.indexOf(o);
-        const depsEnDia = (o.depende||[]).filter(d=>opsDiaIds.includes(d));
-        const maxPred = depsEnDia.length>0 ? Math.max(...depsEnDia.map(d=>efDia[d]||0),0) : 0;
-        efDia[i] = maxPred + (o.min||0)/(o.recursos||1);
-      });
-      tcDia = Math.max(...Object.values(efDia),0);
+      let tcDia = 0, tcDiaLabel = '', cargaPorOpDia = {};
+
+      if(hayAsignacion){
+        // TC del día = operador más cargado del día
+        // Carga de un operador = suma de sus operaciones asignadas en ese día
+        modPresentes.forEach(m=>{ cargaPorOpDia[data.mod.indexOf(m)] = 0; });
+        opsDia.forEach(o=>{
+          const opIdx = data.ops.indexOf(o);
+          const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
+          const opAsigs = asigs[opIdx] || asigs[String(opIdx)] || [];
+          opAsigs.map(x=>parseInt(x)).forEach(mIdx=>{
+            if(cargaPorOpDia[mIdx]!==undefined) cargaPorOpDia[mIdx] += tcOp;
+          });
+        });
+        const maxCargaDia = Math.max(...Object.values(cargaPorOpDia), 0);
+        tcDia = maxCargaDia;
+        const opMasCargadoIdx = Object.keys(cargaPorOpDia).reduce((a,b)=>cargaPorOpDia[a]>cargaPorOpDia[b]?a:b);
+        const nomOp = data.mod[parseInt(opMasCargadoIdx)]?.puesto||'—';
+        tcDiaLabel = `Cuello: ${nomOp} (${tcDia.toFixed(2)} min)`;
+      } else {
+        // Sin asignación: TC = operación más lenta del día (cuello en paralelo)
+        tcDia = Math.max(...opsDia.map(o=>(o.min||0)*(o.piezas||1)/(o.recursos||1)), 0);
+        const opCuello = opsDia.reduce((a,o)=>(o.min||0)*(o.piezas||1)/(o.recursos||1)>(a.min||0)*(a.piezas||1)/(a.recursos||1)?o:a);
+        tcDiaLabel = `Sin asignación — cuello: ${opCuello?.nombre||'—'} (${tcDia.toFixed(2)} min)`;
+      }
 
       const capDiaN = tcDia>0 ? Math.floor(tiempoReal/tcDia) : 0;
       const wip = capAnterior!==null ? Math.max(0, capAnterior-capDiaN) : 0;
-      capPorDia.push({dia, tc:tcDia, cap:capDiaN, esCuello:Math.abs(tcDia-tiempoCiclo)<0.01});
-      utilizPorDia.push({dia, real: tiempoReal>0?(tcDia/tiempoReal*100):0});
+      // Utilización = TC del operador más cargado ÷ tiempo real del turno
+      const utilizDia = tiempoReal>0 ? Math.min(100,(tcDia/tiempoReal*100)) : 0;
+      capPorDia.push({dia, tc:tcDia, cap:capDiaN, esCuello:false, label:tcDiaLabel, cargaOps:cargaPorOpDia});
+      utilizPorDia.push({dia, real:utilizDia});
       wipPorDia.push({dia, wip});
       capAnterior = capDiaN;
     });
+    // Marcar el día cuello (menor capacidad)
+    const minCap = Math.min(...capPorDia.map(d=>d.cap));
+    capPorDia.forEach(d=>{ d.esCuello = d.cap===minCap; });
+    // Capacidad total = mínimo de todos los días
+    capDia = minCap;
   }
   const demandaDia = demanda>0 ? demanda/dias : 0;
   const taktTime = demandaDia>0 ? tiempoReal/demandaDia : 0;
@@ -2164,9 +2418,14 @@ function calcularResultados(){
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${disponible} − ${totalCons.toFixed(2)} cons = ${tiempoReal.toFixed(2)}</div>
         </div>
         <div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Ciclo</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Tiempo Ciclo</div>
           <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--accent);">${tiempoCiclo>0?tiempoCiclo.toFixed(2)+' min':'—'}</div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${tiempoCiclo>0?tcLabel:'sin datos'}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Lead Time</div>
+          <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--text-tertiary);">${leadTimeCritico>0?leadTimeCritico.toFixed(2)+' min':'—'}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${leadTimeCritico>0?'una pieza de inicio a fin':'sin datos'}</div>
         </div>
         <div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Takt Time</div>
@@ -2184,28 +2443,134 @@ function calcularResultados(){
       <!-- Detalle por día -->
       <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border2);">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:10px;">Capacidad por día</div>
+
+        <!-- Header -->
+        <div style="display:grid;grid-template-columns:1fr 110px 110px;gap:8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);padding:4px 8px;margin-bottom:4px;">
+          <span>Operación</span>
+          <span style="text-align:right;">Instalada</span>
+          <span style="text-align:right;">Real (personal)</span>
+        </div>
+
+        ${(hayMultiDia?capPorDia.map(d=>({dia:d.dia,cap:d.cap,tc:d.tc,esCuello:d.esCuello})):
+          [{dia:1,cap:capDia,tc:tiempoCiclo,esCuello:true}]).map(d=>{
+          const opsDia = hayMultiDia ? opsActivas.filter(o=>(o.dia||1)===d.dia) : opsActivas;
+
+          // Build operator cycle map: for each op, find which operator does it and their full cycle load for this day
+          const opCicloMap = {}; // opIdx → ciclo del operador (sum of his ops in this day)
+          opsDia.forEach(o=>{
+            const opIdx = data.ops.indexOf(o);
+            const opAsigs = (asigs[opIdx]||asigs[String(opIdx)]||[]).map(x=>parseInt(x));
+            if(opAsigs.length>0){
+              const mIdx = opAsigs[0];
+              // Sum all ops assigned to this operator in this day
+              const cargaOp = opsDia.reduce((acc,op2)=>{
+                const op2Idx = data.ops.indexOf(op2);
+                const op2Asigs = (asigs[op2Idx]||asigs[String(op2Idx)]||[]).map(x=>parseInt(x));
+                if(op2Asigs.includes(mIdx)) acc += (op2.min||0)*(op2.piezas||1)/(op2.recursos||1);
+                return acc;
+              },0);
+              opCicloMap[opIdx] = cargaOp;
+            }
+          });
+
+          const rows = opsDia.map(o=>{
+            const opIdx = data.ops.indexOf(o);
+            const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
+            const capInstalada = tcOp>0 ? Math.floor(tiempoReal/tcOp) : 0;
+            // Real: based on operator's full cycle
+            const cicloOp = opCicloMap[opIdx];
+            const capReal = cicloOp>0 ? Math.floor(tiempoReal/cicloOp) : capInstalada;
+            const isCuello = hayMultiDia && d.esCuello && capReal===d.cap;
+            const pzas = o.piezas||1;
+            return `<div style="display:grid;grid-template-columns:1fr 110px 110px;gap:8px;padding:5px 8px;border-bottom:1px solid var(--border2);align-items:center;${isCuello?'background:var(--bad-bg);border-radius:4px;':''}">
+              <span style="font-size:12px;color:var(--text-primary);font-weight:500;">${o.nombre}${pzas>1?` <span style="font-size:10px;color:var(--ok);">×${pzas}</span>`:''}${isCuello?' <span style="font-size:9px;color:var(--bad);font-weight:700;">🔴</span>':''}</span>
+              <span style="text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">${capInstalada}</span>
+              <span style="text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:700;color:${cicloOp>0?'var(--accent)':'var(--text-muted)'};">${capReal}${cicloOp===0?' <span style="font-size:9px;">sin asig.</span>':''}</span>
+            </div>`;
+          }).join('');
+
+          return `<div style="margin-bottom:10px;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);padding:4px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px;">
+              📅 Día ${d.dia}${d.esCuello?' · 🔴 cuello':''}
+            </div>
+            ${rows}
+          </div>`;
+        }).join('')}
         ${capPorDia.map(d=>{
           const wip = wipPorDia.find(w=>w.dia===d.dia)||{wip:0};
-          const utiliz = utilizPorDia.find(u=>u.dia===d.dia)||{real:0};
           const barColor = d.esCuello?'var(--bad)':'var(--ok)';
-          const utilizPct = Math.min(100, utiliz.real||0);
-          return `<div style="margin-bottom:12px;padding:12px 14px;background:var(--surface2);border-radius:var(--r);border-left:3px solid ${barColor};">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          const opsDia = opsActivas.filter(o=>(o.dia||1)===d.dia);
+
+          // Utilización por operación = (TC op × piezas del día) ÷ tiempo disponible
+          const utilizOps = opsDia.map(o=>{
+            const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
+            const pct = tiempoReal>0 ? Math.min(100,(tcOp*d.cap/tiempoReal*100)) : 0;
+            const color = pct>=90?'var(--bad)':pct>=70?'var(--warn)':'var(--ok)';
+            return {nombre:o.nombre, pct, color, tcOp};
+          });
+
+          // Utilización por operador = suma de (TC op × piezas) de todas sus ops en el día ÷ tiempo disponible
+          const utilizMod = {};
+          modPresentes.forEach(m=>{ utilizMod[data.mod.indexOf(m)] = 0; });
+          opsDia.forEach(o=>{
+            const opIdx = data.ops.indexOf(o);
+            const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
+            const opAsigs = asigs[opIdx] || asigs[String(opIdx)] || [];
+            opAsigs.map(x=>parseInt(x)).forEach(mIdx=>{
+              if(utilizMod[mIdx]!==undefined) utilizMod[mIdx] += tcOp*d.cap;
+            });
+          });
+
+          return `<div style="margin-bottom:12px;padding:14px 16px;background:var(--surface2);border-radius:var(--r);border-left:3px solid ${barColor};">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
               <div style="font-weight:600;font-size:13px;color:var(--text-primary);">
                 Día ${d.dia}
                 ${d.esCuello?'<span style="margin-left:6px;font-size:10px;background:var(--bad-bg);color:var(--bad);border-radius:4px;padding:1px 6px;font-weight:700;">🔴 cuello</span>':''}
               </div>
               <div style="font-family:var(--font-display);font-size:1.3rem;font-weight:700;color:${barColor};">${d.cap} pzas/día</div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:11px;color:var(--text-muted);margin-bottom:8px;">
-              <div>TC: <strong style="color:var(--text-primary);">${d.tc.toFixed(2)} min</strong></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;color:var(--text-muted);margin-bottom:12px;">
+              <div>TC cuello: <strong style="color:var(--text-primary);">${d.tc.toFixed(2)} min</strong></div>
               <div>WIP acum: <strong style="color:${wip.wip>0?'var(--warn)':'var(--ok)'};">${wip.wip} pzas/día</strong></div>
-              <div>Utilización: <strong style="color:var(--text-primary);">${utilizPct.toFixed(0)}%</strong></div>
             </div>
-            <div style="height:6px;background:var(--border2);border-radius:3px;overflow:hidden;">
-              <div style="height:100%;width:${utilizPct}%;background:${barColor};border-radius:3px;transition:width .3s;"></div>
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:6px;">${d.label||''}</div>
+
+            <!-- Utilización por operación -->
+            <div style="margin-bottom:10px;">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px;">⚙️ Utilización por operación</div>
+              ${utilizOps.map(u=>`
+                <div style="margin-bottom:5px;">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">
+                    <span style="color:var(--text-primary);">${u.nombre}</span>
+                    <span style="font-family:var(--font-mono);font-weight:700;color:${u.color};">${u.pct.toFixed(1)}%</span>
+                  </div>
+                  <div style="height:5px;background:var(--border2);border-radius:3px;overflow:hidden;">
+                    <div style="height:100%;width:${u.pct}%;background:${u.color};border-radius:3px;"></div>
+                  </div>
+                </div>`).join('')}
             </div>
-            <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${tiempoReal.toFixed(0)} min reales ÷ ${d.tc.toFixed(2)} min/ciclo = ${d.cap} pzas</div>
+
+            <!-- Utilización por operador -->
+            ${Object.keys(utilizMod).filter(k=>utilizMod[k]>0).length>0?`
+            <div>
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px;">👷 Utilización por operador</div>
+              ${Object.entries(utilizMod).filter(([_,v])=>v>0).map(([mIdx,total])=>{
+                const op = data.mod[parseInt(mIdx)];
+                const pct = tiempoReal>0 ? Math.min(100,(total/tiempoReal*100)) : 0;
+                const color = pct>=90?'var(--bad)':pct>=70?'var(--warn)':'var(--ok)';
+                return `<div style="margin-bottom:5px;">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">
+                    <span style="color:var(--text-primary);">${op?.puesto||'—'}</span>
+                    <span style="font-family:var(--font-mono);font-weight:700;color:${color};">${pct.toFixed(1)}%</span>
+                  </div>
+                  <div style="height:5px;background:var(--border2);border-radius:3px;overflow:hidden;">
+                    <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;"></div>
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>`:''}
+
+            <div style="font-size:10px;color:var(--text-muted);margin-top:8px;border-top:1px solid var(--border2);padding-top:6px;">${tiempoReal.toFixed(0)} min reales ÷ ${d.tc.toFixed(2)} min/ciclo = ${d.cap} pzas</div>
           </div>`;
         }).join('')}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
