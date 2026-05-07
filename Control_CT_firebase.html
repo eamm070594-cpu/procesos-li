@@ -489,50 +489,50 @@ body.dark .dash-alert-title{color:#e05c5c;}
         <div id="resumenGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;"></div>
         <div id="costoTotalCard" style="display:none;">
           <div class="sep"></div>
-          <!-- BALANCE: Real vs Ideal -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <!-- Costo real -->
-            <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;">
-              <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:6px;">Costo del Centro de Trabajo</div>
-              <div id="costoTotalValor" style="font-size:2.4rem;font-weight:800;letter-spacing:3px;color:var(--selected-ac,#111);"></div>
-              <div class="res-unit" style="margin-top:2px;">pesos por hora</div>
-              <div style="margin-top:12px;border-top:1px solid var(--border2);padding-top:10px;">
-                <div class="res-label" style="margin-bottom:4px;">Desglose</div>
-                <div id="costoDesglose" style="font-size:0.72rem;color:var(--text-tertiary);line-height:1.8;letter-spacing:.5px;"></div>
+          <!-- COSTO REAL -->
+          <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:20px 24px;margin-bottom:12px;box-shadow:var(--shadow);">
+            <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);">💰 Costo Real del Centro</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:16px;">
+              <div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Costo por hora</div>
+                <div id="costoTotalValor" style="font-family:var(--font-display);font-size:2rem;font-weight:700;color:var(--accent);"></div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">pesos / hora</div>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Costo mensual total</div>
+                <div id="costoMensualValor" style="font-family:var(--font-display);font-size:2rem;font-weight:700;color:var(--text-primary);"></div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">pesos / mes</div>
               </div>
             </div>
-            <!-- Costo ideal (forecast) -->
-            <div style="background:var(--surface);border:1px solid rgba(111,201,140,0.35);border-radius:14px;padding:20px 24px;position:relative;">
-              <div style="position:absolute;top:14px;right:14px;background:rgba(111,201,140,0.15);border:1px solid rgba(111,201,140,0.3);border-radius:6px;padding:2px 8px;font-size:0.52rem;font-weight:700;letter-spacing:1.5px;color:#3a9c5e;text-transform:uppercase;">Forecast</div>
-              <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:6px;">Costo Ideal del Centro</div>
-              <div id="costoIdealValor" style="font-size:2.4rem;font-weight:800;letter-spacing:3px;color:#6fc98c;"></div>
-              <div class="res-unit" style="margin-top:2px;">pesos por hora objetivo</div>
-              <div style="margin-top:12px;border-top:1px solid var(--border2);padding-top:10px;">
-                <div class="res-label" style="margin-bottom:6px;">Inputs del Forecast</div>
-                <div style="display:flex;flex-direction:column;gap:6px;">
-                  <div class="form-row" style="gap:8px;">
-                    <div class="form-group" style="flex:0 0 130px;"><label>MOD ideal ($/mes)</label><input type="number" id="forecastMOD" placeholder="0" min="0" step="100" oninput="calcForecast()" style="font-size:0.78rem;padding:6px 10px;"></div>
-                    <div class="form-group" style="flex:0 0 130px;"><label>CIF ideal ($/mes)</label><input type="number" id="forecastCIF" placeholder="0" min="0" step="100" oninput="calcForecast()" style="font-size:0.78rem;padding:6px 10px;"></div>
-                  </div>
-                  <div class="form-row" style="gap:8px;">
-                    <div class="form-group" style="flex:0 0 100px;"><label>Horas/día</label><input type="number" id="forecastHoras" placeholder="8" min="1" step="0.5" oninput="calcForecast()" style="font-size:0.78rem;padding:6px 10px;"></div>
-                    <div class="form-group" style="flex:0 0 100px;"><label>Días/mes</label><input type="number" id="forecastDias" placeholder="22" min="1" step="1" oninput="calcForecast()" style="font-size:0.78rem;padding:6px 10px;"></div>
-                    <div class="form-group" style="flex:0 0 100px;"><label>Operarios</label><input type="number" id="forecastOperarios" placeholder="1" min="1" step="1" oninput="calcForecast()" style="font-size:0.78rem;padding:6px 10px;"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);line-height:2;" id="costoRealDesglose"></div>
           </div>
-          <!-- Balance indicator -->
-          <div id="balanceBlock" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-            <div style="flex:1;min-width:200px;">
-              <div class="res-label" style="margin-bottom:4px;">Balance Real vs. Ideal</div>
-              <div id="balanceTexto" style="font-size:1.1rem;font-weight:800;letter-spacing:2px;"></div>
+          <!-- COSTO IDEAL -->
+          <div style="background:var(--surface);border:2px solid rgba(30,158,94,0.25);border-radius:var(--r2);padding:20px 24px;margin-bottom:12px;box-shadow:var(--shadow);">
+            <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px;">
+              🎯 Costo Ideal del Centro
+              <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--ok-bg);color:var(--ok);">Basado en demanda</span>
             </div>
-            <div id="balanceBarra" style="flex:2;min-width:160px;"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:16px;">
+              <div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Costo ideal por hora</div>
+                <div id="costoIdealValor" style="font-family:var(--font-display);font-size:2rem;font-weight:700;color:var(--ok);"></div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">pesos / hora</div>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Operadores teóricos</div>
+                <div id="costoIdealOps" style="font-family:var(--font-display);font-size:2rem;font-weight:700;color:var(--ok);"></div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">para cubrir demanda</div>
+              </div>
+            </div>
+            <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);line-height:2;" id="costoIdealDesglose"></div>
+          </div>
+          <!-- BALANCE -->
+          <div id="balanceBlock" style="display:none;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:20px 24px;box-shadow:var(--shadow);">
+            <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);">⚖️ Balance Real vs Ideal</div>
+            <div id="balanceContenido"></div>
           </div>
         </div>
-        <div id="resumenEmpty" style="text-align:center;padding:32px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Registra datos en Distribución y CIF para ver el resumen</div>
+        <div id="resumenEmpty" style="text-align:center;padding:32px;color:var(--text-tertiary);font-size:13px;">Registra datos en Distribución y CIF para ver el resumen</div>
         <div class="footer">Linea Italia — Eccellenza in Mobile</div>
       </div>
 
@@ -1935,67 +1935,128 @@ function renderCIF(){
 // RESUMEN
 // ═══════════════════════════════════════════════════
 function calcResumen(){
-  if(selectedIdx===null)return;
-  const data=cur();
-  // Fixed defaults: 1 turno, 8h/día, 22 días, operarios = # de personal registrado
-  const horasDia=8, diasMes=22;
-  const opTot=Math.max(1,data.mod.length);
-  const horasMes=horasDia*diasMes*opTot;
-  const modMensual=data.mod.reduce((a,m)=>a+(m.costo||0),0);
-  const cifMensual=data.cif.reduce((a,c)=>a+c.monto,0);
-  const totalOpsMin=data.ops.reduce((a,o)=>a+o.min,0);
-  const tc=totalOpsMin>0?totalOpsMin:null;
-  const capDia=tc&&tc>0?Math.floor((horasDia*60)/tc):null;
-  const costoHora=horasMes>0?(modMensual+cifMensual)/horasMes:0;
-  const hasData=modMensual>0||cifMensual>0||data.ops.length>0;
-  s('resumenEmpty').style.display=hasData?'none':'';
-  const ac=getAc(selectedIdx);
+  if(selectedIdx===null) return;
+  const data = cur();
+  const p = data.params || { disponible:480, dias:22, turnos:1, demanda:0 };
+  const diasMes = p.dias || 22;
+  const tiempoRealMin = (p.disponible||480) - data.cons.items.filter(c=>c.activa!==false).reduce((a,c)=>a+c.min,0);
+  const horasMes = (tiempoRealMin/60) * diasMes;
+
+  const modMensual = data.mod.reduce((a,m)=>a+(m.costo||0),0);
+  const cifMensual = data.cif.reduce((a,c)=>a+c.monto,0);
+  const opTot = Math.max(1, data.mod.length);
+  const costoHora = horasMes>0 ? (modMensual+cifMensual)/horasMes : 0;
+
+  // Tiempo ciclo desde distribución
+  const opsActivas = data.ops.filter(o=>o.activa!==false);
+  const totalOpsMin = opsActivas.reduce((a,o)=>a+o.min,0);
+  const opMax = opsActivas.length>0 ? opsActivas.reduce((a,o)=>o.min>a.min?o:a) : null;
+  const tc = opMax ? opMax.min : null;
+  const capDia = tc&&tc>0 ? Math.floor(tiempoRealMin/tc) : null;
+
+  const hasData = modMensual>0 || cifMensual>0 || data.ops.length>0;
+  s('resumenEmpty').style.display = hasData ? 'none' : '';
+  const ac = getAc(selectedIdx);
+
   s('resumenGrid').innerHTML=[
-    {label:'MOD mensual',value:'$'+modMensual.toLocaleString('es-MX',{minimumFractionDigits:2}),unit:'pesos / mes',color:ac},
-    {label:'CIF mensual',value:'$'+cifMensual.toLocaleString('es-MX',{minimumFractionDigits:2}),unit:'pesos / mes',color:ac},
-    {label:'Operarios registrados',value:opTot,unit:'personal MOD en el centro',color:ac},
-    {label:'Horas / mes',value:horasMes.toLocaleString('es-MX'),unit:'8h × '+diasMes+' días × '+opTot+' operarios',color:ac},
-    {label:'Capacidad por día',value:capDia!==null?capDia:'—',unit:capDia!==null?'unidades / día':'sin tiempo ciclo',color:ac},
-    {label:'Tiempo ciclo',value:tc!==null?tc.toFixed(2):'—',unit:tc!==null?'minutos / unidad':'sin operaciones',color:ac},
+    {label:'MOD mensual', value:'$'+modMensual.toLocaleString('es-MX',{minimumFractionDigits:2}), unit:'pesos / mes', color:ac},
+    {label:'CIF mensual', value:'$'+cifMensual.toLocaleString('es-MX',{minimumFractionDigits:2}), unit:'pesos / mes', color:ac},
+    {label:'Operarios registrados', value:opTot, unit:'personal MOD', color:ac},
+    {label:'Horas reales / mes', value:horasMes.toFixed(1), unit:`${tiempoRealMin.toFixed(0)} min/día × ${diasMes} días ÷ 60`, color:ac},
+    {label:'Capacidad por día', value:capDia!==null?capDia:'—', unit:capDia!==null?'unidades / día':'sin tiempo ciclo', color:ac},
+    {label:'Tiempo ciclo', value:tc!==null?tc.toFixed(2)+'min':'—', unit:tc!==null?`cuello: ${opMax.nombre}`:'sin operaciones', color:ac},
   ].map(k=>`<div class="res-card"><div class="res-label">${k.label}</div><div class="res-value" style="color:${k.color};">${k.value}</div><div class="res-unit">${k.unit}</div></div>`).join('');
+
   if(costoHora>0){
     s('costoTotalCard').style.display='';
     s('costoTotalValor').textContent='$'+costoHora.toFixed(2);
-    s('costoDesglose').innerHTML='MOD: $'+modMensual.toLocaleString('es-MX',{minimumFractionDigits:2})+' / mes<br>CIF: $'+cifMensual.toLocaleString('es-MX',{minimumFractionDigits:2})+' / mes<br>8h × '+diasMes+' días × '+opTot+' operarios';
-    calcForecast();
-  } else s('costoTotalCard').style.display='none';
+    s('costoMensualValor').textContent='$'+(modMensual+cifMensual).toLocaleString('es-MX',{minimumFractionDigits:2});
+    s('costoRealDesglose').innerHTML=
+      `MOD: $${modMensual.toLocaleString('es-MX',{minimumFractionDigits:2})} / mes (${opTot} operario${opTot!==1?'s':''})<br>`+
+      `CIF: $${cifMensual.toLocaleString('es-MX',{minimumFractionDigits:2})} / mes<br>`+
+      `Total: $${(modMensual+cifMensual).toLocaleString('es-MX',{minimumFractionDigits:2})} / mes<br>`+
+      `Horas reales: ${tiempoRealMin.toFixed(0)} min/día × ${diasMes} días ÷ 60 = ${horasMes.toFixed(1)} hrs/mes<br>`+
+      `Costo/hr = $${(modMensual+cifMensual).toLocaleString('es-MX',{minimumFractionDigits:2})} ÷ ${horasMes.toFixed(1)} = <strong style="color:var(--accent)">$${costoHora.toFixed(2)}/hr</strong>`;
+    calcCostoIdeal(modMensual, cifMensual, horasMes, opTot, diasMes, tiempoRealMin, costoHora);
+  } else {
+    s('costoTotalCard').style.display='none';
+  }
 }
-function calcForecast(){
-  const modI=parseFloat(s('forecastMOD').value)||0;
-  const cifI=parseFloat(s('forecastCIF').value)||0;
-  const hI=parseFloat(s('forecastHoras').value)||8;
-  const dI=parseFloat(s('forecastDias').value)||22;
-  const opI=parseFloat(s('forecastOperarios').value)||1;
-  if(modI===0&&cifI===0){s('costoIdealValor').textContent='—';s('balanceBlock').style.display='none';return;}
-  const horasMesI=hI*dI*opI;
-  const costoIdeal=horasMesI>0?(modI+cifI)/horasMesI:0;
-  s('costoIdealValor').textContent=costoIdeal>0?'$'+costoIdeal.toFixed(2):'—';
+
+function calcCostoIdeal(modMensual, cifMensual, horasMes, opTot, diasMes, tiempoRealMin, costoReal){
+  const data = cur();
+  const p = data.params || {};
+  const demanda = p.demanda || 0;
+
+  // Calcular Takt Time
+  const demandaDia = demanda>0 ? demanda/diasMes : 0;
+  const taktTime = demandaDia>0 ? tiempoRealMin/demandaDia : 0;
+
+  // Operadores teóricos mínimos
+  const opsActivas = data.ops.filter(o=>o.activa!==false);
+  const totalOpsMin = opsActivas.reduce((a,o)=>a+o.min,0);
+  const opsTeoricos = taktTime>0 ? Math.ceil(totalOpsMin/taktTime) : null;
+
+  if(!demanda || !opsTeoricos){
+    s('costoIdealValor').textContent='—';
+    s('costoIdealOps').textContent='—';
+    s('costoIdealDesglose').innerHTML='<span style="color:var(--text-muted)">Captura demanda mensual en Parámetros para calcular el costo ideal</span>';
+    s('balanceBlock').style.display='none';
+    return;
+  }
+
+  // MOD ideal = promedio por operador × operadores teóricos
+  const costoPorOp = opTot>0 ? modMensual/opTot : 0;
+  const modIdeal = costoPorOp * opsTeoricos;
+  const totalIdeal = modIdeal + cifMensual; // CIF se mantiene igual
+  const costoIdeal = horasMes>0 ? totalIdeal/horasMes : 0;
+
+  s('costoIdealValor').textContent = '$'+costoIdeal.toFixed(2);
+  s('costoIdealOps').textContent = opsTeoricos + (opsTeoricos!==1?' ops':' op');
+  s('costoIdealDesglose').innerHTML=
+    `Takt Time = ${tiempoRealMin.toFixed(0)} min ÷ (${demanda} pzas ÷ ${diasMes} días) = ${taktTime.toFixed(2)} min/pza<br>`+
+    `Operadores teóricos = ⌈${totalOpsMin.toFixed(2)} ÷ ${taktTime.toFixed(2)}⌉ = ${opsTeoricos}<br>`+
+    `Costo promedio/op = $${modMensual.toLocaleString('es-MX',{minimumFractionDigits:2})} ÷ ${opTot} = $${costoPorOp.toFixed(2)}/op<br>`+
+    `MOD ideal = $${costoPorOp.toFixed(2)} × ${opsTeoricos} = $${modIdeal.toLocaleString('es-MX',{minimumFractionDigits:2})}<br>`+
+    `CIF = $${cifMensual.toLocaleString('es-MX',{minimumFractionDigits:2})} (sin cambio)<br>`+
+    `Total ideal = $${totalIdeal.toLocaleString('es-MX',{minimumFractionDigits:2})} ÷ ${horasMes.toFixed(1)} hrs = <strong style="color:var(--ok)">$${costoIdeal.toFixed(2)}/hr</strong>`;
+
   // Balance
-  const costoReal=parseFloat((s('costoTotalValor').textContent||'0').replace('$','').replace(/,/g,''))||0;
-  if(costoReal>0&&costoIdeal>0){
-    const diff=costoReal-costoIdeal;
-    const pct=((diff/costoIdeal)*100);
-    const isOver=diff>0;
-    const color=isOver?'#e05c5c':'#6fc98c';
-    s('balanceBlock').style.display='flex';
-    s('balanceTexto').innerHTML=`<span style="color:${color};">${isOver?'▲ Sobrecosto':'▼ Por debajo del ideal'}</span> <span style="font-size:0.8rem;color:var(--text-secondary);font-weight:600;"> $${Math.abs(diff).toFixed(2)}/h (${Math.abs(pct).toFixed(1)}%)</span>`;
-    // Progress bar
-    const pctBar=Math.min(100,Math.max(0,isOver?(costoIdeal/costoReal*100):100));
-    const pctOver=isOver?(diff/costoReal*100):0;
-    s('balanceBarra').innerHTML=`<div style="width:100%;height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;position:relative;">
-      <div style="width:${pctBar}%;height:100%;background:#6fc98c;border-radius:5px;"></div>
-      ${isOver?`<div style="position:absolute;right:0;top:0;width:${pctOver}%;height:100%;background:#e05c5c;border-radius:5px;"></div>`:''}
+  const diff = costoReal - costoIdeal;
+  const pct = costoIdeal>0 ? (diff/costoIdeal*100) : 0;
+  const isOver = diff > 0;
+  const balColor = Math.abs(pct)<5 ? 'var(--warn)' : isOver ? 'var(--bad)' : 'var(--ok)';
+  const balLabel = Math.abs(pct)<5 ? '🎯 Operando cerca del ideal' : isOver ? '🚨 Tienes más personal del que la demanda justifica' : '✅ Por debajo del costo ideal';
+
+  s('balanceBlock').style.display='';
+  s('balanceContenido').innerHTML=`
+    <div style="font-family:var(--font-display);font-size:1.3rem;font-weight:700;color:${balColor};margin-bottom:12px;">${balLabel}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:14px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Costo real</div>
+        <div style="font-family:var(--font-display);font-size:1.4rem;font-weight:700;color:${isOver?'var(--bad)':'var(--accent)'};">$${costoReal.toFixed(2)}/hr</div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Costo ideal</div>
+        <div style="font-family:var(--font-display);font-size:1.4rem;font-weight:700;color:var(--ok);">$${costoIdeal.toFixed(2)}/hr</div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Diferencia</div>
+        <div style="font-family:var(--font-display);font-size:1.4rem;font-weight:700;color:${balColor};">${isOver?'+':''}$${Math.abs(diff).toFixed(2)}/hr (${Math.abs(pct).toFixed(1)}%)</div>
+      </div>
     </div>
-    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:0.6rem;color:var(--text-tertiary);">
-      <span>Ideal: $${costoIdeal.toFixed(2)}/h</span><span>Real: $${costoReal.toFixed(2)}/h</span>
+    <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);line-height:1.8;">
+      Diferencia mensual: ${isOver?'+':''}$${Math.abs(diff*horasMes).toLocaleString('es-MX',{minimumFractionDigits:2})}/mes<br>
+      Operadores reales: ${opTot} · Operadores teóricos: ${opsTeoricos} · ${isOver?'Exceso de '+(opTot-opsTeoricos)+' operador(es)':'Dentro del rango ideal'}
+    </div>
+    <div style="margin-top:12px;height:10px;background:var(--border2);border-radius:5px;overflow:hidden;">
+      <div style="height:100%;width:${Math.min(100,(costoIdeal/Math.max(costoReal,costoIdeal)*100))}%;background:var(--ok);border-radius:5px;"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--text-muted);">
+      <span>Ideal: $${costoIdeal.toFixed(2)}/hr</span><span>Real: $${costoReal.toFixed(2)}/hr</span>
     </div>`;
-  } else s('balanceBlock').style.display='none';
 }
+
 
 // ═══════════════════════════════════════════════════
 // LAYOUT
