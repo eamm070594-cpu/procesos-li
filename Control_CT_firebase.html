@@ -1467,6 +1467,71 @@ function renderMod(){
 // ═══════════════════════════════════════════════════
 // OPERACIONES
 // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// ETAPAS
+// ═══════════════════════════════════════════════════
+function saveEtapa(){
+  const nombre = s('etapaNombre').value.trim();
+  const dia = parseInt(s('etapaDia').value)||1;
+  const modo = s('etapaModo').value||'serie';
+  if(!nombre){ alert('Ingresa el nombre de la etapa.'); return; }
+  if(!cur().etapas) cur().etapas=[];
+  const editIdx = s('etapaEditIdx').value;
+  const entry = {nombre, dia, modo};
+  if(editIdx!=='') cur().etapas[parseInt(editIdx)] = entry;
+  else cur().etapas.push(entry);
+  markUpdated(); closeModal('modal-etapa');
+  renderEtapas(); renderOps(); populateOpEtapa();
+}
+function editEtapa(i){
+  const e = cur().etapas[i];
+  s('etapaEditIdx').value=i;
+  s('modal-etapa-title').textContent='Editar etapa';
+  s('etapaNombre').value=e.nombre;
+  s('etapaDia').value=e.dia||1;
+  s('etapaModo').value=e.modo||'serie';
+  openModal('modal-etapa',false);
+}
+function delEtapa(i){
+  if(!confirm('¿Eliminar esta etapa? Las operaciones asignadas quedarán sin etapa.')) return;
+  cur().ops.forEach(o=>{ if(o.etapaIdx===i) delete o.etapaIdx; else if(o.etapaIdx>i) o.etapaIdx--; });
+  cur().etapas.splice(i,1);
+  markUpdated(); renderEtapas(); renderOps(); populateOpEtapa();
+}
+function renderEtapas(){
+  const wrap = s('etapasList'); if(!wrap) return;
+  const etapas = cur().etapas||[];
+  if(!etapas.length){
+    wrap.innerHTML=`<div style="padding:8px 2px;font-size:12px;color:var(--text-muted);">Sin etapas — todas las operaciones son de un solo día.</div>`;
+    return;
+  }
+  const diasUnicos = [...new Set(etapas.map(e=>e.dia))].sort((a,b)=>a-b);
+  wrap.innerHTML = diasUnicos.map(dia=>{
+    const etapasDia = etapas.filter(e=>e.dia===dia);
+    return `<div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px;padding:4px 8px;background:var(--surface2);border-radius:6px;">Día ${dia}</div>
+      ${etapasDia.map(e=>{
+        const idx=etapas.indexOf(e);
+        const opsCount=(cur().ops||[]).filter(o=>o.etapaIdx===idx).length;
+        const mc=e.modo==='paralelo'?'var(--ok)':'var(--accent)';
+        return`<div class="item-row">
+          <div class="item-name">${e.nombre}</div>
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${e.modo==='paralelo'?'var(--ok-bg)':'var(--accent-bg)'};color:${mc};font-weight:600;">${e.modo}</span>
+          <span style="font-size:11px;color:var(--text-muted);min-width:60px;text-align:right;">${opsCount} op${opsCount!==1?'s':''}</span>
+          <button class="item-edit" onclick="editEtapa(${idx})">✎</button>
+          <button class="item-del" onclick="delEtapa(${idx})">✕</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+function populateOpEtapa(){
+  const sel = s('opEtapa'); if(!sel) return;
+  const etapas = cur().etapas||[];
+  sel.innerHTML = `<option value="">— Sin etapa (un solo día) —</option>` +
+    etapas.map((e,i)=>`<option value="${i}">Día ${e.dia} — ${e.nombre} (${e.modo})</option>`).join('');
+}
+
 function saveOperacion(){
   const nombre = s('opName').value.trim();
   const min = parseFloat(s('opMin').value);
