@@ -1,53 +1,86 @@
 <!DOCTYPE html>
+<!-- v2.1 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <title>Transformación Operativa | Linea Italia</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 
-/* LIGHT THEME */
 :root{
-  --bg:#ffffff;--bg2:#f5f5f5;--bg3:#eeeeee;
-  --surface:rgba(0,0,0,0.03);
-  --border:rgba(0,0,0,0.13);--border2:rgba(0,0,0,0.08);
-  --text-primary:#111111;
-  --text-secondary:#333333;
-  --text-tertiary:#555555;
-  --text-muted:#777777;
-  --input-bg:rgba(0,0,0,0.04);
-  --sidebar-bg:#f0f0f0;
+  --bg:#f4f6f9;
+  --surface:#ffffff;
+  --surface2:#f0f2f5;
+  --border:#d8dde5;
+  --border2:#e4e8ee;
+  --text-primary:#1a2233;
+  --text-secondary:#2d3748;
+  --text-tertiary:#4a5568;
+  --text-muted:#718096;
+  --input-bg:#f7f9fc;
+  --hover-bg:rgba(26,34,51,0.04);
   --modal-bg:#ffffff;
-  --hover-bg:rgba(0,0,0,0.06);
-  --logo-fill:#111111;--logo-bg:#ffffff;
-  --border-mid:rgba(0,0,0,0.18);
+  --border-mid:#c4cdd8;
+  --accent:#d4622a;
+  --accent2:#b8501f;
+  --accent-bg:rgba(212,98,42,0.10);
+  --ok:#1e9e5e;
+  --warn:#c47d0a;
+  --bad:#d93535;
+  --ok-bg:rgba(30,158,94,0.10);
+  --warn-bg:rgba(196,125,10,0.10);
+  --bad-bg:rgba(217,53,53,0.10);
+  --font-display:'Syne',sans-serif;
+  --font-body:'DM Sans',sans-serif;
+  --font-mono:'DM Mono',monospace;
+  --r:10px;--r2:14px;--r3:18px;
+  --shadow:0 2px 12px rgba(26,34,51,0.10);
+  /* legacy aliases */
+  --bg2:var(--surface2);--bg3:#e8ecf0;
+  --selected-ac:var(--accent);
+  --card-bg:var(--surface);
+  --sidebar-bg:var(--surface);
+  --logo-fill:var(--text-primary);--logo-bg:var(--surface);
 }
 body.dark{
-  --bg:#000000;--bg2:#0a0a0a;--bg3:#141414;
-  --surface:rgba(255,255,255,0.03);
-  --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.06);
-  --text-primary:#ffffff;
-  --text-secondary:rgba(255,255,255,0.70);
-  --text-tertiary:rgba(255,255,255,0.45);
-  --text-muted:rgba(255,255,255,0.25);
-  --input-bg:rgba(255,255,255,0.04);
-  --sidebar-bg:#0d0d0d;
-  --modal-bg:#111111;
+  --bg:#0f1117;
+  --surface:#1a1d27;
+  --surface2:#22263a;
+  --border:rgba(255,255,255,0.09);
+  --border2:rgba(255,255,255,0.06);
+  --text-primary:#f0f4ff;
+  --text-secondary:rgba(240,244,255,0.75);
+  --text-tertiary:rgba(240,244,255,0.50);
+  --text-muted:rgba(240,244,255,0.30);
+  --input-bg:rgba(255,255,255,0.05);
   --hover-bg:rgba(255,255,255,0.05);
-  --logo-fill:#ffffff;--logo-bg:#000000;
+  --modal-bg:#1a1d27;
   --border-mid:rgba(255,255,255,0.15);
+  --accent-bg:rgba(212,98,42,0.15);
+  --ok-bg:rgba(30,158,94,0.15);
+  --warn-bg:rgba(196,125,10,0.15);
+  --bad-bg:rgba(217,53,53,0.15);
+  --logo-fill:#f0f4ff;--logo-bg:#1a1d27;
 }
 
-body{font-family:'Barlow Condensed',sans-serif;background:var(--bg);min-height:100vh;color:var(--text-primary);overflow-x:hidden;transition:background .25s,color .25s;}
+html,body{height:100%;overflow-x:hidden}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary);font-size:15px;line-height:1.5;transition:background .25s,color .25s;}
+button{font-family:var(--font-body)}
+input,select,textarea{font-family:var(--font-body);font-size:14px;}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
 
 /* THEME TOGGLE */
-#themeToggle{position:fixed;top:14px;right:18px;z-index:9999;display:flex;align-items:center;gap:6px;border-radius:20px;padding:6px 12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;transition:background .15s,color .15s;background:#111;border:1px solid #333;color:#fff;}
-body.dark #themeToggle{background:#fff;border:1px solid #ddd;color:#111;}
+#themeToggle{position:fixed;top:14px;right:18px;z-index:9999;display:flex;align-items:center;gap:6px;border-radius:20px;padding:6px 14px;cursor:pointer;font-family:var(--font-body);font-size:12px;font-weight:600;letter-spacing:.02em;transition:background .15s,color .15s;background:var(--text-primary);border:1px solid var(--border);color:var(--bg);}
+body.dark #themeToggle{background:var(--surface);border:1px solid var(--border);color:var(--text-primary);}
 #themeToggle:hover{opacity:.85;}
 #themeToggle svg{width:13px;height:13px;flex-shrink:0;}
 
@@ -91,13 +124,13 @@ body.detail-mode #sideList{display:flex;}
 /* GRID */
 #gridView{width:100%;max-width:960px;}
 .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;width:100%;}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:1.6rem 0.5rem 1.2rem;text-align:center;cursor:pointer;position:relative;overflow:hidden;transition:transform .15s,border-color .15s,background .15s;}
+.card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:1.4rem 0.5rem 1rem;text-align:center;cursor:pointer;position:relative;overflow:hidden;transition:transform .15s,border-color .15s,box-shadow .15s;box-shadow:var(--shadow);}
 .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;background:var(--ac);opacity:0;transition:opacity .18s;}
 .card:hover{transform:translateY(-3px);border-color:var(--ac);}
 .card:hover::before{opacity:1;}
 .card-icon{width:36px;height:36px;margin:0 auto 12px;color:var(--ac);}
 .card-icon svg{width:100%;height:100%;display:block;}
-.card-name{font-size:0.62rem;font-weight:700;letter-spacing:1.5px;color:var(--text-primary);text-transform:uppercase;line-height:1.3;}
+.card-name{font-family:var(--font-display);font-size:12px;font-weight:700;letter-spacing:.03em;color:var(--text-primary);text-transform:none;line-height:1.3;}
 .card-stamp{font-size:0.48rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-top:6px;padding:2px 7px;border-radius:10px;display:inline-block;}
 .stamp-green{background:rgba(111,201,140,0.15);color:#3a9c5e;}
 .stamp-amber{background:rgba(232,168,64,0.15);color:#b07a10;}
@@ -118,44 +151,45 @@ body.dark .stamp-none{background:rgba(255,255,255,0.06);color:var(--text-muted);
 #detailHeaderIcon{width:46px;height:46px;color:var(--selected-ac,#333);flex-shrink:0;background:rgba(0,0,0,0.05);border-radius:10px;padding:9px;box-sizing:border-box;}
 #detailHeaderIcon svg{width:100%;height:100%;}
 body.dark #detailHeaderIcon{background:rgba(255,255,255,0.06);}
-#detailHeaderName{font-size:1.8rem;font-weight:800;letter-spacing:6px;color:var(--text-primary);text-transform:uppercase;}
+#detailHeaderName{font-family:var(--font-display);font-size:1.6rem;font-weight:700;letter-spacing:.01em;color:var(--text-primary);text-transform:none;}
 #detailStamp{font-size:0.58rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;border-radius:10px;margin-left:4px;}
 
 /* TABS */
 .tabs-bar{display:flex;gap:4px;padding:16px 28px 0;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2);flex-wrap:wrap;}
-.tab-btn{font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text-tertiary);background:transparent;border:none;border-bottom:2px solid transparent;padding:8px 20px 12px;cursor:pointer;transition:color .15s,border-color .15s;}
+.tab-btn{font-family:var(--font-body);font-size:13px;font-weight:600;letter-spacing:.01em;text-transform:none;color:var(--text-tertiary);background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 20px 12px;cursor:pointer;transition:color .15s,border-color .15s;}
 .tab-btn:hover{color:var(--text-primary);}
-.tab-btn.active{color:var(--text-primary);border-bottom-color:var(--selected-ac,#333);}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700;}
 
 /* TAB PANELS */
 .tab-panel{display:none;flex:1;flex-direction:column;padding:24px 28px 40px;gap:20px;overflow-y:auto;}
 .tab-panel.active{display:flex;}
 
 /* SECTION HEADER */
-.section-hd{font-size:0.65rem;font-weight:700;letter-spacing:3px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:6px;}
+.section-hd{font-family:var(--font-display);font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--text-primary);text-transform:none;margin-bottom:8px;}
 
 /* FORMS */
 .form-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
 .form-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;}
-.form-group label{font-size:0.6rem;font-weight:600;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;}
-.form-group input,.form-group select,.form-group textarea{font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;font-weight:500;letter-spacing:1px;background:var(--input-bg);border:1px solid var(--border-mid);border-radius:8px;padding:9px 12px;color:var(--text-primary);outline:none;transition:border-color .15s;}
-.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--selected-ac,var(--text-tertiary));}
+.form-group label{font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--text-tertiary);text-transform:uppercase;}
+.form-group input,.form-group select,.form-group textarea{font-family:var(--font-body);font-size:14px;font-weight:400;background:var(--input-bg);border:1px solid var(--border2);border-radius:var(--r);padding:9px 12px;color:var(--text-primary);outline:none;transition:border-color .15s;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);}
 .form-group select option{background:var(--modal-bg);color:var(--text-primary);}
-.btn{font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:var(--hover-bg);border:1px solid var(--border-mid);border-radius:8px;padding:9px 18px;color:var(--text-primary);cursor:pointer;transition:background .15s;white-space:nowrap;}
+.btn{font-family:var(--font-body);font-size:13px;font-weight:600;letter-spacing:.02em;text-transform:none;background:var(--hover-bg);border:1px solid var(--border-mid);border-radius:var(--r);padding:9px 18px;color:var(--text-primary);cursor:pointer;transition:background .15s;white-space:nowrap;}
 .btn:hover{background:var(--hover-bg);}
-.btn-accent{background:var(--hover-bg);border-color:var(--selected-ac,rgba(0,0,0,0.3));color:var(--selected-ac,#111);}
-body.dark .btn-accent{color:var(--selected-ac,#fff);}
+.btn-accent{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn-accent:hover{background:var(--accent2);border-color:var(--accent2);}
+body.dark .btn-accent{background:var(--accent);color:#fff;}
 .btn-sm{padding:6px 12px;font-size:0.62rem;}
 .sep{height:1px;background:var(--border2);}
 
 /* ITEMS LIST */
 .items-list{display:flex;flex-direction:column;gap:6px;}
-.item-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px;}
+.item-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:10px 14px;font-size:14px;}
 .item-num{font-size:0.58rem;font-weight:700;letter-spacing:1px;color:var(--text-secondary);min-width:20px;}
-.item-name{flex:1;font-size:0.82rem;font-weight:600;letter-spacing:1px;color:var(--text-primary);}
+.item-name{flex:1;font-size:14px;font-weight:500;color:var(--text-primary);}
 .item-sub{font-size:0.72rem;color:var(--text-tertiary);margin-left:4px;}
-.item-min{font-size:0.75rem;font-weight:600;color:var(--selected-ac,#111);min-width:60px;text-align:right;}
-body.dark .item-min{color:var(--selected-ac,#fff);}
+.item-min{font-size:13px;font-weight:600;color:var(--accent);min-width:60px;text-align:right;}
+body.dark .item-min{color:var(--accent);}
 .item-del{background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:0.75rem;padding:2px 6px;border-radius:4px;transition:color .12s,background .12s;}
 .item-del:hover{color:#e05c5c;background:rgba(224,92,92,0.1);}
 .item-edit{background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:0.75rem;padding:2px 6px;border-radius:4px;transition:color .12s,background .12s;}
@@ -164,10 +198,10 @@ body.dark .item-min{color:var(--selected-ac,#fff);}
 /* RESULTS */
 .results-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .res-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;}
-.res-label{font-size:0.55rem;font-weight:700;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:6px;}
-.res-value{font-size:1.5rem;font-weight:800;letter-spacing:2px;color:var(--selected-ac,#111);}
-body.dark .res-value{color:var(--selected-ac,#fff);}
-.res-unit{font-size:0.62rem;font-weight:600;color:var(--text-secondary);margin-top:2px;letter-spacing:1px;}
+.res-label{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--text-tertiary);text-transform:uppercase;margin-bottom:6px;}
+.res-value{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.01em;color:var(--accent);}
+body.dark .res-value{color:var(--accent);}
+.res-unit{font-size:12px;font-weight:500;color:var(--text-tertiary);margin-top:2px;}
 
 /* TABLE */
 .data-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
@@ -183,7 +217,7 @@ body.dark .res-value{color:var(--selected-ac,#fff);}
 /* MODAL */
 .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:500;align-items:center;justify-content:center;}
 .modal-backdrop.open{display:flex;}
-.modal-box{background:var(--modal-bg);border:1px solid var(--border-mid);border-radius:14px;padding:28px 28px 22px;width:100%;max-width:520px;margin:20px;display:flex;flex-direction:column;gap:16px;max-height:90vh;overflow-y:auto;}
+.modal-box{background:var(--modal-bg);border:1px solid var(--border2);border-radius:var(--r3);padding:24px 24px 20px;width:100%;max-width:520px;margin:20px;display:flex;flex-direction:column;gap:14px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow);}
 .modal-header{display:flex;align-items:center;justify-content:space-between;}
 .modal-title{font-size:0.72rem;font-weight:700;letter-spacing:3px;color:var(--text-secondary);text-transform:uppercase;}
 .modal-close{background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:1.1rem;line-height:1;padding:2px 6px;border-radius:4px;transition:color .12s;}
@@ -193,9 +227,9 @@ body.dark .res-value{color:var(--selected-ac,#fff);}
 /* ACTION BAR */
 .tab-action-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .tab-action-bar .section-hd{margin-bottom:0;}
-.btn-add{display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:var(--input-bg);border:1px solid var(--selected-ac,rgba(0,0,0,0.2));border-radius:8px;padding:7px 14px;color:var(--selected-ac,#333);cursor:pointer;transition:background .15s;white-space:nowrap;}
-body.dark .btn-add{color:var(--selected-ac,#fff);}
-.btn-add:hover{background:var(--hover-bg);}
+.btn-add{display:flex;align-items:center;gap:6px;font-family:var(--font-body);font-size:13px;font-weight:600;letter-spacing:.01em;text-transform:none;background:var(--accent-bg);border:1px solid rgba(212,98,42,0.25);border-radius:var(--r);padding:7px 14px;color:var(--accent);cursor:pointer;transition:background .15s;white-space:nowrap;}
+body.dark .btn-add{color:var(--accent);}
+.btn-add:hover{background:rgba(212,98,42,0.18);}
 .btn-add svg{width:12px;height:12px;flex-shrink:0;}
 
 .footer{margin-top:2rem;font-size:0.55rem;letter-spacing:3px;text-transform:uppercase;text-align:center;color:var(--text-tertiary);}
@@ -262,9 +296,9 @@ body.dark .dash-alert-title{color:#e05c5c;}
 #ferreti-view{display:none;position:fixed;inset:0;z-index:800;background:var(--bg);flex-direction:column;overflow:hidden;}
 #ferreti-view.open{display:flex;}
 #ferreti-back-bar{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:9999;flex-shrink:0;}
-#ferreti-back-btn{display:flex;align-items:center;gap:7px;font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);background:var(--hover-bg);border:1px solid var(--border-mid);border-radius:8px;padding:6px 14px;cursor:pointer;}
+#ferreti-back-btn{display:flex;align-items:center;gap:7px;font-family:var(--font-body);font-size:0.68rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary);background:var(--hover-bg);border:1px solid var(--border-mid);border-radius:8px;padding:6px 14px;cursor:pointer;}
 #ferreti-back-btn svg{width:13px;height:13px;}
-#ferreti-back-label{font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text-secondary);}
+#ferreti-back-label{font-family:var(--font-body);font-size:0.62rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text-secondary);}
 </style>
 </head>
 <body>
@@ -316,7 +350,7 @@ body.dark .dash-alert-title{color:#e05c5c;}
         <button class="tab-btn" data-tab="layout" onclick="switchTab('layout')">Layout</button>
         <button class="tab-btn" data-tab="equipos" onclick="switchTab('equipos')">Equipos</button>
         <button class="tab-btn" data-tab="tabulador" onclick="switchTab('tabulador')">Tabulador</button>
-        <button onclick="confirmarEliminarCentro(selectedIdx)" style="margin-left:auto;background:rgba(224,92,92,0.08);color:#c03030;border:1px solid rgba(224,92,92,0.2);border-radius:6px;padding:4px 12px;font-family:'Barlow Condensed',sans-serif;font-size:0.58rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;white-space:nowrap;">✕ Eliminar centro</button>
+        <button onclick="confirmarEliminarCentro(selectedIdx)" style="margin-left:auto;background:rgba(224,92,92,0.08);color:#c03030;border:1px solid rgba(224,92,92,0.2);border-radius:6px;padding:4px 12px;font-family:var(--font-body);font-size:0.58rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;white-space:nowrap;">✕ Eliminar centro</button>
       </div>
 
       <!-- TAB: DISTRIBUCIÓN (unified) -->
@@ -846,7 +880,7 @@ body.dark .dash-alert-title{color:#e05c5c;}
         <div class="form-group" style="flex:0 0 80px;"><label>Nivel #</label><input type="number" id="nivelNum" placeholder="1" min="1" step="1"></div>
         <div class="form-group" style="flex:1;"><label>Categoría sindical</label><select id="nivelCategoria"><option value="">— Seleccionar —</option></select></div>
       </div>
-      <div class="form-group"><label>Qué puede hacer</label><textarea id="nivelDesc" placeholder="Descripción de funciones..." style="font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;background:var(--input-bg);border:1px solid var(--border-mid);border-radius:8px;padding:9px 12px;color:var(--text-primary);outline:none;min-height:70px;resize:vertical;width:100%;"></textarea></div>
+      <div class="form-group"><label>Qué puede hacer</label><textarea id="nivelDesc" placeholder="Descripción de funciones..." style="font-family:var(--font-body);font-size:0.85rem;background:var(--input-bg);border:1px solid var(--border-mid);border-radius:8px;padding:9px 12px;color:var(--text-primary);outline:none;min-height:70px;resize:vertical;width:100%;"></textarea></div>
       <div class="form-row">
         <div class="form-group" style="flex:1;"><label>Criterio de ascenso</label><input type="text" id="nivelAscenso" placeholder="Ej. 1 mes + evaluación"></div>
         <div class="form-group" style="flex:0 0 140px;"><label>Autonomía</label>
@@ -1285,12 +1319,14 @@ function delPersonal(i){ cur().mod.splice(i,1); markUpdated(); renderMod(); rend
 function renderMod(){
   const mod = cur().mod;
   const wrap = s('modListWrap');
-  if(!mod.length){ wrap.innerHTML=`<div class="items-list"><div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin personal registrado</div></div>`; return; }
+  if(!mod.length){ wrap.innerHTML=`<div class="items-list"><div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:13px;">Sin personal registrado</div></div>`; return; }
   wrap.innerHTML = `<div class="items-list">`+mod.map((m,i)=>{
     const cat=m.catIdx!==null&&m.catIdx!==undefined?tabulador.categorias[m.catIdx]:null;
     const grupo=cat&&m.grupoIdx!==null?tabulador.grupos[m.grupoIdx]:null;
-    const tag=grupo?`<span style="font-size:0.58rem;background:var(--hover-bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--text-secondary);">${grupo.nombre}</span>`:''
-    return`<div class="item-row">
+    const tag=grupo?`<span style="font-size:11px;background:var(--accent-bg);border:1px solid rgba(212,98,42,0.2);border-radius:4px;padding:1px 7px;color:var(--accent);">${grupo.nombre}</span>`:''
+    const checked = m.presente!==false ? 'checked' : '';
+    return`<div class="item-row" style="opacity:${m.presente===false?'0.45':'1'}">
+      <input type="checkbox" ${checked} onchange="togglePresencia('mod',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
       <div class="item-num">${String(i+1).padStart(2,'0')}</div>
       <div class="item-name">${m.puesto} ${tag}</div>
       <div class="item-min">$${(m.costo||0).toLocaleString('es-MX',{minimumFractionDigits:2})}</div>
@@ -1324,15 +1360,18 @@ function delOperacion(i){ cur().ops.splice(i,1); renderOps(); }
 function renderOps(){
   const ops = cur().ops;
   const c = s('opsList');
-  if(!ops.length){ c.innerHTML=`<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin operaciones registradas</div>`; return; }
-  c.innerHTML = ops.map((o,i)=>`
-    <div class="item-row">
+  if(!ops.length){ c.innerHTML=`<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:13px;">Sin operaciones registradas</div>`; return; }
+  c.innerHTML = ops.map((o,i)=>{
+    const checked = o.activa!==false ? 'checked' : '';
+    return`<div class="item-row" style="opacity:${o.activa===false?'0.45':'1'}">
+      <input type="checkbox" ${checked} onchange="togglePresencia('ops',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
       <div class="item-num">${String(i+1).padStart(2,'0')}</div>
       <div class="item-name">${o.nombre}</div>
       <div class="item-min">${o.min.toFixed(2)} min</div>
       <button class="item-edit" onclick="editOperacion(${i})">✎</button>
       <button class="item-del" onclick="delOperacion(${i})">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // ═══════════════════════════════════════════════════
@@ -1372,14 +1411,17 @@ function delConsideracion(i){ cur().cons.items.splice(i,1); markUpdated(); rende
 function renderCons(){
   const items = cur().cons.items;
   const c = s('consList');
-  if(!items.length){ c.innerHTML=`<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin consideraciones</div>`; return; }
-  c.innerHTML = items.map((x,i)=>`
-    <div class="item-row">
+  if(!items.length){ c.innerHTML=`<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:13px;">Sin consideraciones</div>`; return; }
+  c.innerHTML = items.map((x,i)=>{
+    const checked = x.activa!==false ? 'checked' : '';
+    return`<div class="item-row" style="opacity:${x.activa===false?'0.45':'1'}">
+      <input type="checkbox" ${checked} onchange="togglePresencia('cons',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
       <div class="item-name">${x.nombre}</div>
       <div class="item-min">${x.min.toFixed(2)} min</div>
       <button class="item-edit" onclick="editConsideracion(${i})">✎</button>
       <button class="item-del" onclick="delConsideracion(${i})">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // CIF concepto personalizado
@@ -1397,7 +1439,16 @@ function cifSelectChange(){
 
 // ═══════════════════════════════════════════════════
 // RESULTADOS
-// ═══════════════════════════════════════════════════
+// ── togglePresencia ────────────────────────────────
+function togglePresencia(tipo, idx, val){
+  if(tipo==='mod') cur().mod[idx].presente = val;
+  else if(tipo==='ops') cur().ops[idx].activa = val;
+  else if(tipo==='cons') cur().cons.items[idx].activa = val;
+  if(tipo==='mod') renderMod();
+  else if(tipo==='ops') renderOps();
+  else renderCons();
+}
+
 function calcularResultados(){
   const data = cur();
   const p = data.params || { disponible:480, dias:22, turnos:1, demanda:0 };
@@ -1406,47 +1457,97 @@ function calcularResultados(){
   const turnos = p.turnos || 1;
   const demanda = p.demanda || 0;
 
-  const totalCons = data.cons.items.reduce((a,c)=>a+c.min,0);
+  const opsActivas = data.ops.filter(o=>o.activa!==false);
+  const consActivas = data.cons.items.filter(c=>c.activa!==false);
+  const modPresentes = data.mod.filter(m=>m.presente!==false);
+  const numOperadores = modPresentes.length || 1;
+
+  const totalCons = consActivas.reduce((a,c)=>a+c.min,0);
   const tiempoReal = disponible - totalCons;
-  const totalOps = data.ops.reduce((a,o)=>a+o.min,0);
-  const opMaxObj = data.ops.length>0 ? data.ops.reduce((a,o)=>o.min>a.min?o:a) : null;
-  const tiempoCiclo = opMaxObj ? opMaxObj.min : 0;
+  const totalOps = opsActivas.reduce((a,o)=>a+o.min,0);
+  const opMaxObj = opsActivas.length>0 ? opsActivas.reduce((a,o)=>o.min>a.min?o:a) : null;
+  const tcCuello = opMaxObj ? opMaxObj.min : 0;
+  const tcBalanceo = numOperadores>0 ? totalOps/numOperadores : 0;
+  const tiempoCiclo = Math.max(tcCuello, tcBalanceo);
   const capDia = tiempoCiclo>0 ? Math.floor(tiempoReal/tiempoCiclo) : 0;
   const demandaDia = demanda>0 ? demanda/dias : 0;
   const taktTime = demandaDia>0 ? tiempoReal/demandaDia : 0;
-  const ac = getAc(selectedIdx);
+  const eficiencia = (tiempoCiclo>0&&numOperadores>0) ? (totalOps/(tiempoCiclo*numOperadores)*100) : 0;
+  const opsTeoricos = taktTime>0 ? Math.ceil(totalOps/taktTime) : null;
+  const tiempoMuerto = tiempoCiclo>0 ? tiempoCiclo - (totalOps/numOperadores) : 0;
+
+  let estadoColor = 'var(--text-muted)', estadoLabel = 'Captura Takt Time para comparar';
+  if(taktTime>0 && tiempoCiclo>0){
+    if(tiempoCiclo < taktTime*0.95){ estadoColor='var(--ok)'; estadoLabel='TC < TT — Capacidad suficiente'; }
+    else if(tiempoCiclo <= taktTime*1.05){ estadoColor='var(--warn)'; estadoLabel='TC ≈ TT — Ritmo exacto'; }
+    else { estadoColor='var(--bad)'; estadoLabel='TC > TT — No cubre demanda'; }
+  }
 
   s('resultsBlock').style.display='';
 
-  const row=(label,valor,unidad,formula,color)=>`
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:10px;">
-      <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;">${label}</div>
-      <div style="font-size:1.8rem;font-weight:800;letter-spacing:3px;color:${color||ac};">${valor}</div>
-      <div style="font-size:0.65rem;color:var(--text-tertiary);margin-top:2px;">${unidad}</div>
-      <div style="font-size:0.62rem;color:var(--text-muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border2);line-height:1.8;">${formula}</div>
+  const card=(label,valor,unidad,formula,color)=>`
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:16px 20px;margin-bottom:10px;box-shadow:var(--shadow);">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">${label}</div>
+      <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:700;color:${color||'var(--accent)'};">${valor}</div>
+      <div style="font-size:12px;color:var(--text-tertiary);margin-top:2px;">${unidad}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border2);line-height:1.8;font-family:var(--font-mono);">${formula}</div>
     </div>`;
 
   s('resGrid').innerHTML=
-    row('Suma de Operaciones', totalOps.toFixed(2)+' min', 'suma de todos los tiempos estándar',
-      (data.ops.map(o=>`${o.nombre||o.op||'Op'} = ${o.min.toFixed(2)} min`).join('<br>')||'Sin operaciones registradas')) +
+    card('Operadores presentes', numOperadores, `de ${data.mod.length} registrados`,
+      modPresentes.map(m=>`✓ ${m.puesto}`).join('<br>')||'Sin personal',
+      numOperadores===data.mod.length?'var(--ok)':'var(--warn)') +
 
-    row('Tiempo Disponible', disponible+' min', 'tiempo operativo total sin descuentos',
-      `Parámetro capturado: <strong>${disponible} min</strong> · ${dias} días/mes · ${turnos} turno(s)`) +
+    card('Suma de Operaciones activas', totalOps.toFixed(2)+' min', `${opsActivas.length} de ${data.ops.length} operaciones`,
+      opsActivas.map(o=>`${o.nombre} = ${o.min.toFixed(2)} min`).join('<br>')||'Sin operaciones') +
 
-    row('Tiempo Real', tiempoReal.toFixed(2)+' min', 'tiempo disponible menos consideraciones',
-      `${disponible} min<br>− ${data.cons.items.map(c=>`${c.nombre} (${c.min.toFixed(2)} min)`).join('<br>− ')||'0 consideraciones'}<br>= <strong>${tiempoReal.toFixed(2)} min</strong>`,
-      tiempoReal>=0?ac:'#e05c5c') +
+    card('Tiempo Disponible', disponible+' min', `${dias} días/mes · ${turnos} turno(s)`,
+      `Parámetro capturado: ${disponible} min`) +
 
-    row('Tiempo Ciclo', tiempoCiclo>0?tiempoCiclo.toFixed(2)+' min':'—',
-      tiempoCiclo>0?`cuello de botella: ${opMaxObj.nombre||opMaxObj.op}`:'registra operaciones para calcular',
-      tiempoCiclo>0?`Operación más lenta:<br><strong>${opMaxObj.nombre||opMaxObj.op}</strong> = ${tiempoCiclo.toFixed(2)} min`:'Sin operaciones') +
+    card('Tiempo Real', tiempoReal.toFixed(2)+' min', 'disponible − consideraciones activas',
+      `${disponible} min<br>${consActivas.map(c=>`− ${c.nombre} (${c.min.toFixed(2)} min)`).join('<br>')||'− 0 consideraciones'}<br>= ${tiempoReal.toFixed(2)} min`,
+      tiempoReal>=0?'var(--accent)':'var(--bad)') +
 
-    row('Capacidad por Día', capDia>0?capDia+' pzas/día':'—', 'unidades producibles usando tiempo real',
-      capDia>0?`${tiempoReal.toFixed(2)} min reales ÷ ${tiempoCiclo.toFixed(2)} min/ciclo = <strong>${capDia} pzas</strong>`:'Se requiere tiempo ciclo') +
+    card('Tiempo Ciclo', tiempoCiclo>0?tiempoCiclo.toFixed(2)+' min':'—',
+      tiempoCiclo>0?`con ${numOperadores} operador(es)`:'sin datos',
+      tiempoCiclo>0?`Suma ops / operadores = ${totalOps.toFixed(2)} / ${numOperadores} = ${tcBalanceo.toFixed(2)} min<br>Cuello de botella: ${opMaxObj?opMaxObj.nombre:'—'} = ${tcCuello.toFixed(2)} min<br>TC = max(${tcBalanceo.toFixed(2)}, ${tcCuello.toFixed(2)}) = ${tiempoCiclo.toFixed(2)} min`:'Registra operaciones') +
 
-    row('Takt Time', taktTime>0?taktTime.toFixed(2)+' min/pza':'—',
-      demanda>0?`cada pieza debe salir en ${taktTime.toFixed(2)} min para cubrir demanda`:'captura demanda mensual para calcular',
-      demanda>0?`${tiempoReal.toFixed(2)} min reales ÷ (${demanda} pzas/mes ÷ ${dias} días/mes)<br>= ${tiempoReal.toFixed(2)} ÷ ${demandaDia.toFixed(2)} = <strong>${taktTime.toFixed(2)} min/pza</strong>`:'Captura demanda en Parámetros del centro');
+    card('Capacidad por Día', capDia>0?capDia+' pzas/día':'—', 'tiempo real / TC',
+      capDia>0?`${tiempoReal.toFixed(2)} / ${tiempoCiclo.toFixed(2)} = ${capDia} pzas`:'Se requiere TC') +
+
+    card('Takt Time', taktTime>0?taktTime.toFixed(2)+' min/pza':'—',
+      demanda>0?`ritmo requerido para ${demanda} pzas/mes`:'captura demanda mensual',
+      demanda>0?`${tiempoReal.toFixed(2)} / (${demanda} / ${dias}) = ${taktTime.toFixed(2)} min/pza`:'Captura demanda en Parámetros') +
+
+    `<div style="background:var(--surface);border:2px solid ${estadoColor};border-radius:var(--r2);padding:14px 20px;margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">TC vs Takt Time</div>
+      <div style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:${estadoColor};">${estadoLabel}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">TC ${tiempoCiclo.toFixed(2)} min ${taktTime>0?'vs TT '+taktTime.toFixed(2)+' min/pza':''}</div>
+    </div>` +
+
+    card('Eficiencia de Línea', eficiencia>0?eficiencia.toFixed(1)+'%':'—',
+      eficiencia>0?(eficiencia>=85?'Buena eficiencia':eficiencia>=70?'Eficiencia mejorable':'Baja eficiencia — revisar balanceo'):'sin datos',
+      eficiencia>0?`${totalOps.toFixed(2)} / (${tiempoCiclo.toFixed(2)} × ${numOperadores}) × 100 = ${eficiencia.toFixed(1)}%`:'Sin datos',
+      eficiencia>=85?'var(--ok)':eficiencia>=70?'var(--warn)':'var(--bad)') +
+
+    card('Tiempo Muerto / Operador', tiempoMuerto>=0?tiempoMuerto.toFixed(2)+' min':'—',
+      'espera promedio por ciclo',
+      tiempoCiclo>0?`TC (${tiempoCiclo.toFixed(2)}) − carga prom (${(totalOps/numOperadores).toFixed(2)}) = ${tiempoMuerto.toFixed(2)} min`:'Sin datos') +
+
+    (opsTeoricos!==null?card('Operadores Teóricos Mínimos', opsTeoricos+' operador(es)',
+      `para cubrir ${demanda} pzas/mes`,
+      `ceil(${totalOps.toFixed(2)} / ${taktTime.toFixed(2)}) = ${opsTeoricos}<br>${opsTeoricos<numOperadores?'Podrías reducir a '+opsTeoricos:opsTeoricos>numOperadores?'Necesitas '+opsTeoricos+', tienes '+numOperadores:'Cantidad exacta'}`,
+      opsTeoricos<=numOperadores?'var(--ok)':'var(--bad)'):'') +
+
+    `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:16px 20px;margin-bottom:10px;box-shadow:var(--shadow);">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">Carga por operación</div>
+      ${tiempoCiclo>0?`<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Línea = TC (${tiempoCiclo.toFixed(2)} min)</div>`:''}
+      ${opsActivas.map(o=>{
+        const pct=tiempoCiclo>0?(o.min/tiempoCiclo*100):0;
+        const barColor=pct>=95?'var(--bad)':pct>=70?'var(--warn)':'var(--ok)';
+        return '<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span style="color:var(--text-primary);font-weight:500;">'+o.nombre+'</span><span style="color:'+barColor+';font-weight:700;font-family:var(--font-mono);">'+o.min.toFixed(2)+' min ('+pct.toFixed(0)+'%)</span></div><div style="height:10px;background:var(--border2);border-radius:5px;overflow:hidden;"><div style="height:100%;width:'+Math.min(pct,100)+'%;background:'+barColor+';border-radius:5px;transition:width .3s;"></div></div></div>';
+      }).join('')||'<div style="color:var(--text-muted);font-size:13px;">Sin operaciones activas</div>'}
+    </div>`;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1634,7 +1735,7 @@ function renderEquipos(){
       <td style="font-size:0.78rem;">${e.ultimoMtto?new Date(e.ultimoMtto+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}):'—'}</td>
       <td style="font-size:0.78rem;">${e.proxMtto?new Date(e.proxMtto+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}):'—'}</td>
       <td style="color:var(--text-tertiary);font-size:0.72rem;">${e.notas||'—'}</td>
-      <td>${e.url?`<button onclick="openFerretiPanel()" style="display:inline-flex;align-items:center;gap:5px;font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${ac};background:var(--hover-bg);border:1px solid ${ac}55;border-radius:6px;padding:4px 10px;cursor:pointer;">${e.nombre}</button>`:'<span style="color:var(--text-muted);font-size:0.7rem;">—</span>'}</td>
+      <td>${e.url?`<button onclick="openFerretiPanel()" style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-body);font-size:0.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${ac};background:var(--hover-bg);border:1px solid ${ac}55;border-radius:6px;padding:4px 10px;cursor:pointer;">${e.nombre}</button>`:'<span style="color:var(--text-muted);font-size:0.7rem;">—</span>'}</td>
       <td style="display:flex;gap:4px;"><button class="item-edit" onclick="openEditEquipo(${i})">✎</button><button class="item-del" onclick="delEquipo(${i})">✕</button></td>
     </tr>`;
   }).join('')}</tbody></table></div>`;
@@ -2032,12 +2133,12 @@ function renderDashboard(){
   if(dashCifChart){dashCifChart.destroy();dashCifChart=null;}
 
   const costoData=metrics.map(m=>parseFloat(m.costoHora.toFixed(2)));
-  dashMainChart=new Chart(s('dashMainChart'),{type:'bar',data:{labels,datasets:[{label:'Costo/hora ($)',data:costoData,backgroundColor:colors.map(c=>c+'88'),borderColor:colors,borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.y.toFixed(2)+'/h'}}},scales:{x:{ticks:{color:tickColor,font:{family:"'Barlow Condensed',sans-serif",size:11},maxRotation:35},grid:{color:gridColor},border:{color:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.1)'}},y:{ticks:{color:tickColor,font:{family:"'Barlow Condensed',sans-serif",size:11},callback:v=>'$'+v},grid:{color:gridColor}}}}});
+  dashMainChart=new Chart(s('dashMainChart'),{type:'bar',data:{labels,datasets:[{label:'Costo/hora ($)',data:costoData,backgroundColor:colors.map(c=>c+'88'),borderColor:colors,borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.y.toFixed(2)+'/h'}}},scales:{x:{ticks:{color:tickColor,font:{family:"var(--font-body)",size:11},maxRotation:35},grid:{color:gridColor},border:{color:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.1)'}},y:{ticks:{color:tickColor,font:{family:"var(--font-body)",size:11},callback:v=>'$'+v},grid:{color:gridColor}}}}});
 
   const subH=Math.max(320,labels.length*36+60);
   s('dashModWrap').style.height=subH+'px';
   s('dashCifWrap').style.height=subH+'px';
-  const subOpts={indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:tickColor,font:{family:"'Barlow Condensed',sans-serif",size:11},callback:v=>'$'+Number(v).toLocaleString('es-MX')},grid:{color:gridColor},border:{color:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.1)'}},y:{ticks:{color:tickColor,font:{family:"'Barlow Condensed',sans-serif",size:11,weight:'600'}},grid:{display:false}}}};
+  const subOpts={indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:tickColor,font:{family:"var(--font-body)",size:11},callback:v=>'$'+Number(v).toLocaleString('es-MX')},grid:{color:gridColor},border:{color:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.1)'}},y:{ticks:{color:tickColor,font:{family:"var(--font-body)",size:11,weight:'600'}},grid:{display:false}}}};
   dashModChart=new Chart(s('dashModChart'),{type:'bar',data:{labels,datasets:[{data:metrics.map(m=>m.modMensual),backgroundColor:'rgba(91,184,232,0.55)',borderColor:'#5bb8e8',borderWidth:1,borderRadius:4}]},options:{...subOpts,plugins:{...subOpts.plugins,tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.x.toLocaleString('es-MX')}}}}});
   dashCifChart=new Chart(s('dashCifChart'),{type:'bar',data:{labels,datasets:[{data:metrics.map(m=>m.cifMensual),backgroundColor:'rgba(232,168,64,0.55)',borderColor:'#e8a840',borderWidth:1,borderRadius:4}]},options:{...subOpts,plugins:{...subOpts.plugins,tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.x.toLocaleString('es-MX')}}}}});
 
@@ -2090,12 +2191,12 @@ function abrirNuevoCentro(){
   const bd=document.createElement('div');
   bd.id='nuevo-ct-backdrop';
   bd.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:3000;display:flex;align-items:center;justify-content:center;';
-  bd.innerHTML=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:28px 24px;max-width:360px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.35);font-family:'Barlow Condensed',sans-serif;">
+  bd.innerHTML=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:28px 24px;max-width:360px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.35);font-family:var(--font-body);">
     <div style="font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Nuevo centro de trabajo</div>
-    <input id="nuevoCTNombre" type="text" placeholder="Nombre del centro..." style="width:100%;background:var(--input-bg);border:1px solid var(--border-mid);border-radius:8px;padding:10px 12px;font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;font-weight:600;color:var(--text-primary);outline:none;margin-bottom:18px;">
+    <input id="nuevoCTNombre" type="text" placeholder="Nombre del centro..." style="width:100%;background:var(--input-bg);border:1px solid var(--border-mid);border-radius:8px;padding:10px 12px;font-family:var(--font-body);font-size:0.95rem;font-weight:600;color:var(--text-primary);outline:none;margin-bottom:18px;">
     <div style="display:flex;gap:10px;">
-      <button onclick="document.getElementById('nuevo-ct-backdrop').remove()" style="flex:1;background:var(--hover-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Cancelar</button>
-      <button onclick="guardarNuevoCentro()" style="flex:2;background:#6fc98c;color:#fff;border:none;border-radius:8px;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">+ Crear centro</button>
+      <button onclick="document.getElementById('nuevo-ct-backdrop').remove()" style="flex:1;background:var(--hover-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:var(--font-body);font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Cancelar</button>
+      <button onclick="guardarNuevoCentro()" style="flex:2;background:#6fc98c;color:#fff;border:none;border-radius:8px;padding:10px;font-family:var(--font-body);font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">+ Crear centro</button>
     </div>
   </div>`;
   bd.querySelector('input').addEventListener('keydown',e=>{if(e.key==='Enter')guardarNuevoCentro();});
