@@ -394,6 +394,13 @@ body.dark .dash-alert-title{color:#e05c5c;}
               <label>Demanda mensual (pzas)</label>
               <input type="number" id="paramDemanda" placeholder="0" min="0" step="1" oninput="guardarParams()">
             </div>
+            <div class="form-group" style="flex:0 0 180px;">
+              <label>Modo de operación</label>
+              <select id="paramModo" onchange="guardarParams()">
+                <option value="serie">Serie — 1 pieza por TC</option>
+                <option value="paralelo">Paralelo — N piezas por TC</option>
+              </select>
+            </div>
           </div>
         </div>
         <div class="sep"></div>
@@ -740,6 +747,11 @@ body.dark .dash-alert-title{color:#e05c5c;}
       <div id="modSalarioManualWrap">
         <div class="form-group"><label>Costo mensual manual ($) <span style="color:var(--text-tertiary);font-size:0.6rem;">(si no hay nivel en tabulador)</span></label><input type="number" id="modCostoManual" placeholder="0.00" min="0" step="0.01"></div>
       </div>
+      <div class="form-group">
+        <label>Operaciones que puede realizar</label>
+        <div id="modHabilidadesWrap" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;max-height:160px;overflow-y:auto;padding:2px;"></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Sin selección = puede hacer todas</div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-mod')">Cancelar</button>
@@ -1011,6 +1023,7 @@ function openModal(id, isNew=true){
       populateModGrupo();
       s('modGrupo').value = '';
       s('modCategoria').innerHTML = '<option value="">— Seleccionar grupo primero —</option>';
+      buildHabilidadesCheck('');
     }
     if (id === 'modal-ops') {
       s('opsEditIdx').value = '';
@@ -1213,6 +1226,7 @@ function selectCentro(idx){
   s('paramDias').value = p.dias || 22;
   s('paramTurnos').value = p.turnos || 1;
   s('paramDemanda').value = p.demanda || '';
+  s('paramModo').value = p.modo || 'serie';
   renderMod();
   renderOps();
   renderCons();
@@ -1321,15 +1335,35 @@ function getSalarioFromModal(){
   }
   return parseFloat(s('modCostoManual').value)||0;
 }
+function buildHabilidadesCheck(editIdx){
+  const wrap = s('modHabilidadesWrap');
+  if(!wrap) return;
+  const ops = cur().ops;
+  if(!ops.length){ wrap.innerHTML=`<div style="font-size:12px;color:var(--text-muted);">Sin operaciones registradas aún</div>`; return; }
+  const habs = editIdx!==''&&editIdx!==null ? (cur().mod[parseInt(editIdx)]?.habilidades||[]) : [];
+  wrap.innerHTML = ops.map((o,i)=>{
+    const checked = habs.length===0 || habs.includes(i) ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .1s;" onmouseover="this.style.background='var(--hover-bg)'" onmouseout="this.style.background=''">
+      <input type="checkbox" ${checked} data-op="${i}" style="width:15px;height:15px;accent-color:var(--accent);">
+      <span style="color:var(--text-primary);">${o.nombre}</span>
+      <span style="margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${o.min.toFixed(2)} min</span>
+    </label>`;
+  }).join('');
+}
+
 function savePersonal(){
   const puesto = s('modPuesto').value.trim();
   if(!puesto){ alert('Ingresa el puesto.'); return; }
   const costo = getSalarioFromModal();
   const grupoIdx = s('modGrupo').value !== '' ? parseInt(s('modGrupo').value) : null;
   const catIdx = s('modCategoria').value !== '' ? parseInt(s('modCategoria').value) : null;
+  // Guardar habilidades
+  const checks = s('modHabilidadesWrap').querySelectorAll('input[type=checkbox]');
+  const allChecked = Array.from(checks).every(c=>c.checked);
+  const habilidades = allChecked ? [] : Array.from(checks).filter(c=>c.checked).map(c=>parseInt(c.dataset.op));
   const editIdx = s('modEditIdx').value;
-  const entry = { puesto, costo, grupoIdx, catIdx };
-  if(editIdx !== '') cur().mod[parseInt(editIdx)] = entry;
+  const entry = { puesto, costo, grupoIdx, catIdx, habilidades };
+  if(editIdx !== '') cur().mod[parseInt(editIdx)] = {...cur().mod[parseInt(editIdx)], ...entry};
   else cur().mod.push(entry);
   markUpdated(); closeModal('modal-mod'); renderMod(); renderAsignacion(); renderTabuladorCentro();
 }
@@ -1353,6 +1387,7 @@ function editPersonal(i){
     s('modCategoria').innerHTML = '<option value="">— Seleccionar grupo primero —</option>';
     s('modCostoManual').value = m.costo || '';
   }
+  buildHabilidadesCheck(i);
   openModal('modal-mod', false);
 }
 function delPersonal(i){ cur().mod.splice(i,1); markUpdated(); renderMod(); renderTabuladorCentro(); }
@@ -1419,11 +1454,12 @@ function renderOps(){
 // ═══════════════════════════════════════════════════
 function guardarParams(){
   if(selectedIdx===null) return;
-  if(!cur().params) cur().params={disponible:480,dias:22,turnos:1,demanda:0};
+  if(!cur().params) cur().params={disponible:480,dias:22,turnos:1,demanda:0,modo:'serie'};
   const disp=parseFloat(s('paramDisponible').value); if(!isNaN(disp)&&disp>=0) cur().params.disponible=disp;
   const dias=parseFloat(s('paramDias').value); if(!isNaN(dias)&&dias>=1) cur().params.dias=dias;
   const turnos=parseFloat(s('paramTurnos').value); if(!isNaN(turnos)&&turnos>=1) cur().params.turnos=turnos;
   const dem=parseFloat(s('paramDemanda').value); if(!isNaN(dem)&&dem>=0) cur().params.demanda=dem;
+  cur().params.modo = s('paramModo').value || 'serie';
   markUpdated();
 }
 
@@ -1536,8 +1572,16 @@ function renderAsignacion(){
       <td style="text-align:right;font-family:var(--font-mono);font-weight:600;color:var(--accent);">${o.min.toFixed(2)} min</td>
       ${modPresentes.map(m=>{
         const mIdx = data.mod.indexOf(m);
+        const habs = m.habilidades||[];
+        const puedeHacer = habs.length===0 || habs.includes(opIdx);
         const checked = asigs.includes(mIdx) ? 'checked' : '';
-        return `<td class="op-cell"><input type="checkbox" class="asig-cb" ${checked} onchange="toggleAsignacion(${opIdx},${mIdx},this.checked)"></td>`;
+        const disabled = !puedeHacer ? 'disabled' : '';
+        const title = !puedeHacer ? `${m.puesto} no tiene habilidad para esta operación` : '';
+        return `<td class="op-cell" title="${title}">
+          ${puedeHacer
+            ? `<input type="checkbox" class="asig-cb" ${checked} onchange="toggleAsignacion(${opIdx},${mIdx},this.checked)">`
+            : `<span style="font-size:16px;" title="${title}">🚫</span>`}
+        </td>`;
       }).join('')}
     </tr>`;
   });
@@ -1593,10 +1637,24 @@ function autoBalancear(){
 
   opsActivas.forEach(o=>{
     const opIdx = data.ops.indexOf(o);
-    // Operador con menor carga
-    const mIdx = parseInt(Object.keys(cargaOp).reduce((a,b)=>cargaOp[a]<cargaOp[b]?a:b));
-    data.asignaciones[opIdx] = [mIdx];
-    cargaOp[mIdx] += o.min;
+    // Solo operadores que pueden hacer esta operación
+    const candidatos = modPresentes.filter(m=>{
+      const habs = m.habilidades||[];
+      return habs.length===0 || habs.includes(opIdx);
+    });
+    if(!candidatos.length) return; // nadie puede hacerla
+    // Operador con menor carga entre los que pueden
+    const mIdx = parseInt(candidatos.reduce((a,b)=>{
+      const ai=data.mod.indexOf(a), bi=data.mod.indexOf(b);
+      return (cargaOp[ai]||0)<=(cargaOp[bi]||0)?a:b;
+    }, candidatos[0]) ? data.mod.indexOf(candidatos.reduce((a,b)=>{
+      const ai=data.mod.indexOf(a), bi=data.mod.indexOf(b);
+      return (cargaOp[ai]||0)<=(cargaOp[bi]||0)?a:b;
+    })) : data.mod.indexOf(candidatos[0]));
+    data.asignaciones[opIdx] = [data.mod.indexOf(candidatos.reduce((a,b)=>{
+      return (cargaOp[data.mod.indexOf(a)]||0)<=(cargaOp[data.mod.indexOf(b)]||0)?a:b;
+    }))];
+    data.asignaciones[opIdx].forEach(mi=>{ cargaOp[mi]=(cargaOp[mi]||0)+o.min; });
   });
 
   markUpdated();
@@ -1616,11 +1674,12 @@ function togglePresencia(tipo, idx, val){
 
 function calcularResultados(){
   const data = cur();
-  const p = data.params || { disponible:480, dias:22, turnos:1, demanda:0 };
+  const p = data.params || { disponible:480, dias:22, turnos:1, demanda:0, modo:'serie' };
   const disponible = p.disponible || 0;
   const dias = p.dias || 22;
   const turnos = p.turnos || 1;
   const demanda = p.demanda || 0;
+  const modo = p.modo || 'serie';
 
   const opsActivas = data.ops.filter(o=>o.activa!==false);
   const consActivas = data.cons.items.filter(c=>c.activa!==false);
@@ -1631,7 +1690,7 @@ function calcularResultados(){
   const tiempoReal = disponible - totalCons;
   const totalOps = opsActivas.reduce((a,o)=>a+o.min,0);
 
-  // TC basado en asignación real
+  // TC basado en asignación real y modo
   const asigs = data.asignaciones || {};
   const hayAsignacion = opsActivas.some(o=>(asigs[data.ops.indexOf(o)]||[]).length>0);
 
@@ -1639,33 +1698,54 @@ function calcularResultados(){
   const opMaxObj = opsActivas.length>0 ? opsActivas.reduce((a,o)=>o.min>a.min?o:a) : null;
   tcCuello = opMaxObj ? opMaxObj.min : 0;
 
-  if(hayAsignacion){
-    // Calcular carga real por operador según asignación
-    modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = 0; });
-    opsActivas.forEach(o=>{
-      const opIdx = data.ops.indexOf(o);
-      (asigs[opIdx]||[]).forEach(mIdx=>{ if(cargaPorOp[mIdx]!==undefined) cargaPorOp[mIdx]+=o.min; });
-    });
-    const maxCargaOp = Math.max(...Object.values(cargaPorOp), 0);
-    tiempoCiclo = maxCargaOp;
-    tcBalanceo = numOperadores>0 ? totalOps/numOperadores : 0;
-    tcLabel = `Operador más cargado: ${maxCargaOp.toFixed(2)} min`;
+  if(modo === 'paralelo'){
+    // Líneas paralelas: TC = carga del operador más pesado (cada uno hace ciclo completo)
+    // Pero la capacidad se multiplica por número de operadores
+    if(hayAsignacion){
+      modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = 0; });
+      opsActivas.forEach(o=>{
+        const opIdx = data.ops.indexOf(o);
+        (asigs[opIdx]||[]).forEach(mIdx=>{ if(cargaPorOp[mIdx]!==undefined) cargaPorOp[mIdx]+=o.min; });
+      });
+      tiempoCiclo = Math.max(...Object.values(cargaPorOp), 0);
+    } else {
+      // Sin asignación en paralelo = cada operador hace todo
+      tiempoCiclo = totalOps;
+      modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = totalOps; });
+    }
+    tcBalanceo = totalOps;
+    tcLabel = `Paralelo — cada operador hace ciclo completo (${tiempoCiclo.toFixed(2)} min)`;
   } else {
-    // Sin asignación — usar fórmula simple
-    tcBalanceo = numOperadores>0 ? totalOps/numOperadores : 0;
-    tiempoCiclo = Math.max(tcCuello, tcBalanceo);
-    tcLabel = `máx(cuello ${tcCuello.toFixed(2)}, balance ${tcBalanceo.toFixed(2)})`;
-    cargaPorOp = {};
-    modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = totalOps/numOperadores; });
+    // Serie: TC = operador más cargado según asignación
+    if(hayAsignacion){
+      modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = 0; });
+      opsActivas.forEach(o=>{
+        const opIdx = data.ops.indexOf(o);
+        (asigs[opIdx]||[]).forEach(mIdx=>{ if(cargaPorOp[mIdx]!==undefined) cargaPorOp[mIdx]+=o.min; });
+      });
+      const maxCargaOp = Math.max(...Object.values(cargaPorOp), 0);
+      tiempoCiclo = maxCargaOp;
+      tcBalanceo = numOperadores>0 ? totalOps/numOperadores : 0;
+      tcLabel = `Serie — operador más cargado: ${maxCargaOp.toFixed(2)} min`;
+    } else {
+      tcBalanceo = numOperadores>0 ? totalOps/numOperadores : 0;
+      tiempoCiclo = Math.max(tcCuello, tcBalanceo);
+      tcLabel = `máx(cuello ${tcCuello.toFixed(2)}, balance ${tcBalanceo.toFixed(2)})`;
+      modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = totalOps/numOperadores; });
+    }
   }
 
-  const capDia = tiempoCiclo>0 ? Math.floor(tiempoReal/tiempoCiclo) : 0;
+  // Capacidad: en paralelo se multiplica por operadores
+  const piezasPorCiclo = modo==='paralelo' ? numOperadores : 1;
+  const capDia = tiempoCiclo>0 ? Math.floor(tiempoReal/tiempoCiclo)*piezasPorCiclo : 0;
   const demandaDia = demanda>0 ? demanda/dias : 0;
   const taktTime = demandaDia>0 ? tiempoReal/demandaDia : 0;
+
+  // Eficiencia: trabajo útil / trabajo total disponible
   const eficiencia = (tiempoCiclo>0&&numOperadores>0) ? (totalOps/(tiempoCiclo*numOperadores)*100) : 0;
-  const opsTeoricos = taktTime>0 ? Math.ceil(totalOps/taktTime) : null;
+  const opsTeoricos = taktTime>0 ? Math.ceil(totalOps/(taktTime*(modo==='paralelo'?numOperadores:1))) : null;
   const maxCarga = Math.max(...Object.values(cargaPorOp),0.01);
-  const tiempoMuerto = tiempoCiclo>0 ? tiempoCiclo - (totalOps/numOperadores) : 0;
+  const tiempoMuerto = modo==='serie'&&tiempoCiclo>0 ? tiempoCiclo - (totalOps/numOperadores) : 0;
 
   let estadoColor = 'var(--text-muted)', estadoLabel = 'Captura Takt Time para comparar';
   if(taktTime>0 && tiempoCiclo>0){
@@ -1687,7 +1767,7 @@ function calcularResultados(){
   s('resGrid').innerHTML=
     /* ── BLOQUE 1: TIEMPOS ── */
     `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow);">
-      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);">⏱ Tiempos</div>
+      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px;">⏱ Tiempos <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:${modo==='paralelo'?'var(--ok-bg)':'var(--accent-bg)'};color:${modo==='paralelo'?'var(--ok)':'var(--accent)'};">${modo==='paralelo'?'Paralelo':'Serie'}</span></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px;">
         <div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Disponible</div>
@@ -1719,7 +1799,7 @@ function calcularResultados(){
         <div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Capacidad / día</div>
           <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--accent);">${capDia>0?capDia+' pzas':'—'}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${capDia>0?tiempoReal.toFixed(2)+' / '+tiempoCiclo.toFixed(2)+' = '+capDia:'Se requiere TC'}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${capDia>0?`${tiempoReal.toFixed(2)} / ${tiempoCiclo.toFixed(2)} × ${piezasPorCiclo} pza(s)/ciclo = ${capDia}`:'Se requiere TC'}</div>
         </div>
         <div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Ops. teóricos mín.</div>
