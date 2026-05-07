@@ -1964,6 +1964,47 @@ function calcularResultados(){
   // Capacidad: en paralelo se multiplica por operadores, en multi-día se divide por días del ciclo
   const piezasPorCiclo = (!hayEtapas && modo==='paralelo') ? numOperadores : 1;
   const capDia = tiempoCiclo>0 ? Math.floor(tiempoReal/tiempoCiclo)*piezasPorCiclo : 0;
+
+  // Capacidad y WIP por día (solo con etapas)
+  let capPorDia = [], wipPorDia = [], utilizPorDia = [], leadTimeDias = 0;
+  if(hayEtapas){
+    const diasUnicos = [...new Set(etapas.map(e=>e.dia))].sort((a,b)=>a-b);
+    leadTimeDias = diasUnicos.length;
+    let capAnterior = null;
+    diasUnicos.forEach(dia=>{
+      const etapasDia = etapas.filter(e=>e.dia===dia);
+      let tcDia = 0;
+      etapasDia.forEach(etapa=>{
+        const eIdx = etapas.indexOf(etapa);
+        const opsEtapa = opsActivas.filter(o=>o.etapaIdx===eIdx);
+        if(!opsEtapa.length) return;
+        let tcEtapa;
+        if(etapa.modo==='paralelo'){
+          tcEtapa = Math.max(...opsEtapa.map(o=>o.min));
+        } else {
+          if(hayAsignacion){
+            const cL={};
+            modPresentes.forEach(m=>{ cL[data.mod.indexOf(m)]=0; });
+            opsEtapa.forEach(o=>{
+              const opIdx=data.ops.indexOf(o);
+              (asigs[opIdx]||[]).forEach(mIdx=>{ if(cL[mIdx]!==undefined) cL[mIdx]+=o.min; });
+            });
+            tcEtapa = Math.max(...Object.values(cL),0);
+          } else {
+            tcEtapa = opsEtapa.reduce((a,o)=>a+o.min,0);
+          }
+        }
+        tcDia = Math.max(tcDia, tcEtapa);
+      });
+      const capDiaN = tcDia>0 ? Math.floor(tiempoReal/tcDia) : 0;
+      const utilizDia = tcDia>0 ? Math.min(100,(tiempoCiclo/tcDia*100)) : 0; // utilización relativa al cuello
+      const wip = capAnterior!==null ? Math.max(0, capAnterior-capDiaN) : 0;
+      capPorDia.push({dia, tc:tcDia, cap:capDiaN, esCuello:tcDia===tiempoCiclo});
+      utilizPorDia.push({dia, utiliz: tcDia>0?(Math.min(tiempoCiclo,tcDia)/tcDia*100):0, real: tcDia>0?(tcDia/tiempoReal*100):0});
+      wipPorDia.push({dia, wip});
+      capAnterior = capDiaN;
+    });
+  }
   const demandaDia = demanda>0 ? demanda/dias : 0;
   const taktTime = demandaDia>0 ? tiempoReal/demandaDia : 0;
 
@@ -2030,12 +2071,55 @@ function calcularResultados(){
     /* ── BLOQUE 2: CAPACIDAD Y DEMANDA ── */
     `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow);">
       <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);">📦 Capacidad y Demanda</div>
+
+      ${hayEtapas&&capPorDia.length>0?`
+      <!-- Detalle por día -->
+      <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border2);">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:10px;">Capacidad por día</div>
+        ${capPorDia.map(d=>{
+          const wip = wipPorDia.find(w=>w.dia===d.dia)||{wip:0};
+          const utiliz = utilizPorDia.find(u=>u.dia===d.dia)||{real:0};
+          const barColor = d.esCuello?'var(--bad)':'var(--ok)';
+          const utilizPct = Math.min(100, utiliz.real||0);
+          return `<div style="margin-bottom:12px;padding:12px 14px;background:var(--surface2);border-radius:var(--r);border-left:3px solid ${barColor};">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <div style="font-weight:600;font-size:13px;color:var(--text-primary);">
+                Día ${d.dia}
+                ${d.esCuello?'<span style="margin-left:6px;font-size:10px;background:var(--bad-bg);color:var(--bad);border-radius:4px;padding:1px 6px;font-weight:700;">🔴 cuello</span>':''}
+              </div>
+              <div style="font-family:var(--font-display);font-size:1.3rem;font-weight:700;color:${barColor};">${d.cap} pzas/día</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:11px;color:var(--text-muted);margin-bottom:8px;">
+              <div>TC: <strong style="color:var(--text-primary);">${d.tc.toFixed(2)} min</strong></div>
+              <div>WIP acum: <strong style="color:${wip.wip>0?'var(--warn)':'var(--ok)'};">${wip.wip} pzas/día</strong></div>
+              <div>Utilización: <strong style="color:var(--text-primary);">${utilizPct.toFixed(0)}%</strong></div>
+            </div>
+            <div style="height:6px;background:var(--border2);border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:${utilizPct}%;background:${barColor};border-radius:3px;transition:width .3s;"></div>
+            </div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${tiempoReal.toFixed(0)} min reales ÷ ${d.tc.toFixed(2)} min/ciclo = ${d.cap} pzas</div>
+          </div>`;
+        }).join('')}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+          <div style="padding:10px 14px;background:var(--surface2);border-radius:var(--r);text-align:center;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Capacidad total (cuello)</div>
+            <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--bad);">${capDia} pzas/día</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">limitada por ${capPorDia.find(d=>d.esCuello)?'Día '+capPorDia.find(d=>d.esCuello).dia:'el cuello'}</div>
+          </div>
+          <div style="padding:10px 14px;background:var(--surface2);border-radius:var(--r);text-align:center;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Lead Time</div>
+            <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--accent);">${leadTimeDias} día${leadTimeDias!==1?'s':''}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">de inicio a pieza terminada</div>
+          </div>
+        </div>
+      </div>`:''}
+
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px;">
-        <div>
+        ${!hayEtapas?`<div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Capacidad / día</div>
           <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--accent);">${capDia>0?capDia+' pzas':'—'}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${capDia>0?`${tiempoReal.toFixed(2)} / ${tiempoCiclo.toFixed(2)} × ${piezasPorCiclo} pza(s)/ciclo = ${capDia}`:'Se requiere TC'}</div>
-        </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${capDia>0?tiempoReal.toFixed(2)+' / '+tiempoCiclo.toFixed(2)+' = '+capDia:'Se requiere TC'}</div>
+        </div>`:''}
         <div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Ops. teóricos mín.</div>
           <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:${opsTeoricos!==null?(opsTeoricos<=numOperadores?'var(--ok)':'var(--bad)'):'var(--text-muted)'};">${opsTeoricos!==null?opsTeoricos+' ops.':'—'}</div>
