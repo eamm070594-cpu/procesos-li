@@ -1791,6 +1791,7 @@ function toggleAsignacion(opIdx, mIdx, val){
   }
   markUpdated();
   renderAsignacion();
+  if(s('resultsBlock')&&s('resultsBlock').style.display!=='none') calcularResultados();
 }
 
 function autoBalancear(){
@@ -1842,9 +1843,12 @@ function togglePresencia(tipo, idx, val){
   else if(tipo==='ops') renderOps();
   else renderCons();
   renderAsignacion();
+  // Auto-recalcular si ya están los resultados visibles
+  if(s('resultsBlock')&&s('resultsBlock').style.display!=='none') calcularResultados();
 }
 
 function calcularResultados(){
+  if(selectedIdx===null || !cur()) return;
   const data = cur();
   const p = data.params || { disponible:480, dias:22, turnos:1, demanda:0, modo:'serie' };
   const disponible = p.disponible || 0;
@@ -2971,7 +2975,34 @@ function _fbApply(data){
     centros.length=0; CENTROS_DEFAULT.forEach(c=>centros.push({n:c.n,s:c.s}));
   }
   initState();
-  if(data.state) Object.keys(data.state).forEach(k=>{ const ki=parseInt(k); if(ki<centros.length){ const d=data.state[k]; d.ops=_norm(d.ops); d.mod=_norm(d.mod); d.cif=_norm(d.cif); d.equipos=_norm(d.equipos); if(d.cons) d.cons.items=_norm(d.cons.items); if(!d.params) d.params={disponible:480,dias:22,turnos:1,demanda:0}; Object.assign(state[ki],d); }});
+  if(data.state) Object.keys(data.state).forEach(k=>{
+    const ki=parseInt(k);
+    if(ki<centros.length){
+      const d=data.state[k];
+      d.ops=_norm(d.ops);
+      d.mod=_norm(d.mod);
+      d.cif=_norm(d.cif);
+      d.equipos=_norm(d.equipos);
+      if(d.cons) d.cons.items=_norm(d.cons.items);
+      if(!d.params) d.params={disponible:480,dias:22,turnos:1,demanda:0,modo:'serie'};
+      if(!d.params.modo) d.params.modo='serie';
+      // Normalizar etapas
+      d.etapas=_norm(d.etapas);
+      // Normalizar asignaciones (Firebase convierte {0:[1,2]} a objeto)
+      if(d.asignaciones&&!Array.isArray(d.asignaciones)){
+        const asigNorm={};
+        Object.keys(d.asignaciones).forEach(k2=>{
+          asigNorm[k2]=_norm(d.asignaciones[k2]);
+        });
+        d.asignaciones=asigNorm;
+      } else if(!d.asignaciones){
+        d.asignaciones={};
+      }
+      // Normalizar etapaIdx en ops (puede llegar como string)
+      d.ops.forEach(o=>{ if(o.etapaIdx!==undefined&&o.etapaIdx!==null) o.etapaIdx=parseInt(o.etapaIdx); });
+      Object.assign(state[ki],d);
+    }
+  });
   if(data.equipoState){ data.equipoState.ingenieros=_norm(data.equipoState.ingenieros); Object.assign(equipoState,data.equipoState); }
   if(data.tabulador){ ['grupos','categorias','niveles'].forEach(k=>{ if(data.tabulador[k]) data.tabulador[k]=_norm(data.tabulador[k]); }); Object.assign(tabulador,data.tabulador); }
 }
