@@ -1528,6 +1528,48 @@ function weekMetricForUser(userId,_date=new Date()){
   return{total:dels.length,efectivo,cumplido,pendiente,ws,we};
 }
 
+// ── AUTO-CIERRE MENSUAL ────────────────────────────
+// Al iniciar sesión, cierra automáticamente cualquier mes pasado que no tenga cierre
+function autoClosePreviousMonths(){
+  if(!DB.monthlyScores) DB.monthlyScores=[];
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-indexed
+
+  // Revisar los últimos 12 meses hacia atrás
+  for(let i=1; i<=12; i++){
+    let y = currentYear, m = currentMonth - i;
+    if(m < 0){ m += 12; y -= 1; }
+
+    // Verificar si ya existe cierre para ese mes
+    const yaExiste = DB.monthlyScores.some(s => s.year===y && s.month===m);
+    if(yaExiste) continue;
+
+    // Calcular scores para ese mes
+    const ms=`${y}-${String(m+1).padStart(2,'0')}-01`;
+    const lastDay=new Date(y,m+1,0).getDate();
+    const me=`${y}-${String(m+1).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+
+    // Solo cerrar si hay entregables en ese mes
+    const hayDels = DB.deliverables.some(d=>d.due&&d.due>=ms&&d.due<=me);
+    if(!hayDels) continue;
+
+    // Calcular y guardar
+    const scores = DB.users.map(u=>({
+      ...calcMonthlyScore(u.id, y, m),
+      closedAt: me,
+      frozen: true,
+      autoClose: true
+    }));
+    DB.monthlyScores.push(...scores);
+    console.log(`[AutoCierre] Mes ${MONTHS[m]} ${y} cerrado automáticamente`);
+  }
+
+  // Guardar si hubo cambios
+  const newCierres = DB.monthlyScores.filter(s=>s.autoClose);
+  if(newCierres.length > 0) saveDB();
+}
+
 function calcMonthlyScore(userId, year, month){
   // month is 0-indexed
   const ms=`${year}-${String(month+1).padStart(2,'0')}-01`;
@@ -3420,6 +3462,12 @@ function renderEvaluacion(){
         <div style="text-align:right">
           <div class="score-big ${lvl}">${s.score!==null?s.score+'%':'—'}</div>
           <div class="small muted">score nómina</div>
+          ${s.score!==null?`
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border2);text-align:right;">
+            <div style="font-family:var(--font-display,inherit);font-size:1.4rem;font-weight:700;color:${s.score>=90?'var(--ok)':'var(--warn)'};">${s.score>=90?'100':s.score}%</div>
+            <div class="small muted">% del bono</div>
+            ${s.score>=90?'<div style="font-size:10px;color:var(--ok);margin-top:2px;">✅ Bono completo</div>':'<div style="font-size:10px;color:var(--warn);margin-top:2px;">Score generado</div>'}
+          </div>`:''}
         </div>
       </div>
     </div>`;
@@ -3439,12 +3487,12 @@ function renderEvaluacion(){
       <div class="card" style="margin-bottom:10px">
         <div class="card-title">${MONTHS[g.month]} ${g.year} <span class="tag ok" style="font-size:10px">Cerrado</span></div>
         <div class="tbl-wrap"><table>
-          <thead><tr><th>Persona</th><th>Total</th><th>A tiempo</th><th>Tardíos</th><th>Score</th></tr></thead>
-          <tbody>${g.scores.map(s=>{const lvl=scoreLevel(s.score);return`<tr>
+          <thead><tr><th>Persona</th><th>Total</th><th>A tiempo</th><th>Tardíos</th><th>Score</th><th>% Bono</th></tr></thead>
+          <tbody>${g.scores.map(s=>{const lvl=scoreLevel(s.score);const bono=s.score===null?null:s.score>=90?100:s.score;return`<tr>
             <td><b>${userName(s.userId)}</b></td>
             <td>${s.total}</td><td>${s.onTime}</td><td>${s.late}</td>
-            
             <td><span class="tag ${lvl}">${s.score!==null?s.score+'%':'—'}</span></td>
+            <td><span class="tag ${bono!==null&&bono>=90?'ok':bono!==null?'warn':'gray'}">${bono!==null?bono+'%':'—'}</span></td>
           </tr>`}).join('')}</tbody>
         </table></div>
       </div>`).join('');
@@ -4845,6 +4893,7 @@ async function doLogin(){
   sessionStorage.setItem('li_sess',JSON.stringify(SESSION));
   applyRole();
   document.getElementById('login-screen').style.display='none';
+  autoClosePreviousMonths();
   renderView('equipo');
 }
 
@@ -4897,6 +4946,7 @@ if('serviceWorker' in navigator){
         SESSION=JSON.parse(saved);
         applyRole();
         document.getElementById('login-screen').style.display='none';
+        autoClosePreviousMonths();
         renderView('equipo');
       }catch{SESSION=null}
     }
@@ -4909,6 +4959,7 @@ if('serviceWorker' in navigator){
         SESSION=JSON.parse(saved);
         applyRole();
         document.getElementById('login-screen').style.display='none';
+        autoClosePreviousMonths();
         renderView('equipo');
       }catch{SESSION=null}
     }
