@@ -2076,8 +2076,20 @@ function renderProyectos(){
       const projDels=DB.deliverables.filter(d=>d.projectId===p.id);
       if(!myTeam.has(p.leaderId)&&!projDels.some(d=>myTeam.has(d.assigneeId))) return false;
     }
-    if(fct && p.centroId!==fct) return false;
-    if(fl && p.leaderId!==fl) return false;
+    // Filtro por CT: incluir proyectos asignados a ese CT,
+    // O proyectos donde algun ingeniero del CT tiene entregables (CT compartido)
+    if(fct){
+      const ct=byId(DB.centros||[],fct);
+      const ctIngIds=new Set([...(ct?.ingenieros||[]),ct?.encargadoId].filter(Boolean));
+      const projDels=DB.deliverables.filter(d=>d.projectId===p.id);
+      const hasCtEngineer=projDels.some(d=>d.assigneeId&&ctIngIds.has(d.assigneeId));
+      if(p.centroId!==fct && !hasCtEngineer) return false;
+    }
+    // Filtro por persona: incluir proyectos donde es lider O tiene entregables asignados
+    if(fl){
+      const projDels=DB.deliverables.filter(d=>d.projectId===p.id);
+      if(p.leaderId!==fl && !projDels.some(d=>d.assigneeId===fl)) return false;
+    }
     if(fst){
       const s=p.status||'Activo';
       if(fst==='Activo' && ['En revisión','Por aprobar','En riesgo','Detenido'].includes(s)) return false;
@@ -2740,12 +2752,13 @@ function renderDirectivo(){
   /* ── Filtrar usuarios ── */
   let users = fu ? DB.users.filter(u=>u.id===fu) : DB.users;
 
-  // Si hay filtro de CT, solo mostrar ingenieros asignados a ese CT
+  // Si hay filtro de CT, incluir todos los ingenieros que pertenecen a ese CT
+  // (ya sea por asignación directa al CT, o por tener entregables/proyectos en ese CT)
   if(fct){
     const ct=byId(DB.centros||[],fct);
     const ctIngIds=new Set(ct?.ingenieros||[]);
     if(ct?.encargadoId) ctIngIds.add(ct.encargadoId);
-    // También incluir ingenieros con proyectos en ese CT
+    // También incluir ingenieros con proyectos o entregables en ese CT
     DB.projects.filter(p=>p.centroId===fct).forEach(p=>{
       if(p.leaderId) ctIngIds.add(p.leaderId);
       DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
@@ -2758,8 +2771,9 @@ function renderDirectivo(){
   /* ── Helper: tarjeta de ingeniero ── */
   function ingCard(u){
     const uDels = DB.deliverables.filter(d=>d.assigneeId===u.id&&!isProjectClosed(d.projectId));
-    // Si hay filtro de CT, solo entregables de proyectos de ese CT
-    const uDelsFiltered = fct ? uDels.filter(d=>{ const p=byId(DB.projects,d.projectId); return p?.centroId===fct; }) : uDels;
+    // Si hay filtro de CT: mostrar TODOS los entregables del ingeniero que pertenece al CT
+    // (el ingeniero ya fue filtrado arriba por pertenecer al CT, sus entregables son relevantes)
+    const uDelsFiltered = uDels;
 
     const projIds = [...new Set(uDelsFiltered.map(d=>d.projectId))];
     const uProjs  = projIds.map(pid=>byId(DB.projects,pid)).filter(Boolean);
@@ -2850,39 +2864,38 @@ function renderDirectivo(){
     </div>`;
   }
 
-  /* ── Render: agrupado por CT o plano ── */
-  if(!fu && !fct){
-    // Vista agrupada por CT
+  /* ── Render: siempre agrupado por CT ── */
+  // Cuando hay filtro de CT específico, mostrar solo ese CT con sus ingenieros
+  // Cuando hay filtro de ingeniero, mostrar los CTs donde ese ingeniero participa
+  // Siempre mostrar los encabezados de CT para que se vea el contexto compartido
+  {
     const centros = DB.centros||[];
-    const ctConUsers = centros.filter(ct=>{
-      const ctIngIds=new Set([...(ct.ingenieros||[]),ct.encargadoId].filter(Boolean));
-      DB.projects.filter(p=>p.centroId===ct.id).forEach(p=>{
-        if(p.leaderId) ctIngIds.add(p.leaderId);
-        DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
-      });
-      return users.some(u=>ctIngIds.has(u.id));
-    });
 
-    // Usuarios sin CT
-    const usersConCT=new Set();
-    centros.forEach(ct=>{
-      const ctIngIds=new Set([...(ct.ingenieros||[]),ct.encargadoId].filter(Boolean));
+    // Función para obtener los ingenieros de un CT (incluyendo via proyectos/entregables)
+    function getCTIngIds(ct){
+      const ids=new Set([...(ct.ingenieros||[]),ct.encargadoId].filter(Boolean));
       DB.projects.filter(p=>p.centroId===ct.id).forEach(p=>{
-        if(p.leaderId) ctIngIds.add(p.leaderId);
-        DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
+        if(p.leaderId) ids.add(p.leaderId);
+        DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ids.add(d.assigneeId);});
       });
-      users.filter(u=>ctIngIds.has(u.id)).forEach(u=>usersConCT.add(u.id));
-    });
-    const usersSinCT=users.filter(u=>!usersConCT.has(u.id));
+      return ids;
+    }
+
+    // Si hay filtro de CT específico, solo ese CT
+    const centrosAMostrar = fct
+      ? centros.filter(ct=>ct.id===fct)
+      : centros.filter(ct=>users.some(u=>getCTIngIds(ct).has(u.id)));
+
+    // Rastrear qué usuarios ya aparecieron en algún CT
+    const usersConCT=new Set();
 
     let html='';
-    ctConUsers.forEach(ct=>{
-      const ctIngIds=new Set([...(ct.ingenieros||[]),ct.encargadoId].filter(Boolean));
-      DB.projects.filter(p=>p.centroId===ct.id).forEach(p=>{
-        if(p.leaderId) ctIngIds.add(p.leaderId);
-        DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
-      });
+    centrosAMostrar.forEach(ct=>{
+      const ctIngIds=getCTIngIds(ct);
       const ctUsers=users.filter(u=>ctIngIds.has(u.id));
+      if(!ctUsers.length) return;
+      ctUsers.forEach(u=>usersConCT.add(u.id));
+
       const ctProjs=DB.projects.filter(p=>p.centroId===ct.id&&p.status!=='Cerrado');
       const ctDels=ctProjs.flatMap(p=>DB.deliverables.filter(d=>d.projectId===p.id));
       const ctVenc=ctDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today).length;
@@ -2911,20 +2924,21 @@ function renderDirectivo(){
       </div>`;
     });
 
-    if(usersSinCT.length){
-      html+=`<div style="margin-bottom:20px">
-        <div style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2) var(--r2) 0 0">
-          <span style="font-weight:700;font-size:13px;color:var(--muted)">📂 Sin centro de trabajo asignado</span>
-        </div>
-        <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r2) var(--r2);padding:12px">
-          ${usersSinCT.map(u=>ingCard(u)).join('')}
-        </div>
-      </div>`;
+    // Usuarios que no aparecen en ningún CT (solo cuando no hay filtro de CT específico)
+    if(!fct){
+      const usersSinCT=users.filter(u=>!usersConCT.has(u.id));
+      if(usersSinCT.length){
+        html+=`<div style="margin-bottom:20px">
+          <div style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2) var(--r2) 0 0">
+            <span style="font-weight:700;font-size:13px;color:var(--muted)">📂 Sin centro de trabajo asignado</span>
+          </div>
+          <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r2) var(--r2);padding:12px">
+            ${usersSinCT.map(u=>ingCard(u)).join('')}
+          </div>
+        </div>`;
+      }
     }
     report.innerHTML=html||'<div class="empty" style="padding:40px">Sin datos.</div>';
-  } else {
-    // Vista plana (filtrado por ingeniero o CT específico)
-    report.innerHTML=users.map(u=>ingCard(u)).join('')||'<div class="empty" style="padding:40px">Sin ingenieros con ese filtro.</div>';
   }
 }
 
