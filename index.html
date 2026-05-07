@@ -1181,6 +1181,14 @@ function doPost(e){
 
     <!-- ─── VIEW: CONTROL CT ─── -->
     <div class="view" id="view-controlct" style="padding:0;overflow:hidden;display:none;flex-direction:column;height:100%">
+      <!-- Barra de regreso -->
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border2);flex-shrink:0;z-index:10;">
+        <button onclick="showView('equipo')" style="display:flex;align-items:center;gap:6px;background:transparent;border:none;cursor:pointer;color:var(--accent);font-family:var(--font-body);font-size:13px;font-weight:600;padding:4px 8px;border-radius:var(--r);transition:background .12s;" onmouseover="this.style.background='var(--accent-bg)'" onmouseout="this.style.background='transparent'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Ingeniería de Procesos
+        </button>
+        <span style="font-size:12px;color:var(--muted);">/ Control CT</span>
+      </div>
       <div id="cct-loading" style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;gap:8px;">
         <span style="animation:pulse .8s infinite">⏳</span> Cargando Control CT…
       </div>
@@ -1453,6 +1461,12 @@ function saveDB(){
 ══════════════════════════════════════════════════════ */
 function userName(id){const u=byId(DB.users,id);return u?u.name:'—'}
 function projName(id){const p=byId(DB.projects,id);return p?p.name:'—'}
+function deleteOrphanDel(id){
+  if(!confirm('¿Eliminar este entregable sin proyecto?')) return;
+  DB.deliverables=DB.deliverables.filter(d=>d.id!==id);
+  fbPush();
+  renderDashboard();
+}
 
 function statusTag(status,dueISO){
   const t=todayISO(),ov=dueISO&&daysBetween(dueISO,t)>0;
@@ -1742,6 +1756,9 @@ function renderDashboard(){
   if(dateEl) dateEl.textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
 
   const allDels = DB.deliverables.filter(d=>!isProjectClosed(d.projectId)&&(!fa||d.assigneeId===fa));
+  // Detect orphan deliverables (project no longer exists)
+  const orphanDels = DB.deliverables.filter(d=>!byId(DB.projects,d.projectId));
+  const isOrphan = (d) => !byId(DB.projects, d.projectId);
   const vencidos  = allDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today);
   const revision  = allDels.filter(d=>d.status==='En revisión');
   const enCurso   = allDels.filter(d=>d.status==='En progreso'||d.status==='Pendiente');
@@ -1777,6 +1794,21 @@ function renderDashboard(){
       alertas+=`<div style="background:var(--accent-bg,#E6F1FB);border-left:3px solid var(--accent,#185FA5);border-radius:var(--r);padding:10px 14px;font-size:13px;color:var(--accent,#185FA5);margin-bottom:8px">
         <b>📋 ${revision.length} entregable${revision.length!==1?'s':''} por revisar</b> — pendientes de tu aprobación
         <button class="btn xs" style="margin-left:8px" onclick="document.getElementById('validar-block').classList.toggle('hidden')">Ver</button>
+      </div>`;
+    }
+    if(orphanDels.length&&isAdmin){
+      alertas+=`<div style="background:var(--bad-bg);border-left:3px solid var(--bad);border-radius:var(--r);padding:10px 14px;font-size:13px;color:var(--bad);margin-bottom:8px">
+        <b>🗑 ${orphanDels.length} entregable${orphanDels.length!==1?'s':''} sin proyecto</b> — el proyecto fue eliminado
+        <button class="btn xs" style="margin-left:8px;color:var(--bad);border-color:var(--bad)" onclick="this.closest('div').nextElementSibling.classList.toggle('hidden')">Ver y limpiar</button>
+      </div>
+      <div class="hidden" style="background:var(--surface);border:1px solid var(--bad);border-radius:var(--r);margin-bottom:8px;overflow:hidden">
+        ${orphanDels.map(d=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:0.5px solid var(--border2)">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500">${esc(d.title)}</div>
+            <div style="font-size:11px;color:var(--bad)">⚠ Sin proyecto · ${userName(d.assigneeId)}</div>
+          </div>
+          <button class="btn xs" style="color:var(--bad);border-color:var(--bad)" onclick="deleteOrphanDel('${d.id}')">✕ Eliminar</button>
+        </div>`).join('')}
       </div>`;
     }
     alertasEl.innerHTML=alertas;
@@ -1842,7 +1874,7 @@ function renderDashboard(){
   const activeHF=document.querySelector('.hot-filter-btn.active')?.dataset.hf||'all';
   if(hotTbody){
     let hotDels;
-    if(activeHF==='all') hotDels=[...vencidos,...allDels.filter(d=>d.status==='En revisión')].sort((a,b)=>a.due?.localeCompare(b.due||'')||0);
+    if(activeHF==='all') hotDels=[...vencidos,...allDels.filter(d=>d.status==='En revisión'),...orphanDels].sort((a,b)=>a.due?.localeCompare(b.due||'')||0);
     else if(activeHF==='vencido') hotDels=vencidos.sort((a,b)=>a.due?.localeCompare(b.due||'')||0);
     else hotDels=allDels.filter(d=>d.status===activeHF).sort((a,b)=>a.due?.localeCompare(b.due||'')||0);
     if(!hotDels.length){
@@ -1851,17 +1883,19 @@ function renderDashboard(){
       hotTbody.innerHTML=hotDels.map(d=>{
         const isMyDel=d.assigneeId===SESSION?.userId;
         const canFinish=d.status!=='Aprobado'&&d.status!=='En revisión';
-        return`<tr>
+        const orphan = isOrphan(d);
+        return`<tr${orphan?' style="background:var(--bad-bg)"':''}>
           <td>${statusTag(d.status,d.due)}</td>
-          <td><b>${esc(d.title)}</b></td>
-          <td style="font-size:12px">${projName(d.projectId)}</td>
+          <td><b>${esc(d.title)}</b>${orphan?'<span style="margin-left:6px;font-size:10px;color:var(--bad);font-weight:700;">⚠ Sin proyecto</span>':''}</td>
+          <td style="font-size:12px">${orphan?'<span style="color:var(--bad);">Proyecto eliminado</span>':projName(d.projectId)}</td>
           <td style="font-size:12px">${userName(d.assigneeId)}</td>
           <td>${fmtDueFull(d.due,d.originalDue)}</td>
           <td class="right admin-only">
             <div style="display:flex;gap:4px;justify-content:flex-end">
-              ${(canFinish&&(isAdmin||isMyDel))?`<button class="btn xs primary" data-submit-del="${d.id}">✓</button>`:''}
-              ${(d.status==='En revisión'&&isAdmin)?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:''}
-              ${isAdmin?`<button class="btn xs" data-edit-del="${d.id}">Editar</button>`:''}
+              ${orphan&&isAdmin?`<button class="btn xs danger" onclick="deleteOrphanDel('${d.id}')">✕ Eliminar</button>`:''}
+              ${(!orphan&&canFinish&&(isAdmin||isMyDel))?`<button class="btn xs primary" data-submit-del="${d.id}">✓</button>`:''}
+              ${(!orphan&&d.status==='En revisión'&&isAdmin)?`<button class="btn xs ok" data-approve-del="${d.id}">Aprobar</button><button class="btn xs danger" data-reject-del="${d.id}">Rechazar</button>`:''}
+              ${(!orphan&&isAdmin)?`<button class="btn xs" data-edit-del="${d.id}">Editar</button>`:''}
             </div>
           </td>
         </tr>`;
@@ -2076,20 +2110,8 @@ function renderProyectos(){
       const projDels=DB.deliverables.filter(d=>d.projectId===p.id);
       if(!myTeam.has(p.leaderId)&&!projDels.some(d=>myTeam.has(d.assigneeId))) return false;
     }
-    // Filtro por CT: incluir proyectos asignados a ese CT,
-    // O proyectos donde algun ingeniero del CT tiene entregables (CT compartido)
-    if(fct){
-      const ct=byId(DB.centros||[],fct);
-      const ctIngIds=new Set([...(ct?.ingenieros||[]),ct?.encargadoId].filter(Boolean));
-      const projDels=DB.deliverables.filter(d=>d.projectId===p.id);
-      const hasCtEngineer=projDels.some(d=>d.assigneeId&&ctIngIds.has(d.assigneeId));
-      if(p.centroId!==fct && !hasCtEngineer) return false;
-    }
-    // Filtro por persona: incluir proyectos donde es lider O tiene entregables asignados
-    if(fl){
-      const projDels=DB.deliverables.filter(d=>d.projectId===p.id);
-      if(p.leaderId!==fl && !projDels.some(d=>d.assigneeId===fl)) return false;
-    }
+    if(fct && p.centroId!==fct) return false;
+    if(fl && p.leaderId!==fl) return false;
     if(fst){
       const s=p.status||'Activo';
       if(fst==='Activo' && ['En revisión','Por aprobar','En riesgo','Detenido'].includes(s)) return false;
@@ -2752,13 +2774,12 @@ function renderDirectivo(){
   /* ── Filtrar usuarios ── */
   let users = fu ? DB.users.filter(u=>u.id===fu) : DB.users;
 
-  // Si hay filtro de CT, incluir todos los ingenieros que pertenecen a ese CT
-  // (ya sea por asignación directa al CT, o por tener entregables/proyectos en ese CT)
+  // Si hay filtro de CT, solo mostrar ingenieros asignados a ese CT
   if(fct){
     const ct=byId(DB.centros||[],fct);
     const ctIngIds=new Set(ct?.ingenieros||[]);
     if(ct?.encargadoId) ctIngIds.add(ct.encargadoId);
-    // También incluir ingenieros con proyectos o entregables en ese CT
+    // También incluir ingenieros con proyectos en ese CT
     DB.projects.filter(p=>p.centroId===fct).forEach(p=>{
       if(p.leaderId) ctIngIds.add(p.leaderId);
       DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
@@ -2771,9 +2792,8 @@ function renderDirectivo(){
   /* ── Helper: tarjeta de ingeniero ── */
   function ingCard(u){
     const uDels = DB.deliverables.filter(d=>d.assigneeId===u.id&&!isProjectClosed(d.projectId));
-    // Si hay filtro de CT: mostrar TODOS los entregables del ingeniero que pertenece al CT
-    // (el ingeniero ya fue filtrado arriba por pertenecer al CT, sus entregables son relevantes)
-    const uDelsFiltered = uDels;
+    // Si hay filtro de CT, solo entregables de proyectos de ese CT
+    const uDelsFiltered = fct ? uDels.filter(d=>{ const p=byId(DB.projects,d.projectId); return p?.centroId===fct; }) : uDels;
 
     const projIds = [...new Set(uDelsFiltered.map(d=>d.projectId))];
     const uProjs  = projIds.map(pid=>byId(DB.projects,pid)).filter(Boolean);
@@ -2864,38 +2884,39 @@ function renderDirectivo(){
     </div>`;
   }
 
-  /* ── Render: siempre agrupado por CT ── */
-  // Cuando hay filtro de CT específico, mostrar solo ese CT con sus ingenieros
-  // Cuando hay filtro de ingeniero, mostrar los CTs donde ese ingeniero participa
-  // Siempre mostrar los encabezados de CT para que se vea el contexto compartido
-  {
+  /* ── Render: agrupado por CT o plano ── */
+  if(!fu && !fct){
+    // Vista agrupada por CT
     const centros = DB.centros||[];
-
-    // Función para obtener los ingenieros de un CT (incluyendo via proyectos/entregables)
-    function getCTIngIds(ct){
-      const ids=new Set([...(ct.ingenieros||[]),ct.encargadoId].filter(Boolean));
+    const ctConUsers = centros.filter(ct=>{
+      const ctIngIds=new Set([...(ct.ingenieros||[]),ct.encargadoId].filter(Boolean));
       DB.projects.filter(p=>p.centroId===ct.id).forEach(p=>{
-        if(p.leaderId) ids.add(p.leaderId);
-        DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ids.add(d.assigneeId);});
+        if(p.leaderId) ctIngIds.add(p.leaderId);
+        DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
       });
-      return ids;
-    }
+      return users.some(u=>ctIngIds.has(u.id));
+    });
 
-    // Si hay filtro de CT específico, solo ese CT
-    const centrosAMostrar = fct
-      ? centros.filter(ct=>ct.id===fct)
-      : centros.filter(ct=>users.some(u=>getCTIngIds(ct).has(u.id)));
-
-    // Rastrear qué usuarios ya aparecieron en algún CT
+    // Usuarios sin CT
     const usersConCT=new Set();
+    centros.forEach(ct=>{
+      const ctIngIds=new Set([...(ct.ingenieros||[]),ct.encargadoId].filter(Boolean));
+      DB.projects.filter(p=>p.centroId===ct.id).forEach(p=>{
+        if(p.leaderId) ctIngIds.add(p.leaderId);
+        DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
+      });
+      users.filter(u=>ctIngIds.has(u.id)).forEach(u=>usersConCT.add(u.id));
+    });
+    const usersSinCT=users.filter(u=>!usersConCT.has(u.id));
 
     let html='';
-    centrosAMostrar.forEach(ct=>{
-      const ctIngIds=getCTIngIds(ct);
+    ctConUsers.forEach(ct=>{
+      const ctIngIds=new Set([...(ct.ingenieros||[]),ct.encargadoId].filter(Boolean));
+      DB.projects.filter(p=>p.centroId===ct.id).forEach(p=>{
+        if(p.leaderId) ctIngIds.add(p.leaderId);
+        DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
+      });
       const ctUsers=users.filter(u=>ctIngIds.has(u.id));
-      if(!ctUsers.length) return;
-      ctUsers.forEach(u=>usersConCT.add(u.id));
-
       const ctProjs=DB.projects.filter(p=>p.centroId===ct.id&&p.status!=='Cerrado');
       const ctDels=ctProjs.flatMap(p=>DB.deliverables.filter(d=>d.projectId===p.id));
       const ctVenc=ctDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today).length;
@@ -2924,21 +2945,20 @@ function renderDirectivo(){
       </div>`;
     });
 
-    // Usuarios que no aparecen en ningún CT (solo cuando no hay filtro de CT específico)
-    if(!fct){
-      const usersSinCT=users.filter(u=>!usersConCT.has(u.id));
-      if(usersSinCT.length){
-        html+=`<div style="margin-bottom:20px">
-          <div style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2) var(--r2) 0 0">
-            <span style="font-weight:700;font-size:13px;color:var(--muted)">📂 Sin centro de trabajo asignado</span>
-          </div>
-          <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r2) var(--r2);padding:12px">
-            ${usersSinCT.map(u=>ingCard(u)).join('')}
-          </div>
-        </div>`;
-      }
+    if(usersSinCT.length){
+      html+=`<div style="margin-bottom:20px">
+        <div style="padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2) var(--r2) 0 0">
+          <span style="font-weight:700;font-size:13px;color:var(--muted)">📂 Sin centro de trabajo asignado</span>
+        </div>
+        <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r2) var(--r2);padding:12px">
+          ${usersSinCT.map(u=>ingCard(u)).join('')}
+        </div>
+      </div>`;
     }
     report.innerHTML=html||'<div class="empty" style="padding:40px">Sin datos.</div>';
+  } else {
+    // Vista plana (filtrado por ingeniero o CT específico)
+    report.innerHTML=users.map(u=>ingCard(u)).join('')||'<div class="empty" style="padding:40px">Sin ingenieros con ese filtro.</div>';
   }
 }
 
