@@ -8,22 +8,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script>
-// Verificar que Firebase cargó correctamente
-window.addEventListener('load', function(){
-  if(typeof firebase === 'undefined'){
-    console.error('[CT] Firebase no cargó — reintentando...');
-    var s1=document.createElement('script');
-    s1.src='https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
-    s1.onload=function(){
-      var s2=document.createElement('script');
-      s2.src='https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js';
-      document.head.appendChild(s2);
-    };
-    document.head.appendChild(s1);
-  }
-});
-</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 
@@ -320,23 +304,48 @@ body.dark .dash-alert-title{color:#e05c5c;}
               <span id="detailResponsableNombre" style="font-size:0.75rem;font-weight:600;letter-spacing:2px;color:var(--text-tertiary);text-transform:uppercase;"></span>
             </span>
             <span id="detailStamp"></span>
-            <button id="btnEliminarCentro" onclick="confirmarEliminarCentro(selectedIdx)" style="margin-left:auto;background:rgba(224,92,92,0.1);color:#c03030;border:1px solid rgba(224,92,92,0.25);border-radius:7px;padding:5px 12px;font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">✕ Eliminar centro</button>
           </div>
           <div id="detailFichaInfo" style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;"></div>
         </div>
       </div>
 
-      <div class="tabs-bar" id="mainTabsBar">
+      <div class="tabs-bar" id="mainTabsBar" style="display:flex;align-items:center;">
         <button class="tab-btn active" data-tab="dist" onclick="switchTab('dist')">Distribución</button>
         <button class="tab-btn" data-tab="cif" onclick="switchTab('cif')">CIF</button>
         <button class="tab-btn" data-tab="resumen" onclick="switchTab('resumen')">Resumen</button>
         <button class="tab-btn" data-tab="layout" onclick="switchTab('layout')">Layout</button>
         <button class="tab-btn" data-tab="equipos" onclick="switchTab('equipos')">Equipos</button>
         <button class="tab-btn" data-tab="tabulador" onclick="switchTab('tabulador')">Tabulador</button>
+        <button onclick="confirmarEliminarCentro(selectedIdx)" style="margin-left:auto;background:rgba(224,92,92,0.08);color:#c03030;border:1px solid rgba(224,92,92,0.2);border-radius:6px;padding:4px 12px;font-family:'Barlow Condensed',sans-serif;font-size:0.58rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;white-space:nowrap;">✕ Eliminar centro</button>
       </div>
 
       <!-- TAB: DISTRIBUCIÓN (unified) -->
       <div class="tab-panel active" id="tab-dist">
+
+        <!-- PARÁMETROS DEL CENTRO -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:4px;">
+          <div class="section-hd" style="margin-bottom:12px;">Parámetros del centro</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <div class="form-group" style="flex:0 0 150px;">
+              <label>Tiempo disponible (min)</label>
+              <input type="number" id="paramDisponible" placeholder="480" min="0" step="1" oninput="guardarParams()">
+            </div>
+            <div class="form-group" style="flex:0 0 150px;">
+              <label>Días laborables / mes</label>
+              <input type="number" id="paramDias" placeholder="22" min="1" step="1" oninput="guardarParams()">
+            </div>
+            <div class="form-group" style="flex:0 0 150px;">
+              <label>Turnos</label>
+              <input type="number" id="paramTurnos" placeholder="1" min="1" step="1" oninput="guardarParams()">
+            </div>
+            <div class="form-group" style="flex:0 0 150px;">
+              <label>Demanda mensual (pzas)</label>
+              <input type="number" id="paramDemanda" placeholder="0" min="0" step="1" oninput="guardarParams()">
+            </div>
+          </div>
+        </div>
+        <div class="sep"></div>
+
         <!-- SALARIO / MOD -->
         <div>
           <div class="tab-action-bar">
@@ -370,10 +379,6 @@ body.dark .dash-alert-title{color:#e05c5c;}
               Añadir consideración
             </button>
           </div>
-          <div style="display:flex;gap:12px;padding:0 0 10px;flex-wrap:wrap;">
-            <div class="form-group" style="flex:0 0 180px;"><label>Tiempo disponible (min)</label><input type="number" id="consDisp" placeholder="480" min="0" step="1" oninput="guardarDispDemanda()"></div>
-            <div class="form-group" style="flex:0 0 180px;"><label>Demanda mensual (piezas)</label><input type="number" id="consDemanda" placeholder="0" min="0" step="1" oninput="guardarDispDemanda()"></div>
-          </div>
           <div class="items-list" id="consList"><div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin consideraciones</div></div>
         </div>
         <div>
@@ -381,7 +386,7 @@ body.dark .dash-alert-title{color:#e05c5c;}
         </div>
         <div id="resultsBlock" style="display:none;">
           <div class="section-hd">Resultados</div>
-          <div class="results-grid" id="resGrid"></div>
+          <div id="resGrid"></div>
         </div>
         <div class="footer">Linea Italia — Eccellenza in Mobile</div>
       </div>
@@ -599,7 +604,7 @@ body.dark .dash-alert-title{color:#e05c5c;}
     </div>
     <div class="dash-body">
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-        <button class="btn-add" id="btnAddGrupo" onclick="s('grupoEditIdx').value='';s('modal-grupo-title').textContent='Nuevo grupo';s('grupoNombre').value='';openModal('modal-grupo')"  >>
+        <button class="btn-add" id="btnAddGrupo" onclick="openModal('modal-grupo')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Nuevo Grupo
         </button>
@@ -719,7 +724,7 @@ body.dark .dash-alert-title{color:#e05c5c;}
     <input type="hidden" id="cifEditIdx" value="">
     <div style="display:flex;flex-direction:column;gap:10px;">
       <div class="form-group"><label>Concepto</label>
-        <select id="cifConcepto">
+        <select id="cifConceptoSelect" onchange="cifSelectChange()">
           <option value="">— Seleccionar —</option>
           <option>MOI</option><option>Energía</option><option>Agua</option><option>Gas</option>
           <option>Renta</option><option>Fumigación</option><option>Capacitación</option>
@@ -727,7 +732,10 @@ body.dark .dash-alert-title{color:#e05c5c;}
           <option>Sindicato</option><option>Materiales indirectos</option><option>Depreciaciones</option>
           <option>MTTO</option><option>Servicios generales</option><option>Herramientas consumibles</option>
           <option>Diversos</option><option>TICs</option><option>Seguridad y fianzas</option>
+          <option value="__otro__">✎ Otro (personalizado)…</option>
         </select>
+        <input type="text" id="cifConceptoCustom" placeholder="Escribe el concepto..." style="display:none;margin-top:6px;">
+        <input type="hidden" id="cifConcepto">
       </div>
       <div class="form-row">
         <div class="form-group" style="flex:0 0 180px;"><label>Monto mensual ($)</label><input type="number" id="cifMonto" placeholder="0.00" min="0" step="0.01"></div>
@@ -804,11 +812,10 @@ body.dark .dash-alert-title{color:#e05c5c;}
   <div class="modal-box" style="max-width:420px;">
     <div class="modal-header"><span class="modal-title" id="modal-grupo-title">Nuevo grupo</span><button class="modal-close" onclick="closeModal('modal-grupo')">✕</button></div>
     <input type="hidden" id="grupoEditIdx" value="">
-    <div class="form-group"><label>Nombre del grupo</label><input type="text" id="grupoNombre" placeholder="Ej. Sindicalizado, Ayudante, Técnico..." onkeydown="if(event.key==='Enter')saveGrupo()"></div>
-    <div style="font-size:0.62rem;color:var(--text-muted);letter-spacing:1px;padding:0 2px 8px;opacity:0.7;">Al guardar podrás agregar categorías de inmediato →</div>
+    <div class="form-group"><label>Nombre del grupo</label><input type="text" id="grupoNombre" placeholder="Ej. Sindicalizado, Ayudante, Técnico..."></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-grupo')">Cancelar</button>
-      <button class="btn btn-accent" onclick="saveGrupo()">Guardar →</button>
+      <button class="btn btn-accent" onclick="saveGrupo()">Guardar</button>
     </div>
   </div>
 </div>
@@ -822,10 +829,9 @@ body.dark .dash-alert-title{color:#e05c5c;}
       <div class="form-group"><label>Nombre de la categoría sindical</label><input type="text" id="catNombre" placeholder="Ej. Sindicalizado a prueba"></div>
       <div class="form-group"><label>Grupo al que pertenece</label><select id="catGrupo"><option value="">— Seleccionar grupo —</option></select></div>
     </div>
-    <div style="font-size:0.62rem;color:var(--text-muted);letter-spacing:1px;padding:0 2px 4px;opacity:0.7;">Al guardar podrás agregar niveles de inmediato →</div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-categoria')">Cancelar</button>
-      <button class="btn btn-accent" onclick="saveCategoria()">Guardar →</button>
+      <button class="btn btn-accent" onclick="saveCategoria()">Guardar</button>
     </div>
   </div>
 </div>
@@ -878,28 +884,7 @@ body.dark .dash-alert-title{color:#e05c5c;}
 // ═══════════════════════════════════════════════════
 // CENTROS DE TRABAJO
 // ═══════════════════════════════════════════════════
-let centros = [
-  { n:"Carpintería",     s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="1"/><path d="M3 7h18M3 12h18M3 17h18"/></svg>` },
-  { n:"Láser",           s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="7.05" y2="7.05"/><line x1="16.95" y1="16.95" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="7.05" y2="16.95"/><line x1="16.95" y1="7.05" x2="19.78" y2="4.22"/></svg>` },
-  { n:"Troqueles",       s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v4l3 2 3-2V3M9 21v-4l3-2 3 2v4"/><line x1="3" y1="9" x2="7" y2="9"/><line x1="17" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="7" y2="15"/><line x1="17" y1="15" x2="21" y2="15"/></svg>` },
-  { n:"Enchapado",       s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="3" width="20" height="4" rx=".5"/><rect x="2" y="10" width="20" height="4" rx=".5"/><rect x="2" y="17" width="20" height="4" rx=".5"/></svg>` },
-  { n:"Est. Mamparas",   s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="3" width="9" height="18" rx=".5"/><rect x="13" y="3" width="9" height="18" rx=".5"/></svg>` },
-  { n:"Est. Sillas",     s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 9V4h14v5"/><rect x="3" y="9" width="18" height="4" rx=".5"/><line x1="7" y1="13" x2="7" y2="21"/><line x1="17" y1="13" x2="17" y2="21"/></svg>` },
-  { n:"Est. Muebles",    s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx=".5"/><line x1="2" y1="14" x2="22" y2="14"/><line x1="12" y1="7" x2="12" y2="21"/></svg>` },
-  { n:"Cajas",           s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>` },
-  { n:"Habilitado",      s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>` },
-  { n:"Pintura",         s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M19 4a2 2 0 0 0-2-2H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h2v2a2 2 0 0 0 4 0v-2h8a2 2 0 0 0 2-2V4z"/><line x1="5" y1="8" x2="15" y2="8"/><line x1="5" y1="12" x2="12" y2="12"/></svg>` },
-  { n:"Telas",           s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 6c2-2 4 0 6-2s4 2 6 0 4-2 6 0M2 12c2-2 4 0 6-2s4 2 6 0 4-2 6 0M2 18c2-2 4 0 6-2s4 2 6 0 4-2 6 0"/></svg>` },
-  { n:"Ens. Muebles",    s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="8" width="20" height="12" rx=".5"/><path d="M6 8V5h12v3"/><line x1="6" y1="20" x2="6" y2="22"/><line x1="18" y1="20" x2="18" y2="22"/><line x1="2" y1="14" x2="22" y2="14"/></svg>` },
-  { n:"Ens. Sillas",     s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 3v6M18 3v6"/><rect x="4" y="9" width="16" height="4" rx=".5"/><path d="M6 13v8M18 13v8"/></svg>` },
-  { n:"Ens. Sillones",   s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 11V8a3 3 0 0 1 6 0v3M16 11V8a3 3 0 0 1 6 0v3"/><rect x="2" y="11" width="20" height="7" rx="1"/><path d="M5 18v2M19 18v2"/><line x1="2" y1="15" x2="22" y2="15"/></svg>` },
-  { n:"Ens. Libreros",   s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="2" width="5" height="20" rx=".5"/><rect x="9" y="6" width="5" height="16" rx=".5"/><rect x="16" y="4" width="6" height="18" rx=".5"/><line x1="2" y1="22" x2="22" y2="22"/></svg>` },
-  { n:"Ens. Mamparas",   s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="2" width="9" height="20" rx=".5"/><rect x="13" y="2" width="9" height="20" rx=".5"/></svg>` },
-  { n:"Ens. Archiveros", s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="2" width="20" height="5" rx=".5"/><rect x="2" y="9" width="20" height="5" rx=".5"/><rect x="2" y="16" width="20" height="6" rx=".5"/><line x1="8" y1="4.5" x2="16" y2="4.5"/><line x1="8" y1="11.5" x2="16" y2="11.5"/></svg>` },
-];
-
-// Ícono genérico para nuevos centros
-const ICONO_GENERICO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>`;
+// centros array defined dynamically below
 
 // Special pages (not work centres)
 const SPECIAL = {
@@ -916,7 +901,7 @@ function getAc(i){ return acs[i % acs.length]; }
 // ═══════════════════════════════════════════════════
 const state = {};
 centros.forEach((_, i) => {
-  state[i] = { ops:[], cons:{ disponible:null, items:[] }, mod:[], cif:[], equipos:[], demanda:null, updatedAt:null };
+  state[i] = { ops:[], cons:{ disponible:null, items:[] }, mod:[], cif:[], equipos:[], params:{ disponible:480, dias:22, turnos:1, demanda:0 }, updatedAt:null };
 });
 
 // Equipo (ingenieros)
@@ -938,69 +923,68 @@ function cur(){ return state[selectedIdx]; }
 // ═══════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════
-function openModal(id){
-  if (id === 'modal-mod') {
-    s('modEditIdx').value = '';
-    s('modal-mod-title').textContent = 'Añadir operario';
-    s('modPuesto').value = '';
-    s('modCostoManual').value = '';
-    s('modSalarioPreview').style.display = 'none';
-    populateModGrupo();
-    s('modGrupo').value = '';
-    s('modCategoria').innerHTML = '<option value="">— Seleccionar grupo primero —</option>';
-  }
-  if (id === 'modal-ops') {
-    s('opsEditIdx').value = '';
-    s('modal-ops-title').textContent = 'Nueva operación';
-    s('opName').value = ''; s('opMin').value = '';
-  }
-  if (id === 'modal-cons') {
-    s('consEditIdx').value = '';
-    s('modal-cons-title').textContent = 'Nueva consideración';
-    s('consName').value = ''; s('consMin').value = '';
-    const disp = cur() && cur().cons.disponible !== null ? cur().cons.disponible : '';
-    s('consDisp').value = disp;
-    const dem = cur() && cur().demanda !== null ? cur().demanda : '';
-    s('consDemanda').value = dem;
-  }
-  if (id === 'modal-cif') {
-    s('cifEditIdx').value = '';
-    s('modal-cif-title').textContent = 'Nuevo concepto CIF';
-    s('cifConcepto').value = ''; s('cifMonto').value = ''; s('cifNota').value = '';
-  }
-  if (id === 'modal-equipo') {
-    s('equipoEditIdx').value = '';
-    s('modalEquipoTitle').textContent = 'Registrar equipo';
-    ['equipoNombre','equipoModelo','equipoAnio','equipoValor','equipoUltimoMtto','equipoProxMtto','equipoNotas','equipoUrl'].forEach(id2 => s(id2).value = '');
-    s('equipoTipo').value = 'Máquina';
-  }
-  if (id === 'modal-ingeniero') {
-    s('ingEditIdx').value = '';
-    s('modal-ing-title').textContent = 'Registrar miembro del equipo';
-    s('ingNombre').value = ''; s('ingRol').value = 'ingeniero';
-    buildAreasCheck(-1);
-    s('ingAreasWrap').style.display = '';
-    s('ingGerenteNote').style.display = 'none';
-  }
-  if (id === 'modal-grupo') {
-    s('grupoEditIdx').value = '';
-    s('modal-grupo-title').textContent = 'Nuevo grupo';
-    s('grupoNombre').value = '';
-  }
-  if (id === 'modal-categoria') {
-    s('catEditIdx').value = '';
-    s('modal-cat-title').textContent = 'Nueva categoría';
-    s('catNombre').value = '';
-    populateCatGrupo();
-  }
-  if (id === 'modal-nivel') {
-    s('nivelEditIdx').value = '';
-    s('modal-nivel-title').textContent = 'Nuevo nivel';
-    ['nivelNum','nivelDesc','nivelAscenso','nivelSalario','nivelIncremento','nivelSalarioFinal'].forEach(id2 => s(id2).value = '');
-    s('nivelAutonomia').value = 'Ninguna';
-    populateNivelCategoria();
-    s('nivelSalario').oninput = calcNivelFinal;
-    s('nivelIncremento').oninput = calcNivelFinal;
+function openModal(id, isNew=true){
+  if (isNew) {
+    if (id === 'modal-mod') {
+      s('modEditIdx').value = '';
+      s('modal-mod-title').textContent = 'Añadir operario';
+      s('modPuesto').value = '';
+      s('modCostoManual').value = '';
+      s('modSalarioPreview').style.display = 'none';
+      populateModGrupo();
+      s('modGrupo').value = '';
+      s('modCategoria').innerHTML = '<option value="">— Seleccionar grupo primero —</option>';
+    }
+    if (id === 'modal-ops') {
+      s('opsEditIdx').value = '';
+      s('modal-ops-title').textContent = 'Nueva operación';
+      s('opName').value = ''; s('opMin').value = '';
+    }
+    if (id === 'modal-cons') {
+      s('consEditIdx').value = '';
+      s('modal-cons-title').textContent = 'Nueva consideración';
+      s('consName').value = ''; s('consMin').value = '';
+    }
+    if (id === 'modal-cif') {
+      s('cifEditIdx').value = '';
+      s('modal-cif-title').textContent = 'Nuevo concepto CIF';
+      s('cifConceptoSelect').value = ''; s('cifConceptoCustom').style.display='none'; s('cifConcepto').value='';
+      s('cifMonto').value = ''; s('cifNota').value = '';
+    }
+    if (id === 'modal-equipo') {
+      s('equipoEditIdx').value = '';
+      s('modalEquipoTitle').textContent = 'Registrar equipo';
+      ['equipoNombre','equipoModelo','equipoAnio','equipoValor','equipoUltimoMtto','equipoProxMtto','equipoNotas','equipoUrl'].forEach(id2 => s(id2).value = '');
+      s('equipoTipo').value = 'Máquina';
+    }
+    if (id === 'modal-ingeniero') {
+      s('ingEditIdx').value = '';
+      s('modal-ing-title').textContent = 'Registrar miembro del equipo';
+      s('ingNombre').value = ''; s('ingRol').value = 'ingeniero';
+      buildAreasCheck(-1);
+      s('ingAreasWrap').style.display = '';
+      s('ingGerenteNote').style.display = 'none';
+    }
+    if (id === 'modal-grupo') {
+      s('grupoEditIdx').value = '';
+      s('modal-grupo-title').textContent = 'Nuevo grupo';
+      s('grupoNombre').value = '';
+    }
+    if (id === 'modal-categoria') {
+      s('catEditIdx').value = '';
+      s('modal-cat-title').textContent = 'Nueva categoría';
+      s('catNombre').value = '';
+      populateCatGrupo();
+    }
+    if (id === 'modal-nivel') {
+      s('nivelEditIdx').value = '';
+      s('modal-nivel-title').textContent = 'Nuevo nivel';
+      ['nivelNum','nivelDesc','nivelAscenso','nivelSalario','nivelIncremento','nivelSalarioFinal'].forEach(id2 => s(id2).value = '');
+      s('nivelAutonomia').value = 'Ninguna';
+      populateNivelCategoria();
+      s('nivelSalario').oninput = calcNivelFinal;
+      s('nivelIncremento').oninput = calcNivelFinal;
+    }
   }
   document.getElementById(id).classList.add('open');
   const first = document.getElementById(id).querySelector('input:not([readonly]),select,textarea');
@@ -1026,7 +1010,7 @@ function stampInfo(idx){
   if(days<=7)     return {cls:'stamp-amber',label:'Hace '+days+' días'};
   return              {cls:'stamp-red',label:'Hace '+days+' días'};
 }
-function markUpdated(){ if(selectedIdx===null) return; state[selectedIdx].updatedAt=Date.now(); refreshStamp(selectedIdx); fbSave(); }
+function markUpdated(){ if(selectedIdx===null) return; state[selectedIdx].updatedAt=Date.now(); refreshStamp(selectedIdx); }
 function refreshStamp(idx){
   const chip = document.getElementById('stamp-'+idx);
   if(chip){ const info=stampInfo(idx); chip.className='card-stamp '+info.cls; chip.textContent=info.label; }
@@ -1073,7 +1057,7 @@ function buildGrid(){
       const ac = getAc(i);
       const si = stampInfo(i);
       const respName = getResponsableCentro(i);
-      const tc = state[i]&&state[i].ops.length>0 ? Math.max(...state[i].ops.map(o=>o.min)) : null;
+      const tc = state[i]&&state[i].ops&&state[i].ops.length>0 ? Math.max(...state[i].ops.map(o=>o.min)) : null;
       return `<div class="card" style="--ac:${ac};" onclick="selectCentro(${i})">
         <div class="card-icon">${c.s}</div>
         <div class="card-name">${c.n}</div>
@@ -1094,62 +1078,12 @@ function buildGrid(){
       <div class="card-name">${SPECIAL.tabulador.n}</div>
       <div class="card-stamp stamp-none" style="background:rgba(232,200,64,0.15);color:#a07a00;">Salarial</div>
     </div>` +
-    // Botón nuevo centro
+    // Nuevo centro
     `<div class="card" style="--ac:#6fc98c;border:2px dashed rgba(111,201,140,0.4);opacity:0.75;" onclick="abrirNuevoCentro()">
       <div class="card-icon" style="color:#6fc98c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
       <div class="card-name" style="color:#6fc98c">Nuevo centro</div>
       <div class="card-stamp stamp-none" style="background:rgba(111,201,140,0.1);color:#3a9c5e;">+ Agregar</div>
     </div>`;
-}
-
-// ── AGREGAR / ELIMINAR CENTROS ──────────────────────
-function abrirNuevoCentro(){
-  const bd=document.createElement('div');
-  bd.id='nuevo-ct-backdrop';
-  bd.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:3000;display:flex;align-items:center;justify-content:center;';
-  bd.innerHTML=`
-    <div style="background:var(--card-bg,var(--bg));border:1px solid var(--border);border-radius:14px;padding:28px 24px;max-width:360px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.35);font-family:'Barlow Condensed',sans-serif;">
-      <div style="font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Nuevo centro de trabajo</div>
-      <input id="nuevoCTNombre" type="text" placeholder="Nombre del centro..." style="width:100%;background:var(--input-bg);border:1px solid var(--border-mid);border-radius:8px;padding:10px 12px;font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;font-weight:600;color:var(--text-primary);outline:none;margin-bottom:18px;" autofocus>
-      <div style="display:flex;gap:10px;">
-        <button onclick="document.getElementById('nuevo-ct-backdrop').remove()" style="flex:1;background:var(--hover-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Cancelar</button>
-        <button onclick="guardarNuevoCentro()" style="flex:2;background:#6fc98c;color:#fff;border:none;border-radius:8px;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">+ Crear centro</button>
-      </div>
-    </div>`;
-  bd.querySelector('input').addEventListener('keydown',e=>{if(e.key==='Enter')guardarNuevoCentro();});
-  document.body.appendChild(bd);
-  setTimeout(()=>document.getElementById('nuevoCTNombre')?.focus(),100);
-}
-
-function guardarNuevoCentro(){
-  const nombre=(document.getElementById('nuevoCTNombre')?.value||'').trim();
-  if(!nombre){alert('Ingresa el nombre del centro.');return;}
-  document.getElementById('nuevo-ct-backdrop')?.remove();
-  const idx=centros.length;
-  centros.push({n:nombre, s:ICONO_GENERICO});
-  state[idx]={ops:[],cons:{disponible:null,items:[]},mod:[],cif:[],equipos:[],demanda:null,updatedAt:null};
-  buildGrid();
-  fbSave();
-}
-
-function confirmarEliminarCentro(idx){
-  if(!confirm(`¿Eliminar el centro "${centros[idx].n}"?\nSe borrarán todos sus datos. Esta acción no se puede deshacer.`)) return;
-  // Limpiar referencias en ingenieros
-  equipoState.ingenieros.forEach(ing=>{
-    ing.areas=ing.areas.filter(a=>a!==idx).map(a=>a>idx?a-1:a);
-  });
-  centros.splice(idx,1);
-  // Rebuild state with shifted indices
-  const newState={};
-  Object.keys(state).forEach(k=>{
-    const ki=parseInt(k);
-    if(ki<idx) newState[ki]=state[ki];
-    else if(ki>idx) newState[ki-1]=state[ki];
-  });
-  Object.keys(state).forEach(k=>delete state[k]);
-  Object.assign(state,newState);
-  resetToHome();
-  fbSave();
 }
 
 function getResponsableCentro(idx){
@@ -1196,6 +1130,12 @@ function selectCentro(idx){
 
   refreshStamp(idx);
   switchTab('dist');
+  // Load params
+  const p = cur().params || { disponible:480, dias:22, turnos:1, demanda:0 };
+  s('paramDisponible').value = p.disponible || '';
+  s('paramDias').value = p.dias || 22;
+  s('paramTurnos').value = p.turnos || 1;
+  s('paramDemanda').value = p.demanda || '';
   renderMod();
   renderOps();
   renderCons();
@@ -1335,7 +1275,7 @@ function editPersonal(i){
     s('modCategoria').innerHTML = '<option value="">— Seleccionar grupo primero —</option>';
     s('modCostoManual').value = m.costo || '';
   }
-  openModal('modal-mod');
+  openModal('modal-mod', false);
 }
 function delPersonal(i){ cur().mod.splice(i,1); markUpdated(); renderMod(); renderTabuladorCentro(); }
 function renderMod(){
@@ -1374,7 +1314,7 @@ function editOperacion(i){
   s('opsEditIdx').value = i;
   s('modal-ops-title').textContent = 'Editar operación';
   s('opName').value = o.nombre; s('opMin').value = o.min;
-  openModal('modal-ops');
+  openModal('modal-ops', false);
 }
 function delOperacion(i){ cur().ops.splice(i,1); renderOps(); }
 function renderOps(){
@@ -1392,30 +1332,39 @@ function renderOps(){
 }
 
 // ═══════════════════════════════════════════════════
+// PARÁMETROS
+// ═══════════════════════════════════════════════════
+function guardarParams(){
+  if(selectedIdx===null) return;
+  if(!cur().params) cur().params={disponible:480,dias:22,turnos:1,demanda:0};
+  const disp=parseFloat(s('paramDisponible').value); if(!isNaN(disp)&&disp>=0) cur().params.disponible=disp;
+  const dias=parseFloat(s('paramDias').value); if(!isNaN(dias)&&dias>=1) cur().params.dias=dias;
+  const turnos=parseFloat(s('paramTurnos').value); if(!isNaN(turnos)&&turnos>=1) cur().params.turnos=turnos;
+  const dem=parseFloat(s('paramDemanda').value); if(!isNaN(dem)&&dem>=0) cur().params.demanda=dem;
+  markUpdated();
+}
+
+// ═══════════════════════════════════════════════════
 // CONSIDERACIONES
 // ═══════════════════════════════════════════════════
 function saveConsideracion(){
-  const disp = parseFloat(s('consDisp').value);
-  if(!isNaN(disp) && disp>=0) cur().cons.disponible = disp;
   const nombre = s('consName').value.trim();
   const min = parseFloat(s('consMin').value);
   const editIdx = s('consEditIdx').value;
-  if(nombre && !isNaN(min) && min>=0){
-    const entry={nombre,min};
-    if(editIdx !== '') cur().cons.items[parseInt(editIdx)] = entry;
-    else cur().cons.items.push(entry);
-  }
+  if(!nombre || isNaN(min) || min<0){ alert('Completa nombre y minutos.'); return; }
+  const entry={nombre,min};
+  if(editIdx !== '') cur().cons.items[parseInt(editIdx)] = entry;
+  else cur().cons.items.push(entry);
   markUpdated(); closeModal('modal-cons'); renderCons();
 }
 function editConsideracion(i){
   const c = cur().cons.items[i];
   s('consEditIdx').value = i;
   s('modal-cons-title').textContent = 'Editar consideración';
-  s('consDisp').value = cur().cons.disponible !== null ? cur().cons.disponible : '';
   s('consName').value = c.nombre; s('consMin').value = c.min;
-  openModal('modal-cons');
+  openModal('modal-cons', false);
 }
-function delConsideracion(i){ cur().cons.items.splice(i,1); renderCons(); }
+function delConsideracion(i){ cur().cons.items.splice(i,1); markUpdated(); renderCons(); }
 function renderCons(){
   const items = cur().cons.items;
   const c = s('consList');
@@ -1429,43 +1378,71 @@ function renderCons(){
     </div>`).join('');
 }
 
+// CIF concepto personalizado
+function cifSelectChange(){
+  const val=s('cifConceptoSelect').value;
+  if(val==='__otro__'){
+    s('cifConceptoCustom').style.display='';
+    s('cifConcepto').value='';
+    s('cifConceptoCustom').oninput=()=>s('cifConcepto').value=s('cifConceptoCustom').value.trim();
+  } else {
+    s('cifConceptoCustom').style.display='none';
+    s('cifConcepto').value=val;
+  }
+}
+
 // ═══════════════════════════════════════════════════
 // RESULTADOS
 // ═══════════════════════════════════════════════════
-function guardarDispDemanda(){
-  if(selectedIdx===null) return;
-  const disp=parseFloat(s('consDisp').value);
-  const dem=parseFloat(s('consDemanda').value);
-  if(!isNaN(disp)&&disp>=0) cur().cons.disponible=disp;
-  if(!isNaN(dem)&&dem>=0) cur().demanda=dem;
-  fbSave();
-}
-
 function calcularResultados(){
-  const data=cur();
-  const disp=parseFloat(s('consDisp').value)||data.cons.disponible||0;
-  const demanda=parseFloat(s('consDemanda').value)||data.demanda||0;
-  data.cons.disponible=disp; data.demanda=demanda;
-  fbSave();
+  const data = cur();
+  const p = data.params || { disponible:480, dias:22, turnos:1, demanda:0 };
+  const disponible = p.disponible || 0;
+  const dias = p.dias || 22;
+  const turnos = p.turnos || 1;
+  const demanda = p.demanda || 0;
 
-  const totalOps=data.ops.reduce((a,o)=>a+o.min,0);
-  const totalCons=data.cons.items.reduce((a,c)=>a+c.min,0);
-  const tiempoReal=disp-totalCons;
-  // Tiempo ciclo = operación de mayor duración (cuello de botella)
-  const tiempoCiclo=data.ops.length>0?Math.max(...data.ops.map(o=>o.min)):0;
-  // Takt Time = tiempo real / demanda diaria (demanda mensual / 22 días)
-  const diasMes=22;
-  const demandaDia=demanda>0?demanda/diasMes:0;
-  const taktTime=demandaDia>0?(tiempoReal/demandaDia):0;
+  const totalCons = data.cons.items.reduce((a,c)=>a+c.min,0);
+  const tiempoReal = disponible - totalCons;
+  const totalOps = data.ops.reduce((a,o)=>a+o.min,0);
+  const opMaxObj = data.ops.length>0 ? data.ops.reduce((a,o)=>o.min>a.min?o:a) : null;
+  const tiempoCiclo = opMaxObj ? opMaxObj.min : 0;
+  const capDia = tiempoCiclo>0 ? Math.floor(tiempoReal/tiempoCiclo) : 0;
+  const demandaDia = demanda>0 ? demanda/dias : 0;
+  const taktTime = demandaDia>0 ? tiempoReal/demandaDia : 0;
+  const ac = getAc(selectedIdx);
 
   s('resultsBlock').style.display='';
-  const ac=getAc(selectedIdx);
-  s('resGrid').innerHTML=`
-    <div class="res-card"><div class="res-label">Suma Operaciones</div><div class="res-value">${totalOps.toFixed(2)}</div><div class="res-unit">minutos</div></div>
-    <div class="res-card"><div class="res-label">Tiempo Disponible</div><div class="res-value" style="color:${ac}">${disp.toFixed(2)}</div><div class="res-unit">minutos (sin consideraciones)</div></div>
-    <div class="res-card"><div class="res-label">Tiempo Real</div><div class="res-value" style="color:${tiempoReal>=0?ac:'#e05c5c'}">${tiempoReal.toFixed(2)}</div><div class="res-unit">minutos (disponible − consideraciones)</div></div>
-    <div class="res-card"><div class="res-label">Tiempo Ciclo</div><div class="res-value" style="color:${ac}">${tiempoCiclo>0?tiempoCiclo.toFixed(2):'—'}</div><div class="res-unit">${tiempoCiclo>0?'min · cuello de botella':'sin operaciones'}</div></div>
-    <div class="res-card"><div class="res-label">Takt Time</div><div class="res-value" style="color:${taktTime>0?ac:'var(--text-muted)'}">${taktTime>0?taktTime.toFixed(2):'—'}</div><div class="res-unit">${taktTime>0?'min / pieza · demanda '+demanda+' pzas/mes':'captura demanda mensual'}</div></div>`;
+
+  const row=(label,valor,unidad,formula,color)=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:10px;">
+      <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;">${label}</div>
+      <div style="font-size:1.8rem;font-weight:800;letter-spacing:3px;color:${color||ac};">${valor}</div>
+      <div style="font-size:0.65rem;color:var(--text-tertiary);margin-top:2px;">${unidad}</div>
+      <div style="font-size:0.62rem;color:var(--text-muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border2);line-height:1.8;">${formula}</div>
+    </div>`;
+
+  s('resGrid').innerHTML=
+    row('Suma de Operaciones', totalOps.toFixed(2)+' min', 'suma de todos los tiempos estándar',
+      (data.ops.map(o=>`${o.nombre||o.op||'Op'} = ${o.min.toFixed(2)} min`).join('<br>')||'Sin operaciones registradas')) +
+
+    row('Tiempo Disponible', disponible+' min', 'tiempo operativo total sin descuentos',
+      `Parámetro capturado: <strong>${disponible} min</strong> · ${dias} días/mes · ${turnos} turno(s)`) +
+
+    row('Tiempo Real', tiempoReal.toFixed(2)+' min', 'tiempo disponible menos consideraciones',
+      `${disponible} min<br>− ${data.cons.items.map(c=>`${c.nombre} (${c.min.toFixed(2)} min)`).join('<br>− ')||'0 consideraciones'}<br>= <strong>${tiempoReal.toFixed(2)} min</strong>`,
+      tiempoReal>=0?ac:'#e05c5c') +
+
+    row('Tiempo Ciclo', tiempoCiclo>0?tiempoCiclo.toFixed(2)+' min':'—',
+      tiempoCiclo>0?`cuello de botella: ${opMaxObj.nombre||opMaxObj.op}`:'registra operaciones para calcular',
+      tiempoCiclo>0?`Operación más lenta:<br><strong>${opMaxObj.nombre||opMaxObj.op}</strong> = ${tiempoCiclo.toFixed(2)} min`:'Sin operaciones') +
+
+    row('Capacidad por Día', capDia>0?capDia+' pzas/día':'—', 'unidades producibles usando tiempo real',
+      capDia>0?`${tiempoReal.toFixed(2)} min reales ÷ ${tiempoCiclo.toFixed(2)} min/ciclo = <strong>${capDia} pzas</strong>`:'Se requiere tiempo ciclo') +
+
+    row('Takt Time', taktTime>0?taktTime.toFixed(2)+' min/pza':'—',
+      demanda>0?`cada pieza debe salir en ${taktTime.toFixed(2)} min para cubrir demanda`:'captura demanda mensual para calcular',
+      demanda>0?`${tiempoReal.toFixed(2)} min reales ÷ (${demanda} pzas/mes ÷ ${dias} días/mes)<br>= ${tiempoReal.toFixed(2)} ÷ ${demandaDia.toFixed(2)} = <strong>${taktTime.toFixed(2)} min/pza</strong>`:'Captura demanda en Parámetros del centro');
 }
 
 // ═══════════════════════════════════════════════════
@@ -1486,8 +1463,21 @@ function saveCIF(){
 function editCIF(i){
   const c=cur().cif[i];
   s('cifEditIdx').value=i; s('modal-cif-title').textContent='Editar CIF';
-  s('cifConcepto').value=c.concepto; s('cifMonto').value=c.monto; s('cifNota').value=c.nota||'';
-  openModal('modal-cif');
+  // Restore concepto — check if it's in the predefined list
+  const sel=s('cifConceptoSelect');
+  const opts=Array.from(sel.options).map(o=>o.value);
+  if(opts.includes(c.concepto)){
+    sel.value=c.concepto;
+    s('cifConceptoCustom').style.display='none';
+  } else {
+    sel.value='__otro__';
+    s('cifConceptoCustom').style.display='';
+    s('cifConceptoCustom').value=c.concepto;
+    s('cifConceptoCustom').oninput=()=>s('cifConcepto').value=s('cifConceptoCustom').value.trim();
+  }
+  s('cifConcepto').value=c.concepto;
+  s('cifMonto').value=c.monto; s('cifNota').value=c.nota||'';
+  openModal('modal-cif', false);
 }
 function delCIF(i){ cur().cif.splice(i,1); renderCIF(); }
 function renderCIF(){
@@ -1613,7 +1603,7 @@ function openEditEquipo(i){
   s('equipoModelo').value=e.modelo||''; s('equipoAnio').value=e.anio||'';
   s('equipoValor').value=e.valor||''; s('equipoUltimoMtto').value=e.ultimoMtto||'';
   s('equipoProxMtto').value=e.proxMtto||''; s('equipoNotas').value=e.notas||''; s('equipoUrl').value=e.url||'';
-  openModal('modal-equipo');
+  openModal('modal-equipo', false);
 }
 function saveEquipo(){
   const nombre=s('equipoNombre').value.trim();if(!nombre){alert('Ingresa el nombre.');return;}
@@ -1734,7 +1724,7 @@ function saveIngeniero(){
   const entry={nombre,rol,areas:checked};
   if(editIdx!=='') equipoState.ingenieros[parseInt(editIdx)]=entry;
   else equipoState.ingenieros.push(entry);
-  closeModal('modal-ingeniero'); renderIngenieros(); buildGrid(); fbSave();
+  closeModal('modal-ingeniero'); renderIngenieros(); buildGrid();
 }
 function editIngeniero(i){
   const ing=equipoState.ingenieros[i];
@@ -1748,9 +1738,9 @@ function editIngeniero(i){
     s('ingAreasWrap').style.display='';
     s('ingGerenteNote').style.display='none';
   }
-  openModal('modal-ingeniero');
+  openModal('modal-ingeniero', false);
 }
-function delIngeniero(i){ equipoState.ingenieros.splice(i,1); renderIngenieros(); buildGrid(); fbSave(); }
+function delIngeniero(i){ equipoState.ingenieros.splice(i,1); renderIngenieros(); buildGrid(); }
 function renderIngenieros(){
   const gerentes=equipoState.ingenieros.filter(i=>i.rol==='gerente');
   const ingenieros=equipoState.ingenieros.filter(i=>i.rol==='ingeniero');
@@ -1820,30 +1810,21 @@ function saveGrupo(){
   const nombre=s('grupoNombre').value.trim();
   if(!nombre){alert('Ingresa el nombre del grupo.');return;}
   const editIdx=s('grupoEditIdx').value;
-  let nuevoGrupoIdx=null;
-  if(editIdx!==''){
-    tabulador.grupos[parseInt(editIdx)]={nombre};
-  } else {
-    tabulador.grupos.push({nombre});
-    nuevoGrupoIdx=tabulador.grupos.length-1;
-  }
-  closeModal('modal-grupo'); renderTabulador(); fbSave();
-  // Cascada: ofrecer agregar categoría al grupo recién creado
-  if(nuevoGrupoIdx!==null){
-    setTimeout(()=>openAddCategoriaParaGrupo(nuevoGrupoIdx),200);
-  }
+  if(editIdx!=='') tabulador.grupos[parseInt(editIdx)]={nombre};
+  else tabulador.grupos.push({nombre});
+  closeModal('modal-grupo'); renderTabulador();
 }
 function editGrupo(i){
   s('grupoEditIdx').value=i; s('modal-grupo-title').textContent='Editar grupo';
   s('grupoNombre').value=tabulador.grupos[i].nombre;
-  openModal('modal-grupo');
+  openModal('modal-grupo', false);
 }
 function delGrupo(i){
   tabulador.grupos.splice(i,1);
   // Update category references
   tabulador.categorias=tabulador.categorias.filter(c=>c.grupoIdx!==i);
   tabulador.categorias.forEach(c=>{ if(c.grupoIdx>i) c.grupoIdx--; });
-  renderTabulador(); fbSave();
+  renderTabulador();
 }
 
 function saveCategoria(){
@@ -1851,31 +1832,22 @@ function saveCategoria(){
   const grupoIdx=parseInt(s('catGrupo').value);
   if(!nombre||isNaN(grupoIdx)){alert('Completa todos los campos.');return;}
   const editIdx=s('catEditIdx').value;
-  let nuevaCatIdx=null;
-  if(editIdx!==''){
-    tabulador.categorias[parseInt(editIdx)]={nombre,grupoIdx};
-  } else {
-    tabulador.categorias.push({nombre,grupoIdx});
-    nuevaCatIdx=tabulador.categorias.length-1;
-  }
-  closeModal('modal-categoria'); renderTabulador(); fbSave();
-  // Cascada: ofrecer agregar nivel a la categoría recién creada
-  if(nuevaCatIdx!==null){
-    setTimeout(()=>openAddNivelParaCategoria(nuevaCatIdx),200);
-  }
+  if(editIdx!=='') tabulador.categorias[parseInt(editIdx)]={nombre,grupoIdx};
+  else tabulador.categorias.push({nombre,grupoIdx});
+  closeModal('modal-categoria'); renderTabulador();
 }
 function editCategoria(i){
   const c=tabulador.categorias[i];
   s('catEditIdx').value=i; s('modal-cat-title').textContent='Editar categoría';
   s('catNombre').value=c.nombre;
   populateCatGrupo(); s('catGrupo').value=c.grupoIdx;
-  openModal('modal-categoria');
+  openModal('modal-categoria', false);
 }
 function delCategoria(i){
   tabulador.categorias.splice(i,1);
   tabulador.niveles=tabulador.niveles.filter(n=>n.categoriaIdx!==i);
   tabulador.niveles.forEach(n=>{ if(n.categoriaIdx>i) n.categoriaIdx--; });
-  renderTabulador(); fbSave();
+  renderTabulador();
 }
 
 function saveNivel(){
@@ -1889,18 +1861,9 @@ function saveNivel(){
   if(isNaN(num)||isNaN(catIdx)){alert('Selecciona categoría y nivel.');return;}
   const editIdx=s('nivelEditIdx').value;
   const entry={num,categoriaIdx:catIdx,desc,ascenso,autonomia,salario,incremento};
-  let savedIdx;
-  if(editIdx!==''){
-    savedIdx=parseInt(editIdx);
-    tabulador.niveles[savedIdx]=entry;
-    closeModal('modal-nivel'); renderTabulador(); fbSave();
-  } else {
-    tabulador.niveles.push(entry);
-    savedIdx=tabulador.niveles.length-1;
-    closeModal('modal-nivel'); renderTabulador(); fbSave();
-    // Cascada: mostrar opciones después de crear nivel
-    setTimeout(()=>showPostNivelOptions(savedIdx,catIdx),200);
-  }
+  if(editIdx!=='') tabulador.niveles[parseInt(editIdx)]=entry;
+  else tabulador.niveles.push(entry);
+  closeModal('modal-nivel'); renderTabulador();
 }
 function editNivel(i){
   const n=tabulador.niveles[i];
@@ -1911,62 +1874,9 @@ function editNivel(i){
   populateNivelCategoria(); s('nivelCategoria').value=n.categoriaIdx;
   calcNivelFinal();
   s('nivelSalario').oninput=calcNivelFinal; s('nivelIncremento').oninput=calcNivelFinal;
-  openModal('modal-nivel');
+  openModal('modal-nivel', false);
 }
-function delNivel(i){ tabulador.niveles.splice(i,1); renderTabulador(); fbSave(); }
-
-// ── CASCADA: helpers ──────────────────────────────────────────
-// Abre modal de categoría preseleccionando el grupo
-function openAddCategoriaParaGrupo(grupoIdx){
-  s('catEditIdx').value='';
-  s('modal-cat-title').textContent='Agregar categoría a: '+tabulador.grupos[grupoIdx].nombre;
-  s('catNombre').value='';
-  populateCatGrupo();
-  s('catGrupo').value=grupoIdx;
-  openModal('modal-categoria');
-}
-
-// Abre modal de nivel preseleccionando la categoría y autocompletando el siguiente número
-function openAddNivelParaCategoria(catIdx){
-  const existentes=tabulador.niveles.filter(n=>n.categoriaIdx===catIdx);
-  const siguienteNum=existentes.length>0?Math.max(...existentes.map(n=>n.num))+1:1;
-  s('nivelEditIdx').value='';
-  s('modal-nivel-title').textContent='Agregar nivel — '+tabulador.categorias[catIdx].nombre;
-  s('nivelNum').value=siguienteNum;
-  s('nivelDesc').value=''; s('nivelAscenso').value='';
-  s('nivelAutonomia').value='Ninguna'; s('nivelSalario').value=''; s('nivelIncremento').value='';
-  s('nivelSalarioFinal').value='';
-  populateNivelCategoria();
-  s('nivelCategoria').value=catIdx;
-  s('nivelSalario').oninput=calcNivelFinal; s('nivelIncremento').oninput=calcNivelFinal;
-  openModal('modal-nivel');
-}
-
-// Después de crear un nivel: mini-panel con opciones
-function showPostNivelOptions(nivelIdx, catIdx){
-  const n=tabulador.niveles[nivelIdx];
-  const cat=tabulador.categorias[catIdx];
-  const bd=document.createElement('div');
-  bd.id='post-nivel-backdrop';
-  bd.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:3000;display:flex;align-items:center;justify-content:center;';
-  bd.innerHTML=`
-    <div style="background:var(--card-bg);border-radius:14px;padding:28px 24px;max-width:380px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.35);font-family:'Barlow Condensed',sans-serif;">
-      <div style="font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Nivel guardado ✓</div>
-      <div style="font-size:1.1rem;font-weight:700;color:var(--text-primary);margin-bottom:4px;">Nivel ${n.num} — ${cat.nombre}</div>
-      <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:22px;">¿Qué quieres hacer ahora?</div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <button onclick="closePostNivelOptions();setTimeout(()=>editNivel(${nivelIdx}),150)" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:11px 16px;font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">✎ Editar este nivel</button>
-        <button onclick="closePostNivelOptions();setTimeout(()=>openAddNivelParaCategoria(${catIdx}),150)" style="background:var(--hover-bg);color:var(--text-primary);border:1px solid var(--border-mid);border-radius:8px;padding:11px 16px;font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">+ Agregar otro nivel a esta categoría</button>
-        <button onclick="closePostNivelOptions()" style="background:transparent;color:var(--text-muted);border:none;border-radius:8px;padding:9px 16px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Listo, cerrar</button>
-      </div>
-    </div>`;
-  document.body.appendChild(bd);
-}
-function closePostNivelOptions(){
-  const bd=document.getElementById('post-nivel-backdrop');
-  if(bd) bd.remove();
-}
-// ─────────────────────────────────────────────────────────────
+function delNivel(i){ tabulador.niveles.splice(i,1); renderTabulador(); }
 
 function renderTabulador(){
   const wrap=s('tabuladorWrap');
@@ -2167,197 +2077,148 @@ function resetToHome(){
 function goBack(){ resetToHome(); }
 
 // ═══════════════════════════════════════════════════
-// FIREBASE — SINCRONIZACIÓN
+// INIT
 // ═══════════════════════════════════════════════════
-const FB_CONFIG = {
-  databaseURL: 'https://ingenieria-de-procesos-24ba4-default-rtdb.firebaseio.com'
-};
+// ═══════════════════════════════════════════════════
+// CENTROS DINÁMICOS
+// ═══════════════════════════════════════════════════
+let centros = [
+  { n:"Carpintería",     s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="1"/><path d="M3 7h18M3 12h18M3 17h18"/></svg>` },
+  { n:"Láser",           s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="7.05" y2="7.05"/><line x1="16.95" y1="16.95" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="7.05" y2="16.95"/><line x1="16.95" y1="7.05" x2="19.78" y2="4.22"/></svg>` },
+  { n:"Troqueles",       s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v4l3 2 3-2V3M9 21v-4l3-2 3 2v4"/><line x1="3" y1="9" x2="7" y2="9"/><line x1="17" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="7" y2="15"/><line x1="17" y1="15" x2="21" y2="15"/></svg>` },
+  { n:"Enchapado",       s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="3" width="20" height="4" rx=".5"/><rect x="2" y="10" width="20" height="4" rx=".5"/><rect x="2" y="17" width="20" height="4" rx=".5"/></svg>` },
+  { n:"Est. Mamparas",   s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="3" width="9" height="18" rx=".5"/><rect x="13" y="3" width="9" height="18" rx=".5"/></svg>` },
+  { n:"Est. Sillas",     s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 9V4h14v5"/><rect x="3" y="9" width="18" height="4" rx=".5"/><line x1="7" y1="13" x2="7" y2="21"/><line x1="17" y1="13" x2="17" y2="21"/></svg>` },
+  { n:"Est. Muebles",    s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx=".5"/><line x1="2" y1="14" x2="22" y2="14"/><line x1="12" y1="7" x2="12" y2="21"/></svg>` },
+  { n:"Cajas",           s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>` },
+  { n:"Habilitado",      s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>` },
+  { n:"Pintura",         s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M19 4a2 2 0 0 0-2-2H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h2v2a2 2 0 0 0 4 0v-2h8a2 2 0 0 0 2-2V4z"/><line x1="5" y1="8" x2="15" y2="8"/><line x1="5" y1="12" x2="12" y2="12"/></svg>` },
+  { n:"Telas",           s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 6c2-2 4 0 6-2s4 2 6 0 4-2 6 0M2 12c2-2 4 0 6-2s4 2 6 0 4-2 6 0M2 18c2-2 4 0 6-2s4 2 6 0 4-2 6 0"/></svg>` },
+  { n:"Ens. Muebles",    s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="8" width="20" height="12" rx=".5"/><path d="M6 8V5h12v3"/><line x1="6" y1="20" x2="6" y2="22"/><line x1="18" y1="20" x2="18" y2="22"/><line x1="2" y1="14" x2="22" y2="14"/></svg>` },
+  { n:"Ens. Sillas",     s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 3v6M18 3v6"/><rect x="4" y="9" width="16" height="4" rx=".5"/><path d="M6 13v8M18 13v8"/></svg>` },
+  { n:"Ens. Sillones",   s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 11V8a3 3 0 0 1 6 0v3M16 11V8a3 3 0 0 1 6 0v3"/><rect x="2" y="11" width="20" height="7" rx="1"/><path d="M5 18v2M19 18v2"/><line x1="2" y1="15" x2="22" y2="15"/></svg>` },
+  { n:"Ens. Libreros",   s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="2" width="5" height="20" rx=".5"/><rect x="9" y="6" width="5" height="16" rx=".5"/><rect x="16" y="4" width="6" height="18" rx=".5"/><line x1="2" y1="22" x2="22" y2="22"/></svg>` },
+  { n:"Ens. Mamparas",   s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="2" width="9" height="20" rx=".5"/><rect x="13" y="2" width="9" height="20" rx=".5"/></svg>` },
+  { n:"Ens. Archiveros", s:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="2" width="20" height="5" rx=".5"/><rect x="2" y="9" width="20" height="5" rx=".5"/><rect x="2" y="16" width="20" height="6" rx=".5"/><line x1="8" y1="4.5" x2="16" y2="4.5"/><line x1="8" y1="11.5" x2="16" y2="11.5"/></svg>` },
+];
+const ICONO_GENERICO=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>`;
 
-function _initFirebase(){
-  if(typeof firebase === 'undefined'){
-    setTimeout(_initFirebase, 200);
-    return;
-  }
+function abrirNuevoCentro(){
+  const bd=document.createElement('div');
+  bd.id='nuevo-ct-backdrop';
+  bd.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:3000;display:flex;align-items:center;justify-content:center;';
+  bd.innerHTML=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:28px 24px;max-width:360px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.35);font-family:'Barlow Condensed',sans-serif;">
+    <div style="font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Nuevo centro de trabajo</div>
+    <input id="nuevoCTNombre" type="text" placeholder="Nombre del centro..." style="width:100%;background:var(--input-bg);border:1px solid var(--border-mid);border-radius:8px;padding:10px 12px;font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;font-weight:600;color:var(--text-primary);outline:none;margin-bottom:18px;">
+    <div style="display:flex;gap:10px;">
+      <button onclick="document.getElementById('nuevo-ct-backdrop').remove()" style="flex:1;background:var(--hover-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Cancelar</button>
+      <button onclick="guardarNuevoCentro()" style="flex:2;background:#6fc98c;color:#fff;border:none;border-radius:8px;padding:10px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">+ Crear centro</button>
+    </div>
+  </div>`;
+  bd.querySelector('input').addEventListener('keydown',e=>{if(e.key==='Enter')guardarNuevoCentro();});
+  document.body.appendChild(bd);
+  setTimeout(()=>document.getElementById('nuevoCTNombre')?.focus(),100);
+}
+function guardarNuevoCentro(){
+  const nombre=(document.getElementById('nuevoCTNombre')?.value||'').trim();
+  if(!nombre){alert('Ingresa el nombre del centro.');return;}
+  document.getElementById('nuevo-ct-backdrop')?.remove();
+  const idx=centros.length;
+  centros.push({n:nombre,s:ICONO_GENERICO});
+  state[idx]={ops:[],cons:{disponible:null,items:[]},mod:[],cif:[],equipos:[],params:{disponible:480,dias:22,turnos:1,demanda:0},updatedAt:null};
+  buildGrid(); fbSave();
+}
+function confirmarEliminarCentro(idx){
+  if(idx===null||idx===undefined) return;
+  if(!confirm(`¿Eliminar "${centros[idx].n}"?\nSe borrarán todos sus datos. Esta acción no se puede deshacer.`)) return;
+  equipoState.ingenieros.forEach(ing=>{
+    ing.areas=ing.areas.filter(a=>a!==idx).map(a=>a>idx?a-1:a);
+  });
+  centros.splice(idx,1);
+  const newState={};
+  Object.keys(state).forEach(k=>{
+    const ki=parseInt(k);
+    if(ki<idx) newState[ki]=state[ki];
+    else if(ki>idx) newState[ki-1]=state[ki];
+  });
+  Object.keys(state).forEach(k=>delete state[k]);
+  Object.assign(state,newState);
+  resetToHome(); fbSave();
+}
+
+// ═══════════════════════════════════════════════════
+// FIREBASE
+// ═══════════════════════════════════════════════════
+const FB_CONFIG={ databaseURL:'https://ingenieria-de-procesos-24ba4-default-rtdb.firebaseio.com' };
+let _fbDB=null, _fbRef=null;
+let _fbSyncBusy=false, _fbPendingSave=false, _fbSaveTimer=null;
+
+function _waitFb(){ return new Promise(r=>{ const c=()=>_fbRef?r():setTimeout(c,100); c(); }); }
+
+function _initFb(){
+  if(typeof firebase==='undefined'){ setTimeout(_initFb,200); return; }
   if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
-  window._fbDB = firebase.database();
-  window._fbRef = window._fbDB.ref('control_ct');
-  _fbStartListening();
-}
-
-let _fbDB, _fbRef;
-_initFirebase();
-
-let _fbSyncBusy = false;
-let _fbPendingSave = false;
-let _fbSaveTimer = null;
-
-// Indicador de sync en la UI
-function _fbUpdateSyncUI(state) {
-  const pill = document.getElementById('fb-sync-pill');
-  if (!pill) return;
-  const map = {
-    ok:      { bg:'rgba(111,201,140,0.15)', color:'#3a9c5e', dot:'#6fc98c', label:'Sincronizado' },
-    saving:  { bg:'rgba(232,168,64,0.15)',  color:'#b07a10', dot:'#e8a840', label:'Guardando…'  },
-    error:   { bg:'rgba(224,92,92,0.15)',   color:'#b03030', dot:'#e05c5c', label:'Error sync'  },
-    offline: { bg:'rgba(0,0,0,0.07)',       color:'#777',    dot:'#aaa',    label:'Sin conexión'},
-  };
-  const st = map[state] || map.offline;
-  pill.style.background = st.bg;
-  pill.style.color = st.color;
-  pill.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:${st.dot};display:inline-block;margin-right:5px;flex-shrink:0;"></span>${st.label}`;
-}
-
-// Serializar estado completo
-function _fbSerialize() {
-  return {
-    state: state,
-    equipoState: equipoState,
-    tabulador: tabulador,
-    centros: centros.map(c=>({n:c.n, s:c.s})),
-    _savedAt: Date.now()
-  };
-}
-
-// Aplicar estado descargado
-function _fbApply(data) {
-  if (!data) return;
-  if (data.centros && Array.isArray(data.centros) && data.centros.length>0) {
-    centros.length=0;
-    data.centros.forEach(c=>centros.push({n:c.n,s:c.s||ICONO_GENERICO}));
-  }
-  if (data.state) {
-    // Ensure state has entries for all centros
-    centros.forEach((_,i)=>{
-      if(!state[i]) state[i]={ops:[],cons:{disponible:null,items:[]},mod:[],cif:[],equipos:[],demanda:null,updatedAt:null};
-    });
-    Object.keys(data.state).forEach(k => {
-      const ki=parseInt(k);
-      if(ki<centros.length) Object.assign(state[ki], data.state[k]);
-    });
-  }
-  if (data.equipoState) Object.assign(equipoState, data.equipoState);
-  if (data.tabulador) Object.assign(tabulador, data.tabulador);
-}
-
-function _waitForFbRef(){
-  return new Promise(resolve=>{
-    const check=()=>{ if(window._fbRef){ resolve(); } else { setTimeout(check,100); } };
-    check();
+  _fbDB=firebase.database(); _fbRef=_fbDB.ref('control_ct');
+  _fbRef.on('value',snap=>{
+    if(_fbSyncBusy||_fbPendingSave) return;
+    const remote=snap.val(); if(!remote) return;
+    const localTs=(_fbSerialize()._savedAt||0);
+    if((remote._savedAt||0)>localTs+3000){ _fbApply(remote); buildGrid(); _fbUI('ok'); }
   });
 }
+_initFb();
 
-// Guardar en Firebase (debounce 1s)
-function fbSave() {
-  _fbPendingSave = true;
-  clearTimeout(_fbSaveTimer);
-  _fbSaveTimer = setTimeout(async () => {
-    if (_fbSyncBusy) return;
-    _fbSyncBusy = true;
-    _fbUpdateSyncUI('saving');
-    try {
-      await _waitForFbRef();
-      await window._fbRef.set(_fbSerialize());
-      _fbPendingSave = false;
-      _fbUpdateSyncUI('ok');
-    } catch(e) {
-      console.error('[FB-CT] save error:', e.message);
-      _fbUpdateSyncUI('error');
-    }
-    _fbSyncBusy = false;
-  }, 1000);
+function _fbUI(st){
+  const p=document.getElementById('fb-sync-pill'); if(!p) return;
+  const m={ok:{bg:'rgba(111,201,140,0.15)',color:'#3a9c5e',dot:'#6fc98c',label:'Sincronizado'},saving:{bg:'rgba(232,168,64,0.15)',color:'#b07a10',dot:'#e8a840',label:'Guardando…'},error:{bg:'rgba(224,92,92,0.15)',color:'#b03030',dot:'#e05c5c',label:'Error sync'}};
+  const s2=m[st]||m.saving;
+  p.style.background=s2.bg; p.style.color=s2.color;
+  p.innerHTML=`<span style="width:7px;height:7px;border-radius:50%;background:${s2.dot};display:inline-block;margin-right:5px;"></span>${s2.label}`;
 }
 
-// Cargar desde Firebase al iniciar
-async function fbLoad() {
-  _fbUpdateSyncUI('saving');
-  try {
-    await _waitForFbRef();
-    const snap = await window._fbRef.get();
-    const data = snap.val();
-    if (data) {
-      // Normalizar arrays (Firebase puede convertirlos a objetos)
-      if (data.state) {
-        Object.keys(data.state).forEach(k => {
-          const d = data.state[k];
-          if (d && !Array.isArray(d.ops)) d.ops = d.ops ? Object.values(d.ops) : [];
-          if (d && !Array.isArray(d.mod)) d.mod = d.mod ? Object.values(d.mod) : [];
-          if (d && !Array.isArray(d.cif)) d.cif = d.cif ? Object.values(d.cif) : [];
-          if (d && !Array.isArray(d.equipos)) d.equipos = d.equipos ? Object.values(d.equipos) : [];
-          if (d && d.cons && !Array.isArray(d.cons.items)) d.cons.items = d.cons.items ? Object.values(d.cons.items) : [];
-        });
-      }
-      if (data.equipoState && !Array.isArray(data.equipoState.ingenieros))
-        data.equipoState.ingenieros = data.equipoState.ingenieros ? Object.values(data.equipoState.ingenieros) : [];
-      if (data.tabulador) {
-        ['grupos','categorias','niveles'].forEach(k => {
-          if (!Array.isArray(data.tabulador[k])) data.tabulador[k] = data.tabulador[k] ? Object.values(data.tabulador[k]) : [];
-        });
-      }
-      _fbApply(data);
-      _fbUpdateSyncUI('ok');
-      console.log('[FB-CT] datos cargados ✓');
-    } else {
-      _fbUpdateSyncUI('ok');
-      console.log('[FB-CT] sin datos remotos, iniciando vacío');
-    }
-  } catch(e) {
-    console.error('[FB-CT] load error:', e.message);
-    _fbUpdateSyncUI('error');
+function _fbSerialize(){ return { centros:centros.map(c=>({n:c.n,s:c.s})), state:state, equipoState:equipoState, tabulador:tabulador, _savedAt:Date.now() }; }
+
+function _norm(arr){ return Array.isArray(arr)?arr:(arr?Object.values(arr):[]); }
+function _fbApply(data){
+  if(!data) return;
+  if(data.centros&&Array.isArray(data.centros)&&data.centros.length){
+    centros.length=0; data.centros.forEach(c=>centros.push({n:c.n,s:c.s||ICONO_GENERICO}));
   }
+  centros.forEach((_,i)=>{ if(!state[i]) state[i]={ops:[],cons:{disponible:null,items:[]},mod:[],cif:[],equipos:[],params:{disponible:480,dias:22,turnos:1,demanda:0},updatedAt:null}; });
+  if(data.state) Object.keys(data.state).forEach(k=>{ const ki=parseInt(k); if(ki<centros.length){ const d=data.state[k]; d.ops=_norm(d.ops); d.mod=_norm(d.mod); d.cif=_norm(d.cif); d.equipos=_norm(d.equipos); if(d.cons) d.cons.items=_norm(d.cons.items); if(!d.params) d.params={disponible:480,dias:22,turnos:1,demanda:0}; Object.assign(state[ki],d); }});
+  if(data.equipoState){ data.equipoState.ingenieros=_norm(data.equipoState.ingenieros); Object.assign(equipoState,data.equipoState); }
+  if(data.tabulador){ ['grupos','categorias','niveles'].forEach(k=>{ if(data.tabulador[k]) data.tabulador[k]=_norm(data.tabulador[k]); }); Object.assign(tabulador,data.tabulador); }
 }
 
-// Escuchar cambios en tiempo real
-function _fbStartListening(){
-  window._fbRef.on('value', snap => {
-    if (_fbSyncBusy || _fbPendingSave) return;
-    const remote = snap.val();
-    if (!remote) return;
-    const localTs = _fbSerialize()._savedAt || 0;
-    const remoteTs = remote._savedAt || 0;
-    if (remoteTs > localTs + 3000) {
-      console.log('[FB-CT] cambio remoto detectado, actualizando…');
-      if (remote.state) {
-        Object.keys(remote.state).forEach(k => {
-          const d = remote.state[k];
-          if (d && !Array.isArray(d.ops)) d.ops = d.ops ? Object.values(d.ops) : [];
-          if (d && !Array.isArray(d.mod)) d.mod = d.mod ? Object.values(d.mod) : [];
-          if (d && !Array.isArray(d.cif)) d.cif = d.cif ? Object.values(d.cif) : [];
-          if (d && !Array.isArray(d.equipos)) d.equipos = d.equipos ? Object.values(d.equipos) : [];
-          if (d && d.cons && !Array.isArray(d.cons.items)) d.cons.items = d.cons.items ? Object.values(d.cons.items) : [];
-        });
-      }
-      if (remote.equipoState && !Array.isArray(remote.equipoState.ingenieros))
-        remote.equipoState.ingenieros = remote.equipoState.ingenieros ? Object.values(remote.equipoState.ingenieros) : [];
-      if (remote.tabulador) {
-        ['grupos','categorias','niveles'].forEach(k => {
-          if (!Array.isArray(remote.tabulador[k])) remote.tabulador[k] = remote.tabulador[k] ? Object.values(remote.tabulador[k]) : [];
-        });
-      }
-      _fbApply(remote);
-      if (selectedIdx !== null) {
-        renderMod(); renderOps(); renderCons(); renderCIF(); renderEquipos(); renderTabuladorCentro();
-      }
-      buildGrid();
-      _fbUpdateSyncUI('ok');
-    }
-  });
+function fbSave(){
+  _fbPendingSave=true; clearTimeout(_fbSaveTimer);
+  _fbSaveTimer=setTimeout(async()=>{
+    if(_fbSyncBusy) return; _fbSyncBusy=true; _fbUI('saving');
+    try{ await _waitFb(); await _fbRef.set(_fbSerialize()); _fbPendingSave=false; _fbUI('ok'); }
+    catch(e){ console.error('[FB-CT]',e.message); _fbUI('error'); }
+    _fbSyncBusy=false;
+  },1000);
+}
+
+async function fbLoad(){
+  _fbUI('saving');
+  try{
+    await _waitFb();
+    const snap=await _fbRef.get(); const data=snap.val();
+    if(data){ _fbApply(data); _fbUI('ok'); } else { _fbUI('ok'); }
+  } catch(e){ console.error('[FB-CT] load:',e.message); _fbUI('error'); }
 }
 
 // ═══════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
-  // Add sync pill to top bar
-  const pill = document.createElement('div');
-  pill.id = 'fb-sync-pill';
-  pill.style.cssText = 'position:fixed;bottom:16px;right:18px;z-index:9998;display:inline-flex;align-items:center;padding:5px 12px;border-radius:20px;font-family:"Barlow Condensed",sans-serif;font-size:0.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(0,0,0,0.12);transition:background .2s,color .2s;';
+  const pill=document.createElement('div');
+  pill.id='fb-sync-pill';
+  pill.style.cssText='position:fixed;bottom:16px;right:18px;z-index:9998;display:inline-flex;align-items:center;padding:5px 12px;border-radius:20px;font-family:"Barlow Condensed",sans-serif;font-size:0.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(0,0,0,0.12);transition:background .2s,color .2s;';
   document.body.appendChild(pill);
-  _fbUpdateSyncUI('saving');
-
-  // Load from Firebase
+  _fbUI('saving');
   await fbLoad();
-
-  // Build grid with loaded data
   buildGrid();
 });
 </script>
