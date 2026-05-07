@@ -405,6 +405,19 @@ body.dark .dash-alert-title{color:#e05c5c;}
         </div>
         <div class="sep"></div>
 
+        <!-- ETAPAS DEL PROCESO -->
+        <div>
+          <div class="tab-action-bar">
+            <span class="section-hd">Etapas del proceso</span>
+            <button class="btn-add" onclick="openModal('modal-etapa')" style="background:rgba(91,184,232,0.1);border-color:rgba(91,184,232,0.3);color:#2a7aaa;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Agregar etapa
+            </button>
+          </div>
+          <div id="etapasList"></div>
+          <div style="font-size:11px;color:var(--text-muted);padding:4px 2px;">Sin etapas = proceso de un solo día. Con etapas, las operaciones se agrupan por día.</div>
+        </div>
+        <div class="sep"></div>
         <!-- SALARIO / MOD -->
         <div>
           <div class="tab-action-bar">
@@ -760,6 +773,29 @@ body.dark .dash-alert-title{color:#e05c5c;}
   </div>
 </div>
 
+<!-- Modal: Etapa -->
+<div class="modal-backdrop" id="modal-etapa" onclick="closeModalIfBackdrop(event,'modal-etapa')">
+  <div class="modal-box">
+    <div class="modal-header"><span class="modal-title" id="modal-etapa-title">Nueva etapa</span><button class="modal-close" onclick="closeModal('modal-etapa')">✕</button></div>
+    <input type="hidden" id="etapaEditIdx" value="">
+    <div class="form-group"><label>Nombre de la etapa</label><input type="text" id="etapaNombre" placeholder="Ej. Día 1 — Corte y Doblez"></div>
+    <div class="form-row">
+      <div class="form-group" style="flex:0 0 100px;"><label>Día</label><input type="number" id="etapaDia" placeholder="1" min="1" step="1" value="1"></div>
+      <div class="form-group" style="flex:1;">
+        <label>Modo de operación</label>
+        <select id="etapaModo">
+          <option value="serie">Serie — operadores en secuencia</option>
+          <option value="paralelo">Paralelo — operadores/máquinas simultáneas</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-etapa')">Cancelar</button>
+      <button class="btn btn-accent" onclick="saveEtapa()">Guardar →</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Operación -->
 <div class="modal-backdrop" id="modal-ops" onclick="closeModalIfBackdrop(event,'modal-ops')">
   <div class="modal-box">
@@ -768,6 +804,12 @@ body.dark .dash-alert-title{color:#e05c5c;}
     <div class="form-row">
       <div class="form-group" style="flex:2;min-width:180px;"><label>Nombre de la operación</label><input type="text" id="opName" placeholder="Ej. Corte de piezas"></div>
       <div class="form-group" style="flex:0 0 120px;"><label>Minutos</label><input type="number" id="opMin" placeholder="0" min="0" step="0.01"></div>
+    </div>
+    <div class="form-group">
+      <label>Etapa</label>
+      <select id="opEtapa">
+        <option value="">— Sin etapa (proceso de un día) —</option>
+      </select>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-ops')">Cancelar</button>
@@ -979,7 +1021,7 @@ function getAc(i){ return acs[i % acs.length]; }
 const state = {};
 function initState(){
   centros.forEach((_, i) => {
-    if(!state[i]) state[i] = { ops:[], cons:{ disponible:null, items:[] }, mod:[], cif:[], equipos:[], params:{ disponible:480, dias:22, turnos:1, demanda:0 }, asignaciones:{}, updatedAt:null };
+    if(!state[i]) state[i] = { ops:[], cons:{ disponible:null, items:[] }, mod:[], cif:[], equipos:[], params:{ disponible:480, dias:22, turnos:1, demanda:0, modo:'serie' }, etapas:[], asignaciones:{}, updatedAt:null };
   });
 }
 
@@ -1025,10 +1067,19 @@ function openModal(id, isNew=true){
       s('modCategoria').innerHTML = '<option value="">— Seleccionar grupo primero —</option>';
       buildHabilidadesCheck('');
     }
+    if (id === 'modal-etapa') {
+      s('etapaEditIdx').value = '';
+      s('modal-etapa-title').textContent = 'Nueva etapa';
+      s('etapaNombre').value = '';
+      s('etapaDia').value = ((cur().etapas||[]).length>0 ? Math.max(...(cur().etapas||[]).map(e=>e.dia)) : 0)+1;
+      s('etapaModo').value = 'serie';
+    }
     if (id === 'modal-ops') {
       s('opsEditIdx').value = '';
       s('modal-ops-title').textContent = 'Nueva operación';
       s('opName').value = ''; s('opMin').value = '';
+      populateOpEtapa();
+      s('opEtapa').value = '';
     }
     if (id === 'modal-cons') {
       s('consEditIdx').value = '';
@@ -1084,7 +1135,7 @@ function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 function closeModalIfBackdrop(e, id){ if (e.target === document.getElementById(id)) closeModal(id); }
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    ['modal-mod','modal-ops','modal-cons','modal-cif','modal-equipo','modal-ingeniero','modal-grupo','modal-categoria','modal-nivel'].forEach(id => closeModal(id));
+    ['modal-etapa','modal-mod','modal-ops','modal-cons','modal-cif','modal-equipo','modal-ingeniero','modal-grupo','modal-categoria','modal-nivel'].forEach(id => closeModal(id));
   }
 });
 
@@ -1230,6 +1281,8 @@ function selectCentro(idx){
   renderMod();
   renderOps();
   renderCons();
+  renderEtapas();
+  populateOpEtapa();
   renderAsignacion();
   renderCIF();
   renderEquipos();
@@ -1417,10 +1470,12 @@ function renderMod(){
 function saveOperacion(){
   const nombre = s('opName').value.trim();
   const min = parseFloat(s('opMin').value);
+  const etapaVal = s('opEtapa').value;
+  const etapaIdx = etapaVal!=='' ? parseInt(etapaVal) : undefined;
   if(!nombre || isNaN(min) || min<0){ alert('Ingresa nombre y minutos.'); return; }
   const editIdx = s('opsEditIdx').value;
-  const entry = {nombre, min};
-  if(editIdx !== '') cur().ops[parseInt(editIdx)] = entry;
+  const entry = {nombre, min, etapaIdx};
+  if(editIdx !== '') cur().ops[parseInt(editIdx)] = {...(cur().ops[parseInt(editIdx)]||{}), ...entry};
   else cur().ops.push(entry);
   markUpdated(); closeModal('modal-ops'); renderOps(); renderAsignacion();
 }
@@ -1429,24 +1484,76 @@ function editOperacion(i){
   s('opsEditIdx').value = i;
   s('modal-ops-title').textContent = 'Editar operación';
   s('opName').value = o.nombre; s('opMin').value = o.min;
+  populateOpEtapa();
+  s('opEtapa').value = o.etapaIdx!==undefined ? o.etapaIdx : '';
   openModal('modal-ops', false);
 }
-function delOperacion(i){ cur().ops.splice(i,1); renderOps(); }
+function delOperacion(i){ cur().ops.splice(i,1); markUpdated(); renderOps(); renderAsignacion(); }
 function renderOps(){
   const ops = cur().ops;
+  const etapas = cur().etapas||[];
   const c = s('opsList');
   if(!ops.length){ c.innerHTML=`<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:13px;">Sin operaciones registradas</div>`; return; }
-  c.innerHTML = ops.map((o,i)=>{
-    const checked = o.activa!==false ? 'checked' : '';
-    return`<div class="item-row" style="opacity:${o.activa===false?'0.45':'1'}">
-      <input type="checkbox" ${checked} onchange="togglePresencia('ops',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
-      <div class="item-num">${String(i+1).padStart(2,'0')}</div>
-      <div class="item-name">${o.nombre}</div>
-      <div class="item-min">${o.min.toFixed(2)} min</div>
-      <button class="item-edit" onclick="editOperacion(${i})">✎</button>
-      <button class="item-del" onclick="delOperacion(${i})">✕</button>
-    </div>`;
-  }).join('');
+  if(etapas.length){
+    const sinEtapa = ops.filter(o=>o.etapaIdx===undefined||o.etapaIdx===null);
+    const diasUnicos = [...new Set(etapas.map(e=>e.dia))].sort((a,b)=>a-b);
+    let html = '';
+    diasUnicos.forEach(dia=>{
+      const etapasDia = etapas.filter(e=>e.dia===dia);
+      html += `<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px;padding:4px 8px;background:var(--surface2);border-radius:6px;">📅 Día ${dia}</div>`;
+      etapasDia.forEach(etapa=>{
+        const eIdx = etapas.indexOf(etapa);
+        const opsEtapa = ops.filter(o=>o.etapaIdx===eIdx);
+        const modeColor = etapa.modo==='paralelo'?'var(--ok)':'var(--accent)';
+        html += `<div style="margin-bottom:8px;border-left:3px solid ${modeColor};padding-left:10px;">
+          <div style="font-size:11px;font-weight:600;color:${modeColor};margin-bottom:4px;">${etapa.nombre} · ${etapa.modo}</div>
+          ${opsEtapa.map(o=>{
+            const i=ops.indexOf(o);
+            const checked=o.activa!==false?'checked':'';
+            return`<div class="item-row" style="opacity:${o.activa===false?'0.45':'1'}">
+              <input type="checkbox" ${checked} onchange="togglePresencia('ops',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
+              <div class="item-num">${String(i+1).padStart(2,'0')}</div>
+              <div class="item-name">${o.nombre}</div>
+              <div class="item-min">${o.min.toFixed(2)} min</div>
+              <button class="item-edit" onclick="editOperacion(${i})">✎</button>
+              <button class="item-del" onclick="delOperacion(${i})">✕</button>
+            </div>`;
+          }).join('')||`<div style="padding:6px 8px;font-size:12px;color:var(--text-muted);">Sin operaciones asignadas</div>`}
+        </div>`;
+      });
+      html += '</div>';
+    });
+    if(sinEtapa.length){
+      html += `<div style="border-left:3px solid var(--border-mid);padding-left:10px;margin-bottom:8px;">
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">Sin etapa</div>
+        ${sinEtapa.map(o=>{
+          const i=ops.indexOf(o);
+          const checked=o.activa!==false?'checked':'';
+          return`<div class="item-row" style="opacity:${o.activa===false?'0.45':'1'}">
+            <input type="checkbox" ${checked} onchange="togglePresencia('ops',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
+            <div class="item-num">${String(i+1).padStart(2,'0')}</div>
+            <div class="item-name">${o.nombre}</div>
+            <div class="item-min">${o.min.toFixed(2)} min</div>
+            <button class="item-edit" onclick="editOperacion(${i})">✎</button>
+            <button class="item-del" onclick="delOperacion(${i})">✕</button>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+    c.innerHTML = html;
+  } else {
+    c.innerHTML = ops.map((o,i)=>{
+      const checked = o.activa!==false ? 'checked' : '';
+      return`<div class="item-row" style="opacity:${o.activa===false?'0.45':'1'}">
+        <input type="checkbox" ${checked} onchange="togglePresencia('ops',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
+        <div class="item-num">${String(i+1).padStart(2,'0')}</div>
+        <div class="item-name">${o.nombre}</div>
+        <div class="item-min">${o.min.toFixed(2)} min</div>
+        <button class="item-edit" onclick="editOperacion(${i})">✎</button>
+        <button class="item-del" onclick="delOperacion(${i})">✕</button>
+      </div>`;
+    }).join('');
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1690,17 +1797,73 @@ function calcularResultados(){
   const tiempoReal = disponible - totalCons;
   const totalOps = opsActivas.reduce((a,o)=>a+o.min,0);
 
-  // TC basado en asignación real y modo
+  const etapas = data.etapas||[];
+  const hayEtapas = etapas.length>0;
   const asigs = data.asignaciones || {};
   const hayAsignacion = opsActivas.some(o=>(asigs[data.ops.indexOf(o)]||[]).length>0);
 
   let tiempoCiclo, tcBalanceo, tcCuello, tcLabel, cargaPorOp={};
   const opMaxObj = opsActivas.length>0 ? opsActivas.reduce((a,o)=>o.min>a.min?o:a) : null;
   tcCuello = opMaxObj ? opMaxObj.min : 0;
+  let etapasInfo = []; // para mostrar en resultados
+  let diasCiclo = 1;
 
-  if(modo === 'paralelo'){
-    // Líneas paralelas: TC = carga del operador más pesado (cada uno hace ciclo completo)
-    // Pero la capacidad se multiplica por número de operadores
+  if(hayEtapas){
+    // Calcular TC por etapa y encontrar cuello entre etapas
+    diasCiclo = Math.max(...etapas.map(e=>e.dia), 1);
+    const diasUnicos = [...new Set(etapas.map(e=>e.dia))].sort((a,b)=>a-b);
+
+    diasUnicos.forEach(dia=>{
+      const etapasDia = etapas.filter(e=>e.dia===dia);
+      let tcDia = 0;
+      etapasDia.forEach(etapa=>{
+        const eIdx = etapas.indexOf(etapa);
+        const opsEtapa = opsActivas.filter(o=>o.etapaIdx===eIdx);
+        if(!opsEtapa.length) return;
+        let tcEtapa;
+        if(etapa.modo==='paralelo'){
+          // Paralelo: TC = operación más lenta (máquinas simultáneas)
+          tcEtapa = Math.max(...opsEtapa.map(o=>o.min));
+        } else {
+          // Serie: TC = suma de operaciones del operador más cargado
+          if(hayAsignacion){
+            const cargaLocal={};
+            modPresentes.forEach(m=>{ cargaLocal[data.mod.indexOf(m)]=0; });
+            opsEtapa.forEach(o=>{
+              const opIdx=data.ops.indexOf(o);
+              (asigs[opIdx]||[]).forEach(mIdx=>{ if(cargaLocal[mIdx]!==undefined) cargaLocal[mIdx]+=o.min; });
+            });
+            tcEtapa = Math.max(...Object.values(cargaLocal), 0);
+          } else {
+            tcEtapa = opsEtapa.reduce((a,o)=>a+o.min,0);
+          }
+        }
+        // En el mismo día, etapas en paralelo (simultáneas) → max
+        tcDia = etapasDia.length>1 ? Math.max(tcDia, tcEtapa) : tcEtapa;
+        etapasInfo.push({nombre:etapa.nombre, dia, modo:etapa.modo, tc:tcEtapa, ops:opsEtapa});
+      });
+      // Entre días: el proceso es secuencial → la capacidad la limita el día más lento
+      cargaPorOp['dia'+dia] = tcDia;
+    });
+
+    // TC del proceso completo = día más lento (cuello entre días)
+    const tcPorDia = Object.values(cargaPorOp);
+    tiempoCiclo = tcPorDia.length>0 ? Math.max(...tcPorDia) : 0;
+    const cuelloDia = Object.keys(cargaPorOp).reduce((a,b)=>cargaPorOp[a]>cargaPorOp[b]?a:b,'dia1');
+    tcLabel = `Proceso multi-día (${diasCiclo} días) — cuello: ${cuelloDia.replace('dia','Día ')} (${tiempoCiclo.toFixed(2)} min)`;
+    tcBalanceo = tiempoCiclo;
+
+    // Para balanceo individual de operadores
+    cargaPorOp = {};
+    modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = 0; });
+    if(hayAsignacion){
+      opsActivas.forEach(o=>{
+        const opIdx = data.ops.indexOf(o);
+        (asigs[opIdx]||[]).forEach(mIdx=>{ if(cargaPorOp[mIdx]!==undefined) cargaPorOp[mIdx]+=o.min; });
+      });
+    }
+
+  } else if(modo === 'paralelo'){
     if(hayAsignacion){
       modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = 0; });
       opsActivas.forEach(o=>{
@@ -1709,14 +1872,12 @@ function calcularResultados(){
       });
       tiempoCiclo = Math.max(...Object.values(cargaPorOp), 0);
     } else {
-      // Sin asignación en paralelo = cada operador hace todo
       tiempoCiclo = totalOps;
       modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = totalOps; });
     }
     tcBalanceo = totalOps;
     tcLabel = `Paralelo — cada operador hace ciclo completo (${tiempoCiclo.toFixed(2)} min)`;
   } else {
-    // Serie: TC = operador más cargado según asignación
     if(hayAsignacion){
       modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = 0; });
       opsActivas.forEach(o=>{
@@ -1735,17 +1896,16 @@ function calcularResultados(){
     }
   }
 
-  // Capacidad: en paralelo se multiplica por operadores
-  const piezasPorCiclo = modo==='paralelo' ? numOperadores : 1;
+  // Capacidad: en paralelo se multiplica por operadores, en multi-día se divide por días del ciclo
+  const piezasPorCiclo = (!hayEtapas && modo==='paralelo') ? numOperadores : 1;
   const capDia = tiempoCiclo>0 ? Math.floor(tiempoReal/tiempoCiclo)*piezasPorCiclo : 0;
   const demandaDia = demanda>0 ? demanda/dias : 0;
   const taktTime = demandaDia>0 ? tiempoReal/demandaDia : 0;
 
-  // Eficiencia: trabajo útil / trabajo total disponible
   const eficiencia = (tiempoCiclo>0&&numOperadores>0) ? (totalOps/(tiempoCiclo*numOperadores)*100) : 0;
-  const opsTeoricos = taktTime>0 ? Math.ceil(totalOps/(taktTime*(modo==='paralelo'?numOperadores:1))) : null;
-  const maxCarga = Math.max(...Object.values(cargaPorOp),0.01);
-  const tiempoMuerto = modo==='serie'&&tiempoCiclo>0 ? tiempoCiclo - (totalOps/numOperadores) : 0;
+  const opsTeoricos = taktTime>0 ? Math.ceil(totalOps/(taktTime*((!hayEtapas&&modo==='paralelo')?numOperadores:1))) : null;
+  const maxCarga = Math.max(...Object.values(cargaPorOp).filter(v=>typeof v==='number'),0.01);
+  const tiempoMuerto = (!hayEtapas&&modo==='serie')&&tiempoCiclo>0 ? tiempoCiclo - (totalOps/numOperadores) : 0;
 
   let estadoColor = 'var(--text-muted)', estadoLabel = 'Captura Takt Time para comparar';
   if(taktTime>0 && tiempoCiclo>0){
@@ -1767,7 +1927,17 @@ function calcularResultados(){
   s('resGrid').innerHTML=
     /* ── BLOQUE 1: TIEMPOS ── */
     `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow);">
-      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px;">⏱ Tiempos <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:${modo==='paralelo'?'var(--ok-bg)':'var(--accent-bg)'};color:${modo==='paralelo'?'var(--ok)':'var(--accent)'};">${modo==='paralelo'?'Paralelo':'Serie'}</span></div>
+      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px;">⏱ Tiempos
+        <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:${hayEtapas?'rgba(91,184,232,0.12)':modo==='paralelo'?'var(--ok-bg)':'var(--accent-bg)'};color:${hayEtapas?'#2a7aaa':modo==='paralelo'?'var(--ok)':'var(--accent)'};">${hayEtapas?diasCiclo+' días':modo==='paralelo'?'Paralelo':'Serie'}</span>
+      </div>
+      ${hayEtapas?`<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border2);">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">TC por etapa</div>
+        ${etapasInfo.map(e=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;">
+          <span style="font-size:10px;padding:1px 6px;border-radius:20px;background:${e.modo==='paralelo'?'var(--ok-bg)':'var(--accent-bg)'};color:${e.modo==='paralelo'?'var(--ok)':'var(--accent)'};font-weight:600;">Día ${e.dia}</span>
+          <span style="color:var(--text-primary);font-weight:500;">${e.nombre}</span>
+          <span style="margin-left:auto;font-family:var(--font-mono);font-weight:700;color:${e.tc===tiempoCiclo?'var(--bad)':'var(--text-tertiary)'};">${e.tc.toFixed(2)} min${e.tc===tiempoCiclo?' 🔴 cuello':''}</span>
+        </div>`).join('')}
+      </div>`:''}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px;">
         <div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Disponible</div>
