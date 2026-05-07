@@ -4633,6 +4633,21 @@ function mergeDB(local, remote){
       if(!ld) return rd;
       const remoteRank = STATUS_RANK[rd.status]||0;
       const localRank  = STATUS_RANK[ld.status]||0;
+      // Si fue rechazado localmente más reciente que el remoto, respetar el rechazo
+      const localRejected = ld.rejectedAt && (!rd.rejectedAt || ld.rejectedAt >= rd.rejectedAt);
+      if(localRejected && ld.status==='En progreso'){
+        return Object.assign({}, rd, {
+          status:      ld.status,
+          completedAt: ld.completedAt,
+          submittedAt: ld.submittedAt,
+          submittedBy: ld.submittedBy,
+          rejectedAt:  ld.rejectedAt,
+          rejectedBy:  ld.rejectedBy,
+          scorePenalty:ld.scorePenalty,
+          blocked:     ld.blocked,
+          blockSince:  ld.blockSince,
+        });
+      }
       if(localRank > remoteRank){
         console.log('[MERGE] conservando estado local más avanzado:',ld.title,'|',rd.status,'→',ld.status);
         return Object.assign({}, rd, {
