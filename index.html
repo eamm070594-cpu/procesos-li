@@ -1463,6 +1463,8 @@ function userName(id){const u=byId(DB.users,id);return u?u.name:'—'}
 function projName(id){const p=byId(DB.projects,id);return p?p.name:'—'}
 function deleteOrphanDel(id){
   if(!confirm('¿Eliminar este entregable sin proyecto?')) return;
+  if(!DB._deleted) DB._deleted={};
+  DB._deleted[id]=Date.now();
   DB.deliverables=DB.deliverables.filter(d=>d.id!==id);
   fbPush();
   renderDashboard();
