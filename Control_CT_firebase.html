@@ -375,100 +375,105 @@ body.dark .dash-alert-title{color:#e05c5c;}
       <div class="tab-panel active" id="tab-dist">
 
         <!-- PARÁMETROS DEL CENTRO -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:4px;">
-          <div class="section-hd" style="margin-bottom:12px;">Parámetros del centro</div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;">
-            <div class="form-group" style="flex:0 0 150px;">
-              <label>Tiempo disponible (min)</label>
-              <input type="number" id="paramDisponible" placeholder="480" min="0" step="1" oninput="guardarParams()">
-            </div>
-            <div class="form-group" style="flex:0 0 150px;">
-              <label>Días laborables / mes</label>
-              <input type="number" id="paramDias" placeholder="22" min="1" step="1" oninput="guardarParams()">
-            </div>
-            <div class="form-group" style="flex:0 0 150px;">
-              <label>Turnos</label>
-              <input type="number" id="paramTurnos" placeholder="1" min="1" step="1" oninput="guardarParams()">
-            </div>
-            <div class="form-group" style="flex:0 0 150px;">
-              <label>Demanda mensual (pzas)</label>
-              <input type="number" id="paramDemanda" placeholder="0" min="0" step="1" oninput="guardarParams()">
-            </div>
-            <div class="form-group" style="flex:0 0 180px;">
-              <label>Modo de operación</label>
-              <select id="paramModo" onchange="guardarParams()">
-                <option value="serie">Serie — 1 pieza por TC</option>
-                <option value="paralelo">Paralelo — N piezas por TC</option>
-              </select>
+        <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:16px 20px;margin-bottom:8px;box-shadow:var(--shadow);">
+          <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleBloque('blq-params')">
+            <div class="section-hd" style="margin-bottom:0;">⚙️ Parámetros del centro</div>
+            <span id="blq-params-icon" style="font-size:16px;color:var(--text-muted);">▾</span>
+          </div>
+          <div id="blq-params" style="margin-top:12px;">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <div class="form-group" style="flex:0 0 150px;"><label>Tiempo disponible (min)</label><input type="number" id="paramDisponible" placeholder="480" min="0" step="1" oninput="guardarParams()"></div>
+              <div class="form-group" style="flex:0 0 150px;"><label>Días laborables / mes</label><input type="number" id="paramDias" placeholder="22" min="1" step="1" oninput="guardarParams()"></div>
+              <div class="form-group" style="flex:0 0 150px;"><label>Turnos</label><input type="number" id="paramTurnos" placeholder="1" min="1" step="1" oninput="guardarParams()"></div>
+              <div class="form-group" style="flex:0 0 150px;"><label>Demanda mensual (pzas)</label><input type="number" id="paramDemanda" placeholder="0" min="0" step="1" oninput="guardarParams()"></div>
+              <div class="form-group" style="flex:0 0 180px;"><label>Modo de operación</label>
+                <select id="paramModo" onchange="guardarParams()">
+                  <option value="serie">Serie — 1 pieza por TC</option>
+                  <option value="paralelo">Paralelo — N piezas por TC</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
-        <div class="sep"></div>
 
-        <!-- ETAPAS DEL PROCESO -->
-        <div>
-          <div class="tab-action-bar">
-            <span class="section-hd">Etapas del proceso</span>
-            <button class="btn-add" onclick="openModal('modal-etapa')" style="background:rgba(91,184,232,0.1);border-color:rgba(91,184,232,0.3);color:#2a7aaa;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Agregar etapa
-            </button>
-          </div>
-          <div id="etapasList"></div>
-          <div style="font-size:11px;color:var(--text-muted);padding:4px 2px;">Sin etapas = proceso de un solo día. Con etapas, las operaciones se agrupan por día.</div>
-        </div>
-        <div class="sep"></div>
-        <!-- SALARIO / MOD -->
-        <div>
-          <div class="tab-action-bar">
-            <span class="section-hd">Personal (Salarios MOD)</span>
-            <button class="btn-add" onclick="openModal('modal-mod')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Añadir operario
-            </button>
-          </div>
-          <div id="modListWrap"><div class="items-list"><div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin personal registrado</div></div></div>
-        </div>
-        <div class="sep"></div>
-        <!-- OPERACIONES -->
-        <div>
-          <div class="tab-action-bar">
-            <span class="section-hd">Operaciones registradas</span>
-            <button class="btn-add" onclick="openModal('modal-ops')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Añadir operación
-            </button>
-          </div>
-          <div class="items-list" id="opsList"><div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin operaciones registradas</div></div>
-        </div>
-        <div class="sep"></div>
-        <!-- ASIGNACIÓN OPERACIONES → OPERADORES -->
-        <div>
-          <div class="tab-action-bar">
-            <span class="section-hd">Asignación de operaciones</span>
-            <button class="btn-add" onclick="autoBalancear()" style="background:var(--ok-bg);border-color:rgba(30,158,94,0.3);color:var(--ok);">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-              Auto-balancear
-            </button>
-          </div>
-          <div id="asignacionWrap"></div>
-        </div>
-        <div class="sep"></div>
-        <div>
-          <div class="tab-action-bar">
-            <span class="section-hd">Consideraciones de tiempo</span>
+        <!-- CONSIDERACIONES DE TIEMPO -->
+        <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:16px 20px;margin-bottom:8px;box-shadow:var(--shadow);">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;" onclick="toggleBloque('blq-cons')">
+              <div class="section-hd" style="margin-bottom:0;">⏸ Consideraciones de tiempo</div>
+              <span id="blq-cons-icon" style="font-size:16px;color:var(--text-muted);">▾</span>
+            </div>
             <button class="btn-add" onclick="openModal('modal-cons')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Añadir consideración
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Añadir
             </button>
           </div>
-          <div class="items-list" id="consList"><div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;">Sin consideraciones</div></div>
+          <div id="blq-cons" style="margin-top:12px;">
+            <div class="items-list" id="consList"><div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:13px;">Sin consideraciones</div></div>
+          </div>
         </div>
-        <div>
-          <button class="btn btn-accent" style="width:100%;" onclick="calcularResultados()">Calcular resultados</button>
+
+        <!-- PERSONAL MOD -->
+        <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:16px 20px;margin-bottom:8px;box-shadow:var(--shadow);">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;" onclick="toggleBloque('blq-mod')">
+              <div class="section-hd" style="margin-bottom:0;">👷 Personal (Salarios MOD)</div>
+              <span id="blq-mod-icon" style="font-size:16px;color:var(--text-muted);">▾</span>
+            </div>
+            <button class="btn-add" onclick="openModal('modal-mod')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Añadir
+            </button>
+          </div>
+          <div id="blq-mod" style="margin-top:12px;">
+            <div id="modListWrap"><div class="items-list"><div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:13px;">Sin personal registrado</div></div></div>
+          </div>
+        </div>
+
+        <!-- OPERACIONES -->
+        <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:16px 20px;margin-bottom:8px;box-shadow:var(--shadow);">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;" onclick="toggleBloque('blq-ops')">
+              <div class="section-hd" style="margin-bottom:0;">🔧 Operaciones registradas</div>
+              <span id="blq-ops-icon" style="font-size:16px;color:var(--text-muted);">▾</span>
+            </div>
+            <button class="btn-add" onclick="openModal('modal-ops')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Añadir
+            </button>
+          </div>
+          <div id="blq-ops" style="margin-top:12px;">
+            <!-- Lista -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:pointer;" onclick="toggleBloque('blq-ops-lista')">
+              <span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">▾ Lista</span>
+            </div>
+            <div id="blq-ops-lista">
+              <div class="items-list" id="opsList"><div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:13px;">Sin operaciones registradas</div></div>
+            </div>
+            <!-- Diagrama de flujo -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:8px;cursor:pointer;" onclick="toggleBloque('blq-ops-diagrama');renderDiagrama()">
+              <span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;" id="blq-ops-diagrama-icon">▸ Diagrama de flujo</span>
+            </div>
+            <div id="blq-ops-diagrama" style="display:none;">
+              <div id="diagramaWrap" style="overflow-x:auto;padding:8px 0;"></div>
+            </div>
+            <!-- Asignación -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:8px;">
+              <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="toggleBloque('blq-asignacion')">
+                <span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;" id="blq-asignacion-icon">▸ Asignación de operadores</span>
+              </div>
+              <button class="btn-add" onclick="autoBalancear()" style="background:var(--ok-bg);border-color:rgba(30,158,94,0.3);color:var(--ok);font-size:11px;padding:4px 10px;">
+                ⚡ Auto-balancear
+              </button>
+            </div>
+            <div id="blq-asignacion" style="display:none;">
+              <div id="asignacionWrap"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CALCULAR -->
+        <div style="margin-bottom:8px;">
+          <button class="btn btn-accent" style="width:100%;padding:14px;" onclick="calcularResultados()">▶ Calcular resultados</button>
         </div>
         <div id="resultsBlock" style="display:none;">
-          <div class="section-hd">Resultados</div>
           <div id="resGrid"></div>
         </div>
         <div class="footer">Linea Italia — Eccellenza in Mobile</div>
@@ -805,11 +810,21 @@ body.dark .dash-alert-title{color:#e05c5c;}
       <div class="form-group" style="flex:2;min-width:180px;"><label>Nombre de la operación</label><input type="text" id="opName" placeholder="Ej. Corte de piezas"></div>
       <div class="form-group" style="flex:0 0 120px;"><label>Minutos</label><input type="number" id="opMin" placeholder="0" min="0" step="0.01"></div>
     </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:0 0 120px;">
+        <label>Recursos simultáneos</label>
+        <input type="number" id="opRecursos" placeholder="1" min="1" step="1" value="1">
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">personas/máquinas en paralelo</div>
+      </div>
+      <div class="form-group" style="flex:0 0 120px;">
+        <label>Día del proceso</label>
+        <input type="number" id="opDia" placeholder="1" min="1" step="1" value="1">
+      </div>
+    </div>
     <div class="form-group">
-      <label>Etapa</label>
-      <select id="opEtapa">
-        <option value="">— Sin etapa (proceso de un día) —</option>
-      </select>
+      <label>Depende de (operaciones predecesoras)</label>
+      <div id="opDependenciasWrap" style="display:flex;flex-direction:column;gap:5px;margin-top:4px;max-height:140px;overflow-y:auto;"></div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Sin selección = operación de inicio</div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-ops')">Cancelar</button>
@@ -1041,6 +1056,95 @@ let dashMainChart = null, dashModChart = null, dashCifChart = null;
 function s(id){ return document.getElementById(id); }
 function cur(){ return state[selectedIdx]; }
 
+// ── BLOQUES COLAPSABLES ────────────────────────────
+function toggleBloque(id){
+  const el = s(id); if(!el) return;
+  const icon = s(id+'-icon');
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : '';
+  if(icon){
+    if(id.includes('diagrama')||id.includes('asignacion')){
+      icon.textContent = isOpen ? '▸ '+icon.textContent.replace(/^[▾▸] /,'') : '▾ '+icon.textContent.replace(/^[▾▸] /,'');
+    } else {
+      icon.textContent = isOpen ? '▸' : '▾';
+    }
+  }
+}
+
+// ── DIAGRAMA DE FLUJO ─────────────────────────────
+function renderDiagrama(){
+  const wrap = s('diagramaWrap'); if(!wrap) return;
+  const ops = (cur()&&cur().ops)||[];
+  if(!ops.length){ wrap.innerHTML=`<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Sin operaciones</div>`; return; }
+
+  const critPath = calcCaminoCritico(ops);
+  const diasUnicos = [...new Set(ops.map(o=>o.dia||1))].sort((a,b)=>a-b);
+
+  let html = `<div style="display:flex;gap:0;align-items:stretch;">`;
+
+  diasUnicos.forEach((dia, dIdx)=>{
+    const opsDia = ops.filter(o=>(o.dia||1)===dia);
+    html += `<div style="display:flex;flex-direction:column;align-items:center;min-width:0;">`;
+    if(dIdx>0) html += `<div style="display:flex;align-items:center;padding:0 4px;"><div style="width:28px;height:2px;background:var(--border-mid);"></div></div>`;
+
+    html += `<div style="background:var(--surface2);border-radius:8px;padding:6px 10px;margin-bottom:6px;text-align:center;">
+      <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Día ${dia}</span>
+    </div>`;
+
+    html += `<div style="display:flex;flex-direction:column;gap:8px;align-items:center;">`;
+    opsDia.forEach(o=>{
+      const i = ops.indexOf(o);
+      const enCamino = critPath.includes(i);
+      const tcReal = ((o.min||0)/(o.recursos||1)).toFixed(2);
+      const depNames = (o.depende||[]).map(d=>ops[d]?ops[d].nombre.split(' ')[0]:'?').join('+');
+      const inactive = o.activa===false;
+      html += `<div style="
+        background:var(--surface);
+        border:2px solid ${enCamino&&!inactive?'var(--bad)':'var(--border2)'};
+        border-radius:var(--r);
+        padding:10px 14px;
+        min-width:120px;
+        max-width:160px;
+        text-align:center;
+        opacity:${inactive?'0.4':'1'};
+        box-shadow:${enCamino&&!inactive?'0 0 0 3px rgba(217,53,53,0.12)':'var(--shadow)'};
+        position:relative;
+      ">
+        ${enCamino&&!inactive?'<div style="position:absolute;top:-8px;right:-8px;background:var(--bad);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:2px 5px;">CRÍTICO</div>':''}
+        <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">${o.nombre}</div>
+        <div style="font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;">${tcReal} min</div>
+        ${o.recursos>1?`<div style="font-size:10px;color:var(--ok);margin-top:2px;">×${o.recursos} recursos</div>`:''}
+        ${depNames?`<div style="font-size:10px;color:var(--text-muted);margin-top:3px;border-top:1px solid var(--border2);padding-top:3px;">← ${depNames}</div>`:'<div style="font-size:10px;color:var(--text-muted);margin-top:3px;">inicio</div>'}
+      </div>`;
+    });
+    html += `</div></div>`;
+
+    // Flecha entre días
+    if(dIdx < diasUnicos.length-1){
+      html += `<div style="display:flex;align-items:center;justify-content:center;padding:0 4px;align-self:center;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><path d="M5 12h14M14 6l6 6-6 6"/></svg>
+      </div>`;
+    }
+  });
+
+  html += `</div>`;
+
+  // Leyenda
+  html += `<div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);">
+      <div style="width:12px;height:12px;border:2px solid var(--bad);border-radius:3px;"></div>Camino crítico
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);">
+      <div style="width:12px;height:12px;border:2px solid var(--border2);border-radius:3px;"></div>No crítico
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ok);">
+      <span>×N</span>Recursos en paralelo
+    </div>
+  </div>`;
+
+  wrap.innerHTML = html;
+}
+
 function volverAIP(){
   // Si está dentro de un iframe de Ingeniería de Procesos
   if(window.parent && window.parent !== window && typeof window.parent.showView === 'function'){
@@ -1079,8 +1183,9 @@ function openModal(id, isNew=true){
       s('opsEditIdx').value = '';
       s('modal-ops-title').textContent = 'Nueva operación';
       s('opName').value = ''; s('opMin').value = '';
-      populateOpEtapa();
-      s('opEtapa').value = '';
+      s('opRecursos').value = '1';
+      s('opDia').value = '1';
+      buildDependenciasCheck('');
     }
     if (id === 'modal-cons') {
       s('consEditIdx').value = '';
@@ -1534,14 +1639,35 @@ function populateOpEtapa(){
     etapas.map((e,i)=>`<option value="${i}">Día ${e.dia} — ${e.nombre} (${e.modo})</option>`).join('');
 }
 
+function buildDependenciasCheck(editIdx){
+  const wrap = s('opDependenciasWrap'); if(!wrap) return;
+  const ops = cur().ops;
+  const currentIdx = editIdx!=='' ? parseInt(editIdx) : -1;
+  const otrasOps = ops.filter((_,i)=>i!==currentIdx);
+  if(!otrasOps.length){ wrap.innerHTML=`<div style="font-size:12px;color:var(--text-muted);">No hay otras operaciones aún</div>`; return; }
+  const deps = currentIdx>=0 ? (ops[currentIdx].depende||[]) : [];
+  wrap.innerHTML = otrasOps.map(o=>{
+    const i = ops.indexOf(o);
+    const checked = deps.includes(i) ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:3px 6px;border-radius:6px;" onmouseover="this.style.background='var(--hover-bg)'" onmouseout="this.style.background=''">
+      <input type="checkbox" ${checked} data-depidx="${i}" style="width:15px;height:15px;accent-color:var(--accent);">
+      <span style="color:var(--text-primary);">${o.nombre}</span>
+      <span style="margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${o.min.toFixed(2)} min</span>
+    </label>`;
+  }).join('');
+}
+
 function saveOperacion(){
+  if(selectedIdx===null||!cur()) return;
   const nombre = s('opName').value.trim();
   const min = parseFloat(s('opMin').value);
-  const etapaVal = s('opEtapa').value;
-  const etapaIdx = etapaVal!=='' ? parseInt(etapaVal) : undefined;
+  const recursos = parseInt(s('opRecursos').value)||1;
+  const dia = parseInt(s('opDia').value)||1;
   if(!nombre || isNaN(min) || min<0){ alert('Ingresa nombre y minutos.'); return; }
+  const checks = s('opDependenciasWrap').querySelectorAll('input[type=checkbox]');
+  const depende = Array.from(checks).filter(c=>c.checked).map(c=>parseInt(c.dataset.depidx));
   const editIdx = s('opsEditIdx').value;
-  const entry = {nombre, min, etapaIdx};
+  const entry = {nombre, min, recursos, dia, depende, activa:true};
   if(editIdx !== '') cur().ops[parseInt(editIdx)] = {...(cur().ops[parseInt(editIdx)]||{}), ...entry};
   else cur().ops.push(entry);
   markUpdated(); closeModal('modal-ops'); renderOps(); renderAsignacion();
@@ -1551,76 +1677,96 @@ function editOperacion(i){
   s('opsEditIdx').value = i;
   s('modal-ops-title').textContent = 'Editar operación';
   s('opName').value = o.nombre; s('opMin').value = o.min;
-  populateOpEtapa();
-  s('opEtapa').value = o.etapaIdx!==undefined ? o.etapaIdx : '';
+  s('opRecursos').value = o.recursos||1;
+  s('opDia').value = o.dia||1;
+  buildDependenciasCheck(i);
   openModal('modal-ops', false);
 }
 function delOperacion(i){ cur().ops.splice(i,1); markUpdated(); renderOps(); renderAsignacion(); }
 function renderOps(){
   const ops = cur().ops;
-  const etapas = cur().etapas||[];
   const c = s('opsList');
   if(!ops.length){ c.innerHTML=`<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:13px;">Sin operaciones registradas</div>`; return; }
-  if(etapas.length){
-    const sinEtapa = ops.filter(o=>o.etapaIdx===undefined||o.etapaIdx===null);
-    const diasUnicos = [...new Set(etapas.map(e=>e.dia))].sort((a,b)=>a-b);
-    let html = '';
-    diasUnicos.forEach(dia=>{
-      const etapasDia = etapas.filter(e=>e.dia===dia);
-      html += `<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px;padding:4px 8px;background:var(--surface2);border-radius:6px;">📅 Día ${dia}</div>`;
-      etapasDia.forEach(etapa=>{
-        const eIdx = etapas.indexOf(etapa);
-        const opsEtapa = ops.filter(o=>o.etapaIdx===eIdx);
-        const modeColor = etapa.modo==='paralelo'?'var(--ok)':'var(--accent)';
-        html += `<div style="margin-bottom:8px;border-left:3px solid ${modeColor};padding-left:10px;">
-          <div style="font-size:11px;font-weight:600;color:${modeColor};margin-bottom:4px;">${etapa.nombre} · ${etapa.modo}</div>
-          ${opsEtapa.map(o=>{
-            const i=ops.indexOf(o);
-            const checked=o.activa!==false?'checked':'';
-            return`<div class="item-row" style="opacity:${o.activa===false?'0.45':'1'}">
-              <input type="checkbox" ${checked} onchange="togglePresencia('ops',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
-              <div class="item-num">${String(i+1).padStart(2,'0')}</div>
-              <div class="item-name">${o.nombre}</div>
-              <div class="item-min">${o.min.toFixed(2)} min</div>
-              <button class="item-edit" onclick="editOperacion(${i})">✎</button>
-              <button class="item-del" onclick="delOperacion(${i})">✕</button>
-            </div>`;
-          }).join('')||`<div style="padding:6px 8px;font-size:12px;color:var(--text-muted);">Sin operaciones asignadas</div>`}
-        </div>`;
-      });
-      html += '</div>';
-    });
-    if(sinEtapa.length){
-      html += `<div style="border-left:3px solid var(--border-mid);padding-left:10px;margin-bottom:8px;">
-        <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">Sin etapa</div>
-        ${sinEtapa.map(o=>{
-          const i=ops.indexOf(o);
-          const checked=o.activa!==false?'checked':'';
-          return`<div class="item-row" style="opacity:${o.activa===false?'0.45':'1'}">
-            <input type="checkbox" ${checked} onchange="togglePresencia('ops',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
-            <div class="item-num">${String(i+1).padStart(2,'0')}</div>
-            <div class="item-name">${o.nombre}</div>
-            <div class="item-min">${o.min.toFixed(2)} min</div>
-            <button class="item-edit" onclick="editOperacion(${i})">✎</button>
-            <button class="item-del" onclick="delOperacion(${i})">✕</button>
-          </div>`;
-        }).join('')}
-      </div>`;
-    }
-    c.innerHTML = html;
-  } else {
-    c.innerHTML = ops.map((o,i)=>{
+
+  // Agrupar por día
+  const diasUnicos = [...new Set(ops.map(o=>o.dia||1))].sort((a,b)=>a-b);
+  const critPath = calcCaminoCritico(ops);
+
+  let html = '';
+  diasUnicos.forEach(dia=>{
+    const opsDia = ops.filter(o=>(o.dia||1)===dia);
+    html += `<div style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px;padding:4px 8px;background:var(--surface2);border-radius:6px;">📅 Día ${dia}</div>`;
+    opsDia.forEach(o=>{
+      const i = ops.indexOf(o);
       const checked = o.activa!==false ? 'checked' : '';
-      return`<div class="item-row" style="opacity:${o.activa===false?'0.45':'1'}">
+      const enCamino = critPath.includes(i);
+      const depNames = (o.depende||[]).map(d=>ops[d]?ops[d].nombre:'?').join(', ');
+      const recursosLabel = o.recursos>1 ? `<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:var(--ok-bg);color:var(--ok);font-weight:700;">×${o.recursos}</span>` : '';
+      const tcReal = (o.min/(o.recursos||1)).toFixed(2);
+      html += `<div class="item-row" style="opacity:${o.activa===false?'0.45':'1'};${enCamino&&o.activa!==false?'border-left:3px solid var(--bad);':''}">
         <input type="checkbox" ${checked} onchange="togglePresencia('ops',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
-        <div class="item-num">${String(i+1).padStart(2,'0')}</div>
-        <div class="item-name">${o.nombre}</div>
-        <div class="item-min">${o.min.toFixed(2)} min</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="item-name">${o.nombre}</span>
+            ${recursosLabel}
+            ${enCamino&&o.activa!==false?'<span style="font-size:10px;color:var(--bad);font-weight:700;">🔴 crítico</span>':''}
+          </div>
+          ${depNames?`<div style="font-size:10px;color:var(--text-muted);margin-top:1px;">Depende de: ${depNames}</div>`:'<div style="font-size:10px;color:var(--text-muted);">Inicio</div>'}
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div class="item-min">${tcReal} min</div>
+          ${o.recursos>1?`<div style="font-size:10px;color:var(--text-muted);">${o.min.toFixed(2)}÷${o.recursos}</div>`:''}
+        </div>
         <button class="item-edit" onclick="editOperacion(${i})">✎</button>
         <button class="item-del" onclick="delOperacion(${i})">✕</button>
       </div>`;
-    }).join('');
+    });
+    html += '</div>';
+  });
+  c.innerHTML = html;
+}
+
+// ── CAMINO CRÍTICO ─────────────────────────────────
+// Calcula el camino crítico usando Early Finish
+function calcCaminoCritico(ops){
+  if(!ops||!ops.length) return [];
+  const n = ops.length;
+  const ef = new Array(n).fill(0); // Early Finish
+  const es = new Array(n).fill(0); // Early Start
+
+  // Topological sort + forward pass
+  const visited = new Set();
+  function visit(i){
+    if(visited.has(i)) return;
+    const deps = ops[i].depende||[];
+    deps.forEach(d=>{ if(d>=0&&d<n) visit(d); });
+    const tc = (ops[i].min||0)/(ops[i].recursos||1);
+    const maxPred = deps.length>0 ? Math.max(...deps.filter(d=>d>=0&&d<n).map(d=>ef[d]), 0) : 0;
+    es[i] = maxPred;
+    ef[i] = maxPred + tc;
+    visited.add(i);
   }
+  for(let i=0;i<n;i++) visit(i);
+
+  // Backward pass
+  const maxEF = Math.max(...ef);
+  const lf = new Array(n).fill(maxEF);
+  const ls = new Array(n).fill(0);
+
+  // For each op, LF = min of LS of successors
+  for(let i=n-1;i>=0;i--){
+    const successors = ops.map((o,j)=>((o.depende||[]).includes(i)?j:-1)).filter(j=>j>=0);
+    if(successors.length>0) lf[i] = Math.min(...successors.map(j=>ls[j]));
+    ls[i] = lf[i] - (ops[i].min||0)/(ops[i].recursos||1);
+  }
+
+  // Critical path = ops where ES == LS (float = 0)
+  const critical = [];
+  for(let i=0;i<n;i++){
+    if(Math.abs(es[i]-ls[i])<0.001) critical.push(i);
+  }
+  return critical;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1864,149 +2010,105 @@ function calcularResultados(){
   const modPresentes = data.mod.filter(m=>m.presente!==false);
   const numOperadores = modPresentes.length || 1;
 
+
   const totalCons = consActivas.reduce((a,c)=>a+c.min,0);
   const tiempoReal = disponible - totalCons;
   const totalOps = opsActivas.reduce((a,o)=>a+o.min,0);
 
-  const etapas = data.etapas||[];
-  const hayEtapas = etapas.length>0;
   const asigs = data.asignaciones || {};
   const hayAsignacion = opsActivas.some(o=>(asigs[data.ops.indexOf(o)]||[]).length>0);
 
-  let tiempoCiclo, tcBalanceo, tcCuello, tcLabel, cargaPorOp={};
-  const opMaxObj = opsActivas.length>0 ? opsActivas.reduce((a,o)=>o.min>a.min?o:a) : null;
-  tcCuello = opMaxObj ? opMaxObj.min : 0;
-  let etapasInfo = []; // para mostrar en resultados
-  let diasCiclo = 1;
-
-  if(hayEtapas){
-    // Calcular TC por etapa y encontrar cuello entre etapas
-    diasCiclo = Math.max(...etapas.map(e=>e.dia), 1);
-    const diasUnicos = [...new Set(etapas.map(e=>e.dia))].sort((a,b)=>a-b);
-
-    diasUnicos.forEach(dia=>{
-      const etapasDia = etapas.filter(e=>e.dia===dia);
-      let tcDia = 0;
-      etapasDia.forEach(etapa=>{
-        const eIdx = etapas.indexOf(etapa);
-        const opsEtapa = opsActivas.filter(o=>o.etapaIdx===eIdx);
-        if(!opsEtapa.length) return;
-        let tcEtapa;
-        if(etapa.modo==='paralelo'){
-          // Paralelo: TC = operación más lenta (máquinas simultáneas)
-          tcEtapa = Math.max(...opsEtapa.map(o=>o.min));
-        } else {
-          // Serie: TC = suma de operaciones del operador más cargado
-          if(hayAsignacion){
-            const cargaLocal={};
-            modPresentes.forEach(m=>{ cargaLocal[data.mod.indexOf(m)]=0; });
-            opsEtapa.forEach(o=>{
-              const opIdx=data.ops.indexOf(o);
-              (asigs[opIdx]||[]).forEach(mIdx=>{ if(cargaLocal[mIdx]!==undefined) cargaLocal[mIdx]+=o.min; });
-            });
-            tcEtapa = Math.max(...Object.values(cargaLocal), 0);
-          } else {
-            tcEtapa = opsEtapa.reduce((a,o)=>a+o.min,0);
-          }
-        }
-        // En el mismo día, etapas en paralelo (simultáneas) → max
-        tcDia = etapasDia.length>1 ? Math.max(tcDia, tcEtapa) : tcEtapa;
-        etapasInfo.push({nombre:etapa.nombre, dia, modo:etapa.modo, tc:tcEtapa, ops:opsEtapa});
-      });
-      // Entre días: el proceso es secuencial → la capacidad la limita el día más lento
-      cargaPorOp['dia'+dia] = tcDia;
-    });
-
-    // TC del proceso completo = día más lento (cuello entre días)
-    const tcPorDia = Object.values(cargaPorOp);
-    tiempoCiclo = tcPorDia.length>0 ? Math.max(...tcPorDia) : 0;
-    const cuelloDia = Object.keys(cargaPorOp).reduce((a,b)=>cargaPorOp[a]>cargaPorOp[b]?a:b,'dia1');
-    tcLabel = `Proceso multi-día (${diasCiclo} días) — cuello: ${cuelloDia.replace('dia','Día ')} (${tiempoCiclo.toFixed(2)} min)`;
-    tcBalanceo = tiempoCiclo;
-
-    // Para balanceo individual de operadores
-    cargaPorOp = {};
-    modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = 0; });
-    if(hayAsignacion){
-      opsActivas.forEach(o=>{
-        const opIdx = data.ops.indexOf(o);
-        (asigs[opIdx]||[]).forEach(mIdx=>{ if(cargaPorOp[mIdx]!==undefined) cargaPorOp[mIdx]+=o.min; });
-      });
+  // ── CAMINO CRÍTICO ──────────────────────────────
+  // Recalcular con ops activas (reindex)
+  const critPath = calcCaminoCritico(opsActivas);
+  
+  // TC = longitud del camino crítico (EF del último nodo)
+  let tcCaminoCritico = 0;
+  if(opsActivas.length>0){
+    const n = opsActivas.length;
+    const ef = new Array(n).fill(0);
+    const visited = new Set();
+    function visit(i){
+      if(visited.has(i)) return;
+      const deps = (opsActivas[i].depende||[])
+        .map(d=>opsActivas.findIndex(o=>o===data.ops[d]))
+        .filter(d=>d>=0);
+      deps.forEach(d=>visit(d));
+      const tc = (opsActivas[i].min||0)/(opsActivas[i].recursos||1);
+      const maxPred = deps.length>0 ? Math.max(...deps.map(d=>ef[d]),0) : 0;
+      ef[i] = maxPred + tc;
+      visited.add(i);
     }
-
-  } else if(modo === 'paralelo'){
-    if(hayAsignacion){
-      modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = 0; });
-      opsActivas.forEach(o=>{
-        const opIdx = data.ops.indexOf(o);
-        (asigs[opIdx]||[]).forEach(mIdx=>{ if(cargaPorOp[mIdx]!==undefined) cargaPorOp[mIdx]+=o.min; });
-      });
-      tiempoCiclo = Math.max(...Object.values(cargaPorOp), 0);
-    } else {
-      tiempoCiclo = totalOps;
-      modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = totalOps; });
-    }
-    tcBalanceo = totalOps;
-    tcLabel = `Paralelo — cada operador hace ciclo completo (${tiempoCiclo.toFixed(2)} min)`;
-  } else {
-    if(hayAsignacion){
-      modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = 0; });
-      opsActivas.forEach(o=>{
-        const opIdx = data.ops.indexOf(o);
-        (asigs[opIdx]||[]).forEach(mIdx=>{ if(cargaPorOp[mIdx]!==undefined) cargaPorOp[mIdx]+=o.min; });
-      });
-      const maxCargaOp = Math.max(...Object.values(cargaPorOp), 0);
-      tiempoCiclo = maxCargaOp;
-      tcBalanceo = numOperadores>0 ? totalOps/numOperadores : 0;
-      tcLabel = `Serie — operador más cargado: ${maxCargaOp.toFixed(2)} min`;
-    } else {
-      tcBalanceo = numOperadores>0 ? totalOps/numOperadores : 0;
-      tiempoCiclo = Math.max(tcCuello, tcBalanceo);
-      tcLabel = `máx(cuello ${tcCuello.toFixed(2)}, balance ${tcBalanceo.toFixed(2)})`;
-      modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = totalOps/numOperadores; });
-    }
+    for(let i=0;i<n;i++) visit(i);
+    tcCaminoCritico = Math.max(...ef,0);
   }
 
+  // ── TC POR OPERADOR (asignación) ────────────────
+  let cargaPorOp = {};
+  modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = 0; });
+  if(hayAsignacion){
+    opsActivas.forEach(o=>{
+      const opIdx = data.ops.indexOf(o);
+      const tcOp = (o.min||0)/(o.recursos||1);
+      (asigs[opIdx]||[]).forEach(mIdx=>{ if(cargaPorOp[mIdx]!==undefined) cargaPorOp[mIdx]+=tcOp; });
+    });
+  } else {
+    const tcProm = numOperadores>0 ? totalOps/numOperadores : 0;
+    modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = tcProm; });
+  }
+  const tcOperadores = hayAsignacion ? Math.max(...Object.values(cargaPorOp),0) : 0;
+
+  // TC final = max(camino crítico, operador más cargado)
+  const tiempoCiclo = Math.max(tcCaminoCritico, tcOperadores, 0.001);
+  const tcBalanceo = numOperadores>0 ? totalOps/numOperadores : 0;
+
+  // Días del ciclo
+  const diasCiclo = opsActivas.length>0 ? Math.max(...opsActivas.map(o=>o.dia||1),1) : 1;
+  const hayMultiDia = diasCiclo > 1;
+
+  // Label
+  let tcLabel = '';
+  if(tcCaminoCritico >= tcOperadores){
+    const opsCriticas = critPath.map(i=>opsActivas[i]?.nombre||'').filter(Boolean);
+    tcLabel = `Camino crítico: ${opsCriticas.join(' → ')} (${tcCaminoCritico.toFixed(2)} min)`;
+  } else {
+    tcLabel = `Operador más cargado: ${tcOperadores.toFixed(2)} min`;
+  }
+  const etapasInfo = []; // compatibilidad
+  const hayEtapas = hayMultiDia;
+
   // Capacidad: en paralelo se multiplica por operadores, en multi-día se divide por días del ciclo
-  const piezasPorCiclo = (!hayEtapas && modo==='paralelo') ? numOperadores : 1;
+  const piezasPorCiclo = (!hayMultiDia && modo==='paralelo') ? numOperadores : 1;
   const capDia = tiempoCiclo>0 ? Math.floor(tiempoReal/tiempoCiclo)*piezasPorCiclo : 0;
 
-  // Capacidad y WIP por día (solo con etapas)
-  let capPorDia = [], wipPorDia = [], utilizPorDia = [], leadTimeDias = 0;
-  if(hayEtapas){
-    const diasUnicos = [...new Set(etapas.map(e=>e.dia))].sort((a,b)=>a-b);
-    leadTimeDias = diasUnicos.length;
+  // Capacidad y WIP por día (proceso multi-día)
+  let capPorDia = [], wipPorDia = [], utilizPorDia = [], leadTimeDias = diasCiclo;
+  if(hayMultiDia){
+    const diasUnicos = [...new Set(opsActivas.map(o=>o.dia||1))].sort((a,b)=>a-b);
     let capAnterior = null;
     diasUnicos.forEach(dia=>{
-      const etapasDia = etapas.filter(e=>e.dia===dia);
+      const opsDia = opsActivas.filter(o=>(o.dia||1)===dia);
+      // TC del día = camino crítico solo con ops de ese día
+      // Simplificado: max(tc de cada op activa en ese día, considerando recursos)
       let tcDia = 0;
-      etapasDia.forEach(etapa=>{
-        const eIdx = etapas.indexOf(etapa);
-        const opsEtapa = opsActivas.filter(o=>o.etapaIdx===eIdx);
-        if(!opsEtapa.length) return;
-        let tcEtapa;
-        if(etapa.modo==='paralelo'){
-          tcEtapa = Math.max(...opsEtapa.map(o=>o.min));
-        } else {
-          if(hayAsignacion){
-            const cL={};
-            modPresentes.forEach(m=>{ cL[data.mod.indexOf(m)]=0; });
-            opsEtapa.forEach(o=>{
-              const opIdx=data.ops.indexOf(o);
-              (asigs[opIdx]||[]).forEach(mIdx=>{ if(cL[mIdx]!==undefined) cL[mIdx]+=o.min; });
-            });
-            tcEtapa = Math.max(...Object.values(cL),0);
-          } else {
-            tcEtapa = opsEtapa.reduce((a,o)=>a+o.min,0);
-          }
-        }
-        tcDia = Math.max(tcDia, tcEtapa);
+      // Ops en paralelo (sin dependencia entre sí en el mismo día) → max de sus TC
+      // Ops en serie (con dependencia) → suma
+      // Usamos el camino crítico del día
+      const opsDiaIds = opsDia.map(o=>data.ops.indexOf(o));
+      // Forward pass solo con ops del día
+      const efDia = {};
+      opsDia.forEach(o=>{
+        const i = data.ops.indexOf(o);
+        const depsEnDia = (o.depende||[]).filter(d=>opsDiaIds.includes(d));
+        const maxPred = depsEnDia.length>0 ? Math.max(...depsEnDia.map(d=>efDia[d]||0),0) : 0;
+        efDia[i] = maxPred + (o.min||0)/(o.recursos||1);
       });
+      tcDia = Math.max(...Object.values(efDia),0);
+
       const capDiaN = tcDia>0 ? Math.floor(tiempoReal/tcDia) : 0;
-      const utilizDia = tcDia>0 ? Math.min(100,(tiempoCiclo/tcDia*100)) : 0; // utilización relativa al cuello
       const wip = capAnterior!==null ? Math.max(0, capAnterior-capDiaN) : 0;
-      capPorDia.push({dia, tc:tcDia, cap:capDiaN, esCuello:tcDia===tiempoCiclo});
-      utilizPorDia.push({dia, utiliz: tcDia>0?(Math.min(tiempoCiclo,tcDia)/tcDia*100):0, real: tcDia>0?(tcDia/tiempoReal*100):0});
+      capPorDia.push({dia, tc:tcDia, cap:capDiaN, esCuello:Math.abs(tcDia-tiempoCiclo)<0.01});
+      utilizPorDia.push({dia, real: tiempoReal>0?(tcDia/tiempoReal*100):0});
       wipPorDia.push({dia, wip});
       capAnterior = capDiaN;
     });
@@ -2015,9 +2117,9 @@ function calcularResultados(){
   const taktTime = demandaDia>0 ? tiempoReal/demandaDia : 0;
 
   const eficiencia = (tiempoCiclo>0&&numOperadores>0) ? (totalOps/(tiempoCiclo*numOperadores)*100) : 0;
-  const opsTeoricos = taktTime>0 ? Math.ceil(totalOps/(taktTime*((!hayEtapas&&modo==='paralelo')?numOperadores:1))) : null;
+  const opsTeoricos = taktTime>0 ? Math.ceil(totalOps/(taktTime*((!hayMultiDia&&modo==='paralelo')?numOperadores:1))) : null;
   const maxCarga = Math.max(...Object.values(cargaPorOp).filter(v=>typeof v==='number'),0.01);
-  const tiempoMuerto = (!hayEtapas&&modo==='serie')&&tiempoCiclo>0 ? tiempoCiclo - (totalOps/numOperadores) : 0;
+  const tiempoMuerto = (!hayMultiDia&&modo==='serie')&&tiempoCiclo>0 ? tiempoCiclo - (totalOps/numOperadores) : 0;
 
   let estadoColor = 'var(--text-muted)', estadoLabel = 'Captura Takt Time para comparar';
   if(taktTime>0 && tiempoCiclo>0){
@@ -2040,9 +2142,9 @@ function calcularResultados(){
     /* ── BLOQUE 1: TIEMPOS ── */
     `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow);">
       <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px;">⏱ Tiempos
-        <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:${hayEtapas?'rgba(91,184,232,0.12)':modo==='paralelo'?'var(--ok-bg)':'var(--accent-bg)'};color:${hayEtapas?'#2a7aaa':modo==='paralelo'?'var(--ok)':'var(--accent)'};">${hayEtapas?diasCiclo+' días':modo==='paralelo'?'Paralelo':'Serie'}</span>
+        <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:${hayMultiDia?'rgba(91,184,232,0.12)':modo==='paralelo'?'var(--ok-bg)':'var(--accent-bg)'};color:${hayMultiDia?'#2a7aaa':modo==='paralelo'?'var(--ok)':'var(--accent)'};">${hayMultiDia?diasCiclo+' días':modo==='paralelo'?'Paralelo':'Serie'}</span>
       </div>
-      ${hayEtapas?`<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border2);">
+      ${hayMultiDia?`<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border2);">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">TC por etapa</div>
         ${etapasInfo.map(e=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;">
           <span style="font-size:10px;padding:1px 6px;border-radius:20px;background:${e.modo==='paralelo'?'var(--ok-bg)':'var(--accent-bg)'};color:${e.modo==='paralelo'?'var(--ok)':'var(--accent)'};font-weight:600;">Día ${e.dia}</span>
@@ -2078,7 +2180,7 @@ function calcularResultados(){
     `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow);">
       <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);">📦 Capacidad y Demanda</div>
 
-      ${hayEtapas&&capPorDia.length>0?`
+      ${hayMultiDia&&capPorDia.length>0?`
       <!-- Detalle por día -->
       <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border2);">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:10px;">Capacidad por día</div>
@@ -2121,7 +2223,7 @@ function calcularResultados(){
       </div>`:''}
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px;">
-        ${!hayEtapas?`<div>
+        ${!hayMultiDia?`<div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Capacidad / día</div>
           <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--accent);">${capDia>0?capDia+' pzas':'—'}</div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${capDia>0?tiempoReal.toFixed(2)+' / '+tiempoCiclo.toFixed(2)+' = '+capDia:'Se requiere TC'}</div>
