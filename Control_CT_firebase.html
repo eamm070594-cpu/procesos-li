@@ -806,33 +806,43 @@ body.dark .dash-alert-title{color:#e05c5c;}
   <div class="modal-box">
     <div class="modal-header"><span class="modal-title" id="modal-ops-title">Nueva operación</span><button class="modal-close" onclick="closeModal('modal-ops')">✕</button></div>
     <input type="hidden" id="opsEditIdx" value="">
-    <div class="form-row">
-      <div class="form-group" style="flex:2;min-width:180px;"><label>Nombre</label><input type="text" id="opName" placeholder="Ej. Dobla pata"></div>
-      <div class="form-group" style="flex:0 0 100px;"><label>Minutos</label><input type="number" id="opMin" placeholder="0" min="0" step="0.01"></div>
+    <div style="background:var(--surface2);border-radius:var(--r);padding:10px 14px;margin-bottom:4px;font-size:12px;color:var(--text-muted);line-height:1.6;">
+      <strong style="color:var(--text-primary);">Numeración:</strong> usa números enteros para pasos en serie y decimales para paralelas.<br>
+      Ej: <code style="background:var(--border2);padding:1px 5px;border-radius:4px;">1</code> serie · 
+      <code style="background:var(--border2);padding:1px 5px;border-radius:4px;">2.0</code> <code style="background:var(--border2);padding:1px 5px;border-radius:4px;">2.1</code> paralelas
     </div>
     <div class="form-row">
-      <div class="form-group" style="flex:0 0 100px;">
-        <label>Recursos</label>
-        <input type="number" id="opRecursos" placeholder="1" min="1" step="1" value="1">
+      <div class="form-group" style="flex:0 0 90px;">
+        <label>Número</label>
+        <input type="number" id="opNumero" placeholder="1" min="0" step="0.1" oninput="updateOpTcPreview()">
       </div>
-      <div class="form-group" style="flex:0 0 100px;">
+      <div class="form-group" style="flex:2;min-width:140px;"><label>Nombre</label><input type="text" id="opName" placeholder="Ej. Dobla pata"></div>
+      <div class="form-group" style="flex:0 0 90px;"><label>Minutos</label><input type="number" id="opMin" placeholder="0" min="0" step="0.01" oninput="updateOpTcPreview()"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:0 0 90px;">
+        <label>Recursos</label>
+        <input type="number" id="opRecursos" placeholder="1" min="1" step="1" value="1" oninput="updateOpTcPreview()">
+      </div>
+      <div class="form-group" style="flex:0 0 90px;">
         <label>Día</label>
         <input type="number" id="opDia" placeholder="1" min="1" step="1" value="1">
       </div>
-      <div class="form-group" style="flex:0 0 110px;">
+      <div class="form-group" style="flex:0 0 100px;">
         <label>Pzas/producto</label>
-        <input type="number" id="opPiezas" placeholder="1" min="1" step="1" value="1">
-        <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">ej. 4 patas/silla</div>
+        <input type="number" id="opPiezas" placeholder="1" min="1" step="1" value="1" oninput="updateOpTcPreview()">
       </div>
-      <div class="form-group" style="flex:1;min-width:100px;">
+      <div class="form-group" style="flex:1;min-width:80px;">
         <label>TC real</label>
-        <div id="opTcPreview" style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--accent);padding:9px 12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border2);">—</div>
+        <div id="opTcPreview" style="font-family:var(--font-mono);font-size:1rem;font-weight:700;color:var(--accent);padding:9px 12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border2);">—</div>
       </div>
     </div>
+    <!-- Asignación de operador directo en el modal -->
     <div class="form-group">
-      <label>Depende de</label>
-      <div id="opDependenciasWrap" style="display:flex;flex-direction:column;gap:5px;margin-top:4px;max-height:160px;overflow-y:auto;"></div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Sin selección = operación de inicio</div>
+      <label>Operador asignado</label>
+      <select id="opOperador">
+        <option value="">— Sin asignar —</option>
+      </select>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-ops')">Cancelar</button>
@@ -1089,19 +1099,8 @@ function renderDiagrama(){
   const critPath = calcCaminoCritico(opsActivas);
   const n = opsActivas.length;
 
-  // Calcular nivel de cada op
-  const nivel = new Array(n).fill(0);
-  const visitedN = new Set();
-  function calcNivel(i){
-    if(visitedN.has(i)) return nivel[i];
-    visitedN.add(i);
-    const deps = (opsActivas[i].depende||[]).map(d=>opsActivas.findIndex(o=>o===ops[d])).filter(d=>d>=0);
-    if(!deps.length){ nivel[i]=0; return 0; }
-    nivel[i] = Math.max(...deps.map(d=>calcNivel(d)))+1;
-    return nivel[i];
-  }
-  for(let i=0;i<n;i++) calcNivel(i);
-
+  // Use WBS number as level (integer part = column)
+  const nivel = opsActivas.map(o=>Math.floor(parseFloat(o.numero)||0));
   const maxNivel = Math.max(...nivel,0);
   const columnas = [];
   for(let lv=0;lv<=maxNivel;lv++) columnas.push(opsActivas.filter((_,i)=>nivel[i]===lv));
@@ -1112,7 +1111,7 @@ function renderDiagrama(){
   function calcEF(i){
     if(visitedEF.has(i)) return ef[i];
     visitedEF.add(i);
-    const deps = (opsActivas[i].depende||[]).map(d=>opsActivas.findIndex(o=>o===ops[d])).filter(d=>d>=0);
+    const deps = getDepsFromWBS(opsActivas, i).filter(d=>d>=0&&d<n);
     const maxPred = deps.length>0?Math.max(...deps.map(d=>calcEF(d))):0;
     ef[i] = maxPred + (opsActivas[i].min||0)*(opsActivas[i].piezas||1)/(opsActivas[i].recursos||1);
     return ef[i];
@@ -1182,12 +1181,12 @@ function renderDiagrama(){
     const tcReal = ((o.min||0)*(o.piezas||1)/(o.recursos||1));
     const lv = nivel[i];
     const colorTC = enCamino?'var(--bad)':accentColors[lv%accentColors.length];
-    const asigIdx = (cur().asignaciones&&cur().asignaciones[ops.indexOf(o)])||[];
+    const asigIdx = (cur().asignaciones&&(cur().asignaciones[ops.indexOf(o)]||cur().asignaciones[String(ops.indexOf(o))])||[]).map(x=>parseInt(x));
     const asigNombre = asigIdx.length>0&&cur().mod[asigIdx[0]]?cur().mod[asigIdx[0]].puesto:'—';
     const dia = o.dia||1;
+    const wbsNum = o.numero||'?';
     const col = columnas[lv];
-    const hasSeries = col.filter(x=>(x.dia||1)===dia).length>1;
-    const seqNum = hasSeries ? col.indexOf(o)+1 : null;
+    const isParalelo = col.length > 1;
 
     html += `<div id="diag-box-${i}" onclick="abrirAsigDiagrama(${i})" style="
       position:absolute;left:${p.x}px;top:${p.y}px;width:${BOX_W}px;
@@ -1199,10 +1198,11 @@ function renderDiagrama(){
       box-sizing:border-box;
     " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform=''">
       ${enCamino?`<div style="position:absolute;top:-9px;right:8px;background:var(--bad);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:2px 6px;">CRÍTICO</div>`:''}
-      ${seqNum?`<div style="position:absolute;top:-9px;left:8px;background:var(--accent);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:2px 6px;">${seqNum}</div>`:''}
       <div style="display:flex;align-items:center;gap:4px;margin-bottom:5px;">
+        <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;background:${isParalelo?'var(--ok-bg)':'var(--accent-bg)'};color:${isParalelo?'var(--ok)':'var(--accent)'};">${wbsNum}</span>
         <span style="font-size:9px;padding:1px 5px;border-radius:10px;background:var(--surface2);color:var(--text-muted);font-weight:600;">Día ${dia}</span>
         ${o.recursos>1?`<span style="font-size:9px;padding:1px 5px;border-radius:10px;background:var(--ok-bg);color:var(--ok);font-weight:700;">×${o.recursos}</span>`:''}
+        ${isParalelo?'<span style="font-size:9px;color:var(--ok);">⇉</span>':''}
       </div>
       <div style="font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:5px;line-height:1.3;">${o.nombre}</div>
       <div style="font-family:var(--font-mono);font-size:1rem;font-weight:700;color:${colorTC};">${tcReal.toFixed(2)} min</div>
@@ -1227,9 +1227,8 @@ function renderDiagrama(){
   // Draw arrows: for each op, draw line from its right edge to each successor's left edge
   opsActivas.forEach((o,i)=>{
     const pFrom = positions[i]; if(!pFrom) return;
-    // Find successors
     opsActivas.forEach((succ,j)=>{
-      const succDeps = (succ.depende||[]).map(d=>opsActivas.findIndex(x=>x===ops[d])).filter(d=>d>=0);
+      const succDeps = getDepsFromWBS(opsActivas, j);
       if(!succDeps.includes(i)) return;
       const pTo = positions[j]; if(!pTo) return;
       const enCamino = critPath.includes(i)&&critPath.includes(j);
@@ -1378,15 +1377,12 @@ function openModal(id, isNew=true){
       s('opDia').value = '1';
       s('opPiezas').value = '1';
       s('opTcPreview').textContent = '—';
-      buildDependenciasCheck('');
-      ['opMin','opRecursos','opPiezas'].forEach(fid=>{
-        s(fid).oninput = ()=>{
-          const min=parseFloat(s('opMin').value)||0;
-          const rec=parseInt(s('opRecursos').value)||1;
-          const pzas=parseInt(s('opPiezas').value)||1;
-          s('opTcPreview').textContent = min>0?((min*pzas)/rec).toFixed(2)+' min':'—';
-        };
-      });
+      // Auto-suggest next WBS number
+      const ops = cur()&&cur().ops||[];
+      const maxNum = ops.length>0 ? Math.max(...ops.map(o=>parseFloat(o.numero)||0)) : 0;
+      s('opNumero').value = Math.floor(maxNum)+1;
+      // Populate operator selector
+      populateOpOperador(-1);
     }
     if (id === 'modal-cons') {
       s('consEditIdx').value = '';
@@ -1840,63 +1836,80 @@ function populateOpEtapa(){
     etapas.map((e,i)=>`<option value="${i}">Día ${e.dia} — ${e.nombre} (${e.modo})</option>`).join('');
 }
 
-function buildDependenciasCheck(editIdx){
-  const wrap = s('opDependenciasWrap'); if(!wrap) return;
-  const ops = cur().ops;
-  const currentIdx = editIdx!=='' ? parseInt(editIdx) : -1;
-  const otrasOps = ops.filter((_,i)=>i!==currentIdx);
-  if(!otrasOps.length){ wrap.innerHTML=`<div style="font-size:12px;color:var(--text-muted);">No hay otras operaciones aún</div>`; return; }
-  // Normalizar deps a números (Firebase puede enviarlos como strings)
-  const deps = (currentIdx>=0 ? (ops[currentIdx].depende||[]) : []).map(d=>parseInt(d));
-  wrap.innerHTML = otrasOps.map(o=>{
-    const i = ops.indexOf(o);
-    const checked = deps.includes(i) ? 'checked' : '';
-    const dia = o.dia||1;
-    return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:3px 6px;border-radius:6px;" onmouseover="this.style.background='var(--hover-bg)'" onmouseout="this.style.background=''">
-      <input type="checkbox" ${checked} data-depidx="${i}" style="width:15px;height:15px;accent-color:var(--accent);">
-      <span style="color:var(--text-primary);">${o.nombre}</span>
-      <span style="font-size:10px;padding:1px 5px;border-radius:4px;background:var(--surface2);color:var(--text-muted);">Día ${dia}</span>
-      <span style="margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${o.min.toFixed(2)} min</span>
-    </label>`;
-  }).join('');
+function updateOpTcPreview(){
+  const min=parseFloat(s('opMin').value)||0;
+  const rec=parseInt(s('opRecursos').value)||1;
+  const pzas=parseInt(s('opPiezas').value)||1;
+  s('opTcPreview').textContent = min>0?((min*pzas)/rec).toFixed(2)+' min':'—';
+}
+
+function populateOpOperador(editIdx){
+  const sel = s('opOperador'); if(!sel) return;
+  const mod = (cur()&&cur().mod)||[];
+  // Find currently assigned operator for this op
+  let asignadoIdx = -1;
+  if(editIdx>=0 && cur()&&cur().asignaciones){
+    const asigs = (cur().asignaciones[editIdx]||cur().asignaciones[String(editIdx)]||[]);
+    if(asigs.length>0) asignadoIdx = parseInt(asigs[0]);
+  }
+  sel.innerHTML = `<option value="">— Sin asignar —</option>` +
+    mod.map((m,i)=>`<option value="${i}" ${i===asignadoIdx?'selected':''}>${m.puesto}</option>`).join('');
 }
 
 function saveOperacion(){
   if(selectedIdx===null||!cur()) return;
   const nombre = s('opName').value.trim();
   const min = parseFloat(s('opMin').value);
+  const numero = parseFloat(s('opNumero').value);
   const recursos = parseInt(s('opRecursos').value)||1;
   const dia = parseInt(s('opDia').value)||1;
   const piezas = parseInt(s('opPiezas').value)||1;
   if(!nombre || isNaN(min) || min<0){ alert('Ingresa nombre y minutos.'); return; }
-  const checks = s('opDependenciasWrap').querySelectorAll('input[type=checkbox]');
-  const depende = Array.from(checks).filter(c=>c.checked).map(c=>parseInt(c.dataset.depidx));
+  if(isNaN(numero)){ alert('Ingresa el número de operación.'); return; }
+
+  // Build depende from WBS: depends on all ops with lower integer step
+  const pasoActual = Math.floor(numero);
+  const depende = (cur().ops||[])
+    .map((o,i)=>({i, paso:Math.floor(parseFloat(o.numero)||0)}))
+    .filter(x=>x.paso < pasoActual)
+    .map(x=>x.i);
+
   const editIdx = s('opsEditIdx').value;
-  const entry = {nombre, min, recursos, dia, piezas, depende, activa:true};
-  if(editIdx !== '') cur().ops[parseInt(editIdx)] = {...(cur().ops[parseInt(editIdx)]||{}), ...entry};
-  else cur().ops.push(entry);
+  const entry = {nombre, numero, min, recursos, dia, piezas, depende, activa:true};
+  let savedIdx;
+  if(editIdx !== ''){
+    savedIdx = parseInt(editIdx);
+    cur().ops[savedIdx] = {...(cur().ops[savedIdx]||{}), ...entry};
+  } else {
+    cur().ops.push(entry);
+    savedIdx = cur().ops.length-1;
+  }
+
+  // Save operator assignment
+  const opMod = s('opOperador').value;
+  if(!cur().asignaciones) cur().asignaciones={};
+  if(opMod!==''){
+    cur().asignaciones[savedIdx] = [parseInt(opMod)];
+  } else {
+    cur().asignaciones[savedIdx] = [];
+  }
+
   markUpdated(); closeModal('modal-ops'); renderOps(); renderAsignacion();
+  if(s('resultsBlock')&&s('resultsBlock').style.display!=='none') calcularResultados();
 }
+
 function editOperacion(i){
   const o = cur().ops[i];
   s('opsEditIdx').value = i;
   s('modal-ops-title').textContent = 'Editar operación';
+  s('opNumero').value = o.numero||1;
   s('opName').value = o.nombre; s('opMin').value = o.min;
   s('opRecursos').value = o.recursos||1;
   s('opDia').value = o.dia||1;
   s('opPiezas').value = o.piezas||1;
-  const pzas = o.piezas||1;
-  const tc = ((o.min||0)*pzas)/(o.recursos||1);
+  const tc = ((o.min||0)*(o.piezas||1))/(o.recursos||1);
   s('opTcPreview').textContent = tc>0?tc.toFixed(2)+' min':'—';
-  ['opMin','opRecursos','opPiezas'].forEach(fid=>{
-    s(fid).oninput = ()=>{
-      const min=parseFloat(s('opMin').value)||0;
-      const rec=parseInt(s('opRecursos').value)||1;
-      const pz=parseInt(s('opPiezas').value)||1;
-      s('opTcPreview').textContent = min>0?((min*pz)/rec).toFixed(2)+' min':'—';
-    };
-  });
-  buildDependenciasCheck(i);
+  populateOpOperador(i);
   openModal('modal-ops', false);
 }
 function delOperacion(i){ cur().ops.splice(i,1); markUpdated(); renderOps(); renderAsignacion(); }
@@ -1905,58 +1918,87 @@ function renderOps(){
   const c = s('opsList');
   if(!ops.length){ c.innerHTML=`<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:13px;">Sin operaciones registradas</div>`; return; }
 
-  // Agrupar por día
-  const diasUnicos = [...new Set(ops.map(o=>o.dia||1))].sort((a,b)=>a-b);
-  const critPath = calcCaminoCritico(ops);
+  // Sort by WBS number
+  const opsSorted = [...ops].map((o,i)=>({...o, _origIdx:i})).sort((a,b)=>(parseFloat(a.numero)||0)-(parseFloat(b.numero)||0));
+  
+  // Group by integer step (pasos)
+  const pasos = {};
+  opsSorted.forEach(o=>{
+    const paso = Math.floor(parseFloat(o.numero)||0);
+    if(!pasos[paso]) pasos[paso]=[];
+    pasos[paso].push(o);
+  });
+
+  // Group pasos by day
+  const diasUnicos = [...new Set(opsSorted.map(o=>o.dia||1))].sort((a,b)=>a-b);
 
   let html = '';
   diasUnicos.forEach(dia=>{
-    const opsDia = ops.filter(o=>(o.dia||1)===dia);
     html += `<div style="margin-bottom:12px;">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px;padding:4px 8px;background:var(--surface2);border-radius:6px;">📅 Día ${dia}</div>`;
-    opsDia.forEach(o=>{
-      const i = ops.indexOf(o);
-      const checked = o.activa!==false ? 'checked' : '';
-      const enCamino = critPath.includes(i);
-      const depNames = (o.depende||[]).map(d=>ops[d]?ops[d].nombre:'?').join(', ');
-      const recursosLabel = o.recursos>1 ? `<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:var(--ok-bg);color:var(--ok);font-weight:700;">×${o.recursos}</span>` : '';
-      const tcReal = (o.min/(o.recursos||1)).toFixed(2);
-      html += `<div class="item-row" style="opacity:${o.activa===false?'0.45':'1'};${enCamino&&o.activa!==false?'border-left:3px solid var(--bad);':''}">
-        <input type="checkbox" ${checked} onchange="togglePresencia('ops',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span class="item-name">${o.nombre}</span>
-            ${recursosLabel}
-            ${enCamino&&o.activa!==false?'<span style="font-size:10px;color:var(--bad);font-weight:700;">🔴 crítico</span>':''}
+
+    Object.keys(pasos).filter(paso=>{
+      return pasos[paso].some(o=>(o.dia||1)===dia);
+    }).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(paso=>{
+      const opsStep = pasos[paso].filter(o=>(o.dia||1)===dia);
+      const isParalelo = opsStep.length > 1;
+
+      if(isParalelo){
+        html += `<div style="border-left:3px solid var(--ok);padding-left:10px;margin-bottom:8px;">
+          <div style="font-size:10px;font-weight:700;color:var(--ok);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">⇉ Paso ${paso} — Paralelo</div>`;
+      } else {
+        html += `<div style="border-left:3px solid var(--accent);padding-left:10px;margin-bottom:8px;">
+          <div style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">→ Paso ${paso} — Serie</div>`;
+      }
+
+      opsStep.forEach(o=>{
+        const i = o._origIdx;
+        const checked = o.activa!==false ? 'checked' : '';
+        const tcReal = ((o.min||0)*(o.piezas||1)/(o.recursos||1));
+        const pzas = o.piezas||1;
+        // Find assigned operator
+        const asigArr = (cur().asignaciones&&(cur().asignaciones[i]||cur().asignaciones[String(i)])||[]).map(x=>parseInt(x));
+        const opNombre = asigArr.length>0&&cur().mod[asigArr[0]] ? cur().mod[asigArr[0]].puesto : '—';
+
+        html += `<div class="item-row" style="opacity:${o.activa===false?'0.45':'1'}">
+          <input type="checkbox" ${checked} onchange="togglePresencia('ops',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
+          <span style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-muted);min-width:28px;">${o.numero||'?'}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;color:var(--text-primary);">${o.nombre}${pzas>1?` <span style="font-size:10px;color:var(--ok);">×${pzas}pzas</span>`:''}</div>
+            <div style="font-size:11px;color:var(--text-muted);">👤 ${opNombre}</div>
           </div>
-          ${depNames?`<div style="font-size:10px;color:var(--text-muted);margin-top:1px;">Depende de: ${depNames}</div>`:'<div style="font-size:10px;color:var(--text-muted);">Inicio</div>'}
-        </div>
-        <div style="text-align:right;flex-shrink:0;">
-          <div class="item-min">${tcReal} min${(o.piezas||1)>1?` <span style="font-size:9px;color:var(--ok);">×${o.piezas}pzas</span>`:''}</div>
-          ${o.recursos>1||( o.piezas&&o.piezas>1)?`<div style="font-size:10px;color:var(--text-muted);">${o.min}${o.piezas>1?'×'+o.piezas:''} ÷ ${o.recursos} rec</div>`:''}
-        </div>
-        <button class="item-edit" onclick="editOperacion(${i})">✎</button>
-        <button class="item-del" onclick="delOperacion(${i})">✕</button>
-      </div>`;
+          <div class="item-min">${tcReal.toFixed(2)} min</div>
+          <button class="item-edit" onclick="editOperacion(${i})">✎</button>
+          <button class="item-del" onclick="delOperacion(${i})">✕</button>
+        </div>`;
+      });
+
+      html += `</div>`;
     });
-    html += '</div>';
+    html += `</div>`;
   });
   c.innerHTML = html;
 }
-
-// ── CAMINO CRÍTICO ─────────────────────────────────
 // Calcula el camino crítico usando Early Finish
+// Get dependencies from WBS number — op depends on all ops in the previous step
+function getDepsFromWBS(ops, idx){
+  const pasoActual = Math.floor(parseFloat(ops[idx].numero)||0);
+  if(pasoActual<=0) return [];
+  return ops.map((o,i)=>({i, paso:Math.floor(parseFloat(o.numero)||0)}))
+    .filter(x=>x.i!==idx && x.paso === pasoActual-1)
+    .map(x=>x.i);
+}
+
 function calcCaminoCritico(ops){
   if(!ops||!ops.length) return [];
   const n = ops.length;
-  const ef = new Array(n).fill(0); // Early Finish
-  const es = new Array(n).fill(0); // Early Start
+  const ef = new Array(n).fill(0);
+  const es = new Array(n).fill(0);
 
-  // Topological sort + forward pass
   const visited = new Set();
   function visit(i){
     if(visited.has(i)) return;
-    const deps = ops[i].depende||[];
+    const deps = getDepsFromWBS(ops, i);
     deps.forEach(d=>{ if(d>=0&&d<n) visit(d); });
     const tc = (ops[i].min||0)*(ops[i].piezas||1)/(ops[i].recursos||1);
     const maxPred = deps.length>0 ? Math.max(...deps.filter(d=>d>=0&&d<n).map(d=>ef[d]), 0) : 0;
@@ -1966,19 +2008,16 @@ function calcCaminoCritico(ops){
   }
   for(let i=0;i<n;i++) visit(i);
 
-  // Backward pass
   const maxEF = Math.max(...ef);
   const lf = new Array(n).fill(maxEF);
   const ls = new Array(n).fill(0);
 
-  // For each op, LF = min of LS of successors
   for(let i=n-1;i>=0;i--){
-    const successors = ops.map((o,j)=>((o.depende||[]).includes(i)?j:-1)).filter(j=>j>=0);
+    const successors = ops.map((o,j)=>getDepsFromWBS(ops,j).includes(i)?j:-1).filter(j=>j>=0);
     if(successors.length>0) lf[i] = Math.min(...successors.map(j=>ls[j]));
     ls[i] = lf[i] - (ops[i].min||0)*(ops[i].piezas||1)/(ops[i].recursos||1);
   }
 
-  // Critical path = ops where ES == LS (float = 0)
   const critical = [];
   for(let i=0;i<n;i++){
     if(Math.abs(es[i]-ls[i])<0.001) critical.push(i);
