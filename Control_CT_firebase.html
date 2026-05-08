@@ -2476,8 +2476,7 @@ function calcularResultados(){
     `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow);">
       <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);">📦 Capacidad y Demanda</div>
 
-      ${hayMultiDia&&capPorDia.length>0?`
-      <!-- Detalle por día -->
+      <!-- Detalle por operación — siempre visible -->
       <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border2);">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:10px;">Capacidad por día</div>
 
@@ -2533,7 +2532,7 @@ function calcularResultados(){
             ${rows}
           </div>`;
         }).join('')}
-        ${capPorDia.map(d=>{
+        ${(hayMultiDia?capPorDia:[{dia:1,cap:capDia,tc:tiempoCiclo,esCuello:true,cargaOps:cargaPorOp}]).map(d=>{
           const wip = wipPorDia.find(w=>w.dia===d.dia)||{wip:0};
           const barColor = d.esCuello?'var(--bad)':'var(--ok)';
           const opsDia = opsActivas.filter(o=>(o.dia||1)===d.dia);
@@ -2622,7 +2621,7 @@ function calcularResultados(){
             <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">de inicio a pieza terminada</div>
           </div>
         </div>
-      </div>`:''}
+      </div>
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px;">
         ${!hayMultiDia?`<div>
