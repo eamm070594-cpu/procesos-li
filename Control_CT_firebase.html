@@ -2299,9 +2299,7 @@ function calcularResultados(){
     const visited = new Set();
     function visit(i){
       if(visited.has(i)) return;
-      const deps = (opsActivas[i].depende||[])
-        .map(d=>opsActivas.findIndex(o=>o===data.ops[d]))
-        .filter(d=>d>=0);
+      const deps = getDepsFromWBS(opsActivas, i).filter(d=>d>=0&&d<n);
       deps.forEach(d=>visit(d));
       const tc = (opsActivas[i].min||0)*(opsActivas[i].piezas||1)/(opsActivas[i].recursos||1);
       const maxPred = deps.length>0 ? Math.max(...deps.map(d=>ef[d]),0) : 0;
