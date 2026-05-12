@@ -1089,15 +1089,18 @@ function toggleBloque(id){
 // ── DIAGRAMA DE FLUJO CON FLECHAS SVG ─────────────
 function renderDiagrama(){
   const wrap = s('diagramaWrap'); if(!wrap) return;
+  try {
   const data = cur();
-  const ops = (data&&data.ops)||[];
+  if(!data){ wrap.innerHTML=`<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Sin datos</div>`; return; }
+  const ops = data.ops||[];
+  // Migración defensiva: recalcular depende desde numero si es necesario
+  migrarOpsWBS(ops);
+  // Asegurar depende en todas
+  ops.forEach(o=>{ if(o&&!o.depende) o.depende=[]; });
   const opsActivas = ops.filter(o=>o.activa!==false);
   if(!opsActivas.length){ wrap.innerHTML=`<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Sin operaciones activas</div>`; return; }
 
   const asignaciones = data.asignaciones || {};
-
-  // Asegurar que todas las ops tengan campo depende (migración defensiva)
-  ops.forEach(o=>{ if(o&&!o.depende) o.depende=[]; });
 
   // TC efectivo: divide por N operadores asignados si hay mas de 1
   function tcEfectivo(o){
@@ -1111,35 +1114,42 @@ function renderDiagrama(){
   const n = opsActivas.length;
 
   // ── Layout topológico: calcular columna (nivel) de cada op por sus deps ──
+  // Usar algoritmo iterativo (Kahn) para evitar stack overflow con ciclos
   const nivel = new Array(n).fill(0);
-  const visitedNivel = new Set();
-  function calcNivel(i){
-    if(visitedNivel.has(i)) return nivel[i];
-    visitedNivel.add(i);
+  // Calcular in-degree y lista de adyacencia
+  const inDegree = new Array(n).fill(0);
+  const sucesores = Array.from({length:n}, ()=>[]);
+  for(let i=0;i<n;i++){
     const deps = getDepsFromWBS(opsActivas, i, ops).filter(d=>d>=0&&d<n);
-    if(!deps.length){ nivel[i]=0; return 0; }
-    deps.forEach(d=>calcNivel(d));
-    nivel[i] = Math.max(...deps.map(d=>nivel[d])) + 1;
-    return nivel[i];
+    deps.forEach(d=>{ sucesores[d].push(i); inDegree[i]++; });
   }
-  for(let i=0;i<n;i++) calcNivel(i);
+  // Kahn: empezar con nodos sin predecesores
+  const cola = [];
+  for(let i=0;i<n;i++) if(inDegree[i]===0) cola.push(i);
+  while(cola.length){
+    const u = cola.shift();
+    sucesores[u].forEach(v=>{
+      nivel[v] = Math.max(nivel[v], nivel[u]+1);
+      inDegree[v]--;
+      if(inDegree[v]===0) cola.push(v);
+    });
+  }
+  // Si quedan nodos con inDegree>0 hay ciclo — forzar nivel 0 para no romper
+  for(let i=0;i<n;i++) if(inDegree[i]>0){ nivel[i]=0; }
 
   const maxNivel = Math.max(...nivel, 0);
   const columnas = [];
   for(let lv=0;lv<=maxNivel;lv++) columnas.push(opsActivas.filter((_,i)=>nivel[i]===lv));
 
-  // EF usando TC efectivo (considera operadores asignados)
+  // EF usando TC efectivo — iterativo siguiendo orden topológico (nivel)
   const ef = new Array(n).fill(0);
-  const visitedEF = new Set();
-  function calcEF(i){
-    if(visitedEF.has(i)) return ef[i];
-    visitedEF.add(i);
+  // Procesar en orden topológico (nivel ascendente)
+  const ordenTopo = Array.from({length:n},(_,i)=>i).sort((a,b)=>nivel[a]-nivel[b]);
+  ordenTopo.forEach(i=>{
     const deps = getDepsFromWBS(opsActivas, i, ops).filter(d=>d>=0&&d<n);
-    const maxPred = deps.length>0?Math.max(...deps.map(d=>calcEF(d))):0;
+    const maxPred = deps.length>0 ? Math.max(...deps.map(d=>ef[d])) : 0;
     ef[i] = maxPred + tcEfectivo(opsActivas[i]);
-    return ef[i];
-  }
-  for(let i=0;i<n;i++) calcEF(i);
+  });
 
   const accentColors=['#d4622a','#5bb8e8','#6fc98c','#c87de8','#e8a840','#e05c5c'];
   const BOX_W=160, BOX_GAP=20, COL_GAP=60, BOX_MIN_H=110;
@@ -1297,6 +1307,10 @@ function renderDiagrama(){
   </div>`;
 
   wrap.innerHTML = html;
+  } catch(err) {
+    console.error('[Diagrama]', err);
+    wrap.innerHTML = `<div style="padding:16px;color:var(--bad);font-size:12px;">Error al generar diagrama: ${err.message}</div>`;
+  }
 }
 
 function abrirAsigDiagrama(opActIdx){
@@ -2042,18 +2056,29 @@ function calcCaminoCritico(ops, allOps){
   const ef = new Array(n).fill(0);
   const es = new Array(n).fill(0);
 
-  const visited = new Set();
-  function visit(i){
-    if(visited.has(i)) return;
-    const deps = getDepsFromWBS(ops, i, src);
-    deps.forEach(d=>{ if(d>=0&&d<n) visit(d); });
+  // Calcular orden topológico iterativo (Kahn) para evitar stack overflow
+  const inDeg = new Array(n).fill(0);
+  const sucs = Array.from({length:n}, ()=>[]);
+  for(let i=0;i<n;i++){
+    const deps = getDepsFromWBS(ops, i, src).filter(d=>d>=0&&d<n);
+    deps.forEach(d=>{ sucs[d].push(i); inDeg[i]++; });
+  }
+  const topoQ = [];
+  for(let i=0;i<n;i++) if(inDeg[i]===0) topoQ.push(i);
+  const topoOrder = [];
+  const inDegCopy = [...inDeg];
+  const q2 = [...topoQ];
+  while(q2.length){ const u=q2.shift(); topoOrder.push(u); sucs[u].forEach(v=>{ inDegCopy[v]--; if(inDegCopy[v]===0) q2.push(v); }); }
+  // Nodos en ciclo — agregarlos al final
+  for(let i=0;i<n;i++) if(!topoOrder.includes(i)) topoOrder.push(i);
+
+  topoOrder.forEach(i=>{
+    const deps = getDepsFromWBS(ops, i, src).filter(d=>d>=0&&d<n);
     const tc = (ops[i].min||0)*(ops[i].piezas||1)/(ops[i].recursos||1);
-    const maxPred = deps.length>0 ? Math.max(...deps.filter(d=>d>=0&&d<n).map(d=>ef[d]), 0) : 0;
+    const maxPred = deps.length>0 ? Math.max(...deps.map(d=>ef[d]), 0) : 0;
     es[i] = maxPred;
     ef[i] = maxPred + tc;
-    visited.add(i);
-  }
-  for(let i=0;i<n;i++) visit(i);
+  });
 
   const maxEF = Math.max(...ef);
   const lf = new Array(n).fill(maxEF);
