@@ -1609,6 +1609,8 @@ function selectCentro(idx){
   s('paramDemanda').value = p.demanda || '';
   s('paramModo').value = p.modo || 'serie';
   renderMod();
+  // Migrar ops de este centro si vienen del formato WBS antiguo
+  if(cur()&&cur().ops) migrarOpsWBS(cur().ops);
   renderOps();
   renderCons();
   renderEtapas();
@@ -1618,6 +1620,13 @@ function selectCentro(idx){
   renderEquipos();
   renderTabuladorCentro();
   s('resultsBlock').style.display = 'none';
+  // Limpiar diagrama para que no muestre el del centro anterior
+  const diagWrap = s('diagramaWrap');
+  if(diagWrap) diagWrap.innerHTML = '';
+  const diagBlq = s('blq-ops-diagrama');
+  if(diagBlq) diagBlq.style.display = 'none';
+  const diagIcon = s('blq-ops-diagrama-icon');
+  if(diagIcon) diagIcon.textContent = '▸ Diagrama de flujo';
 
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -3507,10 +3516,17 @@ function _initFb(){
   if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
   _fbDB=firebase.database(); _fbRef=_fbDB.ref('control_ct');
   _fbRef.on('value',snap=>{
+    // No aplicar cambios remotos si hay guardado en progreso o pendiente
     if(_fbSyncBusy||_fbPendingSave) return;
     const remote=snap.val(); if(!remote) return;
     const localTs=(_fbSerialize()._savedAt||0);
-    if((remote._savedAt||0)>localTs+3000){ _fbApply(remote); buildGrid(); _fbUI('ok'); }
+    if((remote._savedAt||0)>localTs+3000){
+      _fbApply(remote);
+      // Migrar ops al aplicar cambios remotos también
+      Object.keys(state).forEach(k=>{ if(state[k]&&state[k].ops) migrarOpsWBS(state[k].ops); });
+      buildGrid();
+      _fbUI('ok');
+    }
   });
 }
 _initFb();
@@ -3523,7 +3539,25 @@ function _fbUI(st){
   p.innerHTML=`<span style="width:7px;height:7px;border-radius:50%;background:${s2.dot};display:inline-block;margin-right:5px;"></span>${s2.label}`;
 }
 
-function _fbSerialize(){ return { centros:centros.map(c=>({n:c.n,s:c.s})), state:state, equipoState:equipoState, tabulador:tabulador, _savedAt:Date.now() }; }
+function _fbSerialize(){
+  // Limpiar ops antes de guardar: quitar campo numero (ya migrado), asegurar depende limpio
+  const stateClean = {};
+  Object.keys(state).forEach(k=>{
+    const centro = state[k];
+    stateClean[k] = {
+      ...centro,
+      ops: (centro.ops||[]).map(o=>{
+        if(!o) return o;
+        const clean = {...o};
+        delete clean.numero;     // quitar WBS viejo para no confundir futuras cargas
+        delete clean.etapaIdx;   // campo legacy
+        if(!clean.depende) clean.depende = [];
+        return clean;
+      })
+    };
+  });
+  return { centros:centros.map(c=>({n:c.n,s:c.s})), state:stateClean, equipoState:equipoState, tabulador:tabulador, _savedAt:Date.now() };
+}
 
 function _norm(arr){ return Array.isArray(arr)?arr:(arr?Object.values(arr):[]); }
 function _fbApply(data){
@@ -3557,8 +3591,15 @@ function _fbApply(data){
       } else if(!d.asignaciones){
         d.asignaciones={};
       }
-      // Normalizar etapaIdx en ops (puede llegar como string)
-      d.ops.forEach(o=>{ if(o.etapaIdx!==undefined&&o.etapaIdx!==null) o.etapaIdx=parseInt(o.etapaIdx); });
+      // Normalizar ops
+      d.ops.forEach(o=>{
+        if(!o) return;
+        if(o.etapaIdx!==undefined&&o.etapaIdx!==null) o.etapaIdx=parseInt(o.etapaIdx);
+        // Normalizar depende: Firebase puede convertir array a objeto
+        if(o.depende&&!Array.isArray(o.depende)) o.depende=Object.values(o.depende).map(x=>parseInt(x));
+        else if(!o.depende) o.depende=[];
+        else o.depende=o.depende.map(x=>parseInt(x));
+      });
       Object.assign(state[ki],d);
     }
   });
@@ -3566,32 +3607,51 @@ function _fbApply(data){
   if(data.tabulador){ ['grupos','categorias','niveles'].forEach(k=>{ if(data.tabulador[k]) data.tabulador[k]=_norm(data.tabulador[k]); }); Object.assign(tabulador,data.tabulador); }
 }
 
-// ── Migración: convertir ops con numero WBS a campo depende[] ──
+// ── Migración: recalcular depende[] siempre desde numero WBS ──
+// Ignora cualquier depende guardado en Firebase (puede estar corrupto)
+// Solo aplica a ops que tienen campo numero (formato viejo)
 function migrarOpsWBS(ops){
   if(!ops||!ops.length) return;
-  const necesita = ops.some(o=>o.numero!==undefined && (!o.depende||!o.depende.length));
-  if(!necesita) return;
-  // Ordenar por numero para calcular dependencias
-  const conIdx = ops.map((o,i)=>({o,i}));
-  conIdx.sort((a,b)=>(parseFloat(a.o.numero)||0)-(parseFloat(b.o.numero)||0));
-  conIdx.forEach(({o,i})=>{
-    if(o.depende&&o.depende.length) return; // ya tiene deps
+  // Si ninguna op tiene numero, no hay nada que migrar
+  if(!ops.some(o=>o.numero!==undefined)) return;
+  // Agrupar índices por paso (parte entera de numero)
+  const pasos = {};
+  ops.forEach((o,i)=>{
+    const paso = Math.floor(parseFloat(o.numero)||0);
+    if(!pasos[paso]) pasos[paso]=[];
+    pasos[paso].push(i);
+  });
+  const pasosOrdenados = Object.keys(pasos).map(Number).sort((a,b)=>a-b);
+  // Recalcular depende para TODAS las ops con numero (sobreescribir siempre)
+  ops.forEach((o,i)=>{
+    if(o.numero===undefined) return;
     const pasoActual = Math.floor(parseFloat(o.numero)||0);
-    if(pasoActual<=0){ o.depende=[]; return; }
-    // Depende de todas las ops del paso anterior
-    o.depende = conIdx
-      .filter(x=>Math.floor(parseFloat(x.o.numero)||0)===pasoActual-1)
-      .map(x=>x.i);
+    const pasoAnteriorIdx = pasosOrdenados.indexOf(pasoActual) - 1;
+    o.depende = pasoAnteriorIdx < 0 ? [] : pasos[pasosOrdenados[pasoAnteriorIdx]];
   });
 }
 
 function fbSave(){
   _fbPendingSave=true; clearTimeout(_fbSaveTimer);
   _fbSaveTimer=setTimeout(async()=>{
-    if(_fbSyncBusy) return; _fbSyncBusy=true; _fbUI('saving');
-    try{ await _waitFb(); await _fbRef.set(_fbSerialize()); _fbPendingSave=false; _fbUI('ok'); }
-    catch(e){ console.error('[FB-CT]',e.message); _fbUI('error'); }
-    _fbSyncBusy=false;
+    if(_fbSyncBusy){ 
+      // Si lleva más de 8s ocupado, forzar liberación (evitar bloqueo permanente)
+      fbSave(); return; 
+    }
+    _fbSyncBusy=true; _fbUI('saving');
+    try{
+      await _waitFb();
+      await _fbRef.set(_fbSerialize());
+      _fbPendingSave=false;
+      _fbUI('ok');
+    } catch(e){
+      console.error('[FB-CT]',e.message);
+      _fbUI('error');
+      // Reintentar en 5s si falla
+      setTimeout(()=>{ if(_fbPendingSave) fbSave(); }, 5000);
+    } finally {
+      _fbSyncBusy=false;
+    }
   },1000);
 }
 
