@@ -1013,9 +1013,23 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
             <select class="select-input" id="dir-f-centro" style="min-width:160px">
               <option value="">Todos los CTs</option>
             </select>
-            <select class="select-input" id="dir-f-user" style="min-width:160px">
-              <option value="">Todos los ingenieros</option>
-            </select>
+            <!-- Multi-select ingenieros -->
+            <div style="position:relative" id="dir-user-picker-wrap">
+              <button class="btn sm" id="dir-user-picker-btn" onclick="toggleUserPicker()" type="button" style="min-width:160px;justify-content:space-between">
+                <span id="dir-user-picker-label">Todos los ingenieros</span>
+                <span style="font-size:10px;opacity:.6">▾</span>
+              </button>
+              <div id="dir-user-picker-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);box-shadow:var(--shadow);min-width:220px;max-height:300px;overflow-y:auto;padding:8px 0">
+                <div style="padding:6px 12px 4px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border2);margin-bottom:4px">
+                  <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Ingenieros</span>
+                  <div style="display:flex;gap:8px">
+                    <button type="button" onclick="setAllUsers(true)" style="all:unset;cursor:pointer;font-size:11px;color:var(--accent);font-weight:600">Todos</button>
+                    <button type="button" onclick="setAllUsers(false)" style="all:unset;cursor:pointer;font-size:11px;color:var(--muted);font-weight:600">Ninguno</button>
+                  </div>
+                </div>
+                <div id="dir-user-checkboxes"></div>
+              </div>
+            </div>
             <select class="select-input" id="dir-f-period" style="min-width:140px">
               <option value="week" selected>Esta semana</option>
               <option value="day">Hoy</option>
@@ -2801,11 +2815,79 @@ function delCentro(id){
   saveDB(); renderCentros(); toast('Centro eliminado');
 }
 
+/* ══════════════════════════════════════════════════════
+   MULTI-SELECT INGENIEROS — RESUMEN DIRECTIVO
+══════════════════════════════════════════════════════ */
+let _userPickerOpen = false;
+
+function buildUserCheckboxes(){
+  const container = document.getElementById('dir-user-checkboxes');
+  if(!container) return;
+  // Preserve current selections
+  const existing = new Set(
+    [...(container.querySelectorAll('input[type=checkbox]'))]
+      .filter(i=>i.checked).map(i=>i.value)
+  );
+  const allChecked = existing.size === 0; // empty = all selected
+  container.innerHTML = DB.users.map(u=>{
+    const checked = allChecked || existing.has(u.id);
+    return `<label style="display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;font-size:13px;transition:background .1s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <input type="checkbox" value="${u.id}" ${checked?'checked':''} onchange="onUserCheckChange()" style="accent-color:var(--accent);width:14px;height:14px;cursor:pointer;flex:0 0 14px">
+      <span>${esc(u.name)}</span>
+    </label>`;
+  }).join('');
+  updateUserPickerLabel();
+}
+
+function getSelectedUserIds(){
+  const boxes = [...document.querySelectorAll('#dir-user-checkboxes input[type=checkbox]')];
+  if(!boxes.length) return null; // not built yet → all
+  const checked = boxes.filter(b=>b.checked);
+  if(checked.length === boxes.length || checked.length === 0) return null; // all → no filter
+  return new Set(checked.map(b=>b.value));
+}
+
+function updateUserPickerLabel(){
+  const boxes = [...document.querySelectorAll('#dir-user-checkboxes input[type=checkbox]')];
+  const label = document.getElementById('dir-user-picker-label');
+  if(!label) return;
+  const checked = boxes.filter(b=>b.checked);
+  if(!boxes.length || checked.length === boxes.length) label.textContent = 'Todos los ingenieros';
+  else if(checked.length === 0) label.textContent = 'Ningún ingeniero';
+  else if(checked.length === 1) label.textContent = checked[0].closest('label').querySelector('span').textContent;
+  else label.textContent = `${checked.length} ingenieros`;
+}
+
+function onUserCheckChange(){
+  updateUserPickerLabel();
+  renderDirectivo();
+}
+
+function setAllUsers(val){
+  document.querySelectorAll('#dir-user-checkboxes input[type=checkbox]').forEach(b=>b.checked=val);
+  updateUserPickerLabel();
+  renderDirectivo();
+}
+
+function toggleUserPicker(){
+  const dd = document.getElementById('dir-user-picker-dropdown');
+  _userPickerOpen = !_userPickerOpen;
+  dd.style.display = _userPickerOpen ? 'block' : 'none';
+}
+
+// Close picker when clicking outside
+document.addEventListener('click', e=>{
+  if(_userPickerOpen && !document.getElementById('dir-user-picker-wrap')?.contains(e.target)){
+    _userPickerOpen = false;
+    const dd = document.getElementById('dir-user-picker-dropdown');
+    if(dd) dd.style.display = 'none';
+  }
+});
 
 function renderDirectivo(){
-  fillSelect('dir-f-user', DB.users, 'Todos los ingenieros');
   fillSelect('dir-f-centro', DB.centros||[], 'Todos los CTs', 'id', 'nombre');
-  const fu      = document.getElementById('dir-f-user')?.value||'';
+  // Rebuild checkbox list (preserve existing selections)
+  buildUserCheckboxes();
   const fct     = document.getElementById('dir-f-centro')?.value||'';
   const period  = document.getElementById('dir-f-period')?.value||'week';
   const today   = todayISO();
@@ -2816,7 +2898,8 @@ function renderDirectivo(){
   const report = document.getElementById('dir-report');
 
   /* ── Filtrar usuarios ── */
-  let users = fu ? DB.users.filter(u=>u.id===fu) : DB.users;
+  const selectedIds = getSelectedUserIds();
+  let users = selectedIds === null ? DB.users : DB.users.filter(u=>selectedIds.has(u.id));
 
   // Si hay filtro de CT, solo mostrar ingenieros asignados a ese CT
   if(fct){
@@ -2893,7 +2976,7 @@ function renderDirectivo(){
         }).join('')
       : `<tr><td colspan="4" class="empty" style="font-size:12px">Sin entregables para ${periodLabel.toLowerCase()}.</td></tr>`;
 
-    return`<div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
+    return`<div class="ing-card" style="margin-bottom:12px;padding:0;overflow:hidden;border:1px solid var(--border2);border-radius:var(--r2)">
       <div style="padding:12px 16px;display:flex;align-items:center;gap:12px;background:var(--surface2);border-bottom:1px solid var(--border2)">
         ${av}
         <div style="flex:1">
@@ -2929,38 +3012,47 @@ function renderDirectivo(){
   }
 
   /* ── Render: agrupado por CT o plano ── */
-  if(!fu && !fct){
+  if(!fct){
     // Vista agrupada por CT
     const centros = DB.centros||[];
-    const ctConUsers = centros.filter(ct=>{
-      const ctIngIds=new Set([...(ct.ingenieros||[]),ct.encargadoId].filter(Boolean));
-      DB.projects.filter(p=>p.centroId===ct.id).forEach(p=>{
-        if(p.leaderId) ctIngIds.add(p.leaderId);
-        DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
-      });
-      return users.some(u=>ctIngIds.has(u.id));
-    });
 
-    // Usuarios sin CT
-    const usersConCT=new Set();
-    centros.forEach(ct=>{
-      const ctIngIds=new Set([...(ct.ingenieros||[]),ct.encargadoId].filter(Boolean));
-      DB.projects.filter(p=>p.centroId===ct.id).forEach(p=>{
-        if(p.leaderId) ctIngIds.add(p.leaderId);
-        DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
+    // Agrupar usuarios por CT:
+    // Cada usuario aparece en exactamente UN CT:
+    // 1. De sus CTs explícitos, el que tenga más entregables suyos
+    // 2. Si no tiene membresía explícita, el CT del proyecto con más entregables
+    // 3. Si no aplica nada → sin CT
+    const ctMap = new Map(); // ctId -> [users]
+    users.forEach(u=>{
+      const explicitCTs = centros.filter(ct=>(ct.ingenieros||[]).includes(u.id)||ct.encargadoId===u.id);
+      // Contar entregables por CT
+      const countByCT = new Map();
+      DB.deliverables.filter(d=>d.assigneeId===u.id).forEach(d=>{
+        const p=byId(DB.projects,d.projectId);
+        if(p?.centroId){ countByCT.set(p.centroId,(countByCT.get(p.centroId)||0)+1); }
       });
-      users.filter(u=>ctIngIds.has(u.id)).forEach(u=>usersConCT.add(u.id));
+      let chosenCT = null;
+      if(explicitCTs.length){
+        // De los explícitos, elegir el que tiene más entregables; si empate, el primero
+        const withCount = explicitCTs.map(ct=>({ct, n: countByCT.get(ct.id)||0}));
+        withCount.sort((a,b)=>b.n-a.n);
+        // Solo elegir si tiene al menos 1 entregable; si ninguno tiene, no mostrar
+        if(withCount[0].n > 0) chosenCT = withCount[0].ct.id;
+      } else if(countByCT.size){
+        chosenCT = [...countByCT.entries()].sort((a,b)=>b[1]-a[1])[0][0];
+      }
+      if(chosenCT){
+        if(!ctMap.has(chosenCT)) ctMap.set(chosenCT,[]);
+        ctMap.get(chosenCT).push(u);
+      }
     });
-    const usersSinCT=users.filter(u=>!usersConCT.has(u.id));
+    const usersSinCT = users.filter(u=>![...ctMap.values()].some(arr=>arr.includes(u)));
+
+    // Solo mostrar CTs que tengan al menos un usuario
+    const ctConUsers = centros.filter(ct=>ctMap.has(ct.id)&&ctMap.get(ct.id).length>0);
 
     let html='';
     ctConUsers.forEach(ct=>{
-      const ctIngIds=new Set([...(ct.ingenieros||[]),ct.encargadoId].filter(Boolean));
-      DB.projects.filter(p=>p.centroId===ct.id).forEach(p=>{
-        if(p.leaderId) ctIngIds.add(p.leaderId);
-        DB.deliverables.filter(d=>d.projectId===p.id).forEach(d=>{if(d.assigneeId) ctIngIds.add(d.assigneeId);});
-      });
-      const ctUsers=users.filter(u=>ctIngIds.has(u.id));
+      const ctUsers = ctMap.get(ct.id)||[];
       const ctProjs=DB.projects.filter(p=>p.centroId===ct.id&&p.status!=='Cerrado');
       const ctDels=ctProjs.flatMap(p=>DB.deliverables.filter(d=>d.projectId===p.id));
       const ctVenc=ctDels.filter(d=>d.status!=='Aprobado'&&d.due&&d.due<today).length;
@@ -2968,8 +3060,10 @@ function renderDirectivo(){
       const ctPct=ctDels.length?Math.round(ctAprov/ctDels.length*100):0;
       const ctLvl=ctPct>=85?'ok':ctPct>=70?'warn':'bad';
 
-      html+=`<div style="margin-bottom:20px">
-        <div style="padding:12px 16px;background:var(--text);color:#fff;border-radius:var(--r2) var(--r2) 0 0;display:flex;align-items:center;gap:12px">
+      if(!ctUsers.length) return; // skip CT with no users in current filter
+
+      html+=`<div class="ct-block" style="margin-bottom:20px">
+        <div class="ct-header" style="padding:12px 16px;background:var(--text);color:#fff;border-radius:var(--r2) var(--r2) 0 0;display:flex;align-items:center;gap:12px">
           <div style="flex:1">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <span style="font-family:var(--font-display);font-weight:700;font-size:15px">🏭 ${esc(ct.nombre)}</span>
@@ -3016,11 +3110,10 @@ function exportDirectivoPDF(){
     toast('Primero genera el reporte'); return;
   }
 
-  const fu     = document.getElementById('dir-f-user')?.value||'';
   const period = document.getElementById('dir-f-period')?.value||'week';
   const periodLabels={all:'Todo',day:'Hoy',week:'Esta semana',month:'Este mes'};
   const periodLabel = periodLabels[period]||period;
-  const userName2 = fu ? DB.users.find(u=>u.id===fu)?.name||'' : 'Todo el equipo';
+  const userName2 = document.getElementById('dir-user-picker-label')?.textContent||'Todo el equipo';
   const today = new Date().toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
   // Get CSS variables for colors
@@ -3039,6 +3132,45 @@ function exportDirectivoPDF(){
 
   // Remove action buttons from clone
   clone.querySelectorAll('button,.btn').forEach(el=>el.remove());
+
+  // Resolve CSS variables to literal values so they render in the new window
+  let cloneHTML = clone.innerHTML;
+  const cssVarMap = {
+    'var(--surface)':'#ffffff','var(--surface2)':'#f0f2f5',
+    'var(--border)':'#d8dde5','var(--border2)':'#e4e8ee',
+    'var(--text)':'#1a2233','var(--muted)':'#4a5568',
+    'var(--accent)':'#d4622a','var(--accent2)':'#b8501f',
+    'var(--ok)':'#1e9e5e','var(--warn)':'#c47d0a','var(--bad)':'#d93535',
+    'var(--ok-bg)':'rgba(30,158,94,.10)','var(--warn-bg)':'rgba(196,125,10,.10)',
+    'var(--bad-bg)':'rgba(217,53,53,.10)','var(--accent-bg)':'rgba(212,98,42,.10)',
+    'var(--r)':'10px','var(--r2)':'14px',
+    'var(--font-display)':'Arial','var(--font-body)':'Arial',
+  };
+  Object.entries(cssVarMap).forEach(([k,v])=>{ cloneHTML=cloneHTML.split(k).join(v); });
+
+  // Restructure for print: each engineer gets their CT header + page-break after
+  // Parse ct-blocks and flatten into one engineer-per-page units
+  const parser = new DOMParser();
+  const doc2 = parser.parseFromString('<div>' + cloneHTML + '</div>', 'text/html');
+  const root = doc2.body.firstChild;
+  let printUnits = [];
+  root.querySelectorAll('.ct-block').forEach(ctBlock=>{
+    const ctHeaderEl = ctBlock.querySelector('.ct-header');
+    const ctHeaderHTML = ctHeaderEl ? ctHeaderEl.outerHTML : '';
+    ctBlock.querySelectorAll('.ing-card').forEach(card=>{
+      printUnits.push(
+        `<div style="margin-bottom:20px">${ctHeaderHTML}<div style="border:1px solid #e4e8ee;border-top:none;border-radius:0 0 14px 14px;padding:12px">${card.outerHTML}</div></div>`
+      );
+    });
+  });
+  // Also handle sinCT users (no ct-block wrapper)
+  root.querySelectorAll(':scope > .ing-card').forEach(card=>{
+    printUnits.push(`<div style="margin-bottom:20px">${card.outerHTML}</div>`);
+  });
+
+  if(printUnits.length > 0){
+    cloneHTML = printUnits.join('<div style="page-break-after:always;break-after:page"></div>');
+  }
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
   <title>Resumen Directivo — ${today}</title>
@@ -3071,15 +3203,16 @@ function exportDirectivoPDF(){
     .venc-row{background:#FFF5F5}
     .empty{color:#aaa;font-style:italic;padding:10px}
     .footer{margin-top:24px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #E8E6DF;padding-top:10px}
-    @media print{body{padding:16px}.card{page-break-inside:avoid}}
+    @media print{body{padding:16px}}
   </style></head><body>
   <h1>Resumen Directivo — LI Ingeniería de Procesos</h1>
   <div class="sub">Generado: ${today} · ${userName2} · Período: ${periodLabel}</div>
-  ${clone.innerHTML}
+  ${cloneHTML}
   <div class="footer">LI Ingeniería de Procesos · Sistema de seguimiento de proyectos</div>
   </body></html>`;
 
   const win = window.open('','_blank');
+  win.document.open();
   win.document.write(html);
   win.document.close();
   setTimeout(()=>win.print(), 600);
@@ -4556,7 +4689,7 @@ document.getElementById('del-tabs')?.addEventListener('click',e=>{
   document.getElementById(id)?.addEventListener('change',()=>renderIngenieros());
 });
 // Directivo config panel listeners
-['dir-f-user','dir-f-period','dir-f-proj','dir-f-proj-id','dir-f-centro'].forEach(id=>{
+['dir-f-period','dir-f-proj','dir-f-proj-id','dir-f-centro'].forEach(id=>{
   document.getElementById(id)?.addEventListener('change',()=>renderDirectivo());
 });
 ['dir-sec-kpis','dir-sec-ingenieros','dir-sec-proyectos','dir-sec-riesgo','dir-sec-logros'].forEach(id=>{
@@ -4573,9 +4706,6 @@ document.getElementById('view-revisar')?.addEventListener('click',e=>{
   document.querySelectorAll('.hot-filter-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderDashboard();
-});
-['dir-f-user','dir-f-period'].forEach(id=>{
-  document.getElementById(id)?.addEventListener('change',()=>renderDirectivo());
 });
 ['del-search','del-f-proj','del-f-ass','dash-filter-ass','gantt-f-ass'].forEach(id=>{
   document.getElementById(id)?.addEventListener('input',()=>renderView(currentView));
