@@ -806,18 +806,15 @@ body.dark .dash-alert-title{color:#e05c5c;}
   <div class="modal-box">
     <div class="modal-header"><span class="modal-title" id="modal-ops-title">Nueva operación</span><button class="modal-close" onclick="closeModal('modal-ops')">✕</button></div>
     <input type="hidden" id="opsEditIdx" value="">
-    <div style="background:var(--surface2);border-radius:var(--r);padding:10px 14px;margin-bottom:4px;font-size:12px;color:var(--text-muted);line-height:1.6;">
-      <strong style="color:var(--text-primary);">Numeración:</strong> usa números enteros para pasos en serie y decimales para paralelas.<br>
-      Ej: <code style="background:var(--border2);padding:1px 5px;border-radius:4px;">1</code> serie · 
-      <code style="background:var(--border2);padding:1px 5px;border-radius:4px;">2.0</code> <code style="background:var(--border2);padding:1px 5px;border-radius:4px;">2.1</code> paralelas
-    </div>
     <div class="form-row">
-      <div class="form-group" style="flex:0 0 90px;">
-        <label>Número</label>
-        <input type="number" id="opNumero" placeholder="1" min="0" step="0.1" oninput="updateOpTcPreview()">
-      </div>
       <div class="form-group" style="flex:2;min-width:140px;"><label>Nombre</label><input type="text" id="opName" placeholder="Ej. Dobla pata"></div>
       <div class="form-group" style="flex:0 0 90px;"><label>Minutos</label><input type="number" id="opMin" placeholder="0" min="0" step="0.01" oninput="updateOpTcPreview()"></div>
+    </div>
+    <div class="form-group">
+      <label>Depende de (predecesores)</label>
+      <div id="opDependeWrap" style="background:var(--input-bg);border:1px solid var(--border2);border-radius:var(--r);padding:8px 12px;max-height:140px;overflow-y:auto;font-size:13px;">
+        <span style="color:var(--text-muted);font-size:12px;">Sin otras operaciones aún</span>
+      </div>
     </div>
     <div class="form-row">
       <div class="form-group" style="flex:0 0 90px;">
@@ -1092,28 +1089,54 @@ function toggleBloque(id){
 // ── DIAGRAMA DE FLUJO CON FLECHAS SVG ─────────────
 function renderDiagrama(){
   const wrap = s('diagramaWrap'); if(!wrap) return;
-  const ops = (cur()&&cur().ops)||[];
+  const data = cur();
+  const ops = (data&&data.ops)||[];
   const opsActivas = ops.filter(o=>o.activa!==false);
   if(!opsActivas.length){ wrap.innerHTML=`<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Sin operaciones activas</div>`; return; }
 
-  const critPath = calcCaminoCritico(opsActivas);
+  const asignaciones = data.asignaciones || {};
+
+  // Asegurar que todas las ops tengan campo depende (migración defensiva)
+  ops.forEach(o=>{ if(o&&!o.depende) o.depende=[]; });
+
+  // TC efectivo: divide por N operadores asignados si hay mas de 1
+  function tcEfectivo(o){
+    const opIdx = ops.indexOf(o);
+    const tcBase = (o.min||0)*(o.piezas||1)/(o.recursos||1);
+    const nAsigs = ((asignaciones[opIdx]||asignaciones[String(opIdx)])||[]).length;
+    return nAsigs > 1 ? tcBase / nAsigs : tcBase;
+  }
+
+  const critPath = calcCaminoCritico(opsActivas, data.ops);
   const n = opsActivas.length;
 
-  // Use WBS number as level (integer part = column)
-  const nivel = opsActivas.map(o=>Math.floor(parseFloat(o.numero)||0));
-  const maxNivel = Math.max(...nivel,0);
+  // ── Layout topológico: calcular columna (nivel) de cada op por sus deps ──
+  const nivel = new Array(n).fill(0);
+  const visitedNivel = new Set();
+  function calcNivel(i){
+    if(visitedNivel.has(i)) return nivel[i];
+    visitedNivel.add(i);
+    const deps = getDepsFromWBS(opsActivas, i, ops).filter(d=>d>=0&&d<n);
+    if(!deps.length){ nivel[i]=0; return 0; }
+    deps.forEach(d=>calcNivel(d));
+    nivel[i] = Math.max(...deps.map(d=>nivel[d])) + 1;
+    return nivel[i];
+  }
+  for(let i=0;i<n;i++) calcNivel(i);
+
+  const maxNivel = Math.max(...nivel, 0);
   const columnas = [];
   for(let lv=0;lv<=maxNivel;lv++) columnas.push(opsActivas.filter((_,i)=>nivel[i]===lv));
 
-  // EF
+  // EF usando TC efectivo (considera operadores asignados)
   const ef = new Array(n).fill(0);
   const visitedEF = new Set();
   function calcEF(i){
     if(visitedEF.has(i)) return ef[i];
     visitedEF.add(i);
-    const deps = getDepsFromWBS(opsActivas, i).filter(d=>d>=0&&d<n);
+    const deps = getDepsFromWBS(opsActivas, i, ops).filter(d=>d>=0&&d<n);
     const maxPred = deps.length>0?Math.max(...deps.map(d=>calcEF(d))):0;
-    ef[i] = maxPred + (opsActivas[i].min||0)*(opsActivas[i].piezas||1)/(opsActivas[i].recursos||1);
+    ef[i] = maxPred + tcEfectivo(opsActivas[i]);
     return ef[i];
   }
   for(let i=0;i<n;i++) calcEF(i);
@@ -1178,14 +1201,18 @@ function renderDiagrama(){
   opsActivas.forEach((o,i)=>{
     const p = positions[i]; if(!p) return;
     const enCamino = critPath.includes(i);
-    const tcReal = ((o.min||0)*(o.piezas||1)/(o.recursos||1));
+    const tcBase = ((o.min||0)*(o.piezas||1)/(o.recursos||1));
+    const opIdx = ops.indexOf(o);
+    const asigIdx = (asignaciones[opIdx]||asignaciones[String(opIdx)]||[]).map(x=>parseInt(x));
+    const nAsigsCaja = asigIdx.length;
+    const tcMostrar = nAsigsCaja > 1 ? tcBase / nAsigsCaja : tcBase;
     const lv = nivel[i];
     const colorTC = enCamino?'var(--bad)':accentColors[lv%accentColors.length];
-    const asigIdx = (cur().asignaciones&&(cur().asignaciones[ops.indexOf(o)]||cur().asignaciones[String(ops.indexOf(o))])||[]).map(x=>parseInt(x));
-    const asigNombre = asigIdx.length>0&&cur().mod[asigIdx[0]]?cur().mod[asigIdx[0]].puesto:'—';
+    const asigNombres = asigIdx.map(mi=>data.mod[mi]?.puesto||'').filter(Boolean);
+    const asigNombre = asigNombres.length>0 ? asigNombres.join(', ') : '—';
     const dia = o.dia||1;
-    const wbsNum = o.numero||'?';
     const col = columnas[lv];
+    // Es paralela si comparte columna con otra op (mismos predecesores, distinta rama)
     const isParalelo = col.length > 1;
 
     html += `<div id="diag-box-${i}" onclick="abrirAsigDiagrama(${i})" style="
@@ -1199,14 +1226,17 @@ function renderDiagrama(){
     " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform=''">
       ${enCamino?`<div style="position:absolute;top:-9px;right:8px;background:var(--bad);color:#fff;border-radius:10px;font-size:9px;font-weight:700;padding:2px 6px;">CRÍTICO</div>`:''}
       <div style="display:flex;align-items:center;gap:4px;margin-bottom:5px;">
-        <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;background:${isParalelo?'var(--ok-bg)':'var(--accent-bg)'};color:${isParalelo?'var(--ok)':'var(--accent)'};">${wbsNum}</span>
+        <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;background:${isParalelo?'var(--ok-bg)':'var(--accent-bg)'};color:${isParalelo?'var(--ok)':'var(--accent)'};">${isParalelo?'⇉ Paralelo':'→ Serie'}</span>
         <span style="font-size:9px;padding:1px 5px;border-radius:10px;background:var(--surface2);color:var(--text-muted);font-weight:600;">Día ${dia}</span>
         ${o.recursos>1?`<span style="font-size:9px;padding:1px 5px;border-radius:10px;background:var(--ok-bg);color:var(--ok);font-weight:700;">×${o.recursos}</span>`:''}
-        ${isParalelo?'<span style="font-size:9px;color:var(--ok);">⇉</span>':''}
       </div>
       <div style="font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:5px;line-height:1.3;">${o.nombre}</div>
-      <div style="font-family:var(--font-mono);font-size:1rem;font-weight:700;color:${colorTC};">${tcReal.toFixed(2)} min</div>
-      <div style="margin-top:6px;padding-top:5px;border-top:1px solid var(--border2);font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+      <div style="font-family:var(--font-mono);font-size:1rem;font-weight:700;color:${colorTC};">
+        ${tcMostrar.toFixed(2)} min
+        ${nAsigsCaja>1?`<span style="font-size:9px;font-weight:600;color:var(--ok);margin-left:4px;">÷${nAsigsCaja} ops</span>`:''}
+      </div>
+      ${nAsigsCaja>1?`<div style="font-size:9px;color:var(--text-muted);margin-top:2px;">base: ${tcBase.toFixed(2)} min</div>`:''}
+      <div style="margin-top:6px;padding-top:5px;border-top:1px solid var(--border2);font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
         <span style="font-size:12px;">👤</span>
         <span id="diag-op-${i}">${asigNombre}</span>
       </div>
@@ -1228,7 +1258,7 @@ function renderDiagrama(){
   opsActivas.forEach((o,i)=>{
     const pFrom = positions[i]; if(!pFrom) return;
     opsActivas.forEach((succ,j)=>{
-      const succDeps = getDepsFromWBS(opsActivas, j);
+      const succDeps = getDepsFromWBS(opsActivas, j, ops);
       if(!succDeps.includes(i)) return;
       const pTo = positions[j]; if(!pTo) return;
       const enCamino = critPath.includes(i)&&critPath.includes(j);
@@ -1252,7 +1282,7 @@ function renderDiagrama(){
 
   html += `</svg></div>`;
 
-  // Critical path summary
+  // Critical path summary — usa EF efectivo (con operadores)
   const tcTotal = n>0?Math.max(...ef):0;
   html += `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface2);border-radius:var(--r);flex-wrap:wrap;margin-bottom:8px;">
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Camino crítico</div>
@@ -1377,11 +1407,8 @@ function openModal(id, isNew=true){
       s('opDia').value = '1';
       s('opPiezas').value = '1';
       s('opTcPreview').textContent = '—';
-      // Auto-suggest next WBS number
-      const ops = cur()&&cur().ops||[];
-      const maxNum = ops.length>0 ? Math.max(...ops.map(o=>parseFloat(o.numero)||0)) : 0;
-      s('opNumero').value = Math.floor(maxNum)+1;
-      // Populate operator selector
+      // Poblar selector de dependencias (nueva op: ninguna marcada)
+      populateOpDependencias(-1, []);
       populateOpOperador(-1);
     }
     if (id === 'modal-cons') {
@@ -1860,26 +1887,22 @@ function saveOperacion(){
   if(selectedIdx===null||!cur()) return;
   const nombre = s('opName').value.trim();
   const min = parseFloat(s('opMin').value);
-  const numero = parseFloat(s('opNumero').value);
   const recursos = parseInt(s('opRecursos').value)||1;
   const dia = parseInt(s('opDia').value)||1;
   const piezas = parseInt(s('opPiezas').value)||1;
   if(!nombre || isNaN(min) || min<0){ alert('Ingresa nombre y minutos.'); return; }
-  if(isNaN(numero)){ alert('Ingresa el número de operación.'); return; }
 
-  // Build depende from WBS: depends on all ops with lower integer step
-  const pasoActual = Math.floor(numero);
-  const depende = (cur().ops||[])
-    .map((o,i)=>({i, paso:Math.floor(parseFloat(o.numero)||0)}))
-    .filter(x=>x.paso < pasoActual)
-    .map(x=>x.i);
+  // Leer dependencias desde checkboxes
+  const dependeChecks = document.querySelectorAll('#opDependeWrap input[type=checkbox]:checked');
+  const depende = Array.from(dependeChecks).map(cb=>parseInt(cb.value));
 
   const editIdx = s('opsEditIdx').value;
-  const entry = {nombre, numero, min, recursos, dia, piezas, depende, activa:true};
+  const entry = {nombre, min, recursos, dia, piezas, depende, activa:true};
   let savedIdx;
   if(editIdx !== ''){
     savedIdx = parseInt(editIdx);
     cur().ops[savedIdx] = {...(cur().ops[savedIdx]||{}), ...entry};
+    // Si se edita, actualizar referencias en otras ops que dependían del índice
   } else {
     cur().ops.push(entry);
     savedIdx = cur().ops.length-1;
@@ -1894,7 +1917,7 @@ function saveOperacion(){
     cur().asignaciones[savedIdx] = [];
   }
 
-  markUpdated(); closeModal('modal-ops'); renderOps(); renderAsignacion();
+  markUpdated(); closeModal('modal-ops'); renderOps(); renderAsignacion(); renderDiagrama();
   if(s('resultsBlock')&&s('resultsBlock').style.display!=='none') calcularResultados();
 }
 
@@ -1902,95 +1925,110 @@ function editOperacion(i){
   const o = cur().ops[i];
   s('opsEditIdx').value = i;
   s('modal-ops-title').textContent = 'Editar operación';
-  s('opNumero').value = o.numero||1;
   s('opName').value = o.nombre; s('opMin').value = o.min;
   s('opRecursos').value = o.recursos||1;
   s('opDia').value = o.dia||1;
   s('opPiezas').value = o.piezas||1;
   const tc = ((o.min||0)*(o.piezas||1))/(o.recursos||1);
   s('opTcPreview').textContent = tc>0?tc.toFixed(2)+' min':'—';
+  populateOpDependencias(i, o.depende||[]);
   populateOpOperador(i);
   openModal('modal-ops', false);
 }
-function delOperacion(i){ cur().ops.splice(i,1); markUpdated(); renderOps(); renderAsignacion(); }
+function delOperacion(i){
+  // Actualizar dependencias de otras ops que apuntaban a i
+  cur().ops.forEach((o,j)=>{
+    if(!o||j===i) return;
+    o.depende = (o.depende||[])
+      .filter(d=>d!==i)          // quitar referencia a la op eliminada
+      .map(d=>d>i?d-1:d);        // reindexar las que estaban después
+  });
+  // Reindexar asignaciones
+  const newAsig = {};
+  Object.keys(cur().asignaciones||{}).forEach(k=>{
+    const ki = parseInt(k);
+    if(ki===i) return;
+    newAsig[ki>i?ki-1:ki] = cur().asignaciones[k];
+  });
+  cur().asignaciones = newAsig;
+  cur().ops.splice(i,1);
+  markUpdated(); renderOps(); renderAsignacion(); renderDiagrama();
+}
 function renderOps(){
   const ops = cur().ops;
   const c = s('opsList');
   if(!ops.length){ c.innerHTML=`<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:13px;">Sin operaciones registradas</div>`; return; }
 
-  // Sort by WBS number
-  const opsSorted = [...ops].map((o,i)=>({...o, _origIdx:i})).sort((a,b)=>(parseFloat(a.numero)||0)-(parseFloat(b.numero)||0));
-  
-  // Group by integer step (pasos)
-  const pasos = {};
-  opsSorted.forEach(o=>{
-    const paso = Math.floor(parseFloat(o.numero)||0);
-    if(!pasos[paso]) pasos[paso]=[];
-    pasos[paso].push(o);
-  });
-
-  // Group pasos by day
-  const diasUnicos = [...new Set(opsSorted.map(o=>o.dia||1))].sort((a,b)=>a-b);
-
   let html = '';
-  diasUnicos.forEach(dia=>{
-    html += `<div style="margin-bottom:12px;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px;padding:4px 8px;background:var(--surface2);border-radius:6px;">📅 Día ${dia}</div>`;
+  ops.forEach((o,i)=>{
+    if(!o) return;
+    const checked = o.activa!==false ? 'checked' : '';
+    const tcReal = ((o.min||0)*(o.piezas||1)/(o.recursos||1));
+    const pzas = o.piezas||1;
+    const asigArr = (cur().asignaciones&&(cur().asignaciones[i]||cur().asignaciones[String(i)])||[]).map(x=>parseInt(x));
+    const opNombre = asigArr.length>0&&cur().mod[asigArr[0]] ? cur().mod[asigArr[0]].puesto : '—';
+    const depende = o.depende||[];
+    const depNames = depende.map(di=>ops[di]?.nombre||'?').filter(Boolean);
+    const depLabel = depNames.length ? `← ${depNames.join(', ')}` : '— inicio';
 
-    Object.keys(pasos).filter(paso=>{
-      return pasos[paso].some(o=>(o.dia||1)===dia);
-    }).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(paso=>{
-      const opsStep = pasos[paso].filter(o=>(o.dia||1)===dia);
-      const isParalelo = opsStep.length > 1;
-
-      if(isParalelo){
-        html += `<div style="border-left:3px solid var(--ok);padding-left:10px;margin-bottom:8px;">
-          <div style="font-size:10px;font-weight:700;color:var(--ok);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">⇉ Paso ${paso} — Paralelo</div>`;
-      } else {
-        html += `<div style="border-left:3px solid var(--accent);padding-left:10px;margin-bottom:8px;">
-          <div style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">→ Paso ${paso} — Serie</div>`;
-      }
-
-      opsStep.forEach(o=>{
-        const i = o._origIdx;
-        const checked = o.activa!==false ? 'checked' : '';
-        const tcReal = ((o.min||0)*(o.piezas||1)/(o.recursos||1));
-        const pzas = o.piezas||1;
-        // Find assigned operator
-        const asigArr = (cur().asignaciones&&(cur().asignaciones[i]||cur().asignaciones[String(i)])||[]).map(x=>parseInt(x));
-        const opNombre = asigArr.length>0&&cur().mod[asigArr[0]] ? cur().mod[asigArr[0]].puesto : '—';
-
-        html += `<div class="item-row" style="opacity:${o.activa===false?'0.45':'1'}">
-          <input type="checkbox" ${checked} onchange="togglePresencia('ops',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
-          <span style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-muted);min-width:28px;">${o.numero||'?'}</span>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:500;color:var(--text-primary);">${o.nombre}${pzas>1?` <span style="font-size:10px;color:var(--ok);">×${pzas}pzas</span>`:''}</div>
-            <div style="font-size:11px;color:var(--text-muted);">👤 ${opNombre}</div>
-          </div>
-          <div class="item-min">${tcReal.toFixed(2)} min</div>
-          <button class="item-edit" onclick="editOperacion(${i})">✎</button>
-          <button class="item-del" onclick="delOperacion(${i})">✕</button>
-        </div>`;
-      });
-
-      html += `</div>`;
-    });
-    html += `</div>`;
+    html += `<div class="item-row" style="opacity:${o.activa===false?'0.45':'1'}">
+      <input type="checkbox" ${checked} onchange="togglePresencia('ops',${i},this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;color:var(--text-primary);">${o.nombre}${pzas>1?` <span style="font-size:10px;color:var(--ok);">×${pzas}pzas</span>`:''}</div>
+        <div style="font-size:11px;color:var(--text-muted);">👤 ${opNombre} · <span style="color:var(--text-tertiary);">${depLabel}</span></div>
+      </div>
+      <div class="item-min">${tcReal.toFixed(2)} min</div>
+      <button class="item-edit" onclick="editOperacion(${i})">✎</button>
+      <button class="item-del" onclick="delOperacion(${i})">✕</button>
+    </div>`;
   });
   c.innerHTML = html;
 }
 // Calcula el camino crítico usando Early Finish
 // Get dependencies from WBS number — op depends on all ops in the previous step
-function getDepsFromWBS(ops, idx){
-  const pasoActual = Math.floor(parseFloat(ops[idx].numero)||0);
-  if(pasoActual<=0) return [];
-  return ops.map((o,i)=>({i, paso:Math.floor(parseFloat(o.numero)||0)}))
-    .filter(x=>x.i!==idx && x.paso === pasoActual-1)
-    .map(x=>x.i);
+// Poblar checkboxes de dependencias en el modal
+function populateOpDependencias(editIdx, selectedDeps){
+  const wrap = s('opDependeWrap'); if(!wrap) return;
+  const ops = (cur()&&cur().ops)||[];
+  // Excluir la op que se está editando
+  const otras = ops.map((o,i)=>({o,i})).filter(({i})=>i!==parseInt(editIdx));
+  if(!otras.length){
+    wrap.innerHTML='<span style="color:var(--text-muted);font-size:12px;">Sin otras operaciones aún</span>';
+    return;
+  }
+  wrap.innerHTML = otras.map(({o,i})=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:13px;">
+      <input type="checkbox" value="${i}" ${selectedDeps.includes(i)?'checked':''} style="width:15px;height:15px;accent-color:var(--accent);">
+      <span style="color:var(--text-primary);">${o.nombre}</span>
+      <span style="margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">${((o.min||0)*(o.piezas||1)/(o.recursos||1)).toFixed(2)} min</span>
+    </label>`).join('');
 }
 
-function calcCaminoCritico(ops){
+// Obtener dependencias reales de una op (desde campo depende[])
+// allOps = cur().ops completo (para mapear índices originales)
+// ops = subset activo (opsActivas)
+// idx = índice dentro de ops (subset)
+function getDepsFromWBS(ops, idx, allOps){
+  const o = ops[idx];
+  if(!o) return [];
+  const depende = o.depende;
+  if(!depende||!depende.length) return [];
+  // Si no se pasa allOps, intentar con cur()
+  const source = allOps || (cur()&&cur().ops) || ops;
+  return depende.map(origIdx=>{
+    const op = source[origIdx];
+    if(!op) return -1;
+    // Si ops === source, el índice es directo
+    if(ops === source) return origIdx !== idx ? origIdx : -1;
+    return ops.indexOf(op);
+  }).filter(i=>i>=0 && i!==idx);
+}
+
+function calcCaminoCritico(ops, allOps){
   if(!ops||!ops.length) return [];
+  const src = allOps || ops;
+  // Asegurar depende en todas las ops
+  ops.forEach(o=>{ if(o&&!o.depende) o.depende=[]; });
   const n = ops.length;
   const ef = new Array(n).fill(0);
   const es = new Array(n).fill(0);
@@ -1998,7 +2036,7 @@ function calcCaminoCritico(ops){
   const visited = new Set();
   function visit(i){
     if(visited.has(i)) return;
-    const deps = getDepsFromWBS(ops, i);
+    const deps = getDepsFromWBS(ops, i, src);
     deps.forEach(d=>{ if(d>=0&&d<n) visit(d); });
     const tc = (ops[i].min||0)*(ops[i].piezas||1)/(ops[i].recursos||1);
     const maxPred = deps.length>0 ? Math.max(...deps.filter(d=>d>=0&&d<n).map(d=>ef[d]), 0) : 0;
@@ -2013,7 +2051,7 @@ function calcCaminoCritico(ops){
   const ls = new Array(n).fill(0);
 
   for(let i=n-1;i>=0;i--){
-    const successors = ops.map((o,j)=>getDepsFromWBS(ops,j).includes(i)?j:-1).filter(j=>j>=0);
+    const successors = ops.map((o,j)=>getDepsFromWBS(ops,j,src).includes(i)?j:-1).filter(j=>j>=0);
     if(successors.length>0) lf[i] = Math.min(...successors.map(j=>ls[j]));
     ls[i] = lf[i] - (ops[i].min||0)*(ops[i].piezas||1)/(ops[i].recursos||1);
   }
@@ -2121,7 +2159,10 @@ function renderAsignacion(){
   opsActivas.forEach(o=>{
     const opIdx = data.ops.indexOf(o);
     const asigs = (data.asignaciones[opIdx] || data.asignaciones[String(opIdx)] || []).map(x=>parseInt(x));
-    asigs.forEach(mIdx=>{ if(cargaOp[mIdx]!==undefined) cargaOp[mIdx]+=o.min; });
+    const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
+    // Si N operadores asignados a esta op, cada uno carga tcOp/N
+    const nAsigs = asigs.length || 1;
+    asigs.forEach(mIdx=>{ if(cargaOp[mIdx]!==undefined) cargaOp[mIdx] += tcOp / nAsigs; });
   });
   const maxCarga = Math.max(...Object.values(cargaOp), 0.01);
 
@@ -2151,14 +2192,19 @@ function renderAsignacion(){
       const opIdx = data.ops.indexOf(o);
       const asigs = (data.asignaciones[opIdx] || data.asignaciones[String(opIdx)] || []).map(x=>parseInt(x));
       const asignada = asigs.length > 0;
-      const tcReal = ((o.min||0)*(o.piezas||1)/(o.recursos||1));
+      const tcBase = ((o.min||0)*(o.piezas||1)/(o.recursos||1));
+      const nAsigs = asigs.length || 1;
+      const tcEfectivo = asignada ? tcBase / nAsigs : tcBase;
+      const tcLabel = asigs.length > 1
+        ? `${tcBase.toFixed(2)} / ${asigs.length} = ${tcEfectivo.toFixed(2)} min`
+        : `${tcEfectivo.toFixed(2)} min`;
       html += `<tr style="${!asignada?'background:var(--warn-bg);':''}">
         <td style="font-weight:500;color:var(--text-primary);">
           ${o.nombre}
           ${o.recursos>1?`<span style="margin-left:4px;font-size:10px;background:var(--ok-bg);color:var(--ok);border-radius:4px;padding:1px 5px;font-weight:700;">×${o.recursos}</span>`:''}
           ${!asignada?'<span style="margin-left:6px;font-size:10px;color:var(--warn);font-weight:700;">⚠</span>':''}
         </td>
-        <td style="text-align:right;font-family:var(--font-mono);font-weight:600;color:var(--accent);">${tcReal.toFixed(2)} min</td>
+        <td style="text-align:right;font-family:var(--font-mono);font-weight:600;color:var(--accent);" title="${asigs.length>1?'TC base: '+tcBase.toFixed(2)+' min ÷ '+asigs.length+' ops':''}">${tcLabel}</td>
         ${modPresentes.map(m=>{
           const mIdx = data.mod.indexOf(m);
           const habs = m.habilidades||[];
@@ -2275,6 +2321,8 @@ function calcularResultados(){
   const modo = p.modo || 'serie';
 
   const opsActivas = data.ops.filter(o=>o.activa!==false);
+  // Asegurar depende en todas las ops (migración defensiva)
+  data.ops.forEach(o=>{ if(o&&!o.depende) o.depende=[]; });
   const consActivas = data.cons.items.filter(c=>c.activa!==false);
   const modPresentes = data.mod.filter(m=>m.presente!==false);
   const numOperadores = modPresentes.length || 1;
@@ -2289,7 +2337,7 @@ function calcularResultados(){
 
   // ── CAMINO CRÍTICO ──────────────────────────────
   // Recalcular con ops activas (reindex)
-  const critPath = calcCaminoCritico(opsActivas);
+  const critPath = calcCaminoCritico(opsActivas, data.ops);
   
   // TC = longitud del camino crítico (EF del último nodo)
   let tcCaminoCritico = 0;
@@ -2299,7 +2347,7 @@ function calcularResultados(){
     const visited = new Set();
     function visit(i){
       if(visited.has(i)) return;
-      const deps = getDepsFromWBS(opsActivas, i).filter(d=>d>=0&&d<n);
+      const deps = getDepsFromWBS(opsActivas, i, data.ops).filter(d=>d>=0&&d<n);
       deps.forEach(d=>visit(d));
       const tc = (opsActivas[i].min||0)*(opsActivas[i].piezas||1)/(opsActivas[i].recursos||1);
       const maxPred = deps.length>0 ? Math.max(...deps.map(d=>ef[d]),0) : 0;
@@ -2318,9 +2366,12 @@ function calcularResultados(){
       const opIdx = data.ops.indexOf(o);
       const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
       // Normalize: asigs keys and values may be strings from Firebase
-      const opAsigs = asigs[opIdx] || asigs[String(opIdx)] || [];
-      opAsigs.map(x=>parseInt(x)).forEach(mIdx=>{
-        if(cargaPorOp[mIdx]!==undefined) cargaPorOp[mIdx]+=tcOp;
+      const opAsigs = (asigs[opIdx] || asigs[String(opIdx)] || []).map(x=>parseInt(x));
+      // Si hay N operadores asignados a esta op, cada uno carga tcOp/N (trabajan en paralelo)
+      const nAsigs = opAsigs.length || 1;
+      const cargaPorAsig = tcOp / nAsigs;
+      opAsigs.forEach(mIdx=>{
+        if(cargaPorOp[mIdx]!==undefined) cargaPorOp[mIdx] += cargaPorAsig;
       });
     });
   } else {
@@ -2372,9 +2423,12 @@ function calcularResultados(){
         opsDia.forEach(o=>{
           const opIdx = data.ops.indexOf(o);
           const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
-          const opAsigs = asigs[opIdx] || asigs[String(opIdx)] || [];
-          opAsigs.map(x=>parseInt(x)).forEach(mIdx=>{
-            if(cargaPorOpDia[mIdx]!==undefined) cargaPorOpDia[mIdx] += tcOp;
+          const opAsigs = (asigs[opIdx] || asigs[String(opIdx)] || []).map(x=>parseInt(x));
+          // Si N operadores asignados a esta op, cada uno carga tcOp/N
+          const nAsigs = opAsigs.length || 1;
+          const cargaPorAsig = tcOp / nAsigs;
+          opAsigs.forEach(mIdx=>{
+            if(cargaPorOpDia[mIdx]!==undefined) cargaPorOpDia[mIdx] += cargaPorAsig;
           });
         });
         const maxCargaDia = Math.max(...Object.values(cargaPorOpDia), 0);
@@ -3512,6 +3566,25 @@ function _fbApply(data){
   if(data.tabulador){ ['grupos','categorias','niveles'].forEach(k=>{ if(data.tabulador[k]) data.tabulador[k]=_norm(data.tabulador[k]); }); Object.assign(tabulador,data.tabulador); }
 }
 
+// ── Migración: convertir ops con numero WBS a campo depende[] ──
+function migrarOpsWBS(ops){
+  if(!ops||!ops.length) return;
+  const necesita = ops.some(o=>o.numero!==undefined && (!o.depende||!o.depende.length));
+  if(!necesita) return;
+  // Ordenar por numero para calcular dependencias
+  const conIdx = ops.map((o,i)=>({o,i}));
+  conIdx.sort((a,b)=>(parseFloat(a.o.numero)||0)-(parseFloat(b.o.numero)||0));
+  conIdx.forEach(({o,i})=>{
+    if(o.depende&&o.depende.length) return; // ya tiene deps
+    const pasoActual = Math.floor(parseFloat(o.numero)||0);
+    if(pasoActual<=0){ o.depende=[]; return; }
+    // Depende de todas las ops del paso anterior
+    o.depende = conIdx
+      .filter(x=>Math.floor(parseFloat(x.o.numero)||0)===pasoActual-1)
+      .map(x=>x.i);
+  });
+}
+
 function fbSave(){
   _fbPendingSave=true; clearTimeout(_fbSaveTimer);
   _fbSaveTimer=setTimeout(async()=>{
@@ -3527,7 +3600,10 @@ async function fbLoad(){
   try{
     await _waitFb();
     const snap=await _fbRef.get(); const data=snap.val();
-    if(data){ _fbApply(data); _fbUI('ok'); } else {
+    if(data){ _fbApply(data);
+      // Migrar ops antiguas con numero WBS a depende[]
+      Object.keys(state).forEach(k=>migrarOpsWBS(state[k].ops));
+      _fbUI('ok'); } else {
       // Primera vez — cargar centros por defecto
       centros.length=0; CENTROS_DEFAULT.forEach(c=>centros.push({n:c.n,s:c.s}));
       initState(); _fbUI('ok');
