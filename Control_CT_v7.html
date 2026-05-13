@@ -3,6 +3,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <title>Transformación Operativa | Linea Italia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -3662,7 +3665,12 @@ async function fbPush(){
   _syncBusy=true;_fbUI('saving');
   try{
     await _waitFb();
-    const toSave=_fbSerialize();
+    const snap=await _fbRef.get();
+    const remote=snap.val();
+    const local=_fbSerialize();
+    // Merge con remote para no pisar datos de otros usuarios
+    // pero local siempre gana en sus propios centros (usa _savedAt)
+    const toSave=remote?_fbMerge(local,remote):local;
     toSave._savedAt=Date.now();toSave._sessionId=_fbSessionId;
     await _fbRef.set(toSave);
     _pendingSave=false;_lastFbSave=Date.now();_fbUI('ok');
