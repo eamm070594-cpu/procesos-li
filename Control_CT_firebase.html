@@ -3528,68 +3528,77 @@ function confirmarEliminarCentro(idx){
 }
 
 // ═══════════════════════════════════════════════════
-// FIREBASE
+// ═══════════════════════════════════════════════════
+// FIREBASE  v6 — merge seguro
 // ═══════════════════════════════════════════════════
 const FB_CONFIG={ databaseURL:'https://ingenieria-de-procesos-24ba4-default-rtdb.firebaseio.com' };
 let _fbDB=null, _fbRef=null;
-let _fbSyncBusy=false, _fbPendingSave=false, _fbSaveTimer=null;
+let _syncBusy=false, _pendingSave=false, _fbSaveTimer=null, _lastFbSave=0;
 
-function _waitFb(){ return new Promise(r=>{ const c=()=>_fbRef?r():setTimeout(c,100); c(); }); }
+const _fbSessionId=(()=>{
+  let id=sessionStorage.getItem('_ct_session');
+  if(!id){id='s_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);sessionStorage.setItem('_ct_session',id);}
+  return id;
+})();
 
-function _initFb(){
-  if(typeof firebase==='undefined'){ setTimeout(_initFb,200); return; }
-  if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
-  _fbDB=firebase.database(); _fbRef=_fbDB.ref('control_ct');
-  _fbRef.on('value',snap=>{
-    // No aplicar cambios remotos si hay guardado en progreso o pendiente
-    if(_fbSyncBusy||_fbPendingSave) return;
-    const remote=snap.val(); if(!remote) return;
-    const localTs=(_fbSerialize()._savedAt||0);
-    if((remote._savedAt||0)>localTs+3000){
-      _fbApply(remote);
-      // Migrar ops al aplicar cambios remotos también
-      Object.keys(state).forEach(k=>{ if(state[k]&&state[k].ops) migrarOpsWBS(state[k].ops); });
-      buildGrid();
-      _fbUI('ok');
-    }
-  });
+function _waitFb(){return new Promise(r=>{const c=()=>_fbRef?r():setTimeout(c,100);c();});}
+
+function _fbRegisterPresence(){
+  if(!_fbDB) return;
+  const presRef=_fbDB.ref('control_ct_presence/'+_fbSessionId);
+  presRef.set({at:Date.now()});
+  presRef.onDisconnect().remove();
+  setInterval(()=>presRef.set({at:Date.now()}),30000);
 }
-_initFb();
-
-function _fbUI(st){
-  const p=document.getElementById('fb-sync-pill'); if(!p) return;
-  const m={ok:{bg:'rgba(111,201,140,0.15)',color:'#3a9c5e',dot:'#6fc98c',label:'Sincronizado'},saving:{bg:'rgba(232,168,64,0.15)',color:'#b07a10',dot:'#e8a840',label:'Guardando…'},error:{bg:'rgba(224,92,92,0.15)',color:'#b03030',dot:'#e05c5c',label:'Error sync'}};
-  const s2=m[st]||m.saving;
-  p.style.background=s2.bg; p.style.color=s2.color;
-  p.innerHTML=`<span style="width:7px;height:7px;border-radius:50%;background:${s2.dot};display:inline-block;margin-right:5px;"></span>${s2.label}`;
+async function _fbCheckOtherUsers(){
+  if(!_fbDB) return;
+  try{
+    const snap=await _fbDB.ref('control_ct_presence').get();
+    const pres=snap.val()||{};
+    const others=Object.keys(pres).filter(k=>k!==_fbSessionId&&(Date.now()-(pres[k].at||0))<90000);
+    const banner=document.getElementById('fb-multiuser-banner');
+    if(banner) banner.style.display=others.length>0?'flex':'none';
+  }catch(e){}
 }
 
 function _fbSerialize(){
-  // Limpiar ops antes de guardar: quitar campo numero (ya migrado), asegurar depende limpio
-  const stateClean = {};
+  const sc={};
   Object.keys(state).forEach(k=>{
-    const centro = state[k];
-    stateClean[k] = {
-      ...centro,
-      ops: (centro.ops||[]).map(o=>{
-        if(!o) return o;
-        const clean = {...o};
-        delete clean.numero;     // quitar WBS viejo para no confundir futuras cargas
-        delete clean.etapaIdx;   // campo legacy
-        if(!clean.depende) clean.depende = [];
-        return clean;
-      })
-    };
+    const ct=state[k];
+    sc[k]={...ct,ops:(ct.ops||[]).map(o=>{if(!o)return o;const c={...o};delete c.numero;delete c.etapaIdx;if(!c.depende)c.depende=[];return c;})};
   });
-  return { centros:centros.map(c=>({n:c.n,s:c.s})), state:stateClean, equipoState:equipoState, tabulador:tabulador, _savedAt:Date.now() };
+  return {centros:centros.map(c=>({n:c.n,s:c.s})),state:sc,equipoState,tabulador,_savedAt:Date.now(),_sessionId:_fbSessionId};
 }
 
-function _norm(arr){ return Array.isArray(arr)?arr:(arr?Object.values(arr):[]); }
+function _fbMerge(local,remote){
+  if(!remote) return local;
+  if(!local)  return remote;
+  const merged={...remote};
+  const lC=local.centros||[],rC=remote.centros||[];
+  merged.centros=rC.length>=lC.length?rC:lC;
+  const lS=local.state||{},rS=remote.state||{};
+  const allK=new Set([...Object.keys(lS),...Object.keys(rS)]);
+  merged.state={};
+  allK.forEach(k=>{
+    const l=lS[k],r=rS[k];
+    if(!l) merged.state[k]=r;
+    else if(!r) merged.state[k]=l;
+    else merged.state[k]=(r._savedAt||0)>=(l._savedAt||0)?r:l;
+  });
+  const lE=local.equipoState||{},rE=remote.equipoState||{};
+  merged.equipoState=(rE._savedAt||0)>=(lE._savedAt||0)?rE:lE;
+  const lT=local.tabulador||{},rT=remote.tabulador||{};
+  merged.tabulador=(rT._savedAt||0)>=(lT._savedAt||0)?rT:lT;
+  return merged;
+}
+
+function _norm(arr){return Array.isArray(arr)?arr:(arr?Object.values(arr):[]);}
+
 function _fbApply(data){
   if(!data) return;
   if(data.centros&&Array.isArray(data.centros)&&data.centros.length){
     centros.length=0; data.centros.forEach(c=>centros.push({n:c.n,s:c.s||ICONO_GENERICO}));
-  } else if(!centros.length) {
+  } else if(!centros.length){
     centros.length=0; CENTROS_DEFAULT.forEach(c=>centros.push({n:c.n,s:c.s}));
   }
   initState();
@@ -3597,30 +3606,17 @@ function _fbApply(data){
     const ki=parseInt(k);
     if(ki<centros.length){
       const d=data.state[k];
-      d.ops=_norm(d.ops);
-      d.mod=_norm(d.mod);
-      d.cif=_norm(d.cif);
-      d.equipos=_norm(d.equipos);
+      d.ops=_norm(d.ops);d.mod=_norm(d.mod);d.cif=_norm(d.cif);d.equipos=_norm(d.equipos);
       if(d.cons) d.cons.items=_norm(d.cons.items);
       if(!d.params) d.params={disponible:480,dias:22,turnos:1,demanda:0,modo:'serie'};
       if(!d.params.modo) d.params.modo='serie';
-      // Normalizar etapas
       d.etapas=_norm(d.etapas);
-      // Normalizar asignaciones (Firebase convierte {0:[1,2]} a objeto)
       if(d.asignaciones&&!Array.isArray(d.asignaciones)){
-        const asigNorm={};
-        Object.keys(d.asignaciones).forEach(k2=>{
-          asigNorm[k2]=_norm(d.asignaciones[k2]);
-        });
-        d.asignaciones=asigNorm;
-      } else if(!d.asignaciones){
-        d.asignaciones={};
-      }
-      // Normalizar ops
+        const an={};Object.keys(d.asignaciones).forEach(k2=>{an[k2]=_norm(d.asignaciones[k2]);});d.asignaciones=an;
+      }else if(!d.asignaciones){d.asignaciones={};}
       d.ops.forEach(o=>{
-        if(!o) return;
-        if(o.etapaIdx!==undefined&&o.etapaIdx!==null) o.etapaIdx=parseInt(o.etapaIdx);
-        // Normalizar depende: Firebase puede convertir array a objeto
+        if(!o)return;
+        if(o.etapaIdx!==undefined) o.etapaIdx=parseInt(o.etapaIdx);
         if(o.depende&&!Array.isArray(o.depende)) o.depende=Object.values(o.depende).map(x=>parseInt(x));
         else if(!o.depende) o.depende=[];
         else o.depende=o.depende.map(x=>parseInt(x));
@@ -3628,73 +3624,121 @@ function _fbApply(data){
       Object.assign(state[ki],d);
     }
   });
-  if(data.equipoState){ data.equipoState.ingenieros=_norm(data.equipoState.ingenieros); Object.assign(equipoState,data.equipoState); }
-  if(data.tabulador){ ['grupos','categorias','niveles'].forEach(k=>{ if(data.tabulador[k]) data.tabulador[k]=_norm(data.tabulador[k]); }); Object.assign(tabulador,data.tabulador); }
+  if(data.equipoState){data.equipoState.ingenieros=_norm(data.equipoState.ingenieros);Object.assign(equipoState,data.equipoState);}
+  if(data.tabulador){['grupos','categorias','niveles'].forEach(k=>{if(data.tabulador[k])data.tabulador[k]=_norm(data.tabulador[k]);});Object.assign(tabulador,data.tabulador);}
 }
 
-// ── Migración: recalcular depende[] siempre desde numero WBS ──
-// Ignora cualquier depende guardado en Firebase (puede estar corrupto)
-// Solo aplica a ops que tienen campo numero (formato viejo)
 function migrarOpsWBS(ops){
   if(!ops||!ops.length) return;
-  // Si ninguna op tiene numero, no hay nada que migrar
   if(!ops.some(o=>o.numero!==undefined)) return;
-  // Agrupar índices por paso (parte entera de numero)
-  const pasos = {};
+  const pasos={};
+  ops.forEach((o,i)=>{const paso=Math.floor(parseFloat(o.numero)||0);if(!pasos[paso])pasos[paso]=[];pasos[paso].push(i);});
+  const ord=Object.keys(pasos).map(Number).sort((a,b)=>a-b);
   ops.forEach((o,i)=>{
-    const paso = Math.floor(parseFloat(o.numero)||0);
-    if(!pasos[paso]) pasos[paso]=[];
-    pasos[paso].push(i);
+    if(o.numero===undefined)return;
+    const pa=Math.floor(parseFloat(o.numero)||0);
+    const pi=ord.indexOf(pa)-1;
+    o.depende=pi<0?[]:pasos[ord[pi]];
   });
-  const pasosOrdenados = Object.keys(pasos).map(Number).sort((a,b)=>a-b);
-  // Recalcular depende para TODAS las ops con numero (sobreescribir siempre)
-  ops.forEach((o,i)=>{
-    if(o.numero===undefined) return;
-    const pasoActual = Math.floor(parseFloat(o.numero)||0);
-    const pasoAnteriorIdx = pasosOrdenados.indexOf(pasoActual) - 1;
-    o.depende = pasoAnteriorIdx < 0 ? [] : pasos[pasosOrdenados[pasoAnteriorIdx]];
-  });
+}
+
+function _fbUI(st){
+  const p=document.getElementById('fb-sync-pill');if(!p)return;
+  const m={ok:{bg:'rgba(111,201,140,0.15)',color:'#3a9c5e',dot:'#6fc98c',label:'Sincronizado'},saving:{bg:'rgba(232,168,64,0.15)',color:'#b07a10',dot:'#e8a840',label:'Guardando…'},error:{bg:'rgba(224,92,92,0.15)',color:'#b03030',dot:'#e05c5c',label:'Error sync'}};
+  const s2=m[st]||m.saving;
+  p.style.background=s2.bg;p.style.color=s2.color;
+  p.innerHTML=`<span style="width:7px;height:7px;border-radius:50%;background:${s2.dot};display:inline-block;margin-right:5px;"></span>${s2.label}`;
+}
+function _fbShowRemoteUpdateToast(){
+  let t=document.getElementById('fb-remote-toast');
+  if(!t){t=document.createElement('div');t.id='fb-remote-toast';t.style.cssText='position:fixed;bottom:52px;right:18px;z-index:9999;background:rgba(91,184,232,0.15);color:#1a6e9e;border:1px solid rgba(91,184,232,0.3);border-radius:10px;padding:8px 14px;font-size:0.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;display:none;align-items:center;gap:6px;transition:opacity .3s;';t.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.88"/></svg>Datos actualizados por otro usuario';document.body.appendChild(t);}
+  t.style.display='flex';t.style.opacity='1';clearTimeout(t._timer);
+  t._timer=setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.style.display='none',400);},4000);
+}
+
+async function fbPush(){
+  if(_syncBusy)return;
+  _syncBusy=true;_fbUI('saving');
+  try{
+    await _waitFb();
+    const snap=await _fbRef.get();
+    const remote=snap.val();
+    const local=_fbSerialize();
+    const toSave=remote?_fbMerge(local,remote):local;
+    toSave._savedAt=Date.now();toSave._sessionId=_fbSessionId;
+    await _fbRef.set(toSave);
+    _pendingSave=false;_lastFbSave=Date.now();_fbUI('ok');
+    console.log('[FB-CT] push OK');
+  }catch(e){
+    console.error('[FB-CT] push:',e.message);_fbUI('error');
+    setTimeout(()=>{if(_pendingSave)fbPush();},5000);
+  }
+  _syncBusy=false;
 }
 
 function fbSave(){
-  _fbPendingSave=true; clearTimeout(_fbSaveTimer);
-  _fbSaveTimer=setTimeout(async()=>{
-    if(_fbSyncBusy){ 
-      // Si lleva más de 8s ocupado, forzar liberación (evitar bloqueo permanente)
-      fbSave(); return; 
-    }
-    _fbSyncBusy=true; _fbUI('saving');
-    try{
-      await _waitFb();
-      await _fbRef.set(_fbSerialize());
-      _fbPendingSave=false;
-      _fbUI('ok');
-    } catch(e){
-      console.error('[FB-CT]',e.message);
-      _fbUI('error');
-      // Reintentar en 5s si falla
-      setTimeout(()=>{ if(_fbPendingSave) fbSave(); }, 5000);
-    } finally {
-      _fbSyncBusy=false;
-    }
-  },1000);
+  _pendingSave=true;clearTimeout(_fbSaveTimer);
+  _fbSaveTimer=setTimeout(fbPush,1000);
 }
 
 async function fbLoad(){
   _fbUI('saving');
   try{
     await _waitFb();
-    const snap=await _fbRef.get(); const data=snap.val();
-    if(data){ _fbApply(data);
-      // Migrar ops antiguas con numero WBS a depende[]
-      Object.keys(state).forEach(k=>migrarOpsWBS(state[k].ops));
-      _fbUI('ok'); } else {
-      // Primera vez — cargar centros por defecto
-      centros.length=0; CENTROS_DEFAULT.forEach(c=>centros.push({n:c.n,s:c.s}));
-      initState(); _fbUI('ok');
-    }
-  } catch(e){ console.error('[FB-CT] load:',e.message); _fbUI('error'); }
+    const snap=await _fbRef.get();
+    const remote=snap.val();
+    if(!remote){centros.length=0;CENTROS_DEFAULT.forEach(c=>centros.push({n:c.n,s:c.s}));initState();_fbUI('ok');return;}
+    _fbApply(remote);
+    Object.keys(state).forEach(k=>migrarOpsWBS(state[k].ops));
+    _fbUI('ok');console.log('[FB-CT] load OK');
+  }catch(e){
+    console.error('[FB-CT] load:',e.message);_fbUI('error');
+  }
 }
+
+setInterval(()=>{if(!_syncBusy){if(_pendingSave&&Date.now()-_lastFbSave>30000)fbPush();else if(!_pendingSave)fbPull();}},60000);
+
+async function fbPull(force){
+  if(_syncBusy)return;
+  if(!force&&(_pendingSave||Date.now()-_lastFbSave<15000))return;
+  _syncBusy=true;_fbUI('saving');
+  try{
+    await _waitFb();
+    const snap=await _fbRef.get();
+    const remote=snap.val();
+    if(!remote){_syncBusy=false;_fbUI('ok');await fbPush();return;}
+    const merged=_fbMerge(_fbSerialize(),remote);
+    _fbApply(merged);
+    Object.keys(state).forEach(k=>migrarOpsWBS(state[k].ops));
+    buildGrid();_fbUI('ok');
+  }catch(e){
+    console.error('[FB-CT] pull:',e.message);_fbUI('error');
+  }
+  _syncBusy=false;
+}
+
+function _initFb(){
+  if(typeof firebase==='undefined'){setTimeout(_initFb,200);return;}
+  if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+  _fbDB=firebase.database();
+  _fbRef=_fbDB.ref('control_ct');
+  _fbRef.on('value',snap=>{
+    if(_syncBusy||_pendingSave)return;
+    const remote=snap.val();if(!remote)return;
+    if(remote._sessionId===_fbSessionId)return;
+    const localTs=(_fbSerialize()._savedAt||0);
+    if((remote._savedAt||0)>localTs+3000){
+      const merged=_fbMerge(_fbSerialize(),remote);
+      _fbApply(merged);
+      Object.keys(state).forEach(k=>{if(state[k]&&state[k].ops)migrarOpsWBS(state[k].ops);});
+      buildGrid();_fbUI('ok');_fbShowRemoteUpdateToast();
+    }
+  });
+  _fbRegisterPresence();_fbCheckOtherUsers();
+  setInterval(_fbCheckOtherUsers,45000);
+}
+_initFb();
+
 
 // ═══════════════════════════════════════════════════
 // INIT
