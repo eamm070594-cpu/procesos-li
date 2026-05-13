@@ -2336,6 +2336,7 @@ function togglePresencia(tipo, idx, val){
   if(tipo==='mod') cur().mod[idx].presente = val;
   else if(tipo==='ops') cur().ops[idx].activa = val;
   else if(tipo==='cons') cur().cons.items[idx].activa = val;
+  markUpdated();
   if(tipo==='mod') renderMod();
   else if(tipo==='ops') renderOps();
   else renderCons();
