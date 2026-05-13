@@ -1495,7 +1495,7 @@ function stampInfo(idx){
   if(days<=7)     return {cls:'stamp-amber',label:'Hace '+days+' días'};
   return              {cls:'stamp-red',label:'Hace '+days+' días'};
 }
-function markUpdated(){ if(selectedIdx===null) return; state[selectedIdx].updatedAt=Date.now(); refreshStamp(selectedIdx); fbSave(); }
+function markUpdated(){ if(selectedIdx===null) return; const now=Date.now(); state[selectedIdx].updatedAt=now; state[selectedIdx]._savedAt=now; refreshStamp(selectedIdx); fbSave(); }
 function refreshStamp(idx){
   const chip = document.getElementById('stamp-'+idx);
   if(chip){ const info=stampInfo(idx); chip.className='card-stamp '+info.cls; chip.textContent=info.label; }
@@ -3126,7 +3126,7 @@ function saveIngeniero(){
   const entry={nombre,rol,areas:checked};
   if(editIdx!=='') equipoState.ingenieros[parseInt(editIdx)]=entry;
   else equipoState.ingenieros.push(entry);
-  closeModal('modal-ingeniero'); renderIngenieros(); buildGrid(); fbSave();
+  equipoState._savedAt=Date.now(); closeModal('modal-ingeniero'); renderIngenieros(); buildGrid(); fbSave();
 }
 function editIngeniero(i){
   const ing=equipoState.ingenieros[i];
@@ -3142,7 +3142,7 @@ function editIngeniero(i){
   }
   openModal('modal-ingeniero', false);
 }
-function delIngeniero(i){ equipoState.ingenieros.splice(i,1); renderIngenieros(); buildGrid(); fbSave(); }
+function delIngeniero(i){ equipoState.ingenieros.splice(i,1); equipoState._savedAt=Date.now(); renderIngenieros(); buildGrid(); fbSave(); }
 function renderIngenieros(){
   const gerentes=equipoState.ingenieros.filter(i=>i.rol==='gerente');
   const ingenieros=equipoState.ingenieros.filter(i=>i.rol==='ingeniero');
@@ -3214,7 +3214,7 @@ function saveGrupo(){
   const editIdx=s('grupoEditIdx').value;
   if(editIdx!=='') tabulador.grupos[parseInt(editIdx)]={nombre};
   else tabulador.grupos.push({nombre});
-  closeModal('modal-grupo'); renderTabulador(); fbSave();
+  tabulador._savedAt=Date.now(); closeModal('modal-grupo'); renderTabulador(); fbSave();
 }
 function editGrupo(i){
   s('grupoEditIdx').value=i; s('modal-grupo-title').textContent='Editar grupo';
@@ -3226,7 +3226,7 @@ function delGrupo(i){
   // Update category references
   tabulador.categorias=tabulador.categorias.filter(c=>c.grupoIdx!==i);
   tabulador.categorias.forEach(c=>{ if(c.grupoIdx>i) c.grupoIdx--; });
-  renderTabulador(); fbSave();
+  tabulador._savedAt=Date.now(); renderTabulador(); fbSave();
 }
 
 function saveCategoria(){
@@ -3236,7 +3236,7 @@ function saveCategoria(){
   const editIdx=s('catEditIdx').value;
   if(editIdx!=='') tabulador.categorias[parseInt(editIdx)]={nombre,grupoIdx};
   else tabulador.categorias.push({nombre,grupoIdx});
-  closeModal('modal-categoria'); renderTabulador(); fbSave();
+  closeModal('modal-categoria'); tabulador._savedAt=Date.now(); renderTabulador(); fbSave();
 }
 function editCategoria(i){
   const c=tabulador.categorias[i];
@@ -3249,7 +3249,7 @@ function delCategoria(i){
   tabulador.categorias.splice(i,1);
   tabulador.niveles=tabulador.niveles.filter(n=>n.categoriaIdx!==i);
   tabulador.niveles.forEach(n=>{ if(n.categoriaIdx>i) n.categoriaIdx--; });
-  renderTabulador(); fbSave();
+  tabulador._savedAt=Date.now(); renderTabulador(); fbSave();
 }
 
 function saveNivel(){
@@ -3265,7 +3265,7 @@ function saveNivel(){
   const entry={num,categoriaIdx:catIdx,desc,ascenso,autonomia,salario,incremento};
   if(editIdx!=='') tabulador.niveles[parseInt(editIdx)]=entry;
   else tabulador.niveles.push(entry);
-  closeModal('modal-nivel'); renderTabulador(); fbSave();
+  closeModal('modal-nivel'); tabulador._savedAt=Date.now(); renderTabulador(); fbSave();
 }
 function editNivel(i){
   const n=tabulador.niveles[i];
@@ -3278,7 +3278,7 @@ function editNivel(i){
   s('nivelSalario').oninput=calcNivelFinal; s('nivelIncremento').oninput=calcNivelFinal;
   openModal('modal-nivel', false);
 }
-function delNivel(i){ tabulador.niveles.splice(i,1); renderTabulador(); fbSave(); }
+function delNivel(i){ tabulador.niveles.splice(i,1); tabulador._savedAt=Date.now(); renderTabulador(); fbSave(); }
 
 function renderTabulador(){
   const wrap=s('tabuladorWrap');
