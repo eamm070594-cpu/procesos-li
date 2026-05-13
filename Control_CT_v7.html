@@ -3661,10 +3661,7 @@ async function fbPush(){
   _syncBusy=true;_fbUI('saving');
   try{
     await _waitFb();
-    const snap=await _fbRef.get();
-    const remote=snap.val();
-    const local=_fbSerialize();
-    const toSave=remote?_fbMerge(local,remote):local;
+    const toSave=_fbSerialize();
     toSave._savedAt=Date.now();toSave._sessionId=_fbSessionId;
     await _fbRef.set(toSave);
     _pendingSave=false;_lastFbSave=Date.now();_fbUI('ok');
