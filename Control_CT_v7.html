@@ -2820,7 +2820,7 @@ function editCIF(i){
   s('cifMonto').value=c.monto; s('cifNota').value=c.nota||'';
   openModal('modal-cif', false);
 }
-function delCIF(i){ cur().cif.splice(i,1); renderCIF(); }
+function delCIF(i){ cur().cif.splice(i,1); markUpdated(); renderCIF(); }
 function renderCIF(){
   const cif=cur().cif;
   const wrap=s('cifTablaWrap'), totBlock=s('cifTotalesBlock');
@@ -3015,7 +3015,7 @@ function saveEquipo(){
   s('equipoEditIdx').value=''; s('modalEquipoTitle').textContent='Registrar equipo';
   markUpdated();closeModal('modal-equipo');renderEquipos();
 }
-function delEquipo(i){cur().equipos.splice(i,1);renderEquipos();}
+function delEquipo(i){cur().equipos.splice(i,1); markUpdated(); renderEquipos();}
 function renderEquipos(){
   const equipos=cur().equipos;
   const wrap=s('equiposListWrap');
@@ -3126,7 +3126,7 @@ function saveIngeniero(){
   const entry={nombre,rol,areas:checked};
   if(editIdx!=='') equipoState.ingenieros[parseInt(editIdx)]=entry;
   else equipoState.ingenieros.push(entry);
-  closeModal('modal-ingeniero'); renderIngenieros(); buildGrid();
+  closeModal('modal-ingeniero'); renderIngenieros(); buildGrid(); fbSave();
 }
 function editIngeniero(i){
   const ing=equipoState.ingenieros[i];
@@ -3142,7 +3142,7 @@ function editIngeniero(i){
   }
   openModal('modal-ingeniero', false);
 }
-function delIngeniero(i){ equipoState.ingenieros.splice(i,1); renderIngenieros(); buildGrid(); }
+function delIngeniero(i){ equipoState.ingenieros.splice(i,1); renderIngenieros(); buildGrid(); fbSave(); }
 function renderIngenieros(){
   const gerentes=equipoState.ingenieros.filter(i=>i.rol==='gerente');
   const ingenieros=equipoState.ingenieros.filter(i=>i.rol==='ingeniero');
@@ -3214,7 +3214,7 @@ function saveGrupo(){
   const editIdx=s('grupoEditIdx').value;
   if(editIdx!=='') tabulador.grupos[parseInt(editIdx)]={nombre};
   else tabulador.grupos.push({nombre});
-  closeModal('modal-grupo'); renderTabulador();
+  closeModal('modal-grupo'); renderTabulador(); fbSave();
 }
 function editGrupo(i){
   s('grupoEditIdx').value=i; s('modal-grupo-title').textContent='Editar grupo';
@@ -3226,7 +3226,7 @@ function delGrupo(i){
   // Update category references
   tabulador.categorias=tabulador.categorias.filter(c=>c.grupoIdx!==i);
   tabulador.categorias.forEach(c=>{ if(c.grupoIdx>i) c.grupoIdx--; });
-  renderTabulador();
+  renderTabulador(); fbSave();
 }
 
 function saveCategoria(){
@@ -3236,7 +3236,7 @@ function saveCategoria(){
   const editIdx=s('catEditIdx').value;
   if(editIdx!=='') tabulador.categorias[parseInt(editIdx)]={nombre,grupoIdx};
   else tabulador.categorias.push({nombre,grupoIdx});
-  closeModal('modal-categoria'); renderTabulador();
+  closeModal('modal-categoria'); renderTabulador(); fbSave();
 }
 function editCategoria(i){
   const c=tabulador.categorias[i];
@@ -3249,7 +3249,7 @@ function delCategoria(i){
   tabulador.categorias.splice(i,1);
   tabulador.niveles=tabulador.niveles.filter(n=>n.categoriaIdx!==i);
   tabulador.niveles.forEach(n=>{ if(n.categoriaIdx>i) n.categoriaIdx--; });
-  renderTabulador();
+  renderTabulador(); fbSave();
 }
 
 function saveNivel(){
@@ -3265,7 +3265,7 @@ function saveNivel(){
   const entry={num,categoriaIdx:catIdx,desc,ascenso,autonomia,salario,incremento};
   if(editIdx!=='') tabulador.niveles[parseInt(editIdx)]=entry;
   else tabulador.niveles.push(entry);
-  closeModal('modal-nivel'); renderTabulador();
+  closeModal('modal-nivel'); renderTabulador(); fbSave();
 }
 function editNivel(i){
   const n=tabulador.niveles[i];
@@ -3278,7 +3278,7 @@ function editNivel(i){
   s('nivelSalario').oninput=calcNivelFinal; s('nivelIncremento').oninput=calcNivelFinal;
   openModal('modal-nivel', false);
 }
-function delNivel(i){ tabulador.niveles.splice(i,1); renderTabulador(); }
+function delNivel(i){ tabulador.niveles.splice(i,1); renderTabulador(); fbSave(); }
 
 function renderTabulador(){
   const wrap=s('tabuladorWrap');
