@@ -4004,9 +4004,18 @@ function _fbMerge(local,remote){
     else merged.state[k]=(r._savedAt||0)>(l._savedAt||0)?r:l;
   });
   const lE=local.equipoState||{},rE=remote.equipoState||{};
-  merged.equipoState=(rE._savedAt||0)>(lE._savedAt||0)?rE:lE;
+  const lEHasData=lE.ingenieros&&lE.ingenieros.length>0;
+  const rEHasData=rE.ingenieros&&rE.ingenieros.length>0;
+  if(!lEHasData&&rEHasData) merged.equipoState=rE;
+  else if(lEHasData&&!rEHasData) merged.equipoState=lE;
+  else merged.equipoState=(rE._savedAt||0)>(lE._savedAt||0)?rE:lE;
   const lT=local.tabulador||{},rT=remote.tabulador||{};
-  merged.tabulador=(rT._savedAt||0)>(lT._savedAt||0)?rT:lT;
+  // Si el local no tiene datos en el tabulador, siempre gana el remoto
+  const lTHasData=(lT.grupos&&lT.grupos.length>0)||(lT.categorias&&lT.categorias.length>0)||(lT.niveles&&lT.niveles.length>0);
+  const rTHasData=(rT.grupos&&rT.grupos.length>0)||(rT.categorias&&rT.categorias.length>0)||(rT.niveles&&rT.niveles.length>0);
+  if(!lTHasData&&rTHasData) merged.tabulador=rT;
+  else if(lTHasData&&!rTHasData) merged.tabulador=lT;
+  else merged.tabulador=(rT._savedAt||0)>(lT._savedAt||0)?rT:lT;
   return merged;
 }
 
