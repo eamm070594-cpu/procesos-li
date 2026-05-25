@@ -1,0 +1,2953 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Linea Italia — Plan de Inversion</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:wght@300;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --bg:#F5F2EC;--bg2:#EDEAE2;--bg3:#D8D4CA;
+  --ink:#1E1C18;--ink2:#5A5750;--ink3:#9A9790;
+  --white:#FFFFFF;--border:#D4D0C6;
+  --amber:#B85C00;--amber-m:#F0A84A;--amber-l:#FDF0E0;
+  --green:#1A6640;--green-l:#E4F2EB;
+  --blue:#1A4A8A;--blue-l:#EEF4FC;
+  --red:#B03020;--red-l:#FAEBE8;
+  --sans:'DM Sans',sans-serif;
+  --serif:'Fraunces',serif;
+  --mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--ink)}
+body{overflow-y:auto}
+
+/* HDR */
+
+.brand{font-family:var(--serif);font-size:16px;font-weight:600;color:#F5F2EC}
+.brand span{color:var(--amber-m)}
+.hdr-r{display:flex;gap:8px;align-items:center}
+.hdr-tag{font-family:var(--mono);font-size:10px;color:#5A5750}
+.btn-save{padding:6px 14px;background:var(--amber);color:white;border:none;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--sans)}
+.btn-save:hover{opacity:.85}
+
+/* LAYOUT */
+.wrap{max-width:1140px;margin:0 auto;padding:28px 28px 80px;margin-top:0}
+.page-title{font-family:var(--serif);font-size:24px;font-weight:600;margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--ink2);margin-bottom:32px}
+
+/* SECTION */
+.sec-title{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);padding-bottom:8px;border-bottom:1.5px solid var(--border);margin-bottom:16px;margin-top:32px}
+
+/* GLOBAL PARAMS */
+.gp-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:6px}
+.gp-card{background:var(--white);border:0.5px solid var(--border);border-radius:10px;padding:12px 14px}
+.gp-card label{font-size:10px;color:var(--ink2);display:block;margin-bottom:5px}
+.gp-inp{width:100%;border:0.5px solid var(--border);border-radius:6px;padding:6px 9px;font-size:13px;font-weight:500;font-family:var(--mono);color:var(--blue);background:var(--blue-l);outline:none;text-align:right}
+.gp-inp:focus{border-color:var(--blue)}
+
+/* CT TABLE */
+.ct-wrap{background:var(--white);border:0.5px solid var(--border);border-radius:10px;overflow:hidden}
+.ct-table{width:100%;border-collapse:collapse}
+.ct-table th{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;background:var(--bg)}
+.ct-table td{padding:5px 8px;border-bottom:0.5px solid var(--bg2)}
+.ct-table tr:last-child td{border-bottom:none}
+.ct-inp{border:0.5px solid var(--border);border-radius:5px;padding:5px 8px;font-size:12px;font-family:var(--mono);color:var(--blue);background:var(--blue-l);outline:none;width:100%;text-align:right}
+.ct-inp:focus{border-color:var(--blue)}
+.ct-inp.text{color:var(--ink);background:var(--white);text-align:left}
+.tbl-del{border:none;background:none;cursor:pointer;color:var(--ink3);font-size:15px;padding:2px 6px}
+.tbl-del:hover{color:var(--red)}
+.add-row{margin-top:8px;padding:6px 14px;border:0.5px dashed var(--border);border-radius:6px;background:transparent;cursor:pointer;font-size:11px;color:var(--ink3);font-family:var(--sans)}
+.add-row:hover{border-color:var(--amber);color:var(--amber)}
+
+/* MACHINES */
+.maq-card{background:var(--white);border:0.5px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.maq-hdr{display:flex;align-items:center;gap:12px;padding:13px 18px;cursor:pointer;border:none;width:100%;background:transparent;text-align:left;transition:background .15s}
+.maq-hdr:hover{background:var(--bg)}
+.maq-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.maq-name{font-size:14px;font-weight:600;flex:1}
+.maq-total{font-family:var(--mono);font-size:12px;color:var(--green);font-weight:600}
+.maq-roi{font-family:var(--mono);font-size:11px;color:var(--ink3);margin-left:8px}
+.maq-chev{font-size:11px;color:var(--ink3);transition:transform .2s;margin-left:4px}
+.maq-chev.open{transform:rotate(180deg)}
+.maq-body{display:none;border-top:1px solid var(--border)}
+.maq-body.open{display:block}
+
+/* MACHINE INNER TABS */
+.mac-tabs{display:flex;gap:2px;padding:12px 18px 0;border-bottom:1px solid var(--border);background:var(--bg)}
+.mac-tab{padding:6px 14px;border-radius:7px 7px 0 0;border:none;background:transparent;cursor:pointer;font-size:12px;font-weight:500;font-family:var(--sans);color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.mac-tab:hover{color:var(--ink)}
+.mac-tab.on{color:var(--ink);border-bottom-color:var(--amber);background:var(--white)}
+.mac-panel{display:none;padding:18px}
+.mac-panel.on{display:block}
+
+/* IDENTIFICATION */
+.id-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.id-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.fld label{font-size:10px;color:var(--ink2);display:block;margin-bottom:4px}
+.fld input,.fld select{width:100%;border:0.5px solid var(--border);border-radius:6px;padding:6px 9px;font-size:12px;font-family:var(--sans);color:var(--ink);background:var(--white);outline:none}
+.fld input:focus{border-color:var(--blue)}
+.fld input.money{color:var(--blue);background:var(--blue-l);font-family:var(--mono);font-weight:500;text-align:right}
+.cfg-foto{width:100%;height:110px;border:0.5px dashed var(--border);border-radius:8px;overflow:hidden;position:relative;cursor:pointer;margin-top:4px;background:var(--bg)}
+.cfg-foto img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+.cfg-foto-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.cfg-foto-ph-i{font-size:22px;opacity:.2}
+.cfg-foto-ph-l{font-size:9px;font-family:var(--mono);opacity:.35}
+.cfg-foto-inp{display:none}
+
+/* VARIABLES SECTION */
+.var-cat{margin-bottom:20px}
+.var-cat-title{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);padding:6px 0 4px;border-bottom:0.5px solid var(--border);margin-bottom:8px}
+
+/* VARIABLE CARD */
+.var-card{background:var(--bg);border:0.5px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden}
+.var-card-hdr{display:flex;align-items:center;gap:10px;padding:10px 14px}
+.vtog{width:30px;height:17px;border-radius:9px;background:var(--bg3);border:none;cursor:pointer;position:relative;flex-shrink:0;transition:background .2s}
+.vtog.on{background:var(--green)}
+.vtog::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.vtog.on::after{left:15px}
+.var-name{font-size:12px;font-weight:600;flex:1;color:var(--ink)}
+.var-name.off{color:var(--ink3)}
+.var-result-badge{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--green);background:var(--green-l);padding:2px 8px;border-radius:5px;white-space:nowrap}
+.var-result-badge.zero{color:var(--ink3);background:var(--bg2)}
+.var-expand-btn{border:none;background:none;cursor:pointer;color:var(--ink3);font-size:11px;padding:2px 6px;transition:transform .2s}
+.var-expand-btn.open{transform:rotate(180deg)}
+
+/* VARIABLE TABLE */
+.var-table-wrap{display:none;padding:0 14px 14px;border-top:0.5px solid var(--border)}
+.var-table-wrap.open{display:block}
+.var-mode-row{display:flex;align-items:center;gap:8px;padding:10px 0 8px;border-bottom:0.5px solid var(--border);margin-bottom:10px}
+.var-mode-label{font-size:11px;color:var(--ink2);margin-right:4px}
+.mode-btn{padding:4px 12px;border-radius:5px;border:0.5px solid var(--border);background:var(--white);cursor:pointer;font-size:11px;font-family:var(--sans);color:var(--ink3);transition:all .15s}
+.mode-btn.on{background:var(--blue-l);color:var(--blue);border-color:var(--blue);font-weight:500}
+
+/* SIMPLE MODE */
+.simple-row{display:grid;grid-template-columns:1fr 180px;gap:10px;align-items:center}
+.simple-label{font-size:12px;color:var(--ink2)}
+.simple-inp{border:0.5px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;font-family:var(--mono);color:var(--blue);background:var(--blue-l);outline:none;width:100%;text-align:right;font-weight:500}
+.simple-inp:focus{border-color:var(--blue)}
+
+/* DETAIL TABLE */
+.detail-table{width:100%;border-collapse:collapse;background:var(--white);border-radius:8px;overflow:hidden;border:0.5px solid var(--border)}
+.detail-table th{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);padding:7px 10px;border-bottom:1px solid var(--border);text-align:left;background:var(--bg)}
+.detail-table th.right{text-align:right}
+.detail-table td{padding:5px 8px;border-bottom:0.5px solid var(--bg2);vertical-align:middle}
+.detail-table tr:last-child td{border-bottom:none}
+.detail-table tr.result-row td{background:var(--green-l);font-weight:600}
+.op-badge{display:inline-block;width:24px;height:24px;border-radius:5px;background:var(--bg2);border:0.5px solid var(--border);text-align:center;line-height:24px;font-size:12px;font-family:var(--mono);color:var(--ink2)}
+.op-sel{border:0.5px solid var(--border);border-radius:5px;padding:3px 5px;font-size:12px;font-family:var(--mono);color:var(--ink);background:var(--white);outline:none;width:48px}
+.op-sel:focus{border-color:var(--blue)}
+.det-inp{border:0.5px solid var(--border);border-radius:5px;padding:4px 8px;font-size:12px;font-family:var(--mono);color:var(--blue);background:var(--blue-l);outline:none;width:100%;text-align:right;font-weight:500}
+.det-inp:focus{border-color:var(--blue)}
+.det-inp.global{color:var(--ink3);background:var(--bg2);cursor:default;pointer-events:none}
+.det-label{font-size:12px;color:var(--ink2)}
+.det-result{font-size:13px;font-weight:700;color:var(--green);text-align:right;font-family:var(--mono)}
+.add-det-row{margin-top:8px;padding:5px 12px;border:0.5px dashed var(--border);border-radius:5px;background:transparent;cursor:pointer;font-size:11px;color:var(--ink3);font-family:var(--sans)}
+.add-det-row:hover{border-color:var(--amber);color:var(--amber)}
+
+/* GLOBAL REFS */
+.global-refs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.gref-btn{padding:3px 9px;border-radius:4px;border:0.5px solid var(--border);background:var(--bg2);cursor:pointer;font-size:10px;font-family:var(--mono);color:var(--ink2);transition:all .15s}
+.gref-btn:hover{background:var(--blue-l);color:var(--blue);border-color:var(--blue)}
+
+/* TOTALS */
+.var-totals{background:var(--ink);border-radius:10px;padding:14px 18px;margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.vt-item .l{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#5A5750;margin-bottom:3px}
+.vt-item .v{font-family:var(--serif);font-size:18px;font-weight:600;color:white}
+.vt-item .s{font-size:10px;color:#5A5750;margin-top:2px}
+
+/* ADD MACHINE */
+.add-maq-btn{width:100%;padding:13px;border:1.5px dashed var(--border);border-radius:12px;background:transparent;cursor:pointer;font-size:13px;color:var(--ink3);font-family:var(--sans);transition:all .2s;margin-top:6px}
+.add-maq-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-l)}
+
+/* MODAL */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;align-items:center;justify-content:center}
+.modal-ov.on{display:flex}
+.modal{background:var(--white);border-radius:13px;width:480px;max-width:92vw;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{font-family:var(--serif);font-size:17px;margin-bottom:14px}
+.modal label{font-size:10px;color:var(--ink2);display:block;margin-bottom:3px;margin-top:10px}
+.modal input{width:100%;border:0.5px solid var(--border);border-radius:6px;padding:7px 9px;font-size:12px;font-family:var(--sans);outline:none}
+.modal input:focus{border-color:var(--blue)}
+.modal-btns{display:flex;gap:8px;margin-top:18px;justify-content:flex-end}
+.modal-btn{padding:7px 16px;border-radius:7px;border:none;cursor:pointer;font-size:12px;font-weight:500;font-family:var(--sans)}
+.modal-btn.primary{background:var(--ink);color:white}
+.modal-btn.secondary{background:var(--bg2);color:var(--ink)}
+
+.g{color:var(--green)}.r{color:var(--red)}.a{color:var(--amber)}.b{color:var(--blue)}
+
+/* ── RESUMEN STYLES ── */
+
+
+
+
+
+/* HDR */
+.hdr{height:50px;background:var(--ink);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:fixed;top:0;left:0;right:0;z-index:200}
+.brand{font-family:var(--serif);font-size:16px;font-weight:600;color:#F5F2EC}
+.brand span{color:var(--amber-m)}
+.hdr-tabs{display:flex;gap:4px}
+.htab{padding:6px 14px;border-radius:6px;border:none;background:transparent;cursor:pointer;font-size:12px;font-weight:500;font-family:var(--sans);color:#5A5750;transition:all .2s}
+.htab:hover{background:rgba(255,255,255,.08);color:#D4D0C6}
+.htab.on{background:rgba(240,168,74,.15);color:var(--amber-m)}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.hdr-dots{display:flex;gap:5px}
+.ndot{width:6px;height:6px;border-radius:50%;border:1px solid rgba(255,255,255,.2);cursor:pointer;transition:all .2s}
+.ndot.on{background:var(--amber-m);border-color:var(--amber-m)}
+.save-btn{padding:5px 12px;background:var(--amber);color:white;border:none;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;font-family:var(--sans)}
+.save-btn:hover{opacity:.85}
+
+/* SCREENS */
+.screens{position:fixed;top:50px;left:0;right:0;bottom:0;overflow:hidden}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
+.screen.on{display:flex}
+.navs{position:fixed;bottom:14px;right:18px;display:flex;gap:6px;z-index:300}
+.narr{width:32px;height:32px;border-radius:50%;border:0.5px solid var(--border);background:var(--white);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .18s;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.narr:hover:not([disabled]){background:var(--ink);color:#F5F2EC;border-color:var(--ink)}
+.narr[disabled]{opacity:.2;cursor:default}
+
+/* ══ CONFIG ══ */
+.cfg-wrap{flex:1;overflow-y:auto;padding:24px 32px 80px;padding-top:28px}
+.cfg-h1{font-family:var(--serif);font-size:22px;font-weight:600;margin-bottom:4px}
+.cfg-sub{font-size:13px;color:var(--ink2);margin-bottom:22px}
+.cfg-sec{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);padding-bottom:7px;border-bottom:1px solid var(--border);margin-bottom:12px;margin-top:22px}
+.gp-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:6px}
+.gp-card{background:var(--white);border:0.5px solid var(--border);border-radius:9px;padding:10px 12px}
+.gp-card label{font-size:10px;color:var(--ink2);display:block;margin-bottom:4px}
+.gp-inp{width:100%;border:0.5px solid var(--border);border-radius:5px;padding:5px 8px;font-size:12px;font-weight:500;font-family:var(--mono);color:var(--blue);background:var(--blue-l);outline:none}
+.gp-inp:focus{border-color:var(--blue)}
+/* CT */
+.ct-table{width:100%;border-collapse:collapse;background:var(--white);border-radius:9px;overflow:hidden;border:0.5px solid var(--border)}
+.ct-table th{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);padding:7px 10px;border-bottom:1px solid var(--border);text-align:left;background:var(--bg)}
+.ct-table td{padding:5px 8px;border-bottom:0.5px solid var(--bg2)}
+.ct-table tr:last-child td{border-bottom:none}
+.ct-inp{border:0.5px solid var(--border);border-radius:4px;padding:4px 7px;font-size:12px;font-family:var(--mono);color:var(--blue);background:var(--blue-l);outline:none;width:100%}
+.ct-inp:focus{border-color:var(--blue)}
+.ct-del{border:none;background:none;cursor:pointer;color:var(--ink3);font-size:14px;padding:2px 5px}
+.ct-del:hover{color:var(--red)}
+.add-row-btn{margin-top:8px;padding:5px 12px;border:0.5px dashed var(--border);border-radius:6px;background:transparent;cursor:pointer;font-size:11px;color:var(--ink3);font-family:var(--sans)}
+.add-row-btn:hover{border-color:var(--amber);color:var(--amber)}
+/* Machine accordion */
+.maq-acc{background:var(--white);border:0.5px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.maq-acc-hdr{padding:11px 16px;display:flex;align-items:center;gap:10px;background:var(--white);border:none;width:100%;cursor:pointer;text-align:left;transition:background .15s}
+.maq-acc-hdr:hover{background:var(--bg)}
+.maq-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.maq-acc-name{font-size:13px;font-weight:600;flex:1}
+.maq-acc-roi{font-family:var(--mono);font-size:11px;color:var(--green);margin-right:4px}
+.maq-acc-chev{font-size:10px;color:var(--ink3);transition:transform .2s}
+.maq-acc-chev.open{transform:rotate(180deg)}
+.maq-body{display:none;border-top:0.5px solid var(--border);background:var(--bg)}
+.maq-body.open{display:block}
+.mac-tabs{display:flex;gap:3px;padding:10px 14px 0;border-bottom:1px solid var(--border)}
+.mac-tab{padding:5px 11px;border-radius:6px 6px 0 0;border:none;background:transparent;cursor:pointer;font-size:11px;font-weight:500;font-family:var(--sans);color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-1px}
+.mac-tab:hover{color:var(--ink)}
+.mac-tab.on{color:var(--ink);border-bottom-color:var(--amber)}
+.mac-panel{display:none;padding:14px}
+.mac-panel.on{display:block}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.f3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+.fld label{font-size:10px;color:var(--ink2);display:block;margin-bottom:3px}
+.fld input,.fld select{width:100%;border:0.5px solid var(--border);border-radius:5px;padding:5px 8px;font-size:12px;font-family:var(--sans);color:var(--ink);background:var(--white);outline:none}
+.fld input:focus{border-color:var(--blue)}
+.fld input.blue{color:var(--blue);background:var(--blue-l);font-family:var(--mono);font-weight:500}
+/* Foto config compartida */
+.cfg-foto{width:100%;height:120px;border:0.5px dashed var(--border);border-radius:8px;overflow:hidden;position:relative;cursor:pointer;margin-top:6px;background:var(--bg)}
+.cfg-foto img{width:100%;height:100%;object-fit:cover;display:none}
+.cfg-foto-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.cfg-foto-ph-i{font-size:22px;opacity:.2}
+.cfg-foto-ph-l{font-size:9px;font-family:var(--mono);opacity:.35}
+.cfg-foto-inp{display:none}
+/* Variables */
+.vsect{font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);padding:8px 0 3px;border-bottom:0.5px solid var(--border);margin-bottom:5px;margin-top:8px}
+.vrow{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:0.5px solid rgba(0,0,0,.04)}
+.vrow:last-child{border-bottom:none}
+.vtog{width:28px;height:16px;border-radius:8px;background:var(--bg3);border:none;cursor:pointer;position:relative;flex-shrink:0;margin-top:3px;transition:background .2s}
+.vtog.on{background:var(--green)}
+.vtog::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.vtog.on::after{left:14px}
+.vbody{flex:1}
+.vlbl{font-size:12px;font-weight:500}
+.vlbl.off{color:var(--ink3)}
+.vform{font-size:9px;color:var(--blue);font-family:var(--mono);margin:1px 0 3px}
+.vinps{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:4px}
+.vinp-w label{font-size:9px;color:var(--ink3);display:block;margin-bottom:2px}
+.vinp-w input{width:100%;border:0.5px solid var(--border);border-radius:4px;padding:3px 6px;font-size:11px;font-family:var(--mono);color:var(--blue);background:var(--blue-l);outline:none}
+.vmode-sel{display:flex;gap:4px;margin-bottom:4px}
+.vmode-btn{padding:2px 8px;border-radius:4px;border:0.5px solid var(--border);background:var(--bg);cursor:pointer;font-size:9px;font-family:var(--mono);color:var(--ink3)}
+.vmode-btn.on{background:var(--blue-l);color:var(--blue);border-color:var(--blue)}
+.vres{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--green);white-space:nowrap;min-width:110px;text-align:right;padding-top:3px}
+.vres.off{color:var(--ink3)}
+/* Specs */
+.spec-cfg-hdr{display:grid;grid-template-columns:30px 1fr 1fr 80px 24px;gap:5px;padding:4px 0;border-bottom:1px solid var(--border);margin-bottom:4px}
+.spec-cfg-hdr span{font-family:var(--mono);font-size:8px;text-transform:uppercase;color:var(--ink3)}
+.spec-cfg-row{display:grid;grid-template-columns:30px 1fr 1fr 80px 24px;gap:5px;align-items:center;padding:4px 0;border-bottom:0.5px solid var(--bg2)}
+.spec-cfg-row:last-child{border-bottom:none}
+.sinp{border:0.5px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px;font-family:var(--sans);outline:none;width:100%;background:var(--white)}
+.sinp:focus{border-color:var(--blue)}
+.spchk{display:flex;align-items:center;gap:3px;font-size:10px;color:var(--ink2);cursor:pointer}
+.spchk input{width:13px;height:13px;cursor:pointer}
+.sdel,.idel{border:none;background:none;cursor:pointer;color:var(--ink3);font-size:13px;padding:0 2px}
+.sdel:hover,.idel:hover{color:var(--red)}
+/* Puntos de impacto */
+.imp-row{display:grid;grid-template-columns:36px 1fr 1fr 24px;gap:5px;margin-bottom:5px;align-items:center}
+.iinp{border:0.5px solid var(--border);border-radius:5px;padding:5px 7px;font-size:11px;font-family:var(--sans);outline:none;width:100%;background:var(--white)}
+.iinp:focus{border-color:var(--blue)}
+.add-maq-btn{width:100%;padding:12px;border:1.5px dashed var(--border);border-radius:12px;background:transparent;cursor:pointer;font-size:13px;color:var(--ink3);font-family:var(--sans);transition:all .2s;margin-top:6px}
+.add-maq-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-l)}
+
+/* ══ RESUMEN — CLEAN APP STYLE ══ */
+
+/* Layout */
+#screen-res-main { display:none; background:#F0F2F5; }
+#screen-res-main.on { display:flex; flex-direction:column; }
+.res-layout { display:flex; height:calc(100vh - 50px); overflow:hidden; }
+
+/* SIDEBAR */
+.res-sidebar {
+  width:220px; flex-shrink:0;
+  background:#1E2A4A;
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+.res-sidebar-logo {
+  padding:20px 18px 14px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.res-sidebar-logo-txt {
+  font-family:var(--serif); font-size:15px; font-weight:600; color:white;
+  margin-bottom:2px;
+}
+.res-sidebar-logo-sub {
+  font-size:10px; color:rgba(255,255,255,.35); font-family:var(--mono);
+}
+.res-nav { flex:1; overflow-y:auto; padding:10px 0; }
+.res-nav-section {
+  font-family:var(--mono); font-size:9px; text-transform:uppercase; letter-spacing:.1em;
+  color:rgba(255,255,255,.25); padding:10px 18px 5px;
+}
+.res-nav-item {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 18px; cursor:pointer;
+  font-size:12px; font-weight:500; color:rgba(255,255,255,.55);
+  transition:all .15s; border-left:2px solid transparent;
+  text-decoration:none;
+}
+.res-nav-item:hover { background:rgba(255,255,255,.06); color:rgba(255,255,255,.85); }
+.res-nav-item.on { background:rgba(255,255,255,.08); color:white; border-left-color:#F0A84A; }
+.res-nav-item .nav-icon { font-size:14px; width:18px; text-align:center; flex-shrink:0; }
+.res-nav-item .nav-label { flex:1; }
+.res-nav-item .nav-dot {
+  width:8px; height:8px; border-radius:50%;
+  flex-shrink:0;
+}
+.res-nav-divider { height:1px; background:rgba(255,255,255,.06); margin:8px 18px; }
+
+/* MAIN CONTENT */
+.res-main { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+
+/* PAGE: DASHBOARD */
+.res-page { display:none; flex:1; overflow-y:auto; padding:28px 32px 60px; }
+.res-page.on { display:block; }
+.res-page-title { font-family:'DM Sans',sans-serif; font-size:22px; font-weight:600; color:#1E1C18; margin-bottom:4px; }
+.res-page-sub { font-size:13px; color:#7A7870; margin-bottom:24px; }
+
+/* KPI CARDS */
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+.kpi-card {
+  background:white; border-radius:12px; padding:18px 20px;
+  box-shadow:0 1px 3px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
+  display:flex; align-items:flex-start; justify-content:space-between;
+  transition:box-shadow .2s;
+}
+.kpi-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.1), 0 0 0 1px rgba(0,0,0,.04); }
+.kpi-card-left { flex:1; }
+.kpi-card-label { font-size:12px; color:#7A7870; margin-bottom:6px; font-weight:500; }
+.kpi-card-value { font-size:28px; font-weight:700; color:#1E1C18; line-height:1; margin-bottom:4px; }
+.kpi-card-value.green { color:#16A34A; }
+.kpi-card-value.amber { color:#D97706; }
+.kpi-card-value.blue { color:#2563EB; }
+.kpi-card-sub { font-size:11px; color:#9A9890; }
+.kpi-card-icon {
+  width:42px; height:42px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center; font-size:20px;
+  flex-shrink:0;
+}
+.kpi-icon-green { background:#DCFCE7; }
+.kpi-icon-amber { background:#FEF3C7; }
+.kpi-icon-blue { background:#DBEAFE; }
+.kpi-icon-slate { background:#F1F5F9; }
+
+/* MACHINE TABLE */
+.maq-table-wrap {
+  background:white; border-radius:12px;
+  box-shadow:0 1px 3px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
+  overflow:hidden;
+}
+.maq-table-hdr {
+  padding:16px 20px; border-bottom:1px solid #F1F3F5;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.maq-table-title { font-size:15px; font-weight:600; color:#1E1C18; }
+.maq-table-sub { font-size:12px; color:#9A9890; }
+.maq-tbl { width:100%; border-collapse:collapse; }
+.maq-tbl th {
+  font-size:11px; font-weight:600; color:#7A7870; text-transform:uppercase;
+  letter-spacing:.05em; padding:10px 20px; text-align:left;
+  background:#FAFBFC; border-bottom:1px solid #F1F3F5;
+}
+.maq-tbl td { padding:14px 20px; border-bottom:1px solid #F8F9FA; vertical-align:middle; }
+.maq-tbl tr:last-child td { border-bottom:none; }
+.maq-tbl tr { cursor:pointer; transition:background .15s; }
+.maq-tbl tr:hover td { background:#F8FAFF; }
+.maq-col-name { display:flex; align-items:center; gap:10px; }
+.maq-col-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.maq-col-nameval { font-size:13px; font-weight:600; color:#1E1C18; }
+.maq-col-model { font-size:11px; color:#9A9890; margin-top:1px; }
+.maq-col-inv { font-size:13px; font-weight:600; color:#1E1C18; font-family:var(--mono); }
+.maq-col-ben { font-size:13px; font-weight:600; color:#16A34A; font-family:var(--mono); }
+.maq-col-roi-val { font-size:15px; font-weight:700; }
+.maq-col-pay { font-size:13px; color:#D97706; font-family:var(--mono); font-weight:600; }
+.maq-col-pdf { display:flex; gap:5px; }
+.maq-pdf-btn {
+  padding:4px 10px; border-radius:6px; border:1px solid #E5E7EB;
+  background:white; font-size:11px; cursor:pointer; color:#4B5563;
+  transition:all .15s; font-family:var(--sans); font-weight:500;
+}
+.maq-pdf-btn:hover { background:#F0F7FF; border-color:#93C5FD; color:#2563EB; }
+.maq-pdf-btn.off { opacity:.35; cursor:default; pointer-events:none; }
+.maq-col-go {
+  padding:6px 14px; border-radius:7px; background:#1E2A4A; color:white;
+  border:none; cursor:pointer; font-size:11px; font-weight:600;
+  font-family:var(--sans); transition:background .15s;
+}
+.maq-col-go:hover { background:#2A3A6A; }
+
+/* PAGE: MACHINE DETAIL (app-style) */
+.maq-detail-page { display:none; flex:1; overflow-y:auto; }
+.maq-detail-page.on { display:block; min-height:100%; }
+
+/* Detail top bar */
+.mdt-topbar {
+  background:white; border-bottom:1px solid #E9ECEF;
+  padding:14px 28px; display:flex; align-items:center; gap:14px;
+  position:sticky; top:0; z-index:50;
+}
+.mdt-back {
+  display:flex; align-items:center; gap:6px;
+  padding:6px 12px; border-radius:7px; border:1px solid #E5E7EB;
+  background:white; font-size:12px; font-weight:500; color:#4B5563;
+  cursor:pointer; transition:all .15s;
+}
+.mdt-back:hover { background:#F9FAFB; }
+.mdt-color-bar { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+.mdt-name { font-size:16px; font-weight:700; color:#1E1C18; flex:1; }
+.mdt-model { font-size:12px; color:#9A9890; }
+.mdt-top-kpis { display:flex; gap:8px; }
+.mdt-kpi {
+  background:#F8F9FA; border-radius:8px; padding:8px 14px; text-align:right;
+  min-width:90px;
+}
+.mdt-kpi-l { font-size:10px; color:#9A9890; margin-bottom:2px; }
+.mdt-kpi-v { font-size:16px; font-weight:700; color:#1E1C18; line-height:1; }
+.mdt-pdf-btns { display:flex; gap:6px; }
+.mdt-pdf-btn {
+  display:flex; align-items:center; gap:5px;
+  padding:7px 14px; border-radius:7px; border:1px solid #E5E7EB;
+  background:white; font-size:12px; font-weight:500; color:#374151;
+  cursor:pointer; transition:all .15s;
+}
+.mdt-pdf-btn:hover { background:#EFF6FF; border-color:#93C5FD; color:#1D4ED8; }
+.mdt-pdf-btn.off { opacity:.35; cursor:default; pointer-events:none; }
+
+/* Detail body */
+.mdt-body { padding:24px 28px 60px; }
+.mdt-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.mdt-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
+
+/* Detail cards */
+.mdt-card {
+  background:white; border-radius:12px; padding:18px 20px;
+  box-shadow:0 1px 3px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
+}
+.mdt-card-title {
+  font-size:11px; font-weight:600; color:#9A9890; text-transform:uppercase;
+  letter-spacing:.06em; margin-bottom:14px; padding-bottom:10px;
+  border-bottom:1px solid #F1F3F5;
+}
+.mdt-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid #F8F9FA; }
+.mdt-row:last-child { border-bottom:none; }
+.mdt-row-l { font-size:12px; color:#4B5563; }
+.mdt-row-v { font-size:12px; font-weight:600; color:#1E1C18; font-family:var(--mono); }
+.mdt-row-v.green { color:#16A34A; }
+.mdt-row-v.red { color:#DC2626; }
+.mdt-row-v.amber { color:#D97706; }
+.mdt-row-v.blue { color:#2563EB; }
+
+/* Hero photo */
+.mdt-hero {
+  width:100%; height:200px; border-radius:12px; overflow:hidden;
+  background:#F1F3F5; position:relative; cursor:pointer;
+  border:1px solid #E9ECEF;
+}
+.mdt-hero img { width:100%; height:100%; object-fit:cover; }
+.mdt-hero-ph {
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:8px;
+}
+.mdt-hero-ph-i { font-size:32px; opacity:.2; }
+.mdt-hero-ph-l { font-size:11px; color:#9A9890; }
+.mdt-hero-inp { display:none; }
+.mdt-hero-chg {
+  position:absolute; bottom:8px; right:8px;
+  background:rgba(0,0,0,.5); color:white; font-size:10px;
+  padding:3px 8px; border-radius:4px; border:none; cursor:pointer;
+}
+
+/* Impactos list */
+.mdt-impacto {
+  display:flex; align-items:flex-start; gap:12px; padding:10px 0;
+  border-bottom:1px solid #F1F3F5;
+}
+.mdt-impacto:last-child { border-bottom:none; }
+.mdt-impacto-icon {
+  width:36px; height:36px; border-radius:9px; background:#F1F5F9;
+  display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;
+}
+.mdt-impacto-text { font-size:13px; font-weight:600; color:#1E1C18; }
+.mdt-impacto-sub { font-size:11px; color:#7A7870; margin-top:2px; }
+
+/* Specs grid */
+.mdt-specs-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.mdt-spec-item {
+  display:flex; align-items:center; gap:9px; padding:9px 12px;
+  background:#F8F9FA; border-radius:8px;
+}
+.mdt-spec-icon { font-size:16px; width:20px; text-align:center; flex-shrink:0; }
+.mdt-spec-label { font-size:11px; color:#7A7870; }
+.mdt-spec-val { font-size:12px; font-weight:600; color:#1E1C18; margin-top:1px; }
+
+/* Beneficios table */
+.mdt-ben-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #F1F3F5; }
+.mdt-ben-row:last-child { border-bottom:none; }
+.mdt-ben-l { font-size:12px; color:#374151; }
+.mdt-ben-cat { font-size:10px; color:#9A9890; margin-top:1px; font-family:var(--mono); }
+.mdt-ben-v { font-size:13px; font-weight:700; color:#16A34A; font-family:var(--mono); }
+.mdt-total-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 14px; background:#F0FDF4; border-radius:8px; margin-top:10px;
+}
+.mdt-total-l { font-size:13px; font-weight:600; color:#16A34A; }
+.mdt-total-v { font-size:16px; font-weight:700; color:#16A34A; font-family:var(--mono); }
+
+/* Big ROI number */
+.mdt-roi-big {
+  text-align:center; padding:20px;
+}
+.mdt-roi-big-val { font-size:48px; font-weight:800; line-height:1; margin-bottom:4px; }
+.mdt-roi-big-lbl { font-size:12px; color:#9A9890; text-transform:uppercase; letter-spacing:.07em; }
+.mdt-roi-big-sub { font-size:12px; color:#4B5563; margin-top:6px; }
+
+/* Slideshow in detail */
+.mdt-slideshow {
+  width:100%; aspect-ratio:16/9; border-radius:10px; overflow:hidden;
+  background:#0D0B07; position:relative;
+}
+.mdt-slide-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .5s; }
+.mdt-slide-img.on { opacity:1; }
+.mdt-slide-ph { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; cursor:pointer; }
+.mdt-slide-ph-i { font-size:28px; opacity:.2; }
+.mdt-slide-ph-l { font-size:11px; color:#5A5750; }
+.mdt-slide-dots { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); display:flex; gap:4px; }
+.mdt-slide-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.35); cursor:pointer; }
+.mdt-slide-dot.on { background:white; }
+.mdt-slide-add-bar { display:flex; align-items:center; justify-content:space-between; padding:8px 0 0; }
+.mdt-slide-count { font-size:11px; color:#9A9890; }
+.mdt-slide-add-btn {
+  padding:5px 12px; border-radius:6px; border:1px solid #E5E7EB;
+  background:white; font-size:11px; font-weight:500; cursor:pointer; color:#374151;
+}
+.mdt-slide-inp { display:none; }
+
+/* Nav dots bottom */
+.res-nav-dots { 
+  display:none; position:fixed; bottom:18px; right:22px; 
+  flex-direction:column; gap:5px; z-index:100;
+}
+.res-nav-dots.on { display:flex; }
+.res-ndot { width:7px; height:7px; border-radius:50%; background:#CBD5E1; cursor:pointer; transition:all .2s; }
+.res-ndot.on { background:#1E2A4A; transform:scale(1.3); }
+
+/* Frase destacada */
+.mdt-frase {
+  background:linear-gradient(135deg, #1E2A4A 0%, #2A3A6A 100%);
+  border-radius:10px; padding:16px 18px; color:white;
+  font-size:13px; line-height:1.6; font-style:italic; margin-bottom:14px;
+}
+
+.dbtn{padding:5px 11px;border-radius:6px;border:0.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);cursor:pointer;font-size:11px;font-weight:500;font-family:var(--sans);color:#D4D0C6;transition:all .18s}
+.dbtn:hover{background:rgba(255,255,255,.12);color:white}
+.dbtn.on{background:var(--amber);color:white;border-color:var(--amber)}
+
+
+
+/* Modal */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center}
+.modal-ov.on{display:flex}
+.modal{background:var(--white);border-radius:13px;width:480px;max-width:92vw;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:85vh;overflow-y:auto}
+.modal h3{font-family:var(--serif);font-size:16px;margin-bottom:12px}
+.modal label{font-size:10px;color:var(--ink2);display:block;margin-bottom:3px;margin-top:9px}
+.modal input{width:100%;border:0.5px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;font-family:var(--sans);outline:none}
+.modal input:focus{border-color:var(--blue)}
+.modal-btns{display:flex;gap:7px;margin-top:16px;justify-content:flex-end}
+.modal-btn{padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:500;font-family:var(--sans)}
+.modal-btn.primary{background:var(--ink);color:white}
+.modal-btn.secondary{background:var(--bg2);color:var(--ink)}
+
+.g{color:var(--green)}.r{color:var(--red)}.a{color:var(--amber)}.b{color:var(--blue)}
+.bg-g{background:var(--green-l)}.bg-b{background:var(--blue-l)}.bg-r{background:var(--red-l)}
+
+/* ── ACTIVE SCREEN ── */
+.main-screen { display:none; }
+.main-screen.on { display:block; }
+#screen-cfg-main { overflow-y:auto; height:calc(100vh - 50px); padding-top:0; margin-top:50px; }
+#screen-res-main { position:fixed; top:50px; left:0; right:0; bottom:0; overflow:hidden; display:none; }
+#screen-res-main.on { display:block; }
+
+
+/* ── Scrolling fix for res-main ── */
+.res-main { overflow-y: auto; height: 100%; }
+.res-page { box-sizing: border-box; }
+.maq-detail-page { box-sizing: border-box; }
+#m-pages { display: block; }
+#screen-res-main.on { height: calc(100vh - 50px); }
+.res-layout { height: 100%; overflow: hidden; }
+.res-sidebar { height: 100%; overflow-y: auto; }
+
+/* ── PDF DOCUMENT SLOTS ── */
+.docs-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px}
+.doc-slot{background:var(--bg);border:0.5px solid var(--border);border-radius:10px;overflow:hidden}
+.doc-slot-hdr{padding:10px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px}
+.doc-slot-icon{font-size:16px}
+.doc-slot-title{font-size:12px;font-weight:600;flex:1}
+.doc-slot-badge{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:4px;background:var(--green-l);color:var(--green)}
+.doc-slot-badge.empty{background:var(--bg2);color:var(--ink3)}
+.doc-drop{min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;padding:18px;transition:background .15s}
+.doc-drop:hover{background:var(--bg2)}
+.doc-drop-i{font-size:28px;opacity:.25}
+.doc-drop-l{font-size:11px;color:var(--ink3);font-family:var(--mono);text-align:center}
+.doc-loaded{padding:12px 14px;display:flex;align-items:center;gap:10px}
+.doc-loaded-icon{width:36px;height:36px;background:var(--red-l);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.doc-loaded-info{flex:1;min-width:0}
+.doc-loaded-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-loaded-size{font-size:10px;color:var(--ink3);font-family:var(--mono)}
+.doc-loaded-btns{display:flex;gap:6px;margin-top:8px}
+.doc-btn-view{padding:5px 12px;border-radius:6px;background:var(--amber);color:white;border:none;cursor:pointer;font-size:11px;font-weight:500;font-family:var(--sans)}
+.doc-btn-view:hover{opacity:.85}
+.doc-btn-del{padding:5px 10px;border-radius:6px;background:var(--bg2);color:var(--ink3);border:0.5px solid var(--border);cursor:pointer;font-size:11px;font-family:var(--sans)}
+.doc-btn-del:hover{color:var(--red);border-color:var(--red)}
+.doc-inp{display:none}
+.doc-note{font-size:10px;color:var(--ink3);padding:8px 14px;background:var(--amber-l);border-top:0.5px solid var(--border)}
+/* ── PDF BUTTONS IN PRESENTATION BAR ── */
+.pdf-btns{display:flex;gap:5px}
+.pdf-btn{padding:5px 11px;border-radius:6px;border:0.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#D4D0C6;cursor:pointer;font-size:11px;font-weight:500;font-family:var(--sans);transition:all .18s}
+.pdf-btn:hover{background:rgba(240,168,74,.2);border-color:var(--amber-m);color:var(--amber-m)}
+.pdf-btn.off{opacity:.3;cursor:default;pointer-events:none}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="brand">Linea <span>Italia</span></div>
+  <div style="display:flex;gap:4px">
+    <button class="htab on" id="tab-cfg" onclick="switchMainScreen('cfg')">&#9881; Configuracion</button>
+    <button class="htab" id="tab-res" onclick="switchMainScreen('res')">&#9654; Resumen</button>
+  </div>
+  <div class="hdr-r" style="display:flex;gap:8px;align-items:center">
+    <div class="hdr-dots" id="ndots" style="display:none"></div>
+    <span id="save-badge" style="font-size:10px;font-family:var(--mono);color:var(--amber-m);opacity:0;transition:opacity .4s;white-space:nowrap">&#10003; Guardado</span>
+    <button class="btn-save" onclick="clearLS()" style="background:transparent;border:0.5px solid rgba(255,255,255,.15);color:#9A9790;font-size:10px;padding:4px 9px" title="Borrar datos del navegador">&#8635; Resetear</button>
+    <button class="btn-save" onclick="saveFile()">&#128190; Descargar HTML</button>
+  </div>
+</div>
+
+<!-- MODAL ADD MACHINE -->
+<div class="modal-ov" id="modal-add">
+  <div class="modal">
+    <h3>Nueva maquina</h3>
+    <label>Nombre completo</label><input id="nm-name" placeholder="Ej: Router CNC KDT KN-3410 DE">
+    <label>Codigo (max 4 letras)</label><input id="nm-code" placeholder="CNC" maxlength="4">
+    <label>Color</label><input id="nm-color" type="color" value="#F87171">
+    <label>Inversion total ($)</label><input id="nm-inv" type="number" placeholder="1500000">
+    <div class="modal-btns">
+      <button class="modal-btn secondary" onclick="document.getElementById('modal-add').classList.remove('on')">Cancelar</button>
+      <button class="modal-btn primary" onclick="addMachine()">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN SCREENS -->
+<div id="screen-cfg-main" class="main-screen on">
+  <div class="wrap">
+    <div class="page-title">Configuracion del plan de inversion</div>
+    <div class="page-sub">Define parametros globales, centros de trabajo y variables por maquina. El Resumen se actualiza automaticamente.</div>
+    <div class="sec-title">Parametros globales</div>
+    <div class="gp-grid">
+      <div class="gp-card"><label>Salario operador/mes ($)</label><input class="gp-inp" id="gp-salary" type="text" value="19,661" onblur="fmtGP(this)" oninput="recalcAll()"></div>
+      <div class="gp-card"><label>Dias habiles/mes</label><input class="gp-inp" id="gp-days" type="number" value="21.5" step="0.5" oninput="recalcAll()"></div>
+      <div class="gp-card"><label>Horas por turno</label><input class="gp-inp" id="gp-hours" type="number" value="8.5" step="0.5" oninput="recalcAll()"></div>
+      <div class="gp-card"><label>Tipo de cambio USD/MXN ($)</label><input class="gp-inp" id="gp-fx" type="text" value="18.00" onblur="fmtGP(this)" oninput="recalcAll()"></div>
+      <div class="gp-card"><label>Tarifa CFE ($/kWh)</label><input class="gp-inp" id="gp-cfe" type="text" value="3.50" onblur="fmtGP(this)" oninput="recalcAll()"></div>
+      <div class="gp-card"><label>Meses operacion/ano</label><input class="gp-inp" id="gp-months" type="number" value="12" oninput="recalcAll()"></div>
+    </div>
+    <div class="sec-title">Centros de trabajo (CT) — Costo hora CIF+MOD</div>
+    <div class="ct-wrap">
+      <table class="ct-table"><thead><tr><th>Codigo</th><th>Nombre del CT</th><th style="text-align:right">Costo hora ($)</th><th style="width:40px"></th></tr></thead>
+      <tbody id="ct-body"></tbody></table>
+    </div>
+    <button class="add-row" onclick="addCT()">+ Agregar centro de trabajo</button>
+    <div class="sec-title">Maquinaria</div>
+    <div id="maq-list"></div>
+    <button class="add-maq-btn" onclick="document.getElementById('modal-add').classList.add('on')">+ Agregar maquina</button>
+  </div>
+</div>
+
+<div id="screen-res-main" class="main-screen">
+  <div class="res-layout">
+    <!-- SIDEBAR -->
+    <div class="res-sidebar">
+      <div class="res-sidebar-logo">
+        <div class="res-sidebar-logo-txt">Linea <span style="color:#F0A84A">Italia</span></div>
+        <div class="res-sidebar-logo-sub">Plan de Inversión 2026</div>
+      </div>
+      <div class="res-nav">
+        <div class="res-nav-section">Resumen</div>
+        <div class="res-nav-item on" id="snav-dash" onclick="resGoTo(0)">
+          <span class="nav-icon">⊞</span>
+          <span class="nav-label">Dashboard</span>
+        </div>
+        <div class="res-nav-divider"></div>
+        <div class="res-nav-section">Maquinaria</div>
+        <div id="res-nav-machines"></div>
+      </div>
+    </div>
+    <!-- MAIN -->
+    <div class="res-main">
+      <!-- Dashboard page -->
+      <div class="res-page on" id="res-pg-dash">
+        <div class="res-page-title">Dashboard de Inversión</div>
+        <div class="res-page-sub" id="res-dash-sub">Linea Italia · Aguascalientes · 2026</div>
+        <div class="kpi-grid" id="d-kpis"></div>
+        <div class="maq-table-wrap">
+          <div class="maq-table-hdr">
+            <div>
+              <div class="maq-table-title">Maquinaria</div>
+              <div class="maq-table-sub">Haz clic en una máquina para ver el análisis completo</div>
+            </div>
+          </div>
+          <table class="maq-tbl">
+            <thead><tr>
+              <th>Máquina</th>
+              <th style="text-align:right">Inversión</th>
+              <th style="text-align:right">Beneficio / año</th>
+              <th style="text-align:right">ROI</th>
+              <th style="text-align:right">Payback</th>
+              <th>Documentos</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="d-maq-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Machine detail pages injected here -->
+      <div id="m-pages"></div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV ARROWS (only in resumen) -->
+<div class="navs" id="navs" style="display:none">
+  <button class="narr" id="b-prev" onclick="nav(-1)">&#8592;</button>
+  <button class="narr" id="b-next" onclick="nav(1)">&#8594;</button>
+</div>
+
+<script>
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+
+var GP = {salary:19661, days:21.5, hours:8.5, fx:18, cfe:3.5, months:12};
+
+var CTS = [
+  {id:"c1", code:"CT-CNC", name:"Corte CNC",    costo:1898},
+  {id:"c2", code:"CT-ENC", name:"Enchapado",     costo:1758},
+  {id:"c3", code:"CT-HAB", name:"Habilitado",    costo:1334},
+  {id:"c4", code:"CT-TAL", name:"Taladrado",     costo:0},
+  {id:"c5", code:"CT-DOB", name:"Doblado",       costo:2350}
+];
+
+// Variable library — 30 variables with their detail rows
+var VAR_LIB = [
+  // COSTOS QUE SE ELIMINAN
+  {id:"mant_corr", cat:"costos", name:"Mantenimiento correctivo",
+   detail:[
+     {label:"Gasto correctivo actual/ano ($)", val:0, op:"+", type:"money"},
+     {label:"Gasto esperado maquina nueva/ano ($)", val:0, op:"-", type:"money"}
+   ]},
+  {id:"scrap", cat:"costos", name:"Scrap y material desperdiciado",
+   detail:[
+     {label:"Unidades/piezas producidas por dia", val:0, op:"+", type:"num"},
+     {label:"% desperdicio actual", val:0, op:"*", type:"pct"},
+     {label:"Costo de material por unidad ($)", val:0, op:"*", type:"money"},
+     {label:"% reduccion con maquina nueva", val:0, op:"*", type:"pct"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"reproceso", cat:"costos", name:"Costo de reproceso / retrabajo",
+   detail:[
+     {label:"Unidades reprocesadas por dia", val:0, op:"+", type:"num"},
+     {label:"Horas de reproceso por unidad", val:0, op:"*", type:"num"},
+     {label:"Costo hora CT ($)", val:0, op:"*", type:"money"},
+     {label:"% reduccion con maquina nueva", val:0, op:"*", type:"pct"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"renta", cat:"costos", name:"Renta de equipo externo o maquila",
+   detail:[
+     {label:"Costo de renta o maquila por mes ($)", val:0, op:"+", type:"money"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"energia_inef", cat:"costos", name:"Energia extra por ineficiencia del equipo",
+   detail:[
+     {label:"kW extra consumidos por hora", val:0, op:"+", type:"num"},
+     {label:"Horas por turno", val:"[HORAS]", op:"*", type:"global"},
+     {label:"Tarifa CFE ($/kWh)", val:"[CFE]", op:"*", type:"global"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"garantias", cat:"costos", name:"Garantias y devoluciones por calidad",
+   detail:[
+     {label:"Devoluciones por mes", val:0, op:"+", type:"num"},
+     {label:"Costo promedio por devolucion ($)", val:0, op:"*", type:"money"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"almacen", cat:"costos", name:"Almacenamiento de producto defectuoso",
+   detail:[
+     {label:"Costo de almacen por mes ($)", val:0, op:"+", type:"money"},
+     {label:"% atribuible a producto defectuoso", val:0, op:"*", type:"pct"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  // PERSONAL
+  {id:"nomina", cat:"personal", name:"Nomina de personas liberadas",
+   detail:[
+     {label:"Personas liberadas", val:0, op:"+", type:"num"},
+     {label:"% del tiempo liberado", val:0, op:"*", type:"pct"},
+     {label:"Salario por mes ($)", val:"[SALARIO]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"horas_extra", cat:"personal", name:"Horas extra que se eliminan",
+   detail:[
+     {label:"Horas extra por mes", val:0, op:"+", type:"num"},
+     {label:"Costo por hora extra ($)", val:0, op:"*", type:"money"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"calidad_personal", cat:"personal", name:"Personal de calidad / inspeccion reducido",
+   detail:[
+     {label:"Personas en calidad/inspeccion", val:0, op:"+", type:"num"},
+     {label:"% tiempo liberado", val:0, op:"*", type:"pct"},
+     {label:"Salario por mes ($)", val:"[SALARIO]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"accidentes", cat:"personal", name:"Reduccion de accidentes / incapacidades",
+   detail:[
+     {label:"Incidentes por ano (actual)", val:0, op:"+", type:"num"},
+     {label:"Costo promedio por incidente ($)", val:0, op:"*", type:"money"},
+     {label:"% reduccion esperada", val:0, op:"*", type:"pct"}
+   ]},
+  // PRODUCCION
+  {id:"paros", cat:"produccion", name:"Horas productivas ganadas — paros de linea",
+   detail:[
+     {label:"Paros por dia", val:0, op:"+", type:"num"},
+     {label:"Horas por paro", val:0, op:"*", type:"num"},
+     {label:"Costo hora CT ($)", val:0, op:"*", type:"money"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"uds_adicionales", cat:"produccion", name:"Unidades adicionales por dia",
+   detail:[
+     {label:"Unidades adicionales por dia", val:0, op:"+", type:"num"},
+     {label:"Utilidad por unidad ($)", val:0, op:"*", type:"money"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"ciclo", cat:"produccion", name:"Reduccion de tiempo de ciclo",
+   detail:[
+     {label:"Horas ganadas por dia", val:0, op:"+", type:"num"},
+     {label:"Costo hora CT ($)", val:0, op:"*", type:"money"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"tiempos_muertos", cat:"produccion", name:"Eliminacion de tiempos muertos",
+   detail:[
+     {label:"Horas muertas por dia", val:0, op:"+", type:"num"},
+     {label:"Costo hora CT ($)", val:0, op:"*", type:"money"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"nesting", cat:"produccion", name:"Mejor aprovechamiento de material (nesting)",
+   detail:[
+     {label:"% mejora en aprovechamiento", val:0, op:"+", type:"pct"},
+     {label:"Unidades/piezas por dia", val:0, op:"*", type:"num"},
+     {label:"Costo de material por unidad ($)", val:0, op:"*", type:"money"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"setup", cat:"produccion", name:"Reduccion de tiempo de setup / cambio herramienta",
+   detail:[
+     {label:"Setups por dia", val:0, op:"+", type:"num"},
+     {label:"Horas ahorradas por setup", val:0, op:"*", type:"num"},
+     {label:"Costo hora CT ($)", val:0, op:"*", type:"money"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  // CALIDAD
+  {id:"defectos", cat:"calidad", name:"Reduccion de defectos / scrap",
+   detail:[
+     {label:"Unidades producidas por dia", val:0, op:"+", type:"num"},
+     {label:"% defecto actual", val:0, op:"*", type:"pct"},
+     {label:"Costo por unidad defectuosa ($)", val:0, op:"*", type:"money"},
+     {label:"% reduccion con maquina nueva", val:0, op:"*", type:"pct"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"rendimiento", cat:"calidad", name:"Mejora en rendimiento de material",
+   detail:[
+     {label:"% mejora en rendimiento", val:0, op:"+", type:"pct"},
+     {label:"Consumo de material por dia ($)", val:0, op:"*", type:"money"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"fuera_spec", cat:"calidad", name:"Reduccion de productos fuera de especificacion",
+   detail:[
+     {label:"Unidades fuera de spec por dia", val:0, op:"+", type:"num"},
+     {label:"Costo de reproceso por unidad ($)", val:0, op:"*", type:"money"},
+     {label:"% reduccion con maquina nueva", val:0, op:"*", type:"pct"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  // MERCADO
+  {id:"nuevos_productos", cat:"mercado", name:"Nuevos productos habilitados",
+   detail:[
+     {label:"Ventas adicionales por mes ($)", val:0, op:"+", type:"money"},
+     {label:"Margen de contribucion", val:0, op:"*", type:"pct"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"nuevos_clientes", cat:"mercado", name:"Nuevos clientes o segmentos",
+   detail:[
+     {label:"Ventas adicionales por mes ($)", val:0, op:"+", type:"money"},
+     {label:"Margen de contribucion", val:0, op:"*", type:"pct"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  // CAPACIDAD
+  {id:"cap_instalada", cat:"capacidad", name:"Incremento de capacidad instalada",
+   detail:[
+     {label:"Unidades adicionales por dia", val:0, op:"+", type:"num"},
+     {label:"Utilidad por unidad ($)", val:0, op:"*", type:"money"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"cuello", cat:"capacidad", name:"Reduccion de cuellos de botella",
+   detail:[
+     {label:"Horas liberadas por dia", val:0, op:"+", type:"num"},
+     {label:"Costo hora CT ($)", val:0, op:"*", type:"money"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"aguas_abajo", cat:"capacidad", name:"Liberacion de capacidad en procesos aguas abajo",
+   detail:[
+     {label:"Personas en proceso aguas abajo", val:0, op:"+", type:"num"},
+     {label:"% tiempo liberado", val:0, op:"*", type:"pct"},
+     {label:"Salario por mes ($)", val:"[SALARIO]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"lead_time", cat:"capacidad", name:"Reduccion de lead time de produccion",
+   detail:[
+     {label:"Dias de lead time ahorrados por mes", val:0, op:"+", type:"num"},
+     {label:"Costo del capital por dia ($)", val:0, op:"*", type:"money"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  // OPEX (estos son costos, van al OPEX no a beneficios)
+  {id:"opex_mant", cat:"opex", name:"Mantenimiento preventivo",
+   detail:[
+     {label:"Costo de mantenimiento preventivo/ano ($)", val:0, op:"+", type:"money"}
+   ]},
+  {id:"opex_energia", cat:"opex", name:"Energia electrica",
+   detail:[
+     {label:"Consumo en kW de la maquina", val:0, op:"+", type:"num"},
+     {label:"Horas por turno", val:"[HORAS]", op:"*", type:"global"},
+     {label:"Tarifa CFE ($/kWh)", val:"[CFE]", op:"*", type:"global"},
+     {label:"Dias habiles/mes", val:"[DIAS]", op:"*", type:"global"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"opex_consumibles", cat:"opex", name:"Consumibles y herramientas",
+   detail:[
+     {label:"Costo de consumibles por mes ($)", val:0, op:"+", type:"money"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]},
+  {id:"opex_refacciones", cat:"opex", name:"Refacciones programadas",
+   detail:[
+     {label:"Costo de refacciones por ano ($)", val:0, op:"+", type:"money"}
+   ]},
+  {id:"opex_lubricantes", cat:"opex", name:"Lubricantes y fluidos",
+   detail:[
+     {label:"Costo de lubricantes por mes ($)", val:0, op:"+", type:"money"},
+     {label:"Meses/ano", val:"[MESES]", op:"*", type:"global"}
+   ]}
+];
+
+var CAT_NAMES = {
+  costos:"Costos que se eliminan",
+  personal:"Personal",
+  produccion:"Produccion",
+  calidad:"Calidad",
+  mercado:"Mercado y ventas",
+  capacidad:"Capacidad",
+  opex:"OPEX — Costos operativos anuales"
+};
+
+var MACHINES = [
+  {id:"m1", code:"CNC", color:"#F87171",
+   name:"Router CNC KDT KN-3410 DE", model:"Trimaq - Folio 4531 - AGS",
+   inv:1269541, opx_extra:0, yr:8, res:119828, xlsxLink:"", videoUrl:"", cotLink:"", slidePhotos:[],
+   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null,
+   frase:"Elimina el cuello de botella principal. El CNC actual cuesta mas en mantenimiento que la maquina nueva.",
+   impactos:[
+     {icon:"⚡", text:"Cambio de 12 herramientas automatico", sub:"Sin tiempos muertos entre operaciones"},
+     {icon:"📐", text:"Software de nesting incluido", sub:"Optimiza el aprovechamiento de cada tablero"},
+     {icon:"🔧", text:"Reduce mantenimiento 80%", sub:"De $364,502 a $72,900 por ano"}
+   ],
+   vars:{},  // key=var_id, value={on, mode, simpleVal, detail:[{label,val,op,type}]}
+   specs:[
+     {icon:"⚡", label:"Motor", val:"16 hp", showPhoto:true, photo:null},
+     {icon:"🔄", label:"Cambio herramientas", val:"12 automatico", showPhoto:true, photo:null},
+     {icon:"📏", label:"Area de trabajo", val:"2310 x 1570 mm", showPhoto:false, photo:null},
+     {icon:"💨", label:"Velocidad", val:"80/80/30 m/min", showPhoto:false, photo:null},
+     {icon:"🖥", label:"Software nesting", val:"Incluido", showPhoto:true, photo:null},
+     {icon:"📦", label:"Instalacion", val:"Sin obra civil", showPhoto:false, photo:null},
+     {icon:"🚚", label:"Entrega", val:"75-90 dias", showPhoto:false, photo:null}
+   ]
+  },
+  {id:"m2", code:"ENC", color:"#34D399",
+   name:"Enchapadora KDT KE-710 BT 40", model:"Trimaq - Folio 4529 - AGS",
+   inv:1790000, opx_extra:0, yr:10, res:154310, xlsxLink:"", videoUrl:"", cotLink:"", slidePhotos:[],
+   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null,
+   frase:"Abre tres nuevos acabados que hoy se rechazan. Retorno automatico incluido sin costo adicional.",
+   impactos:[
+     {icon:"🔄", text:"Retorno automatico KHF-530 incluido", sub:"Elimina operacion manual entre pasadas"},
+     {icon:"🎨", text:"Arco, curva y 45 grados habilitados", sub:"Nuevos mercados que hoy no se atienden"},
+     {icon:"👤", text:"De 3 operadores a 1", sub:"2 personas liberadas en enchapado y habilitado"}
+   ],
+   vars:{}, specs:[
+     {icon:"🔄", label:"Retorno automatico", val:"KHF-530 incluido", showPhoto:true, photo:null},
+     {icon:"🎨", label:"Acabados nuevos", val:"Arco, curva, 45 grados", showPhoto:true, photo:null},
+     {icon:"💰", label:"CT Enchapado", val:"$1,758/hr", showPhoto:false, photo:null},
+     {icon:"👤", label:"Personal", val:"De 3 a 1 operador", showPhoto:false, photo:null},
+     {icon:"🚚", label:"Entrega", val:"75-90 dias", showPhoto:false, photo:null}
+   ]
+  },
+  {id:"m3", code:"EXT", color:"#A78BFA",
+   name:"Extractor de Polvo SMT MS-400", model:"Trimaq - Folio 4533 - 5 unidades",
+   inv:1249138, opx_extra:0, yr:15, res:62285, xlsxLink:"", videoUrl:"", cotLink:"", slidePhotos:[],
+   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null,
+   frase:"Prerequisito para operar las maquinas nuevas. Elimina $453,600 anuales en mantenimiento por polvo.",
+   impactos:[
+     {icon:"🌪", text:"Sirve a 3 maquinas simultaneo", sub:"Enchapadora, CNC y Taladro"},
+     {icon:"💰", text:"Ahorro $362,880 al ano", sub:"Reduccion 80% en mantenimiento por polvo"},
+     {icon:"⚡", text:"Entrega inmediata", sub:"Stock disponible en Trimaq AGS"}
+   ],
+   vars:{}, specs:[
+     {icon:"⚡", label:"Motor", val:"15 hp industrial", showPhoto:true, photo:null},
+     {icon:"🌪", label:"Volumen aire", val:"11,000 m3/h", showPhoto:false, photo:null},
+     {icon:"📦", label:"Unidades", val:"5 extractores", showPhoto:false, photo:null},
+     {icon:"🚚", label:"Entrega", val:"Inmediata", showPhoto:false, photo:null}
+   ]
+  },
+  {id:"m4", code:"TAL", color:"#FBBF24",
+   name:"Taladro CNC KDT KD-612 GNH", model:"Trimaq - Folio 4532 - AGS",
+   inv:1624828, opx_extra:0, yr:8, res:159483, xlsxLink:"", videoUrl:"", cotLink:"", slidePhotos:[],
+   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null,
+   frase:"El mas rentable del paquete. ROI 647% en 8 anos. Se paga solo en 13 meses.",
+   impactos:[
+     {icon:"🏆", text:"ROI 647% — El mas rentable", sub:"Ganancia neta $10,507,653 en 8 anos"},
+     {icon:"🎯", text:"Elimina error humano en barrenos", sub:"350 piezas/dia con precision CNC"},
+     {icon:"⚡", text:"Libera cuello en habilitado", sub:"2 personas recuperan 80% del tiempo"}
+   ],
+   vars:{}, specs:[
+     {icon:"🎯", label:"Cabezal superior", val:"13 vert + 10 horiz", showPhoto:true, photo:null},
+     {icon:"💨", label:"Velocidad", val:"140/90/50 m/min", showPhoto:false, photo:null},
+     {icon:"🚛", label:"Mesa transportadora", val:"KHC-324 SA incluida", showPhoto:true, photo:null},
+     {icon:"💰", label:"CT Habilitado", val:"$1,125/hr", showPhoto:false, photo:null},
+     {icon:"🚚", label:"Entrega", val:"75-90 dias", showPhoto:false, photo:null}
+   ]
+  },
+  {id:"m5", code:"DOB", color:"#60A5FA",
+   name:"Dobladora CNC G.Weike GWK-10032", model:"G.Weike Tech - USD 30,550 - Importacion",
+   inv:672395, opx_extra:0, yr:7, res:54990, xlsxLink:"", videoUrl:"", cotLink:"", slidePhotos:[],
+   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null,
+   frase:"Abre el mercado de mueble metalico. ROI 541% con nuevos productos que hoy son imposibles.",
+   impactos:[
+     {icon:"🏅", text:"2do mas rentable — ROI 541%", sub:"Ganancia neta $3,638,515 en 7 anos"},
+     {icon:"🏭", text:"Mueble metalico de precision", sub:"Nuevo segmento que la competencia no puede atender"},
+     {icon:"🇩🇪", text:"Tecnologia europea", sub:"DELEM DA53T (NL) + Rexroth hidraulico (DE)"}
+   ],
+   vars:{}, specs:[
+     {icon:"🖥", label:"Sistema CNC", val:"DELEM DA53T (NL)", showPhoto:true, photo:null},
+     {icon:"⚙", label:"Hidraulico", val:"Rexroth (Alemania)", showPhoto:true, photo:null},
+     {icon:"📐", label:"Presion nominal", val:"1,000 kN", showPhoto:false, photo:null},
+     {icon:"📏", label:"Mesa", val:"3,200 mm", showPhoto:false, photo:null},
+     {icon:"💰", label:"CT Doblado", val:"$2,350/hr", showPhoto:false, photo:null},
+     {icon:"🚢", label:"Entrega", val:"35 dias habiles", showPhoto:false, photo:null}
+   ]
+  }
+];
+
+var openMaqId = null;
+var openMacTab = {};
+var openVarId = {};  // per machine: which var is expanded
+
+// ── FORMAT HELPERS ────────────────────────────────────────────────────────────
+function parseNum(s) {
+  if (typeof s === "number") return s;
+  return parseFloat(String(s).replace(/,/g,"").replace(/\$/g,"").replace(/%/g,"")) || 0;
+}
+
+function fmtMoney(n) {
+  if (n === null || n === undefined || isNaN(n)) return "$0";
+  return "$" + Math.round(n).toLocaleString("es-MX");
+}
+
+function fmtNum(n) {
+  if (n === null || n === undefined || isNaN(n)) return "0";
+  var r = parseFloat(n);
+  if (Number.isInteger(r)) return r.toLocaleString("es-MX");
+  return r.toLocaleString("es-MX", {minimumFractionDigits:2, maximumFractionDigits:4});
+}
+
+function fmtPct(n) {
+  return (parseFloat(n)*100).toFixed(1) + "%";
+}
+
+function fmtGP(inp) {
+  var v = parseNum(inp.value);
+  inp.value = fmtNum(v);
+}
+
+function getGP() {
+  return {
+    salary: parseNum(document.getElementById("gp-salary").value),
+    days:   parseFloat(document.getElementById("gp-days").value) || 21.5,
+    hours:  parseFloat(document.getElementById("gp-hours").value) || 8.5,
+    fx:     parseNum(document.getElementById("gp-fx").value),
+    cfe:    parseNum(document.getElementById("gp-cfe").value),
+    months: parseFloat(document.getElementById("gp-months").value) || 12
+  };
+}
+
+function resolveGlobal(token, gp) {
+  var map = {
+    "[SALARIO]": gp.salary,
+    "[DIAS]":    gp.days,
+    "[HORAS]":   gp.hours,
+    "[TC]":      gp.fx,
+    "[CFE]":     gp.cfe,
+    "[MESES]":   gp.months
+  };
+  return map[token] !== undefined ? map[token] : 0;
+}
+
+// ── CALCULATE VARIABLE ────────────────────────────────────────────────────────
+function calcVar(mId, varId) {
+  var m = MACHINES.find(function(x){ return x.id === mId; });
+  if (!m) return 0;
+  var mv = m.vars[varId];
+  if (!mv || !mv.on) return 0;
+
+  if (mv.mode === "simple") {
+    return parseNum(mv.simpleVal) || 0;
+  }
+
+  // Detail mode: run through rows top to bottom
+  var gp = getGP();
+  var vdef = VAR_LIB.find(function(v){ return v.id === varId; });
+  var rows = mv.detail || (vdef ? JSON.parse(JSON.stringify(vdef.detail)) : []);
+
+  var acc = null;
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var val = row.type === "global" ? resolveGlobal(row.val, gp) : parseNum(row.val);
+    if (acc === null) {
+      acc = val;
+    } else {
+      var op = row.op;
+      if (op === "+") acc = acc + val;
+      else if (op === "-") acc = acc - val;
+      else if (op === "*") acc = acc * val;
+      else if (op === "/") acc = val !== 0 ? acc / val : 0;
+    }
+  }
+  return acc || 0;
+}
+
+function calcOpex(m) {
+  var gp = getGP();
+  var total = 0;
+  Object.keys(m.vars).forEach(function(vid) {
+    var vdef = VAR_LIB.find(function(v){ return v.id === vid; });
+    if (vdef && vdef.cat === "opex") {
+      total += calcVar(m.id, vid);
+    }
+  });
+  return total;
+}
+
+function calcBenefits(m) {
+  var total = 0;
+  Object.keys(m.vars).forEach(function(vid) {
+    var vdef = VAR_LIB.find(function(v){ return v.id === vid; });
+    if (vdef && vdef.cat !== "opex") {
+      total += calcVar(m.id, vid);
+    }
+  });
+  return total;
+}
+
+function calcROI(m) {
+  var ab = calcBenefits(m);
+  var opx = calcOpex(m) + (parseNum(m.opx)||0);
+  var fl = ab - opx;
+  var tot = fl * m.yr + m.res;
+  var ng = tot - m.inv;
+  var roi = m.inv > 0 ? (ng / m.inv) * 100 : 0;
+  var pay = fl > 0 ? m.inv / fl : Infinity;
+  return { ab:ab, opx:opx, fl:fl, ng:ng, roi:roi, pay:pay };
+}
+
+// ── RENDER CT ─────────────────────────────────────────────────────────────────
+function renderCTs() {
+  var h = "";
+  CTS.forEach(function(ct, i) {
+    h += '<tr>';
+    h += '<td><input class="ct-inp text" value="' + ct.code + '" oninput="CTS['+i+'].code=this.value"></td>';
+    h += '<td><input class="ct-inp text" value="' + ct.name + '" oninput="CTS['+i+'].name=this.value"></td>';
+    h += '<td><input class="ct-inp" value="' + fmtNum(ct.costo) + '" onblur="CTS['+i+'].costo=parseNum(this.value);this.value=fmtNum(CTS['+i+'].costo);recalcAll()"></td>';
+    h += '<td><button class="tbl-del" onclick="CTS.splice('+i+',1);renderCTs()">&#215;</button></td>';
+    h += '</tr>';
+  });
+  document.getElementById("ct-body").innerHTML = h;
+}
+
+function addCT() {
+  CTS.push({id:"c"+Date.now(), code:"CT-NEW", name:"Nuevo CT", costo:0});
+  renderCTs();
+  saveLS();
+}
+
+// ── RENDER MACHINES ───────────────────────────────────────────────────────────
+function renderMachines() {
+  var h = "";
+  MACHINES.forEach(function(m) {
+    var r = calcROI(m);
+    var hd = r.ab > 0;
+    var isOpen = openMaqId === m.id;
+    var curTab = openMacTab[m.id] || "id";
+
+    h += '<div class="maq-card">';
+    h += '<button class="maq-hdr" onclick="toggleMaq(\'' + m.id + '\')">';
+    h += '<div class="maq-dot" style="background:' + m.color + '"></div>';
+    h += '<div class="maq-name">' + m.name + '</div>';
+    if (hd) {
+      h += '<div class="maq-total">' + fmtMoney(r.ab) + '/ano</div>';
+      h += '<div class="maq-roi">ROI ' + (r.roi >= 0 ? "+" : "") + r.roi.toFixed(0) + '%</div>';
+    }
+    h += '<div class="maq-chev' + (isOpen ? " open" : "") + '">&#9660;</div>';
+    h += '</button>';
+
+    h += '<div class="maq-body' + (isOpen ? " open" : "") + '">';
+
+    if (isOpen) {
+      // TABS
+      h += '<div class="mac-tabs">';
+      var tabs = [
+        {id:"id", label:"Identificacion"},
+        {id:"vars", label:"Variables y calculo"},
+        {id:"specs", label:"Especificaciones"},
+        {id:"impactos", label:"Puntos de impacto"},
+        {id:"docs", label:"📎 Documentos"}
+      ];
+      tabs.forEach(function(t) {
+        h += '<button class="mac-tab' + (curTab === t.id ? " on" : "") + '" onclick="switchTab(\'' + m.id + '\',\'' + t.id + '\')">' + t.label + '</button>';
+      });
+      h += '</div>';
+
+      // TAB CONTENT
+      if (curTab === "id") h += renderTabId(m);
+      else if (curTab === "vars") h += renderTabVars(m);
+      else if (curTab === "specs") h += renderTabSpecs(m);
+      else if (curTab === "impactos") h += renderTabImpactos(m);
+      else if (curTab === "docs") h += renderTabDocs(m);
+    }
+
+    h += '</div></div>';
+  });
+  document.getElementById("maq-list").innerHTML = h;
+}
+
+// ── TAB: IDENTIFICACION ───────────────────────────────────────────────────────
+function renderTabId(m) {
+  var h = '<div class="mac-panel on">';
+  h += '<div class="id-grid">';
+  h += '<div class="fld"><label>Nombre completo</label><input value="' + m.name + '" oninput="updM(\'' + m.id + '\',\'name\',this.value)"></div>';
+  h += '<div class="fld"><label>Modelo / Proveedor</label><input value="' + m.model + '" oninput="updM(\'' + m.id + '\',\'model\',this.value)"></div>';
+  h += '</div>';
+  h += '<div class="id-grid-3">';
+  h += '<div class="fld"><label>Inversion total ($)</label><input class="money" value="' + fmtNum(m.inv) + '" onblur="updM(\'' + m.id + '\',\'inv\',parseNum(this.value));this.value=fmtNum(m.inv);recalcAll()"></div>';
+  h += '<div class="fld"><label>Vida util (anos)</label><input class="money" type="number" value="' + m.yr + '" oninput="updM(\'' + m.id + '\',\'yr\',parseFloat(this.value)||1);recalcAll()"></div>';
+  h += '<div class="fld"><label>Valor de rescate ($)</label><input class="money" value="' + fmtNum(m.res) + '" onblur="updM(\'' + m.id + '\',\'res\',parseNum(this.value));this.value=fmtNum(m.res);recalcAll()"></div>';
+  h += '</div>';
+  h += '<div class="fld" style="margin-bottom:8px"><label>Link a respaldo Excel (Google Sheets / OneDrive)</label><input value="' + (m.xlsxLink||"") + '" placeholder="https://..." oninput="updM(\'' + m.id + '\',\'xlsxLink\',this.value)"></div>';
+  h += '<div class="fld" style="margin-bottom:12px"><label>Link a cotizacion (PDF / Drive / carpeta)</label><input value="' + (m.cotLink||"") + '" placeholder="https://..." oninput="updM(\'' + m.id + '\',\'cotLink\',this.value)"></div>';
+  h += '<div class="fld"><label>Foto de la maquina (se usa en presentacion)</label></div>';
+  h += '<div class="cfg-foto" onclick="document.getElementById(\'cfgi-' + m.id + '\').click()">';
+  h += '<input type="file" accept="image/*" class="cfg-foto-inp" id="cfgi-' + m.id + '" onchange="loadCfgFoto(\'' + m.id + '\',this)">';
+  h += '<img id="cfgfotoimg-' + m.id + '" src="' + (m.heroPhoto||"") + '" style="display:' + (m.heroPhoto?"block":"none") + '">';
+  h += '<div class="cfg-foto-ph" id="cfgfotoph-' + m.id + '" style="display:' + (m.heroPhoto?"none":"flex") + '">';
+  h += '<div class="cfg-foto-ph-i">📷</div><div class="cfg-foto-ph-l">Clic para subir — se usa en presentacion</div></div></div>';
+
+  // ROI summary
+  var r = calcROI(m);
+  h += '<div class="var-totals">';
+  h += '<div class="vt-item"><div class="l">Beneficios anuales</div><div class="v">' + fmtMoney(r.ab) + '</div><div class="s">variables activas</div></div>';
+  h += '<div class="vt-item"><div class="l">OPEX anual</div><div class="v">' + fmtMoney(r.opx) + '</div><div class="s">costos operativos</div></div>';
+  h += '<div class="vt-item"><div class="l">ROI Simple</div><div class="v" style="color:' + (r.ab>0?(r.roi>=100?"#34D399":r.roi>=50?"var(--amber-m)":"#F87171"):"#5A5750") + '">' + (r.ab>0?(r.roi>=0?"+":"")+r.roi.toFixed(0)+"%":"--") + '</div><div class="s">' + m.yr + ' anos</div></div>';
+  h += '<div class="vt-item"><div class="l">Payback</div><div class="v" style="color:' + (isFinite(r.pay)?"var(--amber-m)":"#5A5750") + '">' + (isFinite(r.pay)?r.pay.toFixed(1)+" anos":"Pendiente") + '</div><div class="s">para recuperar</div></div>';
+  h += '</div>';
+  h += '</div>';
+  return h;
+}
+
+// ── TAB: VARIABLES ────────────────────────────────────────────────────────────
+function renderTabVars(m) {
+  var h = '<div class="mac-panel on">';
+  var cats = ["costos","personal","produccion","calidad","mercado","capacidad","opex"];
+
+  cats.forEach(function(cat) {
+    var catVars = VAR_LIB.filter(function(v){ return v.cat === cat; });
+    h += '<div class="var-cat">';
+    h += '<div class="var-cat-title">' + CAT_NAMES[cat] + (cat==="opex"?" — estos van al OPEX":"") + '</div>';
+
+    catVars.forEach(function(vdef) {
+      var mv = m.vars[vdef.id] || {on:false, mode:"simple", simpleVal:0, detail:null};
+      var isOn = mv.on;
+      var isExpanded = (openVarId[m.id] === vdef.id) && isOn;
+      var result = calcVar(m.id, vdef.id);
+
+      h += '<div class="var-card">';
+      h += '<div class="var-card-hdr">';
+      h += '<button class="vtog' + (isOn?" on":"") + '" onclick="togVar(\'' + m.id + '\',\'' + vdef.id + '\')"></button>';
+      h += '<div class="var-name' + (isOn?"":" off") + '">' + vdef.name + '</div>';
+      if (isOn) {
+        h += '<div class="var-result-badge' + (result>0?"":" zero") + '" data-badge="'+m.id+'-'+vdef.id+'">' + fmtMoney(result) + '/ano</div>';
+        h += '<button class="var-expand-btn' + (isExpanded?" open":"") + '" onclick="toggleVarExpand(\'' + m.id + '\',\'' + vdef.id + '\')">' + (isExpanded?"▲":"▼") + '</button>';
+      }
+      h += '</div>';
+
+      if (isOn && isExpanded) {
+        h += '<div class="var-table-wrap open">';
+
+        // Mode selector
+        h += '<div class="var-mode-row">';
+        h += '<span class="var-mode-label">Modo de captura:</span>';
+        h += '<button class="mode-btn' + (mv.mode==="simple"?" on":"") + '" onclick="setMode(\'' + m.id + '\',\'' + vdef.id + '\',\'simple\')">Simple — un numero</button>';
+        h += '<button class="mode-btn' + (mv.mode==="detail"?" on":"") + '" onclick="setMode(\'' + m.id + '\',\'' + vdef.id + '\',\'detail\')">Detallado — tabla de calculo</button>';
+        h += '</div>';
+
+        if (mv.mode === "simple") {
+          h += renderSimpleMode(m, vdef, mv);
+        } else {
+          h += renderDetailMode(m, vdef, mv);
+        }
+
+        h += '</div>';
+      }
+
+      h += '</div>';
+    });
+
+    h += '</div>';
+  });
+
+  h += '</div>';
+  return h;
+}
+
+function renderSimpleMode(m, vdef, mv) {
+  var h = '<div class="simple-row">';
+  h += '<div class="simple-label">Resultado anual</div>';
+  h += '<input class="simple-inp" value="' + fmtNum(mv.simpleVal||0) + '" ';
+  h += 'onblur="setSimpleVal(\'' + m.id + '\',\'' + vdef.id + '\',this.value);this.value=fmtNum(parseNum(this.value))" ';
+  h += 'oninput="setSimpleVal(\'' + m.id + '\',\'' + vdef.id + '\',this.value)">';
+  h += '</div>';
+  h += '<div style="font-size:10px;color:var(--ink3);margin-top:6px">Ingresa el resultado anual en pesos. Usa esta opcion cuando ya tienes el dato calculado externamente.</div>';
+  return h;
+}
+
+function renderDetailMode(m, vdef, mv) {
+  var gp = getGP();
+  var rows = mv.detail || JSON.parse(JSON.stringify(vdef.detail));
+
+  var h = '';
+  // Global params quick-insert
+  h += '<div style="margin-bottom:8px">';
+  h += '<div style="font-size:10px;color:var(--ink3);margin-bottom:5px">Parametros disponibles (clic para insertar en una fila):</div>';
+  h += '<div class="global-refs">';
+  var refs = [
+    {label:"SALARIO $"+fmtNum(gp.salary), val:gp.salary},
+    {label:"DIAS "+gp.days, val:gp.days},
+    {label:"HORAS "+gp.hours, val:gp.hours},
+    {label:"TC $"+fmtNum(gp.fx), val:gp.fx},
+    {label:"CFE $"+gp.cfe, val:gp.cfe},
+    {label:"MESES "+gp.months, val:gp.months}
+  ];
+  CTS.forEach(function(ct){
+    if(ct.costo>0) refs.push({label:ct.code+" $"+fmtNum(ct.costo), val:ct.costo});
+  });
+  refs.forEach(function(r){
+    h += '<button class="gref-btn" onclick="void(0)" title="'+r.val+'">'+r.label+'</button>';
+  });
+  h += '</div></div>';
+
+  // Detail table
+  h += '<table class="detail-table">';
+  h += '<thead><tr><th>#</th><th>Concepto</th><th class="right">Valor</th><th>Op</th><th></th></tr></thead>';
+  h += '<tbody>';
+
+  var acc = null;
+  rows.forEach(function(row, ri) {
+    var isGlobal = row.type === "global";
+    var val = isGlobal ? resolveGlobal(row.val, gp) : parseNum(row.val);
+    if (acc === null) acc = val;
+    else {
+      var op = row.op;
+      if (op==="+") acc=acc+val;
+      else if (op==="-") acc=acc-val;
+      else if (op==="*") acc=acc*val;
+      else if (op==="/") acc=val!==0?acc/val:0;
+    }
+
+    var dispVal = row.type==="money" ? fmtMoney(val) :
+                  row.type==="pct"   ? fmtPct(val) :
+                  isGlobal           ? fmtNum(val) :
+                                       fmtNum(val);
+
+    h += '<tr>';
+    h += '<td style="color:var(--ink3);font-family:var(--mono);font-size:10px;width:24px">' + (ri+1) + '</td>';
+    h += '<td><input style="border:0.5px solid var(--border);border-radius:4px;padding:3px 7px;font-size:11px;width:100%;background:var(--white);outline:none" value="' + row.label + '" oninput="updDetLabel(\'' + m.id + '\',\'' + vdef.id + '\',' + ri + ',this.value)"></td>';
+    if (isGlobal) {
+      h += '<td><input class="det-inp global" value="' + dispVal + '" readonly title="Valor de parametro global"></td>';
+    } else {
+      var rawVal = row.type==="pct" ? parseFloat(row.val)||0 : parseNum(row.val);
+      var tabIdx = 100 + ri;
+      h += '<td><input class="det-inp" tabindex="' + tabIdx + '" value="' + (row.type==="money"?fmtNum(rawVal):row.type==="pct"?(rawVal*100):rawVal) + '" ';
+      h += 'onblur="updDetVal(\'' + m.id + '\',\'' + vdef.id + '\',' + ri + ',this.value,\'' + row.type + '\')" ';
+      h += 'onkeydown="if(event.key===\'Enter\'||event.key===\'Tab\'){var nxt=document.querySelector(\'[tabindex=\\\'' + (tabIdx+1) + '\\\']\');if(nxt){event.preventDefault();nxt.focus();nxt.select();}}" ';
+      h += 'onfocus="this.select()" ';
+      h += 'placeholder="' + (row.type==="money"?"$0":row.type==="pct"?"0%":"0") + '"></td>';
+    }
+    h += '<td>';
+    if (ri === 0) {
+      h += '<span class="op-badge">=</span>';
+    } else {
+      h += '<select class="op-sel" onchange="updDetOp(\'' + m.id + '\',\'' + vdef.id + '\',' + ri + ',this.value)">';
+      ["+","-","*","/"].forEach(function(op){
+        h += '<option value="'+op+'"'+(row.op===op?" selected":"")+'>'+op+'</option>';
+      });
+      h += '</select>';
+    }
+    h += '</td>';
+    h += '<td><button class="tbl-del" onclick="delDetRow(\'' + m.id + '\',\'' + vdef.id + '\',' + ri + ')">&#215;</button></td>';
+    h += '</tr>';
+  });
+
+  // Result row
+  h += '<tr class="result-row">';
+  h += '<td colspan="2" style="font-size:12px;font-weight:600;color:var(--green);padding:7px 8px">Resultado anual</td>';
+  h += '<td style="text-align:right;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green)" data-result="'+m.id+'-'+vdef.id+'">' + fmtMoney(acc||0) + '</td>';
+  h += '<td colspan="2"></td></tr>';
+
+  h += '</tbody></table>';
+  h += '<button class="add-det-row" onclick="addDetRow(\'' + m.id + '\',\'' + vdef.id + '\')">+ Agregar fila</button>';
+
+  return h;
+}
+
+// ── TAB: SPECS ────────────────────────────────────────────────────────────────
+function renderTabSpecs(m) {
+  var h = '<div class="mac-panel on">';
+  h += '<table class="ct-table" style="margin-bottom:8px"><thead><tr><th>Icono</th><th>Concepto</th><th>Valor</th><th>Foto</th><th></th></tr></thead><tbody>';
+  m.specs.forEach(function(s, si) {
+    h += '<tr>';
+    h += '<td><input class="ct-inp text" style="width:50px;text-align:center" value="'+s.icon+'" oninput="updSpec(\''+m.id+'\','+si+',\'icon\',this.value)"></td>';
+    h += '<td><input class="ct-inp text" value="'+s.label+'" oninput="updSpec(\''+m.id+'\','+si+',\'label\',this.value)"></td>';
+    h += '<td><input class="ct-inp text" value="'+s.val+'" oninput="updSpec(\''+m.id+'\','+si+',\'val\',this.value)"></td>';
+    h += '<td><label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox"'+(s.showPhoto?" checked":"")+' onchange="updSpec(\''+m.id+'\','+si+',\'showPhoto\',this.checked)"> si</label></td>';
+    h += '<td><button class="tbl-del" onclick="delSpec(\''+m.id+'\','+si+')">&#215;</button></td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  h += '<button class="add-row" onclick="addSpec(\''+m.id+'\')">+ Agregar especificacion</button>';
+  h += '</div>';
+  return h;
+}
+
+// ── TAB: IMPACTOS ─────────────────────────────────────────────────────────────
+function renderTabImpactos(m) {
+  var h = '<div class="mac-panel on">';
+  h += '<div class="fld" style="margin-bottom:12px"><label>Frase de impacto — aparece en la presentacion</label>';
+  h += '<input value="'+m.frase+'" oninput="updM(\''+m.id+'\',\'frase\',this.value)"></div>';
+  m.impactos.forEach(function(imp, ii) {
+    h += '<div style="display:grid;grid-template-columns:44px 1fr 1fr 30px;gap:6px;margin-bottom:6px;align-items:center">';
+    h += '<input class="ct-inp text" style="text-align:center" value="'+imp.icon+'" oninput="updImp(\''+m.id+'\','+ii+',\'icon\',this.value)">';
+    h += '<input class="ct-inp text" value="'+imp.text+'" placeholder="Texto principal" oninput="updImp(\''+m.id+'\','+ii+',\'text\',this.value)">';
+    h += '<input class="ct-inp text" value="'+imp.sub+'" placeholder="Subtexto" oninput="updImp(\''+m.id+'\','+ii+',\'sub\',this.value)">';
+    h += '<button class="tbl-del" onclick="delImp(\''+m.id+'\','+ii+')">&#215;</button>';
+    h += '</div>';
+  });
+  h += '<button class="add-row" onclick="addImp(\''+m.id+'\')">+ Agregar punto de impacto</button>';
+  h += '</div>';
+  return h;
+}
+
+// ── INTERACTIONS ──────────────────────────────────────────────────────────────
+function toggleMaq(mid) {
+  openMaqId = (openMaqId === mid) ? null : mid;
+  renderMachines();
+}
+
+function switchTab(mid, tab) {
+  openMacTab[mid] = tab;
+  renderMachines();
+}
+
+function updM(mid, key, val) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (m) m[key] = val;
+  saveLS();
+}
+
+function togVar(mid, vid) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (!m.vars[vid]) {
+    var vdef = VAR_LIB.find(function(v){ return v.id===vid; });
+    m.vars[vid] = {on:false, mode:"simple", simpleVal:0, detail:JSON.parse(JSON.stringify(vdef.detail))};
+  }
+  m.vars[vid].on = !m.vars[vid].on;
+  if (m.vars[vid].on) openVarId[mid] = vid;
+  renderMachines();
+  saveLS();
+}
+
+function toggleVarExpand(mid, vid) {
+  openVarId[mid] = (openVarId[mid] === vid) ? null : vid;
+  renderMachines();
+}
+
+function setMode(mid, vid, mode) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (!m.vars[vid]) return;
+  m.vars[vid].mode = mode;
+  renderMachines();
+  saveLS();
+}
+
+function setSimpleVal(mid, vid, val) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (!m.vars[vid]) return;
+  m.vars[vid].simpleVal = parseNum(val);
+  // Update badge without full re-render
+  var badge = document.querySelector('[data-badge="'+mid+'-'+vid+'"]');
+  if (badge) badge.textContent = fmtMoney(m.vars[vid].simpleVal) + '/ano';
+  saveLS();
+}
+
+function updDetVal(mid, vid, ri, val, type) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (!m.vars[vid] || !m.vars[vid].detail) return;
+  var parsed = parseNum(val);
+  if (type === "pct") parsed = parsed / 100;
+  m.vars[vid].detail[ri].val = parsed;
+  // Update result row and badge without full re-render
+  var res = calcVar(mid, vid);
+  var badge = document.querySelector('[data-badge="'+mid+'-'+vid+'"]');
+  if (badge) badge.textContent = fmtMoney(res) + '/ano';
+  var resultCell = document.querySelector('[data-result="'+mid+'-'+vid+'"]');
+  if (resultCell) resultCell.textContent = fmtMoney(res);
+  saveLS();
+}
+
+function updDetLabel(mid, vid, ri, val) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (!m.vars[vid] || !m.vars[vid].detail) return;
+  m.vars[vid].detail[ri].label = val;
+  saveLS();
+}
+
+function updDetOp(mid, vid, ri, op) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (!m.vars[vid] || !m.vars[vid].detail) return;
+  m.vars[vid].detail[ri].op = op;
+  var res = calcVar(mid, vid);
+  var badge = document.querySelector('[data-badge="'+mid+'-'+vid+'"]');
+  if (badge) badge.textContent = fmtMoney(res) + '/ano';
+  var resultCell = document.querySelector('[data-result="'+mid+'-'+vid+'"]');
+  if (resultCell) resultCell.textContent = fmtMoney(res);
+  saveLS();
+}
+
+function addDetRow(mid, vid) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (!m.vars[vid]) return;
+  if (!m.vars[vid].detail) {
+    var vdef = VAR_LIB.find(function(v){ return v.id===vid; });
+    m.vars[vid].detail = JSON.parse(JSON.stringify(vdef.detail));
+  }
+  m.vars[vid].detail.push({label:"Nuevo concepto", val:0, op:"+", type:"money"});
+  renderMachines();
+  saveLS();
+}
+
+function delDetRow(mid, vid, ri) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (!m.vars[vid] || !m.vars[vid].detail) return;
+  m.vars[vid].detail.splice(ri, 1);
+  renderMachines();
+  saveLS();
+}
+
+function delSpec(mid, si) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  m.specs.splice(si, 1);
+  openMaqId = mid; renderMachines();
+  saveLS();
+}
+function addSpec(mid) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  m.specs.push({icon:"⚙", label:"Nuevo", val:"Valor", showPhoto:false, photo:null});
+  openMaqId = mid; switchTab(mid, "specs");
+  saveLS();
+}
+function updImp(mid, ii, key, val) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  m.impactos[ii][key] = val;
+  saveLS();
+}
+function delImp(mid, ii) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  m.impactos.splice(ii, 1);
+  openMaqId = mid; renderMachines();
+  saveLS();
+}
+function addImp(mid) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  m.impactos.push({icon:"⚡", text:"Nuevo punto", sub:"Descripcion"});
+  openMaqId = mid; switchTab(mid, "impactos");
+  saveLS();
+}
+
+function loadCfgFoto(mid, inp) {
+  var file = inp.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var m = MACHINES.find(function(x){ return x.id===mid; });
+    if (m) m.heroPhoto = e.target.result;
+    var img = document.getElementById("cfgfotoimg-"+mid);
+    var ph = document.getElementById("cfgfotoph-"+mid);
+    if (img) { img.src = e.target.result; img.style.display = "block"; }
+    if (ph) ph.style.display = "none";
+    saveLS();
+  };
+  reader.readAsDataURL(file); inp.value = "";
+}
+
+function recalcAll() {
+  GP = getGP();
+  renderMachines();
+  saveLS();
+}
+
+function addMachine() {
+  var name = document.getElementById("nm-name").value.trim();
+  var code = document.getElementById("nm-code").value.trim().toUpperCase();
+  var color = document.getElementById("nm-color").value;
+  var inv = parseNum(document.getElementById("nm-inv").value);
+  if (!name || !code) { alert("Nombre y codigo son requeridos"); return; }
+  MACHINES.push({
+    id:"m"+Date.now(), code:code, color:color, name:name,
+    model:"Nueva maquina",
+    cotPdf:null, cotPdfName:"", fichaPdf:null, fichaPdfName:"", inv:inv, opx_extra:0, yr:8,
+    res:Math.round(inv*0.1), xlsxLink:"",
+    heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null,
+    frase:"Descripcion de impacto pendiente",
+    impactos:[
+      {icon:"⚡", text:"Punto de impacto 1", sub:"Descripcion"},
+      {icon:"📐", text:"Punto de impacto 2", sub:"Descripcion"},
+      {icon:"🔧", text:"Punto de impacto 3", sub:"Descripcion"}
+    ],
+    vars:{},
+    specs:[{icon:"⚙", label:"Especificacion 1", val:"Valor", showPhoto:false, photo:null}]
+  });
+  document.getElementById("modal-add").classList.remove("on");
+  openMaqId = MACHINES[MACHINES.length-1].id;
+  renderMachines();
+  saveLS();
+}
+
+// ── SAVE (old inline — kept for HTML backup, also calls saveLS) ───────────
+function _saveFileOld() {
+  var state = {MACHINES:MACHINES, CTS:CTS};
+  var tag = '<scr'+'ipt id="ss" type="application/json">'+JSON.stringify(state)+'</sc'+'ript>';
+  var html = document.documentElement.outerHTML;
+  html = html.replace(/<scr[i]pt id="ss"[\s\S]*?<\/script>/, "");
+  html = html.replace("</body>", tag+"</body>");
+  var blob = new Blob([html], {type:"text/html"});
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "LineaItalia_Config_"+new Date().toISOString().slice(0,10)+".html";
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+// ── INIT (real init happens at end of script, after localStorage load) ────
+
+
+
+// Aliases for compatibility
+function fmt(n){ return fmtMoney(n); }
+function fp(n){ return (n>=0?"+":"")+n.toFixed(0)+"%"; }
+function fy(n){ return (n!=null&&isFinite(n))?n.toFixed(1)+" anos":"Pendiente"; }
+function cc(n){ return n>=100?"var(--green)":n>=50?"var(--amber)":"var(--red)"; }
+
+// ── RESUMEN FUNCTIONS ──────────────────────────────────────────────────────
+
+
+
+
+// Variable categories with labels
+var CATS={
+  costos:"Costos eliminados",
+  nomina:"Nomina y personal",
+  calidad:"Calidad y scrap",
+  capacidad:"Capacidad y produccion",
+  mercado:"Nuevos mercados"
+};
+
+
+
+var carStates={};
+var activeSpec={mid:null,idx:null};
+var curPage=0;
+var presMode=false;
+var openMaqId=null;
+var openMacTab={};
+
+// ── HELPERS ──
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ── SCREENS ──
+
+
+// ── NAV ──
+function renderDots(){
+  // sidebar nav handled by buildMachinePages/resGoTo
+  var TOT=MACHINES.length+1;
+  var prev=document.getElementById("b-prev");
+  var next=document.getElementById("b-next");
+  if(prev) prev.disabled=resActivePage===0;
+  if(next) next.disabled=resActivePage===TOT-1;
+}
+
+function goTo(i){ resGoTo(i); }
+function nav(d){ var n=resActivePage+d; if(n>=0&&n<MACHINES.length+1) resGoTo(n); }
+
+function closeDetails(){
+  document.querySelectorAll(".mp-detail").forEach(function(d){d.classList.remove("on");});
+  document.querySelectorAll(".mp-impacto").forEach(function(d){d.classList.remove("hide");});
+  document.querySelectorAll(".dbtn").forEach(function(b){b.classList.remove("on");});
+  activeSpec={mid:null,idx:null};
+}
+
+
+// ── RESUMEN — CLEAN APP STYLE ─────────────────────────────────────────────
+
+var resActivePage = 0; // 0 = dashboard, 1..N = machine index
+
+function resGoTo(idx) {
+  resActivePage = idx;
+  // pages
+  document.querySelectorAll('.res-page').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.maq-detail-page').forEach(function(p){ p.classList.remove('on'); });
+  if (idx === 0) {
+    var dp = document.getElementById('res-pg-dash');
+    if (dp) dp.classList.add('on');
+  } else {
+    var mp = document.getElementById('res-pg-m'+(idx-1));
+    if (mp) mp.classList.add('on');
+  }
+  // sidebar
+  document.querySelectorAll('.res-nav-item').forEach(function(el){ el.classList.remove('on'); });
+  var navEl = document.getElementById('snav-'+(idx===0?'dash':'m'+(idx-1)));
+  if (navEl) navEl.classList.add('on');
+  // scroll to top
+  var main = document.querySelector('.res-main');
+  if (main) main.scrollTop = 0;
+}
+
+function renderDash() {
+  var results = MACHINES.map(function(m){ return calcROI(m); });
+  var totInv = MACHINES.reduce(function(s,m){ return s+m.inv; }, 0);
+  var totNg = results.reduce(function(s,r){ return s+r.ng; }, 0);
+  var wd = results.filter(function(r){ return r.ab>0; });
+  var avgR = wd.length ? wd.reduce(function(s,r){ return s+r.roi; },0)/wd.length : 0;
+  var pays = results.map(function(r){ return r.pay; }).filter(isFinite);
+  var bp = pays.length ? Math.min.apply(null,pays) : Infinity;
+
+  // KPIs
+  document.getElementById('d-kpis').innerHTML =
+    kpiCard('Inversión Total', fmt(totInv), MACHINES.length+' máquinas', '💰', 'blue', 'blue') +
+    kpiCard('Ganancia Neta', fmt(totNg), 'en vida útil', '📈', 'green', 'green') +
+    kpiCard('ROI Promedio', (wd.length?(avgR>=0?'+':'')+avgR.toFixed(0)+'%':'--'), 'máquinas con datos', '🎯', 'amber', 'amber') +
+    kpiCard('Mejor Payback', isFinite(bp)?bp.toFixed(1)+' años':'--', 'para recuperar inversión', '⏱', 'slate', '');
+
+  // Table body
+  var h = '';
+  MACHINES.forEach(function(m, i) {
+    var r = calcROI(m);
+    var hd = r.ab > 0;
+    var roiColor = hd ? (r.roi>=100?'#16A34A':r.roi>=50?'#D97706':'#DC2626') : '#9A9890';
+    var hasCot = m.cotPdf && m.cotPdf.length > 10;
+    var hasFicha = m.fichaPdf && m.fichaPdf.length > 10;
+    h += '<tr onclick="resGoTo('+(i+1)+')">';
+    h += '<td><div class="maq-col-name">';
+    h += '<div class="maq-col-dot" style="background:'+m.color+'"></div>';
+    h += '<div><div class="maq-col-nameval">'+m.name+'</div>';
+    h += '<div class="maq-col-model">'+m.model+'</div></div></div></td>';
+    h += '<td style="text-align:right"><div class="maq-col-inv">'+fmt(m.inv)+'</div></td>';
+    h += '<td style="text-align:right"><div class="maq-col-ben">'+(hd?fmt(r.ab):'Pendiente')+'</div></td>';
+    h += '<td style="text-align:right"><div class="maq-col-roi-val" style="color:'+roiColor+'">'+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'--')+'</div></td>';
+    h += '<td style="text-align:right"><div class="maq-col-pay">'+(isFinite(r.pay)?r.pay.toFixed(1)+' años':'--')+'</div></td>';
+    h += '<td><div class="maq-col-pdf" onclick="event.stopPropagation()">';
+    h += '<button class="maq-pdf-btn'+(hasCot?'':' off')+'" onclick="openPdfModal(\''+m.id+'\',\'cot\')">📄 Cot.</button>';
+    h += '<button class="maq-pdf-btn'+(hasFicha?'':' off')+'" onclick="openPdfModal(\''+m.id+'\',\'ficha\')">📋 Ficha</button>';
+    h += '</div></td>';
+    h += '<td><button class="maq-col-go" onclick="event.stopPropagation();resGoTo('+(i+1)+')">Ver análisis →</button></td>';
+    h += '</tr>';
+  });
+  document.getElementById('d-maq-tbody').innerHTML = h;
+}
+
+function kpiCard(label, value, sub, icon, iconClass, valClass) {
+  return '<div class="kpi-card">'
+    +'<div class="kpi-card-left">'
+    +'<div class="kpi-card-label">'+label+'</div>'
+    +'<div class="kpi-card-value '+(valClass||'')+'">'+value+'</div>'
+    +'<div class="kpi-card-sub">'+sub+'</div>'
+    +'</div>'
+    +'<div class="kpi-card-icon kpi-icon-'+iconClass+'">'+icon+'</div>'
+    +'</div>';
+}
+
+function buildMachinePages() {
+  // Build sidebar nav items
+  var navH = '';
+  MACHINES.forEach(function(m, i) {
+    navH += '<div class="res-nav-item" id="snav-m'+i+'" onclick="resGoTo('+(i+1)+')">';
+    navH += '<div class="nav-dot" style="background:'+m.color+'"></div>';
+    navH += '<span class="nav-label">'+m.code+' — '+m.name.split(' ').slice(0,3).join(' ')+'</span>';
+    navH += '</div>';
+  });
+  var navEl = document.getElementById('res-nav-machines');
+  if (navEl) navEl.innerHTML = navH;
+
+  // Build machine detail pages
+  var html = '';
+  MACHINES.forEach(function(m, i) {
+    var r = calcROI(m);
+    var hd = r.ab > 0;
+    var roiColor = hd ? (r.roi>=100?'#16A34A':r.roi>=50?'#D97706':'#DC2626') : '#9A9890';
+    var hasCot = m.cotPdf && m.cotPdf.length > 10;
+    var hasFicha = m.fichaPdf && m.fichaPdf.length > 10;
+
+    html += '<div class="maq-detail-page" id="res-pg-m'+i+'">';
+
+    // Top bar
+    html += '<div class="mdt-topbar">';
+    html += '<button class="mdt-back" onclick="resGoTo(0)">← Dashboard</button>';
+    html += '<div class="mdt-color-bar" style="background:'+m.color+'"></div>';
+    html += '<div><div class="mdt-name">'+m.name+'</div><div class="mdt-model">'+m.model+'</div></div>';
+    html += '<div class="mdt-top-kpis">';
+    html += '<div class="mdt-kpi"><div class="mdt-kpi-l">Inversión</div><div class="mdt-kpi-v" style="color:#2563EB;font-size:13px">'+fmt(m.inv)+'</div></div>';
+    html += '<div class="mdt-kpi"><div class="mdt-kpi-l">ROI '+m.yr+' años</div><div class="mdt-kpi-v" style="color:'+roiColor+'">'+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'--')+'</div></div>';
+    html += '<div class="mdt-kpi"><div class="mdt-kpi-l">Payback</div><div class="mdt-kpi-v" style="color:#D97706">'+(isFinite(r.pay)?r.pay.toFixed(1)+' años':'--')+'</div></div>';
+    html += '</div>';
+    html += '<div class="mdt-pdf-btns">';
+    html += '<button class="mdt-pdf-btn'+(hasCot?'':' off')+'" onclick="openPdfModal(\''+m.id+'\',\'cot\')">📄 Cotización</button>';
+    html += '<button class="mdt-pdf-btn'+(hasFicha?'':' off')+'" onclick="openPdfModal(\''+m.id+'\',\'ficha\')">📋 Ficha Técnica</button>';
+    html += '</div>';
+    html += '</div>'; // topbar
+
+    // Body
+    html += '<div class="mdt-body">';
+
+    // Row 1: Hero photo + Frase + KPIs
+    html += '<div class="mdt-grid">';
+
+    // Hero photo
+    html += '<div class="mdt-card" style="padding:0;overflow:hidden">';
+    html += '<div class="mdt-hero" onclick="document.getElementById(\'mhi-'+m.id+'\').click()">';
+    html += '<input type="file" accept="image/*" class="mdt-hero-inp" id="mhi-'+m.id+'" onchange="loadMdtHero(\''+m.id+'\',this)">';
+    if (m.heroPhoto) {
+      html += '<img src="'+m.heroPhoto+'" style="width:100%;height:100%;object-fit:cover">';
+    } else {
+      html += '<div class="mdt-hero-ph"><div class="mdt-hero-ph-i">📷</div><div class="mdt-hero-ph-l">Clic para subir foto</div></div>';
+    }
+    html += '<button class="mdt-hero-chg" onclick="event.stopPropagation();document.getElementById(\'mhi-'+m.id+'\').click()">cambiar</button>';
+    html += '</div></div>';
+
+    // Frase + impactos
+    html += '<div class="mdt-card">';
+    html += '<div class="mdt-card-title">Puntos de Impacto</div>';
+    html += '<div class="mdt-frase">'+m.frase+'</div>';
+    m.impactos.forEach(function(b) {
+      html += '<div class="mdt-impacto">';
+      html += '<div class="mdt-impacto-icon">'+b.icon+'</div>';
+      html += '<div><div class="mdt-impacto-text">'+b.text+'</div><div class="mdt-impacto-sub">'+b.sub+'</div></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '</div>'; // mdt-grid row 1
+
+    // Row 2: Financiero + Beneficios + Especificaciones
+    html += '<div class="mdt-grid-3">';
+
+    // Financiero
+    html += '<div class="mdt-card">';
+    html += '<div class="mdt-card-title">Análisis Financiero</div>';
+    html += '<div class="mdt-roi-big">';
+    html += '<div class="mdt-roi-big-val" style="color:'+roiColor+'">'+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'--')+'</div>';
+    html += '<div class="mdt-roi-big-lbl">ROI Simple · '+m.yr+' años</div>';
+    html += '<div class="mdt-roi-big-sub">'+(hd?'Ganancia neta '+fmt(r.ng):'Configure variables para calcular')+'</div>';
+    html += '</div>';
+    ['Inversión total (CAPEX)', 'OPEX anual', 'Vida útil', 'Valor de rescate', 'Beneficio anual', 'Flujo neto anual', 'Payback'].forEach(function(label, ii) {
+      var vals = [fmt(m.inv), fmt(r.opx||m.opx||0), m.yr+' años', fmt(m.res), hd?fmt(r.ab):'--', hd?fmt(r.fl):'--', isFinite(r.pay)?r.pay.toFixed(1)+' años':'--'];
+      var cls = ii===4?'green':ii===1?'red':'';
+      html += '<div class="mdt-row"><span class="mdt-row-l">'+label+'</span><span class="mdt-row-v '+cls+'">'+vals[ii]+'</span></div>';
+    });
+    html += '</div>';
+
+    // Beneficios
+    html += '<div class="mdt-card">';
+    html += '<div class="mdt-card-title">Beneficios Anuales</div>';
+    var anyBen = false;
+    Object.keys(m.vars).forEach(function(vid) {
+      var mv = m.vars[vid];
+      if (!mv || !mv.on) return;
+      var vdef = VAR_LIB.find(function(v){ return v.id===vid; });
+      if (!vdef || vdef.cat==='opex') return;
+      var res = calcVar(m.id, vid);
+      if (res <= 0) return;
+      anyBen = true;
+      html += '<div class="mdt-ben-row">';
+      html += '<div><div class="mdt-ben-l">'+vdef.name+'</div><div class="mdt-ben-cat">'+vdef.cat+'</div></div>';
+      html += '<div class="mdt-ben-v">'+fmt(res)+'</div>';
+      html += '</div>';
+    });
+    if (!anyBen) html += '<div style="font-size:12px;color:#9A9890;padding:14px 0;text-align:center">Active variables en Configuración</div>';
+    if (hd) {
+      html += '<div class="mdt-total-row"><span class="mdt-total-l">Total / año</span><span class="mdt-total-v">'+fmt(r.ab)+'</span></div>';
+    }
+    html += '</div>';
+
+    // Especificaciones
+    html += '<div class="mdt-card">';
+    html += '<div class="mdt-card-title">Especificaciones Técnicas</div>';
+    html += '<div class="mdt-specs-grid">';
+    m.specs.forEach(function(s) {
+      html += '<div class="mdt-spec-item">';
+      html += '<div class="mdt-spec-icon">'+s.icon+'</div>';
+      html += '<div><div class="mdt-spec-label">'+s.label+'</div><div class="mdt-spec-val">'+s.val+'</div></div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+    html += '</div>'; // mdt-grid-3
+
+    // Row 3: Slideshow
+    if (m.slidePhotos && m.slidePhotos.length > 0) {
+      html += '<div class="mdt-card">';
+      html += '<div class="mdt-card-title">Galería</div>';
+      html += '<div class="mdt-slideshow" id="mdt-ss-'+m.id+'">';
+      m.slidePhotos.forEach(function(src, si) {
+        html += '<img class="mdt-slide-img'+(si===0?' on':'')+'" src="'+src+'">';
+      });
+      html += '<div class="mdt-slide-dots" id="mdt-sd-'+m.id+'">';
+      m.slidePhotos.forEach(function(_, si) {
+        html += '<div class="mdt-slide-dot'+(si===0?' on':'')+'" onclick="mdtSlideTo(\''+m.id+'\','+si+')"></div>';
+      });
+      html += '</div></div>';
+      html += '<div class="mdt-slide-add-bar">';
+      html += '<span class="mdt-slide-count">'+m.slidePhotos.length+' foto'+(m.slidePhotos.length>1?'s':'')+'</span>';
+      html += '<input type="file" accept="image/*" multiple class="mdt-slide-inp" id="mdt-si-'+m.id+'" onchange="addSlidePhotos(\''+m.id+'\',this)">';
+      html += '<button class="mdt-slide-add-btn" onclick="document.getElementById(\'mdt-si-'+m.id+'\').click()">+ Agregar fotos</button>';
+      html += '</div></div>';
+    }
+
+    html += '</div>'; // mdt-body
+    html += '</div>'; // maq-detail-page
+  });
+
+  document.getElementById('m-pages').innerHTML = html;
+
+  // Init slideshows for detail pages
+  MACHINES.forEach(function(m) {
+    if (m.slidePhotos && m.slidePhotos.length > 1) {
+      mdtStartSlide(m.id);
+    }
+  });
+}
+
+// Slideshow for new detail pages
+var mdtSlideStates = {};
+var mdtSlideTimers = {};
+
+function mdtSlideTo(mid, idx) {
+  mdtSlideStates[mid] = idx;
+  var ss = document.getElementById('mdt-ss-'+mid);
+  if (!ss) return;
+  ss.querySelectorAll('.mdt-slide-img').forEach(function(img, i){ img.classList.toggle('on', i===idx); });
+  var dots = document.getElementById('mdt-sd-'+mid);
+  if (dots) dots.querySelectorAll('.mdt-slide-dot').forEach(function(d, i){ d.classList.toggle('on', i===idx); });
+}
+
+function mdtStartSlide(mid) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (!m || !m.slidePhotos || m.slidePhotos.length < 2) return;
+  clearInterval(mdtSlideTimers[mid]);
+  mdtSlideTimers[mid] = setInterval(function() {
+    var cur = (mdtSlideStates[mid]||0);
+    mdtSlideTo(mid, (cur+1) % m.slidePhotos.length);
+  }, 4000);
+}
+
+function loadMdtHero(mid, inp) {
+  var file = inp.files[0]; if (!file) return;
+  compressImg(file, 1200, 900, 0.85, function(data) {
+    var m = MACHINES.find(function(x){ return x.id===mid; });
+    if (m) m.heroPhoto = data;
+    // update both views
+    var img = document.getElementById('mhi-'+mid);
+    if (img) { /* reload page */ }
+    buildMachinePages();
+    resGoTo(MACHINES.findIndex(function(x){ return x.id===mid; })+1);
+    // also update config view
+    var cimg = document.getElementById('cfgfotoimg-'+mid);
+    if (cimg) { cimg.src = data; cimg.style.display='block'; }
+    saveLS();
+  });
+  inp.value = '';
+}
+
+
+// ── CONTRAST ROWS from variables ──
+function buildContrastRows(m){
+  var gp=getGP();
+  var actRows=[];var propRows=[];
+  var activeVars=[];
+  Object.keys(m.vars).forEach(function(vid){
+    var mv=m.vars[vid];
+    if(mv&&mv.on){
+      var vdef=VAR_LIB.find(function(v){return v.id===vid;});
+      if(vdef&&vdef.cat!=="opex") activeVars.push({id:vid,vdef:vdef,mv:mv});
+    }
+  });
+  if(!activeVars.length){
+    actRows.push({s:"Sin variables activas"});
+    propRows.push({s:"Activar variables en Configuracion"});
+    return{act:actRows,prop:propRows};
+  }
+  var cats={};
+  activeVars.forEach(function(item){
+    var cat=item.vdef.cat;
+    if(!cats[cat]) cats[cat]=[];
+    cats[cat].push(item);
+  });
+  Object.keys(cats).forEach(function(cat){
+    actRows.push({s:CAT_NAMES[cat]||cat});
+    propRows.push({s:CAT_NAMES[cat]||cat});
+    cats[cat].forEach(function(item){
+      var res=calcVar(m.id,item.id);
+      var mv=item.mv;
+      var vdef=item.vdef;
+
+      // Build actual-condition display from detail rows
+      var rows=mv.detail||(vdef?JSON.parse(JSON.stringify(vdef.detail)):[]);
+      var actLines=[];
+      rows.forEach(function(row){
+        if(row.type==="global") return; // skip global params
+        var val=parseNum(row.val);
+        if(val===0) return; // skip zeros
+        var label=row.label;
+        // Format by type
+        var fv="";
+        if(row.type==="money") fv=fmtMoney(val);
+        else if(row.type==="pct") fv=(val*100).toFixed(1)+"%";
+        else fv=fmtNum(val);
+        // Shorten label: remove parentheses and trim
+        var lbl=label.replace(/\([$%#a-zA-Z/]*\)/g,"").replace(/\([^)]*\)/g,"").trim();
+        // Remove trailing words that are just units
+        lbl=lbl.replace(/\s*(por ano|\/ano|por mes|\/mes|anual)$/i,"");
+        actLines.push({l:lbl,v:fv});
+      });
+
+      if(actLines.length===0){
+        // fallback: just show the variable name with pending
+        actRows.push({l:item.vdef.name,v:"Sin datos",c:"pend"});
+      } else if(actLines.length===1){
+        actRows.push({l:item.vdef.name,v:actLines[0].v,c:"bad"});
+      } else {
+        // First line as header, rest as sub-rows
+        actRows.push({l:item.vdef.name,v:actLines[0].v,c:"bad"});
+        for(var k=1;k<actLines.length;k++){
+          actRows.push({l:"  └ "+actLines[k].l,v:actLines[k].v,c:""});
+        }
+      }
+      propRows.push({l:item.vdef.name,v:fmtMoney(res)+"/ano",c:"good"});
+    });
+  });
+  return{act:actRows,prop:propRows};
+}
+
+// ── MACHINE PAGES ──
+// OLD buildMachinePages removed — new version above
+
+// ── DETAIL ──
+function showDetail(mid,type){
+  // hide video, show detail in col 3
+  var vidEl=document.getElementById("mpv-"+mid);
+  if(vidEl) vidEl.classList.add("hide");
+  document.querySelectorAll("[data-mid='"+mid+"']").forEach(function(b){b.classList.toggle("on",b.dataset.type===type);});
+  document.querySelectorAll("#mpr-"+mid+" .mp-detail").forEach(function(d){d.classList.remove("on");});
+  var det=document.getElementById("mpd-"+mid+"-"+type);
+  if(det) det.classList.add("on");
+  if(type==="fin") renderFinancial(mid);
+  if(type==="tec") renderTechRows(MACHINES.find(function(m){return m.id===mid;}));
+}
+
+function closeDetails(mid){
+  // hide all details, show video
+  if(mid){
+    document.querySelectorAll("#mpr-"+mid+" .mp-detail").forEach(function(d){d.classList.remove("on");});
+    document.querySelectorAll("[data-mid='"+mid+"']").forEach(function(b){b.classList.remove("on");});
+    var vidEl=document.getElementById("mpv-"+mid);
+    if(vidEl) vidEl.classList.remove("hide");
+  }else{
+    document.querySelectorAll(".mp-detail").forEach(function(d){d.classList.remove("on");});
+    document.querySelectorAll(".dbtn").forEach(function(b){b.classList.remove("on");});
+    document.querySelectorAll(".mp-video").forEach(function(v){v.classList.remove("hide");});
+  }
+}
+
+// ── VIDEO ──
+function embedUrl(url){
+  if(!url) return "";
+  // YouTube
+  var yt=url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  if(yt) return "https://www.youtube.com/embed/"+yt[1]+"?autoplay=1&mute=1&loop=1&playlist="+yt[1]+"&controls=0&rel=0";
+  // direct video or other embed — return as-is
+  return url;
+}
+
+function setVideo(mid){
+  var inp=document.getElementById("mpvinp-"+mid);if(!inp) return;
+  var url=inp.value.trim();
+  var m=MACHINES.find(function(x){return x.id===mid;});
+  if(m) m.videoUrl=url;
+  var inner=document.getElementById("mpvi-"+mid);if(!inner) return;
+  if(!url){inner.innerHTML='<div class="mp-video-ph"><div class="mp-video-ph-i">▶</div><div class="mp-video-ph-l">Pega un link de YouTube o video directo<br>para mostrar aqui</div></div>';return;}
+  var eu=embedUrl(url);
+  inner.innerHTML='<iframe src="'+eu+'" style="position:absolute;inset:0;width:100%;height:100%;border:none;display:block" allow="autoplay; loop" allowfullscreen></iframe>';
+}
+
+// ── TECH ROWS ──
+function renderTechRows(m){
+  var c=document.getElementById("trows-"+m.id);if(!c) return;
+  var h="";
+  m.specs.forEach(function(s,i){
+    var onCls=(activeSpec.mid===m.id&&activeSpec.idx===i)?" on":"";
+    var hasCls=s.photo?" has":"";
+    h+='<div class="spec-row"><div class="spec-r'+onCls+'" onclick="togSpec(\''+m.id+'\','+i+')">';
+    h+='<div class="spec-icon">'+s.icon+'</div>';
+    h+='<div class="spec-lbl">'+s.label+'</div>';
+    h+='<div class="spec-val">'+s.val+'</div>';
+    if(s.showPhoto){
+      h+='<input type="file" accept="image/*" class="spec-cam-inp" id="sci-'+m.id+'-'+i+'" onchange="loadSpecPhoto(\''+m.id+'\','+i+',this)">';
+      h+='<div class="spec-cam'+hasCls+'" onclick="event.stopPropagation();document.getElementById(\'sci-'+m.id+'-'+i+'\').click()" title="Foto">📎</div>';
+    }
+    h+='</div>';
+    if(s.showPhoto){
+      var spOn=(activeSpec.mid===m.id&&activeSpec.idx===i)?" on":"";
+      h+='<div class="spec-photo-area'+spOn+'" id="spa-'+m.id+'-'+i+'">';
+      h+='<div class="spec-photo-inner" onclick="document.getElementById(\'sci-'+m.id+'-'+i+'\').click()">';
+      h+='<img id="spimg-'+m.id+'-'+i+'" src="'+(s.photo||"")+'" style="display:'+(s.photo?"block":"none")+'">';
+      if(s.photo){
+        h+='<div class="spec-ph-lbl">'+s.label+'</div>';
+        h+='<button class="spec-ph-chg" onclick="event.stopPropagation();document.getElementById(\'sci-'+m.id+'-'+i+'\').click()">cambiar</button>';
+      }else{
+        h+='<div class="spec-ph-empty"><div class="spec-ph-i">📎</div><div class="spec-ph-l">Foto para '+s.label+'</div></div>';
+      }
+      h+='</div></div>';
+    }
+    h+='</div>';
+  });
+  c.innerHTML=h;
+}
+
+function togSpec(mid,idx){
+  var m=MACHINES.find(function(x){return x.id===mid;});
+  if(!m.specs[idx].showPhoto) return;
+  var same=activeSpec.mid===mid&&activeSpec.idx===idx;
+  activeSpec=same?{mid:null,idx:null}:{mid:mid,idx:idx};
+  renderTechRows(m);
+}
+
+function loadSpecPhoto(mid,idx,inp){
+  var file=inp.files[0];if(!file) return;
+  var m=MACHINES.find(function(x){return x.id===mid;});
+  var reader=new FileReader();
+  reader.onload=function(e){
+    m.specs[idx].photo=e.target.result;
+    activeSpec={mid:mid,idx:idx};renderTechRows(m);
+  };
+  reader.readAsDataURL(file);inp.value="";
+}
+
+// ── FINANCIAL ──
+function renderFinancial(mid){
+  var m=MACHINES.find(function(x){return x.id===mid;});
+  var GP=getGP();var r=calcROI(m);var hd=r.ab>0;
+  var c=document.getElementById("finb-"+mid);if(!c) return;
+  var h='<div class="fin-block"><div class="fin-block-title">Inversion y OPEX</div>';
+  h+='<div class="fin-row"><div class="fin-lbl">Inversion total (CAPEX)</div><div class="fin-val b">'+fmt(m.inv)+'</div></div>';
+  h+='<div class="fin-row"><div class="fin-lbl">OPEX anual</div><div class="fin-val r">'+fmt(m.opx)+'</div></div>';
+  h+='<div class="fin-row"><div class="fin-lbl">Vida util</div><div class="fin-val">'+m.yr+' anos</div></div>';
+  h+='<div class="fin-row"><div class="fin-lbl">Valor de rescate</div><div class="fin-val">'+fmt(m.res)+'</div></div>';
+  h+='</div>';
+  h+='<div class="fin-block"><div class="fin-block-title">Beneficios anuales activos</div>';
+  Object.keys(m.vars).forEach(function(vid){
+    var mv=m.vars[vid];if(!mv||!mv.on) return;
+    var vdef=VAR_LIB.find(function(v){return v.id===vid;});
+    if(!vdef||vdef.cat==="opex") return;
+    var res=calcVar(m.id,vid);
+    var formula=mv.mode==="simple"?"Valor directo capturado":(vdef?vdef.detail.map(function(d){return d.label;}).join(" > "):"");
+    h+='<div class="fin-row"><div><div class="fin-lbl">'+(vdef?vdef.name:vid)+'</div>';
+    h+='<div class="fin-formula">'+formula+'</div></div>';
+    h+='<div class="fin-val g">'+fmtMoney(res)+'</div></div>';
+  });
+  h+='<div class="fin-total bg-g"><span style="font-size:11px;font-weight:600;color:var(--green)">Total beneficio anual</span>';
+  h+='<span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green)">'+(hd?fmtMoney(r.ab):"Pendiente")+'</span></div>';
+  h+='</div>';
+  h+='<div class="fin-big">';
+  var cards=[
+    {l:"ROI Simple",v:hd?fp(r.roi):"Pendiente",c:hd?cc(r.roi):"var(--ink3)",f:hd?fmtMoney(r.ng)+" / "+fmtMoney(m.inv):""},
+    {l:"Payback Period",v:fy(r.pay),c:isFinite(r.pay)?"var(--amber)":"var(--ink3)",f:isFinite(r.pay)?fmtMoney(m.inv)+" / flujo "+fmtMoney(r.fl):""}
+  ];
+  cards.forEach(function(card){
+    h+='<div class="fin-big-card"><div class="l">'+card.l+'</div>';
+    h+='<div class="v" style="color:'+card.c+'">'+card.v+'</div>';
+    h+='<div class="f">'+card.f+'</div></div>';
+  });
+  h+='</div>';
+  c.innerHTML=h;
+}
+
+// ── SLIDESHOW ──
+var slideStates={};
+var slideTimers={};
+
+function trigSlide(mid){document.getElementById("mpsi-"+mid).click();}
+
+function addSlidePhotos(mid,inp){
+  if(!slideStates[mid]) slideStates[mid]={slides:[],cur:0};
+  var s=slideStates[mid];
+  var files=Array.prototype.slice.call(inp.files,0,10-s.slides.length);
+  var loaded=0;
+  files.forEach(function(f){
+    compressImg(f,1400,1050,0.85,function(data){
+      s.slides.push(data);
+      var m=MACHINES.find(function(x){return x.id===mid;});
+      if(m) m.slidePhotos=s.slides.slice();
+      loaded++;
+      if(loaded===files.length){renderSlide(mid);startSlideTimer(mid);}
+    });
+  });
+  inp.value="";
+}
+
+function delSlide(mid){
+  var s=slideStates[mid];if(!s||!s.slides.length) return;
+  s.slides.splice(s.cur,1);
+  if(s.cur>=s.slides.length) s.cur=Math.max(0,s.slides.length-1);
+  var m=MACHINES.find(function(x){return x.id===mid;});
+  if(m) m.slidePhotos=s.slides.slice();
+  renderSlide(mid);
+  if(s.slides.length) startSlideTimer(mid); else clearSlideTimer(mid);
+}
+
+function startSlideTimer(mid){
+  clearSlideTimer(mid);
+  slideTimers[mid]=setInterval(function(){
+    var s=slideStates[mid];if(!s||s.slides.length<2) return;
+    s.cur=(s.cur+1)%s.slides.length;
+    renderSlide(mid);
+  },4000);
+}
+
+function clearSlideTimer(mid){
+  if(slideTimers[mid]){clearInterval(slideTimers[mid]);delete slideTimers[mid];}
+}
+
+function renderSlide(mid){
+  var s=slideStates[mid];
+  var stage=document.getElementById("mpss-"+mid);
+  var ph=document.getElementById("mpsph-"+mid);
+  var dotsEl=document.getElementById("mpsdo-"+mid);
+  var ct=document.getElementById("mpsct-"+mid);
+  if(!s||!s.slides.length){
+    if(ph) ph.style.display="flex";
+    stage.querySelectorAll(".mp-slide-img").forEach(function(el){el.remove();});
+    if(dotsEl) dotsEl.innerHTML="";
+    if(ct) ct.textContent="0 fotos";
+    return;
+  }
+  if(ph) ph.style.display="none";
+  // rebuild images
+  stage.querySelectorAll(".mp-slide-img").forEach(function(el){el.remove();});
+  s.slides.forEach(function(src,i){
+    var img=document.createElement("img");
+    img.className="mp-slide-img"+(i===s.cur?" on":"");
+    img.src=src;
+    stage.insertBefore(img,dotsEl);
+  });
+  // dots
+  if(dotsEl){
+    dotsEl.innerHTML="";
+    s.slides.forEach(function(_,i){
+      var d=document.createElement("div");
+      d.className="mp-slide-dot"+(i===s.cur?" on":"");
+      d.onclick=function(){s.cur=i;renderSlide(mid);};
+      dotsEl.appendChild(d);
+    });
+  }
+  if(ct) ct.textContent=s.slides.length+" foto"+(s.slides.length>1?"s":"");
+}
+
+function initSlides(){
+  MACHINES.forEach(function(m){
+    if(m.slidePhotos&&m.slidePhotos.length){
+      slideStates[m.id]={slides:m.slidePhotos.slice(),cur:0};
+      renderSlide(m.id);
+      startSlideTimer(m.id);
+    }
+  });
+}
+function trigCar(mid){document.getElementById("ci-"+mid).click();}
+
+function addCarPhotos(mid,inp){
+  var s=carStates[mid];if(!s) return;
+  var max=5-s.slides.length;
+  var files=Array.prototype.slice.call(inp.files,0,max);
+  var loaded=0;
+  files.forEach(function(f){
+    compressImg(f,1000,750,0.80,function(data){
+      s.slides.push(data);
+      var m=MACHINES.find(function(x){return x.id===mid;});
+      if(m) m.carPhotos=s.slides.slice();
+      loaded++;if(loaded===files.length) renderCar(mid);
+    });
+  });
+  inp.value="";
+}
+
+function carNav(mid,dir){
+  var s=carStates[mid];if(!s||!s.slides.length) return;
+  s.cur=(s.cur+dir+s.slides.length)%s.slides.length;renderCar(mid);
+}
+function carGoTo(mid,idx){var s=carStates[mid];if(s){s.cur=idx;renderCar(mid);}}
+
+function renderCar(mid){
+  var s=carStates[mid];if(!s) return;
+  var track=document.getElementById("ct-"+mid);
+  var prev=document.getElementById("cp-"+mid);
+  var next=document.getElementById("cn-"+mid);
+  var dotsEl=document.getElementById("cd-"+mid);
+  if(!s.slides.length){
+    if(prev)prev.style.display="none";
+    if(next)next.style.display="none";
+    if(dotsEl)dotsEl.innerHTML="";return;
+  }
+  if(track){
+    track.querySelectorAll(".car-slide.real").forEach(function(el){el.remove();});
+    s.slides.forEach(function(src){
+      var div=document.createElement("div");div.className="car-slide real";
+      var img=document.createElement("img");img.src=src;div.appendChild(img);track.appendChild(div);
+    });
+    var ph=track.querySelector(".car-slide:not(.real)");if(ph)ph.style.display="none";
+    track.style.transform="translateX(-"+(s.cur*100)+"%)";
+  }
+  if(prev)prev.style.display=s.slides.length>1?"flex":"none";
+  if(next)next.style.display=s.slides.length>1?"flex":"none";
+  if(dotsEl){
+    var dh="";
+    s.slides.forEach(function(_,i){dh+='<div class="car-dot'+(i===s.cur?" on":"")+'" onclick="carGoTo(\''+mid+'\','+i+')"></div>';});
+    dotsEl.innerHTML=dh;
+  }
+}
+
+// ── COMPRESS IMAGE ──
+// Redimensiona y comprime cualquier foto antes de guardarla
+function compressImg(file, maxW, maxH, quality, callback){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var w=img.width, h=img.height;
+      if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+      if(h>maxH){w=Math.round(w*maxH/h);h=maxH;}
+      var canvas=document.createElement("canvas");
+      canvas.width=w;canvas.height=h;
+      canvas.getContext("2d").drawImage(img,0,0,w,h);
+      callback(canvas.toDataURL("image/jpeg",quality));
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── PHOTOS ──
+function trigHero(mid){document.getElementById("hi-"+mid).click();}
+function loadHero(mid,inp){
+  var file=inp.files[0];if(!file) return;
+  compressImg(file,1200,900,0.82,function(data){
+    var m=MACHINES.find(function(x){return x.id===mid;});
+    if(m) m.heroPhoto=data;
+    var img=document.getElementById("himg-"+mid);
+    var ph=document.getElementById("hph-"+mid);
+    if(img){img.src=data;img.style.display="block";}
+    if(ph) ph.style.display="none";
+    var cimg=document.getElementById("cfgfotoimg-"+mid);
+    var cph=document.getElementById("cfgfotoph-"+mid);
+    if(cimg){cimg.src=data;cimg.style.display="block";}
+    if(cph) cph.style.display="none";
+  });
+  inp.value="";
+}
+
+function trigCFoto(mid,side){document.getElementById("cfi-"+mid+"-"+side).click();}
+function loadCFoto(mid,side,inp){
+  var file=inp.files[0];if(!file) return;
+  compressImg(file,900,700,0.80,function(data){
+    var m=MACHINES.find(function(x){return x.id===mid;});
+    if(m){if(side==="act")m.actPhoto=data;else m.propPhoto=data;}
+    var img=document.getElementById("cfimg-"+mid+"-"+side);
+    var ph=document.getElementById("cfph-"+mid+"-"+side);
+    if(img){img.src=data;img.style.display="block";}
+    if(ph) ph.style.display="none";
+  });
+  inp.value="";
+}
+
+// ── CONFIG ──
+
+function addCT(){CTS.push({id:"c"+Date.now(),code:"CT-NEW",name:"Nuevo CT",costo:0});renderCTs();}
+function delCT(i){CTS.splice(i,1);renderCTs();}
+
+function renderConfig(){
+  var h="";
+  MACHINES.forEach(function(m){
+    var r=calcROI(m);var hd=r.ab>0;
+    var isOpen=openMaqId===m.id;
+    var curTab=openMacTab[m.id]||"id";
+    h+='<div class="maq-acc">';
+    h+='<button class="maq-acc-hdr" onclick="toggleAcc(\''+m.id+'\')">';
+    h+='<div class="maq-dot" style="background:'+m.color+'"></div>';
+    h+='<div class="maq-acc-name">'+m.name+'</div>';
+    if(hd) h+='<div class="maq-acc-roi">ROI '+fp(r.roi)+'</div>';
+    h+='<div class="maq-acc-chev'+(isOpen?" open":"")+'">&#9660;</div></button>';
+    h+='<div class="maq-body'+(isOpen?" open":"")+'" id="maqb-'+m.id+'">';
+    if(isOpen){
+      h+='<div class="mac-tabs">';
+      ["id","vars","specs","impactos","docs"].forEach(function(t,ti){
+        var names=["Identificacion","Variables","Especificaciones","Puntos de impacto","📎 Documentos"];
+        h+='<button class="mac-tab'+(curTab===t?" on":"")+'" onclick="switchTab(\''+m.id+'\',\''+t+'\')">'+names[ti]+'</button>';
+      });
+      h+='</div>';
+
+      // TAB ID
+      h+='<div class="mac-panel'+(curTab==="id"?" on":"")+'">';
+      h+='<div class="f2"><div class="fld"><label>Nombre completo</label><input value="'+m.name+'" oninput="updM(\''+m.id+'\',\'name\',this.value)"></div>';
+      h+='<div class="fld"><label>Modelo / Proveedor</label><input value="'+m.model+'" oninput="updM(\''+m.id+'\',\'model\',this.value)"></div></div>';
+      h+='<div class="f3"><div class="fld"><label>Inversion total ($)</label><input class="blue" type="number" value="'+m.inv+'" oninput="updM(\''+m.id+'\',\'inv\',parseFloat(this.value)||0);recalc()"></div>';
+      h+='<div class="fld"><label>OPEX anual ($)</label><input class="blue" type="number" value="'+m.opx+'" oninput="updM(\''+m.id+'\',\'opx\',parseFloat(this.value)||0);recalc()"></div>';
+      h+='<div class="fld"><label>Vida util (anos)</label><input class="blue" type="number" value="'+m.yr+'" oninput="updM(\''+m.id+'\',\'yr\',parseFloat(this.value)||1);recalc()"></div></div>';
+      h+='<div class="f3"><div class="fld"><label>Valor rescate ($)</label><input class="blue" type="number" value="'+m.res+'" oninput="updM(\''+m.id+'\',\'res\',parseFloat(this.value)||0);recalc()"></div>';
+      h+='<div class="fld" style="grid-column:span 2"><label>Link a Excel (Google Sheets o OneDrive)</label><input value="'+(m.xlsxLink||"")+'" placeholder="https://..." oninput="updM(\''+m.id+'\',\'xlsxLink\',this.value)"></div></div>';
+      h+='<label style="font-size:10px;color:var(--ink2);display:block;margin-bottom:3px">Foto de la maquina (compartida con Resumen)</label>';
+      h+='<div class="cfg-foto" onclick="trigCfgFoto(\''+m.id+'\')">';
+      h+='<input type="file" accept="image/*" class="cfg-foto-inp" id="cfgi-'+m.id+'" onchange="loadCfgFoto(\''+m.id+'\',this)">';
+      h+='<img id="cfgfotoimg-'+m.id+'" src="'+(m.heroPhoto||"")+'" style="display:'+(m.heroPhoto?"block":"none")+'">';
+      h+='<div class="cfg-foto-ph" id="cfgfotoph-'+m.id+'" style="display:'+(m.heroPhoto?"none":"flex")+'">';
+      h+='<div class="cfg-foto-ph-i">📷</div><div class="cfg-foto-ph-l">Clic para subir — aparece en presentacion y en resumen</div></div></div>';
+      h+='</div>';
+
+      // TAB VARS
+      h+='<div class="mac-panel'+(curTab==="vars"?" on":"")+'">';
+      Object.keys(CATS).forEach(function(cat){
+        var catVars=VAR_LIB.filter(function(v){return v.cat===cat;});
+        if(!catVars.length) return;
+        h+='<div class="vsect">'+CATS[cat]+'</div>';
+        catVars.forEach(function(vdef){
+          var mv=m.vars[vdef.id]||{on:false,mode:"simple",simpleVal:0,detail:null};
+          var isOn=mv.on;
+          var isExpanded=(openVarId[m.id]===vdef.id)&&isOn;
+          var result=calcVar(m.id,vdef.id);
+          h+='<div class="vrow" id="vr-'+m.id+'-'+vdef.id+'">';
+          h+='<button class="vtog'+(isOn?" on":"")+'" onclick="togVar(\''+m.id+'\',\''+vdef.id+'\')"></button>';
+          h+='<div class="vbody">';
+          h+='<div class="vlbl'+(isOn?"":" off")+'">'+vdef.name+'</div>';
+          h+='<div class="vmode-sel">';
+          h+='<button class="vmode-btn'+(mv.mode==="simple"?" on":"")+'" onclick="setMode(\''+m.id+'\',\''+vdef.id+'\',\'simple\')">Simple</button>';
+          h+='<button class="vmode-btn'+(mv.mode==="detail"?" on":"")+'" onclick="setMode(\''+m.id+'\',\''+vdef.id+'\',\'detail\')">Detallado</button>';
+          h+='</div>';
+          if(isOn){
+            if(mv.mode==="detail"){
+              h+='<div class="vform">'+vdef.detail.map(function(d){return d.label;}).join(" > ")+'</div>';
+            }
+          }
+          h+='</div>';
+          if(isOn){
+            h+='<div class="var-result-badge'+(result>0?"":" zero")+'">'+fmtMoney(result)+'/ano</div>';
+            h+='<button class="var-expand-btn'+(isExpanded?" open":"")+'" onclick="toggleVarExpand(\''+m.id+'\',\''+vdef.id+'\')">'+( isExpanded?"▲":"▼")+'</button>';
+          }
+          h+='</div>';
+          if(isOn&&isExpanded){
+            h+='<div class="var-table-wrap open">';
+            h+='<div class="var-mode-row"><span class="var-mode-label">Modo:</span>';
+            h+='<button class="mode-btn'+(mv.mode==="simple"?" on":"")+'" onclick="setMode(\''+m.id+'\',\''+vdef.id+'\',\'simple\')">Simple — un numero</button>';
+            h+='<button class="mode-btn'+(mv.mode==="detail"?" on":"")+'" onclick="setMode(\''+m.id+'\',\''+vdef.id+'\',\'detail\')">Detallado — tabla de calculo</button>';
+            h+='</div>';
+            if(mv.mode==="simple"){h+=renderSimpleMode(m,vdef,mv);}
+            else{h+=renderDetailMode(m,vdef,mv);}
+            h+='</div>';
+          }
+          h+='</div>';
+        });;
+      });
+      h+='<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">';
+      h+='<button class="add-row-btn" onclick="addVar(\''+m.id+'\')">+ Agregar variable</button></div>';
+      h+='</div>';
+
+      // TAB SPECS
+      h+='<div class="mac-panel'+(curTab==="specs"?" on":"")+'">';
+      h+='<div class="spec-cfg-hdr"><span>Icono</span><span>Concepto</span><span>Valor</span><span>Tiene foto</span><span></span></div>';
+      m.specs.forEach(function(s,si){
+        h+='<div class="spec-cfg-row">';
+        h+='<input class="sinp" value="'+s.icon+'" oninput="updSpec(\''+m.id+'\','+si+',\'icon\',this.value)">';
+        h+='<input class="sinp" value="'+s.label+'" oninput="updSpec(\''+m.id+'\','+si+',\'label\',this.value)">';
+        h+='<input class="sinp" value="'+s.val+'" oninput="updSpec(\''+m.id+'\','+si+',\'val\',this.value)">';
+        h+='<label class="spchk"><input type="checkbox"'+(s.showPhoto?" checked":"")+' onchange="updSpec(\''+m.id+'\','+si+',\'showPhoto\',this.checked)"> foto</label>';
+        h+='<button class="sdel" onclick="delSpec(\''+m.id+'\','+si+')">&#215;</button>';
+        h+='</div>';
+      });
+      h+='<button class="add-row-btn" style="margin-top:8px" onclick="addSpec(\''+m.id+'\')">+ Agregar especificacion</button>';
+      h+='</div>';
+
+      // TAB IMPACTOS
+      h+='<div class="mac-panel'+(curTab==="impactos"?" on":"")+'">';
+      h+='<div class="fld" style="margin-bottom:10px"><label>Frase de impacto</label>';
+      h+='<input value="'+m.frase+'" oninput="updM(\''+m.id+'\',\'frase\',this.value)"></div>';
+      m.impactos.forEach(function(imp,ii){
+        h+='<div class="imp-row">';
+        h+='<input class="iinp" value="'+imp.icon+'" oninput="updImp(\''+m.id+'\','+ii+',\'icon\',this.value)">';
+        h+='<input class="iinp" value="'+imp.text+'" oninput="updImp(\''+m.id+'\','+ii+',\'text\',this.value)">';
+        h+='<input class="iinp" value="'+imp.sub+'" oninput="updImp(\''+m.id+'\','+ii+',\'sub\',this.value)">';
+        h+='<button class="idel" onclick="delImp(\''+m.id+'\','+ii+')">&#215;</button>';
+        h+='</div>';
+      });
+      h+='<button class="add-row-btn" onclick="addImp(\''+m.id+'\')">+ Agregar punto de impacto</button>';
+      h+='</div>';
+    }
+    h+='</div></div>';
+  });
+  document.getElementById("maq-list").innerHTML=h;
+}
+
+function toggleAcc(mid){openMaqId=(openMaqId===mid?null:mid);renderMachines();}
+function switchTab(mid,tab){openMacTab[mid]=tab;renderMachines();}
+function updM(mid,key,val){var m=MACHINES.find(function(x){return x.id===mid;});if(m)m[key]=val;}
+
+
+
+function setVarMode(mid,vi,mode){
+  var m=MACHINES.find(function(x){return x.id===mid;});
+  m.vars[vi].mode=mode;
+  // re-render this machine's vars tab
+  openMaqId=mid;openMacTab[mid]="vars";renderMachines();
+  recalc();updateContrastRows(mid);
+}
+
+function updVarInp(mid,vi,ii,val){
+  var m=MACHINES.find(function(x){return x.id===mid;});
+  m.vars[vi].inputs[ii].v=parseFloat(val)||0;
+  var gp=getGP();var result=calcVar(m.vars[vi],gp);
+  var vr=document.getElementById("vr-"+mid+"-"+vi);
+  if(vr){var rv=vr.querySelector(".vres");if(rv)rv.textContent=fmt(result)+"/ano";}
+  recalc();updateContrastRows(mid);
+}
+
+function updDirectVal(mid,vi,val){
+  var m=MACHINES.find(function(x){return x.id===mid;});
+  m.vars[vi].directVal=parseFloat(val)||0;
+  var gp=getGP();var result=calcVar(m.vars[vi],gp);
+  var vr=document.getElementById("vr-"+mid+"-"+vi);
+  if(vr){var rv=vr.querySelector(".vres");if(rv)rv.textContent=fmt(result)+"/ano";}
+  recalc();updateContrastRows(mid);
+}
+
+function updateContrastRows(mid){
+  var m=MACHINES.find(function(x){return x.id===mid;});if(!m) return;
+  var cr=buildContrastRows(m);
+  function renderRows(rows,el){
+    if(!el) return;
+    var h="";
+    rows.forEach(function(d){
+      if(d.s){h+='<div class="dr-sep">'+d.s+'</div>';return;}
+      h+='<div class="dr"><div class="dr-l">'+d.l+'</div><div class="dr-v '+(d.c||"")+'">'+d.v+'</div></div>';
+    });
+    el.innerHTML=h;
+  }
+  renderRows(cr.act,document.getElementById("col-act-"+mid));
+  renderRows(cr.prop,document.getElementById("col-prop-"+mid));
+}
+
+function updSpec(mid,si,key,val){var m=MACHINES.find(function(x){return x.id===mid;});if(m){m.specs[si][key]=val;saveLS();}}
+function delSpec(mid,si){var m=MACHINES.find(function(x){return x.id===mid;});m.specs.splice(si,1);openMaqId=mid;renderMachines();saveLS();}
+function addSpec(mid){var m=MACHINES.find(function(x){return x.id===mid;});m.specs.push({icon:"⚙",label:"Nuevo",val:"Valor",showPhoto:false,photo:null});openMaqId=mid;switchTab(mid,"specs");saveLS();}
+function updImp(mid,ii,key,val){var m=MACHINES.find(function(x){return x.id===mid;});if(m){m.impactos[ii][key]=val;saveLS();}}
+function delImp(mid,ii){var m=MACHINES.find(function(x){return x.id===mid;});m.impactos.splice(ii,1);openMaqId=mid;renderMachines();saveLS();}
+function addImp(mid){var m=MACHINES.find(function(x){return x.id===mid;});m.impactos.push({icon:"⚡",text:"Nuevo punto",sub:"Descripcion"});openMaqId=mid;switchTab(mid,"impactos");saveLS();}
+
+function addVar(mid){
+  var m=MACHINES.find(function(x){return x.id===mid;});
+  m.vars.push({id:"v"+Date.now(),on:false,cat:"costos",label:"Nueva variable",mode:"direct",
+    formula:"valor/ano",inputs:[{k:"valor",l:"Valor ($)",v:0}],calc:"inp.valor",directVal:0,
+    actLabel:"Valor actual",actSuffix:"",propLabel:"Valor esperado",propSuffix:""});
+  openMaqId=mid;switchTab(mid,"vars");
+}
+
+function trigCfgFoto(mid){document.getElementById("cfgi-"+mid).click();}
+function loadCfgFoto(mid,inp){
+  var file=inp.files[0];if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var m=MACHINES.find(function(x){return x.id===mid;});
+    if(m) m.heroPhoto=e.target.result;
+    var img=document.getElementById("cfgfotoimg-"+mid);
+    var ph=document.getElementById("cfgfotoph-"+mid);
+    if(img){img.src=e.target.result;img.style.display="block";}
+    if(ph) ph.style.display="none";
+    // sync to presentation
+    var himg=document.getElementById("himg-"+mid);
+    var hph=document.getElementById("hph-"+mid);
+    if(himg){himg.src=e.target.result;himg.style.display="block";}
+    if(hph) hph.style.display="none";
+  };
+  reader.readAsDataURL(file);inp.value="";
+}
+
+function recalc(){if(presMode)renderDash();}
+
+// ── ADD MACHINE ──
+function openModal(){document.getElementById("modal-add").classList.add("on");}
+function closeModal(){document.getElementById("modal-add").classList.remove("on");}
+function addMachine(){
+  var name=document.getElementById("nm-name").value.trim();
+  var code=document.getElementById("nm-code").value.trim().toUpperCase();
+  var color=document.getElementById("nm-color").value;
+  var inv=parseFloat(document.getElementById("nm-inv").value)||0;
+  var frase=document.getElementById("nm-frase").value.trim();
+  if(!name||!code){alert("Nombre y codigo son requeridos");return;}
+  MACHINES.push({
+    id:"m"+Date.now(),code:code,color:color,name:name,model:"Nueva maquina",
+    inv:inv,opx:0,yr:8,res:Math.round(inv*0.1),xlsxLink:"",videoUrl:"", cotLink:"", slidePhotos:[],
+    cotPdf:null,cotPdfName:"",fichaPdf:null,fichaPdfName:"",
+    heroPhoto:null,carPhotos:[],actPhoto:null,propPhoto:null,
+    frase:frase||"Descripcion de impacto pendiente",
+    impactos:[{icon:"⚡",text:"Punto de impacto 1",sub:"Descripcion"},{icon:"📐",text:"Punto de impacto 2",sub:"Descripcion"},{icon:"🔧",text:"Punto de impacto 3",sub:"Descripcion"}],
+    vars:[{id:"v1",on:false,cat:"costos",label:"Beneficio principal",mode:"direct",formula:"valor/ano",inputs:[{k:"valor",l:"Valor ($)",v:0}],calc:"inp.valor",directVal:0,actLabel:"Valor actual",actSuffix:"",propLabel:"Valor esperado",propSuffix:""}],
+    specs:[{icon:"⚙",label:"Especificacion 1",val:"Valor",showPhoto:false,photo:null}]
+  });
+  closeModal();openMaqId=MACHINES[MACHINES.length-1].id;
+  renderMachines();buildMachinePages();renderDots();
+  alert("Maquina agregada. Abre Configuracion para completar los datos.");
+}
+
+
+
+
+
+// ── MAIN SCREEN SWITCH ────────────────────────────────────────────────────
+var presMode = false;
+var curPage = 0;
+
+function switchMainScreen(which) {
+  var cfg = document.getElementById("screen-cfg-main");
+  var res = document.getElementById("screen-res-main");
+  cfg.classList.toggle("on", which==="cfg");
+  res.classList.toggle("on", which==="res");
+  document.getElementById("tab-cfg").classList.toggle("on", which==="cfg");
+  document.getElementById("tab-res").classList.toggle("on", which==="res");
+  presMode = which === "res";
+  document.getElementById("navs").style.display = "none"; // sidebar replaces nav arrows
+  // ndots removed — sidebar nav is used now
+  if (presMode) {
+    buildMachinePages();
+    renderDash();
+    resGoTo(0);
+    initSlides(); // still needed for old slideshow states
+  }
+}
+
+
+// ── PDF DOCUMENT MANAGEMENT ──────────────────────────────────────────────────
+
+function renderTabDocs(m) {
+  return '<div class="mac-panel on">' + renderTabDocsInner(m) + '</div>';
+}
+
+function renderTabDocsInner(m) {
+  var h = '<div class="docs-grid">';
+  h += renderDocSlot(m, 'cot', '📄 Cotizacion', 'Cotizacion del proveedor');
+  h += renderDocSlot(m, 'ficha', '📋 Ficha Tecnica', 'Especificaciones del fabricante');
+  h += '</div>';
+  h += '<div class="doc-note">Los PDFs se incrustan en el archivo. Usa <b>Descargar HTML</b> para preservarlos.</div>';
+  return h;
+}
+
+function renderDocSlot(m, key, title, desc) {
+  var hasPdf = m[key+'Pdf'] && m[key+'Pdf'].length > 10;
+  var h = '<div class="doc-slot">';
+  h += '<div class="doc-slot-hdr">';
+  h += '<div class="doc-slot-icon">' + (key==='cot' ? '📄' : '📋') + '</div>';
+  h += '<div class="doc-slot-title">' + title + '</div>';
+  h += '<div class="doc-slot-badge' + (hasPdf ? '' : ' empty') + '">' + (hasPdf ? '✓ Cargado' : 'Sin cargar') + '</div>';
+  h += '</div>';
+  h += '<input type="file" accept="application/pdf" class="doc-inp" id="doc-inp-' + m.id + '-' + key + '" onchange="loadDocPdf(\'' + m.id + '\',\'' + key + '\',this)">';
+  if (hasPdf) {
+    h += '<div class="doc-loaded">';
+    h += '<div class="doc-loaded-icon">📄</div>';
+    h += '<div class="doc-loaded-info">';
+    h += '<div class="doc-loaded-name">' + (m[key+'PdfName'] || 'Documento.pdf') + '</div>';
+    h += '<div class="doc-loaded-size">' + (m[key+'PdfSize'] || '') + '</div>';
+    h += '<div class="doc-loaded-btns">';
+    h += '<button class="doc-btn-view" onclick="openPdfModal(\'' + m.id + '\',\'' + key + '\')">👁 Ver PDF</button>';
+    h += '<button class="doc-btn-del" onclick="delDocPdf(\'' + m.id + '\',\'' + key + '\')">Eliminar</button>';
+    h += '</div></div></div>';
+  } else {
+    h += '<div class="doc-drop" onclick="document.getElementById(\'doc-inp-' + m.id + '-' + key + '\').click()">';
+    h += '<div class="doc-drop-i">📎</div>';
+    h += '<div class="doc-drop-l">Clic para cargar PDF<br>' + desc + '</div>';
+    h += '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function loadDocPdf(mid, key, inp) {
+  var file = inp.files[0];
+  if (!file || file.type !== 'application/pdf') { alert('Selecciona un archivo PDF'); return; }
+  if (file.size > 10 * 1024 * 1024) {
+    alert('PDF mayor a 10 MB. Comprímelo primero en smallpdf.com');
+    inp.value = ''; return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var m = MACHINES.find(function(x){ return x.id === mid; });
+    if (!m) return;
+    m[key+'Pdf'] = e.target.result;
+    m[key+'PdfName'] = file.name;
+    m[key+'PdfSize'] = (file.size/1024).toFixed(0) + ' KB';
+    openMaqId = mid; openMacTab[mid] = 'docs';
+    renderMachines(); saveLS();
+  };
+  reader.readAsDataURL(file); inp.value = '';
+}
+
+function delDocPdf(mid, key) {
+  if (!confirm('¿Eliminar este PDF?')) return;
+  var m = MACHINES.find(function(x){ return x.id === mid; });
+  if (!m) return;
+  m[key+'Pdf'] = null; m[key+'PdfName'] = ''; m[key+'PdfSize'] = '';
+  openMaqId = mid; openMacTab[mid] = 'docs';
+  renderMachines(); saveLS();
+}
+
+// ── PDF VIEWER — opens in new tab (avoids file:// iframe security restriction) ──
+
+function openPdfModal(mid, key) {
+  var m = MACHINES.find(function(x){ return x.id === mid; });
+  if (!m) return;
+  var pdfData = m[key+'Pdf'];
+  var name = m[key+'PdfName'] || 'Documento.pdf';
+  if (!pdfData || pdfData.length < 10) { alert('Sin PDF cargado.'); return; }
+  var label = key === 'cot' ? 'Cotizacion' : 'Ficha Tecnica';
+  var w = window.open('', '_blank');
+  if (!w) { alert('Permite popups para este archivo en el navegador.'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + name + '</title>'
+    + '<style>*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%;background:#404040}'
+    + '.bar{background:#1E1C18;padding:8px 16px;display:flex;align-items:center;gap:10px;height:44px;flex-shrink:0}'
+    + '.bt{font-family:sans-serif;font-size:13px;font-weight:600;color:#F5F2EC;flex:1}'
+    + '.bs{font-family:monospace;font-size:10px;color:#5A5750}'
+    + '.bc{padding:4px 12px;border-radius:5px;border:0.5px solid rgba(255,255,255,.15);background:transparent;color:#9A9790;cursor:pointer;font-size:11px}'
+    + '.bc:hover{background:rgba(255,255,255,.08);color:#fff}'
+    + 'iframe{width:100%;height:calc(100vh - 44px);border:none;display:block}'
+    + '</style></head><body>'
+    + '<div class="bar"><div class="bt">' + (m.name||'') + ' — ' + label + '</div>'
+    + '<div class="bs">' + name + '</div>'
+    + '<button class="bc" onclick="window.close()">✕ Cerrar</button></div>'
+    + '<iframe src="' + pdfData + '" title="' + name + '"></iframe>'
+    + '</body></html>');
+  w.document.close();
+}
+
+function closePdfModal() {} // kept for compatibility
+
+// ── LOCALSTORAGE KEY ──────────────────────────────────────────────────────
+var LS_KEY = "lineaitalia_v1";
+
+// ── SAVE TO LOCALSTORAGE (auto) ───────────────────────────────────────────
+function saveLS() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({MACHINES:MACHINES, CTS:CTS}));
+    showSaveBadge();
+  } catch(e) { console.warn("localStorage save failed:", e); }
+}
+
+// ── SAVE BADGE FEEDBACK ───────────────────────────────────────────────────
+function showSaveBadge() {
+  var b = document.getElementById("save-badge");
+  if (!b) return;
+  b.style.opacity = "1";
+  clearTimeout(window._saveBadgeTimer);
+  window._saveBadgeTimer = setTimeout(function(){ b.style.opacity = "0"; }, 1800);
+}
+
+// ── DOWNLOAD HTML FILE (backup) ───────────────────────────────────────────
+function saveFile() {
+  // Still save to localStorage too
+  saveLS();
+  var state = {MACHINES:MACHINES, CTS:CTS};
+  var tag = '<scr'+'ipt id="ss" type="application/json">'+JSON.stringify(state)+'</sc'+'ript>';
+  var html = document.documentElement.outerHTML;
+  html = html.replace(/<scr[i]pt id="ss"[\s\S]*?<\/script>/, "");
+  html = html.replace("</body>", tag+"</body>");
+  var blob = new Blob([html], {type:"text/html"});
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "LineaItalia_"+new Date().toISOString().slice(0,10)+".html";
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+// ── CLEAR LOCALSTORAGE ────────────────────────────────────────────────────
+function clearLS() {
+  if (!confirm("¿Borrar datos guardados en este navegador y volver a los valores del archivo?")) return;
+  localStorage.removeItem(LS_KEY);
+  location.reload();
+}
+
+// ── LOAD: localStorage first, then embedded <script id="ss"> fallback ─────
+(function(){
+  var loaded = false;
+
+  // 1. Try localStorage
+  try {
+    var raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      var s = JSON.parse(raw);
+      if (s.MACHINES && s.MACHINES.length) {
+        while (MACHINES.length) MACHINES.pop();
+        s.MACHINES.forEach(function(sm){
+          if(!sm.cotPdf) sm.cotPdf=null;
+          if(!sm.cotPdfName) sm.cotPdfName='';
+          if(!sm.fichaPdf) sm.fichaPdf=null;
+          if(!sm.fichaPdfName) sm.fichaPdfName='';
+          MACHINES.push(sm);
+        });
+      }
+      if (s.CTS && s.CTS.length) {
+        while (CTS.length) CTS.pop();
+        s.CTS.forEach(function(ct){ CTS.push(ct); });
+      }
+      loaded = true;
+    }
+  } catch(e) {}
+
+  // 2. Fallback: embedded JSON in <script id="ss">
+  if (!loaded) {
+    var el = document.getElementById("ss"); if (!el) return;
+    try {
+      var s = JSON.parse(el.textContent);
+      if (s.MACHINES && s.MACHINES.length) {
+        while (MACHINES.length) MACHINES.pop();
+        s.MACHINES.forEach(function(sm){
+          if(!sm.cotPdf) sm.cotPdf=null;
+          if(!sm.cotPdfName) sm.cotPdfName='';
+          if(!sm.fichaPdf) sm.fichaPdf=null;
+          if(!sm.fichaPdfName) sm.fichaPdfName='';
+          MACHINES.push(sm);
+        });
+      }
+      if (s.CTS && s.CTS.length) {
+        while (CTS.length) CTS.pop();
+        s.CTS.forEach(function(ct){ CTS.push(ct); });
+      }
+      // Migrate embedded state to localStorage
+      saveLS();
+    } catch(e) {}
+  }
+})();
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+renderCTs();
+renderMachines();
+if (typeof buildMachinePages === "function") buildMachinePages();
+if (typeof renderDots === "function") renderDots();
+</script>
+</body>
+</html>
