@@ -433,12 +433,7 @@ body.dark .dash-alert-title{color:#e05c5c;}
               <div class="form-group" style="flex:0 0 150px;"><label>Días laborables / mes</label><input type="number" id="paramDias" placeholder="22" min="1" step="1" oninput="guardarParams()"></div>
               <div class="form-group" style="flex:0 0 150px;"><label>Turnos</label><input type="number" id="paramTurnos" placeholder="1" min="1" step="1" oninput="guardarParams()"></div>
               <div class="form-group" style="flex:0 0 150px;"><label>Demanda mensual (pzas)</label><input type="number" id="paramDemanda" placeholder="0" min="0" step="1" oninput="guardarParams()"></div>
-              <div class="form-group" style="flex:0 0 180px;"><label>Modo de operación</label>
-                <select id="paramModo" onchange="guardarParams()">
-                  <option value="serie">Serie — 1 pieza por TC</option>
-                  <option value="paralelo">Paralelo — N piezas por TC</option>
-                </select>
-              </div>
+
             </div>
           </div>
         </div>
@@ -517,6 +512,14 @@ body.dark .dash-alert-title{color:#e05c5c;}
         </div>
 
         <!-- CALCULAR -->
+        <!-- FLUJOS -->
+        <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:16px 20px;margin-bottom:8px;box-shadow:var(--shadow);">
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">🔀 Flujos de producción</div>
+          <div id="flujos-badges" style="display:flex;flex-wrap:wrap;gap:6px;">
+            <span style="font-size:12px;color:var(--text-muted);">Sin flujos — créalos al agregar operaciones</span>
+          </div>
+        </div>
+
         <div style="margin-bottom:8px;">
           <button class="btn btn-accent" style="width:100%;padding:14px;" onclick="calcularResultados()">▶ Calcular resultados</button>
         </div>
@@ -901,6 +904,22 @@ body.dark .dash-alert-title{color:#e05c5c;}
     <div class="form-row">
       <div class="form-group" style="flex:2;min-width:140px;"><label>Nombre</label><input type="text" id="opName" placeholder="Ej. Dobla pata"></div>
       <div class="form-group" style="flex:0 0 90px;"><label>Minutos</label><input type="number" id="opMin" placeholder="0" min="0" step="0.01" oninput="updateOpTcPreview()"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:1;">
+        <label>Flujo</label>
+        <div style="display:flex;gap:6px;">
+          <select id="opFlujo" style="flex:1;"></select>
+          <button type="button" class="btn btn-accent" style="padding:6px 10px;font-size:12px;white-space:nowrap;" onclick="crearFlujoRapido()">+ Nuevo</button>
+        </div>
+      </div>
+      <div class="form-group" style="flex:0 0 160px;">
+        <label>Modo del flujo</label>
+        <select id="opModoFlujo">
+          <option value="serie">Serie</option>
+          <option value="paralelo">Paralelo</option>
+        </select>
+      </div>
     </div>
     <div class="form-group">
       <label>Depende de (predecesores)</label>
@@ -1514,7 +1533,8 @@ function openModal(id, isNew=true){
       s('opDia').value = '1';
       s('opPiezas').value = '1';
       s('opTcPreview').textContent = '—';
-      // Poblar selector de dependencias (nueva op: ninguna marcada)
+      s('opModoFlujo').value = 'serie';
+      populateFlujoSelect('opFlujo', '');
       populateOpDependencias(-1, []);
       populateOpOperador(-1);
     }
@@ -1720,7 +1740,6 @@ function selectCentro(idx){
   s('paramDias').value = p.dias || 22;
   s('paramTurnos').value = p.turnos || 1;
   s('paramDemanda').value = p.demanda || '';
-  s('paramModo').value = p.modo || 'serie';
   renderMod();
   // Migrar ops de este centro si vienen del formato WBS antiguo
   if(cur()&&cur().ops) migrarOpsWBS(cur().ops);
@@ -1729,6 +1748,7 @@ function selectCentro(idx){
   renderEtapas();
   populateOpEtapa();
   renderAsignacion();
+  renderFlujosBadges();
   renderCIF();
   renderEquipos();
   renderTabuladorCentro();
@@ -2016,25 +2036,24 @@ function saveOperacion(){
   const recursos = parseInt(s('opRecursos').value)||1;
   const dia = parseInt(s('opDia').value)||1;
   const piezas = parseInt(s('opPiezas').value)||1;
+  const flujo = s('opFlujo').value || '';
+  const modoFlujo = s('opModoFlujo').value || 'serie';
   if(!nombre || isNaN(min) || min<0){ alert('Ingresa nombre y minutos.'); return; }
 
-  // Leer dependencias desde checkboxes
   const dependeChecks = document.querySelectorAll('#opDependeWrap input[type=checkbox]:checked');
   const depende = Array.from(dependeChecks).map(cb=>parseInt(cb.value));
 
   const editIdx = s('opsEditIdx').value;
-  const entry = {nombre, min, recursos, dia, piezas, depende, activa:true};
+  const entry = {nombre, min, recursos, dia, piezas, depende, flujo, modoFlujo, activa:true};
   let savedIdx;
   if(editIdx !== ''){
     savedIdx = parseInt(editIdx);
     cur().ops[savedIdx] = {...(cur().ops[savedIdx]||{}), ...entry};
-    // Si se edita, actualizar referencias en otras ops que dependían del índice
   } else {
     cur().ops.push(entry);
     savedIdx = cur().ops.length-1;
   }
 
-  // Save operator assignment
   const opMod = s('opOperador').value;
   if(!cur().asignaciones) cur().asignaciones={};
   if(opMod!==''){
@@ -2044,6 +2063,7 @@ function saveOperacion(){
   }
 
   markUpdated(); closeModal('modal-ops'); renderOps(); renderAsignacion(); renderDiagrama();
+  renderFlujosBadges();
   if(s('resultsBlock')&&s('resultsBlock').style.display!=='none') calcularResultados();
 }
 
@@ -2057,6 +2077,8 @@ function editOperacion(i){
   s('opPiezas').value = o.piezas||1;
   const tc = ((o.min||0)*(o.piezas||1))/(o.recursos||1);
   s('opTcPreview').textContent = tc>0?tc.toFixed(2)+' min':'—';
+  populateFlujoSelect('opFlujo', o.flujo||'');
+  s('opModoFlujo').value = o.modoFlujo || 'serie';
   populateOpDependencias(i, o.depende||[]);
   populateOpOperador(i);
   openModal('modal-ops', false);
@@ -2203,14 +2225,60 @@ function calcCaminoCritico(ops, allOps){
 // ═══════════════════════════════════════════════════
 // PARÁMETROS
 // ═══════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
+   FLUJOS
+═══════════════════════════════════════════════════ */
+function getFlujos(){ if(!cur()) return []; if(!cur().flujos) cur().flujos=[]; return cur().flujos; }
+
+function populateFlujoSelect(selectId, selectedVal){
+  const sel = s(selectId); if(!sel) return;
+  const flujos = getFlujos();
+  sel.innerHTML = '<option value="">— Sin flujo —</option>'
+    + flujos.map(f=>'<option value="'+f.id+'"'+(f.id===selectedVal?' selected':'')+'>'+f.nombre+'</option>').join('');
+}
+
+function crearFlujoRapido(){
+  const nombre = prompt('Nombre del flujo (ej. Línea Weike 1, Línea A):');
+  if(!nombre||!nombre.trim()) return;
+  if(!cur().flujos) cur().flujos=[];
+  const id = 'f_'+Date.now().toString(16);
+  cur().flujos.push({id, nombre:nombre.trim()});
+  markUpdated();
+  populateFlujoSelect('opFlujo', id);
+  renderFlujosBadges();
+}
+
+function renderFlujosBadges(){
+  const el = s('flujos-badges'); if(!el) return;
+  const flujos = getFlujos();
+  if(!flujos.length){ el.innerHTML='<span style="font-size:12px;color:var(--text-muted);">Sin flujos — créalos al agregar operaciones</span>'; return; }
+  el.innerHTML = flujos.map(f=>{
+    const ops = (cur().ops||[]).filter(o=>o.flujo===f.id&&o.activa!==false);
+    const modo = ops.length>0 ? (ops[0].modoFlujo||'serie') : 'serie';
+    const modeColor = modo==='paralelo'?'var(--ok)':'var(--accent)';
+    const modeBg = modo==='paralelo'?'var(--ok-bg)':'var(--accent-bg)';
+    return '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:99px;background:'+modeBg+';border:1px solid rgba(0,0,0,.1);font-size:12px;font-weight:600;color:'+modeColor+';margin:2px;">'
+      +'🔀 '+f.nombre
+      +' <span style="font-size:10px;opacity:.7;">'+ops.length+' ops · '+modo+'</span>'
+      +'<button onclick="eliminarFlujo(\''+f.id+'\')" style="background:transparent;border:none;cursor:pointer;color:inherit;font-size:13px;padding:0 2px;line-height:1;">✕</button>'
+      +'</span>';
+  }).join('');
+}
+
+function eliminarFlujo(id){
+  if(!confirm('¿Eliminar este flujo? Las operaciones quedarán sin flujo.')) return;
+  cur().flujos=(cur().flujos||[]).filter(f=>f.id!==id);
+  (cur().ops||[]).forEach(o=>{ if(o.flujo===id){o.flujo='';o.modoFlujo='serie';} });
+  markUpdated(); renderFlujosBadges(); renderOps();
+}
+
 function guardarParams(){
   if(selectedIdx===null) return;
-  if(!cur().params) cur().params={disponible:480,dias:22,turnos:1,demanda:0,modo:'serie'};
+  if(!cur().params) cur().params={disponible:480,dias:22,turnos:1,demanda:0};
   const disp=parseFloat(s('paramDisponible').value); if(!isNaN(disp)&&disp>=0) cur().params.disponible=disp;
   const dias=parseFloat(s('paramDias').value); if(!isNaN(dias)&&dias>=1) cur().params.dias=dias;
   const turnos=parseFloat(s('paramTurnos').value); if(!isNaN(turnos)&&turnos>=1) cur().params.turnos=turnos;
   const dem=parseFloat(s('paramDemanda').value); if(!isNaN(dem)&&dem>=0) cur().params.demanda=dem;
-  cur().params.modo = s('paramModo').value || 'serie';
   markUpdated();
 }
 
@@ -2277,108 +2345,148 @@ function renderAsignacion(){
   const modPresentes = data.mod.filter(m=>m.presente!==false);
 
   if(!opsActivas.length || !modPresentes.length){
-    wrap.innerHTML=`<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:13px;">
-      ${!opsActivas.length?'Agrega operaciones para asignar.':'Registra personal para asignar operaciones.'}
-    </div>`;
+    wrap.innerHTML='<div style="text-align:center;padding:16px;color:var(--text-tertiary);font-size:13px;">'
+      +(!opsActivas.length?'Agrega operaciones para asignar.':'Registra personal para asignar operaciones.')
+      +'</div>';
     return;
   }
 
-  // Inicializar asignaciones si no existen
-  if(!data.asignaciones) data.asignaciones = {};
-  opsActivas.forEach((o,oi)=>{
-    const opIdx = data.ops.indexOf(o);
-    if(!data.asignaciones[opIdx]) data.asignaciones[opIdx] = [];
-  });
-
-  // Calcular carga por operador
-  const cargaOp = {};
-  modPresentes.forEach(m=>{ cargaOp[data.mod.indexOf(m)] = 0; });
+  if(!data.asignaciones) data.asignaciones={};
   opsActivas.forEach(o=>{
-    const opIdx = data.ops.indexOf(o);
-    const asigs = (data.asignaciones[opIdx] || data.asignaciones[String(opIdx)] || []).map(x=>parseInt(x));
-    const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
-    // Si N operadores asignados a esta op, cada uno carga tcOp/N
-    const nAsigs = asigs.length || 1;
-    asigs.forEach(mIdx=>{ if(cargaOp[mIdx]!==undefined) cargaOp[mIdx] += tcOp / nAsigs; });
-  });
-  const maxCarga = Math.max(...Object.values(cargaOp), 0.01);
-
-  // Operaciones sin asignar
-  const sinAsignar = opsActivas.filter(o=>{
-    const opIdx = data.ops.indexOf(o);
-    return !(data.asignaciones[opIdx]||[]).length;
+    const opIdx=data.ops.indexOf(o);
+    if(!data.asignaciones[opIdx]) data.asignaciones[opIdx]=[];
   });
 
-  let html = `<div style="overflow-x:auto;"><table class="asig-table">
-    <thead><tr>
-      <th>Operación</th>
-      <th style="text-align:right;color:var(--accent);">TC real</th>
-      ${modPresentes.map(m=>`<th class="op-col">${m.puesto.split(' ')[0]}</th>`).join('')}
-    </tr></thead>
-    <tbody>`;
+  // Carga total por operador (todos los flujos)
+  const cargaOp={};
+  modPresentes.forEach(m=>{cargaOp[data.mod.indexOf(m)]=0;});
+  opsActivas.forEach(o=>{
+    const opIdx=data.ops.indexOf(o);
+    const asigs=(data.asignaciones[opIdx]||data.asignaciones[String(opIdx)]||[]).map(x=>parseInt(x));
+    const tcOp=(o.min||0)*(o.piezas||1)/(o.recursos||1);
+    const nAsigs=asigs.length||1;
+    asigs.forEach(mIdx=>{if(cargaOp[mIdx]!==undefined)cargaOp[mIdx]+=tcOp/nAsigs;});
+  });
+  const maxCarga=Math.max(...Object.values(cargaOp),0.01);
 
-  // Group by day
-  const diasUnicos = [...new Set(opsActivas.map(o=>o.dia||1))].sort((a,b)=>a-b);
-  diasUnicos.forEach(dia=>{
-    const opsDia = opsActivas.filter(o=>(o.dia||1)===dia);
-    // Day header row
-    html += `<tr style="background:var(--surface2);">
-      <td colspan="${modPresentes.length+2}" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);padding:6px 12px;">📅 Día ${dia}</td>
-    </tr>`;
-    opsDia.forEach(o=>{
-      const opIdx = data.ops.indexOf(o);
-      const asigs = (data.asignaciones[opIdx] || data.asignaciones[String(opIdx)] || []).map(x=>parseInt(x));
-      const asignada = asigs.length > 0;
-      const tcBase = ((o.min||0)*(o.piezas||1)/(o.recursos||1));
-      const nAsigs = asigs.length || 1;
-      const tcEfectivo = asignada ? tcBase / nAsigs : tcBase;
-      const tcLabel = asigs.length > 1
-        ? `${tcBase.toFixed(2)} / ${asigs.length} = ${tcEfectivo.toFixed(2)} min`
-        : `${tcEfectivo.toFixed(2)} min`;
-      html += `<tr style="${!asignada?'background:var(--warn-bg);':''}">
-        <td style="font-weight:500;color:var(--text-primary);">
-          ${o.nombre}
-          ${o.recursos>1?`<span style="margin-left:4px;font-size:10px;background:var(--ok-bg);color:var(--ok);border-radius:4px;padding:1px 5px;font-weight:700;">×${o.recursos}</span>`:''}
-          ${!asignada?'<span style="margin-left:6px;font-size:10px;color:var(--warn);font-weight:700;">⚠</span>':''}
-        </td>
-        <td style="text-align:right;font-family:var(--font-mono);font-weight:600;color:var(--accent);" title="${asigs.length>1?'TC base: '+tcBase.toFixed(2)+' min ÷ '+asigs.length+' ops':''}">${tcLabel}</td>
-        ${modPresentes.map(m=>{
-          const mIdx = data.mod.indexOf(m);
-          const habs = m.habilidades||[];
-          const puedeHacer = habs.length===0 || habs.includes(opIdx);
-          const checked = asigs.includes(mIdx) ? 'checked' : '';
-          const title = !puedeHacer ? `${m.puesto} no tiene habilidad` : '';
-          return `<td class="op-cell" title="${title}">
-            ${puedeHacer
-              ? `<input type="checkbox" class="asig-cb" ${checked} onchange="toggleAsignacion(${opIdx},${mIdx},this.checked)">`
-              : `<span style="font-size:14px;">🚫</span>`}
-          </td>`;
-        }).join('')}
-      </tr>`;
+  const flujos=data.flujos||[];
+  // Grupos: un grupo por flujo + uno para ops sin flujo
+  const grupos=[];
+  flujos.forEach(f=>{
+    const ops=opsActivas.filter(o=>o.flujo===f.id);
+    if(ops.length) grupos.push({id:f.id, nombre:f.nombre, ops, sinFlujo:false});
+  });
+  const opsSinFlujo=opsActivas.filter(o=>!o.flujo||!flujos.find(f=>f.id===o.flujo));
+  if(opsSinFlujo.length) grupos.push({id:'__sf', nombre:'Sin flujo asignado', ops:opsSinFlujo, sinFlujo:true});
+
+  // Si no hay flujos definidos, mostrar todo junto como antes
+  if(grupos.length===0) grupos.push({id:'__all', nombre:'Todas las operaciones', ops:opsActivas, sinFlujo:true});
+
+  const colores=['#D85A30','#1D9E75','#378ADD','#7F77DD','#D4537E','#639922','#EF9F27'];
+
+  let html='';
+  grupos.forEach((g, gi)=>{
+    const color=g.sinFlujo?'var(--text-muted)':colores[gi%colores.length];
+
+    // Operadores que tienen al menos una op asignada en este flujo (o todos si sin flujo)
+    const mIdxsEnFlujo=new Set();
+    g.ops.forEach(o=>{
+      const opIdx=data.ops.indexOf(o);
+      (data.asignaciones[opIdx]||data.asignaciones[String(opIdx)]||[]).forEach(x=>mIdxsEnFlujo.add(parseInt(x)));
     });
+    // Mostrar todos los operadores presentes (para poder asignar)
+    const modFlujo=modPresentes;
+
+    // Carga de operadores dentro de este flujo
+    const cargaOpFlujo={};
+    modPresentes.forEach(m=>{cargaOpFlujo[data.mod.indexOf(m)]=0;});
+    g.ops.forEach(o=>{
+      const opIdx=data.ops.indexOf(o);
+      const asigs=(data.asignaciones[opIdx]||data.asignaciones[String(opIdx)]||[]).map(x=>parseInt(x));
+      const tcOp=(o.min||0)*(o.piezas||1)/(o.recursos||1);
+      const nAsigs=asigs.length||1;
+      asigs.forEach(mIdx=>{if(cargaOpFlujo[mIdx]!==undefined)cargaOpFlujo[mIdx]+=tcOp/nAsigs;});
+    });
+    const maxCargaFlujo=Math.max(...Object.values(cargaOpFlujo),0.01);
+
+    const sinAsignarFlujo=g.ops.filter(o=>{
+      const opIdx=data.ops.indexOf(o);
+      return !(data.asignaciones[opIdx]||[]).length;
+    });
+
+    html+='<div style="margin-bottom:16px;border:1px solid var(--border2);border-radius:var(--r2);overflow:hidden;">'
+      +'<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--border2);">'
+      +'<div style="width:3px;height:18px;border-radius:99px;background:'+color+';flex-shrink:0;"></div>'
+      +'<span style="font-size:12px;font-weight:700;color:var(--text-primary);">'+g.nombre+'</span>'
+      +'<span style="font-size:11px;color:var(--text-muted);">'+g.ops.length+' ops</span>'
+      +(sinAsignarFlujo.length?'<span style="margin-left:auto;font-size:11px;color:var(--warn);font-weight:700;">⚠ '+sinAsignarFlujo.length+' sin asignar</span>':'')
+      +'</div>'
+      +'<div style="overflow-x:auto;">'
+      +'<table class="asig-table"><thead><tr>'
+      +'<th>Operación</th>'
+      +'<th style="text-align:right;color:var(--accent);">TC</th>'
+      +modFlujo.map(m=>'<th class="op-col">'+m.puesto.split(' ')[0]+'</th>').join('')
+      +'</tr></thead><tbody>';
+
+    g.ops.forEach(o=>{
+      const opIdx=data.ops.indexOf(o);
+      const asigs=(data.asignaciones[opIdx]||data.asignaciones[String(opIdx)]||[]).map(x=>parseInt(x));
+      const asignada=asigs.length>0;
+      const tcBase=(o.min||0)*(o.piezas||1)/(o.recursos||1);
+      const nAsigs=asigs.length||1;
+      const tcEf=asignada?tcBase/nAsigs:tcBase;
+      const tcLabel=asigs.length>1?tcBase.toFixed(2)+' / '+asigs.length+' = '+tcEf.toFixed(2)+' min':tcEf.toFixed(2)+' min';
+
+      html+='<tr style="'+(asignada?'':'background:var(--warn-bg);')+'">'
+        +'<td style="font-weight:500;color:var(--text-primary);">'+o.nombre
+        +(o.recursos>1?'<span style="margin-left:4px;font-size:10px;background:var(--ok-bg);color:var(--ok);border-radius:4px;padding:1px 5px;font-weight:700;">×'+o.recursos+'</span>':'')
+        +(!asignada?'<span style="margin-left:6px;font-size:10px;color:var(--warn);font-weight:700;">⚠</span>':'')
+        +'</td>'
+        +'<td style="text-align:right;font-family:var(--font-mono);font-weight:600;color:var(--accent);">'+tcLabel+'</td>'
+        +modFlujo.map(m=>{
+          const mIdx=data.mod.indexOf(m);
+          const checked=asigs.includes(mIdx)?'checked':'';
+          return '<td class="op-cell"><input type="checkbox" class="asig-cb" '+checked+' onchange="toggleAsignacion('+opIdx+','+mIdx+',this.checked)"></td>';
+        }).join('')
+        +'</tr>';
+    });
+
+    // Fila carga por operador del flujo
+    html+='<tr style="background:var(--surface2);font-weight:700;">'
+      +'<td style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Carga flujo</td>'
+      +'<td style="text-align:right;font-size:12px;color:var(--text-muted);">'+g.ops.reduce((a,o)=>a+(o.min||0),0).toFixed(2)+' min</td>'
+      +modFlujo.map(m=>{
+        const mIdx=data.mod.indexOf(m);
+        const carga=cargaOpFlujo[mIdx]||0;
+        const pct=maxCargaFlujo>0?(carga/maxCargaFlujo*100):0;
+        const col=pct>=95?'var(--bad)':pct>=70?'var(--warn)':'var(--ok)';
+        return '<td class="op-cell">'
+          +'<div style="font-family:var(--font-mono);font-size:12px;color:'+col+';">'+carga.toFixed(2)+'</div>'
+          +'<div class="asig-carga-bar"><div class="asig-carga-bar-fill" style="width:'+pct+'%;background:'+col+';"></div></div>'
+          +'</td>';
+      }).join('')
+      +'</tr></tbody></table></div></div>';
   });
 
-  // Fila de totales por operador
-  html += `<tr style="background:var(--surface2);font-weight:700;">
-    <td style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Carga total</td>
-    <td style="text-align:right;font-size:12px;color:var(--text-muted);">${opsActivas.reduce((a,o)=>a+o.min,0).toFixed(2)} min</td>
-    ${modPresentes.map(m=>{
-      const mIdx = data.mod.indexOf(m);
-      const carga = cargaOp[mIdx] || 0;
-      const pct = maxCarga>0?(carga/maxCarga*100):0;
-      const color = pct>=95?'var(--bad)':pct>=70?'var(--warn)':'var(--ok)';
-      return `<td class="op-cell">
-        <div style="font-family:var(--font-mono);font-size:12px;color:${color};">${carga.toFixed(2)}</div>
-        <div class="asig-carga-bar"><div class="asig-carga-bar-fill" style="width:${pct}%;background:${color};"></div></div>
-      </td>`;
-    }).join('')}
-  </tr></tbody></table></div>`;
-
-  if(sinAsignar.length){
-    html += `<div class="asig-op-sin">⚠ ${sinAsignar.length} operación(es) sin asignar: ${sinAsignar.map(o=>o.nombre).join(', ')}</div>`;
+  // Resumen total de carga por operador (todos los flujos)
+  if(grupos.length>1){
+    html+='<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);padding:10px 14px;">'
+      +'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">Carga total por operador</div>'
+      +'<div style="display:flex;gap:12px;flex-wrap:wrap;">'
+      +modPresentes.map(m=>{
+        const mIdx=data.mod.indexOf(m);
+        const carga=cargaOp[mIdx]||0;
+        const pct=maxCarga>0?(carga/maxCarga*100):0;
+        const col=pct>=95?'var(--bad)':pct>=70?'var(--warn)':'var(--ok)';
+        return '<div style="display:flex;align-items:center;gap:6px;font-size:12px;">'
+          +'<span style="color:var(--text-primary);font-weight:500;">'+m.puesto+'</span>'
+          +'<span style="font-family:var(--font-mono);color:'+col+';font-weight:700;">'+carga.toFixed(2)+' min</span>'
+          +'</div>';
+      }).join('')
+      +'</div></div>';
   }
 
-  wrap.innerHTML = html;
+  wrap.innerHTML=html;
 }
 
 function toggleAsignacion(opIdx, mIdx, val){
@@ -2451,190 +2559,223 @@ function togglePresencia(tipo, idx, val){
 function calcularResultados(){
   if(selectedIdx===null || !cur()) return;
   const data = cur();
-  const p = data.params || { disponible:480, dias:22, turnos:1, demanda:0, modo:'serie' };
+  const p = data.params || { disponible:480, dias:22, turnos:1, demanda:0 };
   const disponible = p.disponible || 0;
   const dias = p.dias || 22;
   const turnos = p.turnos || 1;
   const demanda = p.demanda || 0;
-  const modo = p.modo || 'serie';
 
   const opsActivas = data.ops.filter(o=>o.activa!==false);
-  // Asegurar depende en todas las ops (migración defensiva)
   data.ops.forEach(o=>{ if(o&&!o.depende) o.depende=[]; });
   const consActivas = data.cons.items.filter(c=>c.activa!==false);
   const modPresentes = data.mod.filter(m=>m.presente!==false);
   const numOperadores = modPresentes.length || 1;
-
-
   const totalCons = consActivas.reduce((a,c)=>a+c.min,0);
   const tiempoReal = disponible - totalCons;
-  const totalOps = opsActivas.reduce((a,o)=>a+o.min,0);
-
+  const totalOps = opsActivas.reduce((a,o)=>a+(o.min||0),0);
   const asigs = data.asignaciones || {};
-  const hayAsignacion = opsActivas.some(o=>(asigs[data.ops.indexOf(o)]||[]).length>0);
+  const flujos = data.flujos || [];
 
-  // ── CAMINO CRÍTICO ──────────────────────────────
-  // Recalcular con ops activas (reindex)
-  const critPath = calcCaminoCritico(opsActivas, data.ops);
-  
-  // TC = longitud del camino crítico (EF del último nodo)
-  let tcCaminoCritico = 0;
-  if(opsActivas.length>0){
-    const n = opsActivas.length;
-    const ef = new Array(n).fill(0);
-    const visited = new Set();
-    function visit(i){
-      if(visited.has(i)) return;
-      const deps = getDepsFromWBS(opsActivas, i, data.ops).filter(d=>d>=0&&d<n);
-      deps.forEach(d=>visit(d));
-      const tc = (opsActivas[i].min||0)*(opsActivas[i].piezas||1)/(opsActivas[i].recursos||1);
-      const maxPred = deps.length>0 ? Math.max(...deps.map(d=>ef[d]),0) : 0;
-      ef[i] = maxPred + tc;
-      visited.add(i);
-    }
-    for(let i=0;i<n;i++) visit(i);
-    tcCaminoCritico = Math.max(...ef,0);
-  }
+  // ── CÁLCULO DE CARGA POR OPERADOR ──────────────
+  // Para cada operador: suma de TCs de todas sus operaciones asignadas
+  const cargaOp = {};
+  modPresentes.forEach(m=>{ cargaOp[data.mod.indexOf(m)] = 0; });
+  opsActivas.forEach(o=>{
+    const opIdx = data.ops.indexOf(o);
+    const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
+    const opAsigs = (asigs[opIdx]||asigs[String(opIdx)]||[]).map(x=>parseInt(x));
+    const nAsigs = opAsigs.length||1;
+    opAsigs.forEach(mIdx=>{ if(cargaOp[mIdx]!==undefined) cargaOp[mIdx]+=tcOp/nAsigs; });
+  });
 
-  // ── TC POR OPERADOR (asignación) ────────────────
-  let cargaPorOp = {};
-  modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = 0; });
-  if(hayAsignacion){
-    opsActivas.forEach(o=>{
+  // ── CÁLCULO POR FLUJO ──────────────────────────
+  // Agrupa ops por flujo, calcula TC cuello y capacidad de cada flujo
+  const resultadosPorFlujo = flujos.map(f=>{
+    const opsFlujo = opsActivas.filter(o=>o.flujo===f.id);
+    if(!opsFlujo.length) return {flujo:f, ops:[], tc:0, cap:0, modo:'serie', operadores:[], label:'Sin operaciones'};
+    const modo = opsFlujo[0].modoFlujo || 'serie';
+
+    // Operadores asignados a ops de este flujo
+    const modIdxsFlujo = new Set();
+    opsFlujo.forEach(o=>{
       const opIdx = data.ops.indexOf(o);
-      const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
-      // Normalize: asigs keys and values may be strings from Firebase
-      const opAsigs = (asigs[opIdx] || asigs[String(opIdx)] || []).map(x=>parseInt(x));
-      // Si hay N operadores asignados a esta op, cada uno carga tcOp/N (trabajan en paralelo)
-      const nAsigs = opAsigs.length || 1;
-      const cargaPorAsig = tcOp / nAsigs;
-      opAsigs.forEach(mIdx=>{
-        if(cargaPorOp[mIdx]!==undefined) cargaPorOp[mIdx] += cargaPorAsig;
+      (asigs[opIdx]||asigs[String(opIdx)]||[]).forEach(x=>modIdxsFlujo.add(parseInt(x)));
+    });
+    const operadoresFlujo = [...modIdxsFlujo].map(i=>data.mod[i]).filter(Boolean);
+
+    let tcCuello=0, opCuello=null, capFlujo=0;
+
+    if(modo==='serie'){
+      // TC cuello = operador más cargado del flujo
+      // Carga de cada operador = suma de sus ops en este flujo
+      const cargaOpFlujo = {};
+      modIdxsFlujo.forEach(mIdx=>{ cargaOpFlujo[mIdx]=0; });
+      opsFlujo.forEach(o=>{
+        const opIdx = data.ops.indexOf(o);
+        const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
+        const opAsigs = (asigs[opIdx]||asigs[String(opIdx)]||[]).map(x=>parseInt(x));
+        const nAsigs = opAsigs.length||1;
+        opAsigs.forEach(mIdx=>{ if(cargaOpFlujo[mIdx]!==undefined) cargaOpFlujo[mIdx]+=tcOp/nAsigs; });
       });
-    });
-  } else {
-    const tcProm = numOperadores>0 ? totalOps/numOperadores : 0;
-    modPresentes.forEach(m=>{ cargaPorOp[data.mod.indexOf(m)] = tcProm; });
-  }
-  // TC para CAPACIDAD = operador más cargado (total del turno)
-  const tcOperadores = hayAsignacion ? Math.max(...Object.values(cargaPorOp),0) : 0;
-  // TC para mostrar en tiempos = operador más cargado (es el cuello real de producción)
-  const tiempoCiclo = tcOperadores>0 ? tcOperadores : (tcCaminoCritico||0.001);
-  // Lead Time = camino crítico (tiempo de una pieza de inicio a fin)
-  const leadTimeCritico = tcCaminoCritico;
-  const tcBalanceo = numOperadores>0 ? totalOps/numOperadores : 0;
-
-  // Días del ciclo
-  const diasCiclo = opsActivas.length>0 ? Math.max(...opsActivas.map(o=>o.dia||1),1) : 1;
-  const hayMultiDia = diasCiclo > 1;
-
-  // Label
-  let tcLabel = '';
-  if(tcOperadores>0){
-    tcLabel = `Operador más cargado: ${tcOperadores.toFixed(2)} min`;
-  } else {
-    const opsCriticas = critPath.map(i=>opsActivas[i]?.nombre||'').filter(Boolean);
-    tcLabel = `Camino crítico: ${opsCriticas.join(' → ')} (${tcCaminoCritico.toFixed(2)} min)`;
-  }
-  const etapasInfo = []; // compatibilidad
-  const hayEtapas = hayMultiDia;
-
-  // Capacidad: en paralelo se multiplica por operadores, en multi-día se divide por días del ciclo
-  const piezasPorCiclo = (!hayMultiDia && modo==='paralelo') ? numOperadores : 1;
-  // capDia: para multi-día = mínimo de todos los días (cuello real)
-  // Se recalcula después de calcular capPorDia
-  let capDia = tiempoCiclo>0 ? Math.floor(tiempoReal/tiempoCiclo)*piezasPorCiclo : 0;
-
-  // Capacidad y WIP por día (proceso multi-día)
-  let capPorDia = [], wipPorDia = [], utilizPorDia = [], leadTimeDias = diasCiclo;
-  if(hayMultiDia){
-    const diasUnicos = [...new Set(opsActivas.map(o=>o.dia||1))].sort((a,b)=>a-b);
-    let capAnterior = null;
-    diasUnicos.forEach(dia=>{
-      const opsDia = opsActivas.filter(o=>(o.dia||1)===dia);
-      let tcDia = 0, tcDiaLabel = '', cargaPorOpDia = {};
-
-      if(hayAsignacion){
-        // TC del día = operador más cargado del día
-        // Carga de un operador = suma de sus operaciones asignadas en ese día
-        modPresentes.forEach(m=>{ cargaPorOpDia[data.mod.indexOf(m)] = 0; });
-        opsDia.forEach(o=>{
-          const opIdx = data.ops.indexOf(o);
-          const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
-          const opAsigs = (asigs[opIdx] || asigs[String(opIdx)] || []).map(x=>parseInt(x));
-          // Si N operadores asignados a esta op, cada uno carga tcOp/N
-          const nAsigs = opAsigs.length || 1;
-          const cargaPorAsig = tcOp / nAsigs;
-          opAsigs.forEach(mIdx=>{
-            if(cargaPorOpDia[mIdx]!==undefined) cargaPorOpDia[mIdx] += cargaPorAsig;
-          });
-        });
-        const maxCargaDia = Math.max(...Object.values(cargaPorOpDia), 0);
-        tcDia = maxCargaDia;
-        const opMasCargadoIdx = Object.keys(cargaPorOpDia).reduce((a,b)=>cargaPorOpDia[a]>cargaPorOpDia[b]?a:b);
-        const nomOp = data.mod[parseInt(opMasCargadoIdx)]?.puesto||'—';
-        tcDiaLabel = `Cuello: ${nomOp} (${tcDia.toFixed(2)} min)`;
+      if(modIdxsFlujo.size>0){
+        tcCuello = Math.max(...Object.values(cargaOpFlujo),0);
+        const mIdxCuello = Object.keys(cargaOpFlujo).reduce((a,b)=>cargaOpFlujo[a]>cargaOpFlujo[b]?a:b);
+        opCuello = data.mod[parseInt(mIdxCuello)];
       } else {
-        // Sin asignación: TC = operación más lenta del día (cuello en paralelo)
-        tcDia = Math.max(...opsDia.map(o=>(o.min||0)*(o.piezas||1)/(o.recursos||1)), 0);
-        const opCuello = opsDia.reduce((a,o)=>(o.min||0)*(o.piezas||1)/(o.recursos||1)>(a.min||0)*(a.piezas||1)/(a.recursos||1)?o:a);
-        tcDiaLabel = `Sin asignación — cuello: ${opCuello?.nombre||'—'} (${tcDia.toFixed(2)} min)`;
+        // Sin asignación: op más lenta
+        opsFlujo.forEach(o=>{ const tc=(o.min||0)*(o.piezas||1)/(o.recursos||1); if(tc>tcCuello){tcCuello=tc;opCuello=o;} });
       }
+      capFlujo = tcCuello>0 ? Math.floor(tiempoReal/tcCuello) : 0;
+    } else {
+      // Paralelo: cada op/máquina produce en paralelo → sumar capacidades individuales
+      // Agrupar por nivel (ops sin dependencias entre sí = paralelas)
+      capFlujo = opsFlujo.reduce((sum,o)=>{
+        const tcBase = (o.min||0)*(o.piezas||1);
+        const nMaq = o.recursos||1;
+        return sum + (tcBase>0 ? Math.floor(tiempoReal/tcBase)*nMaq : 0);
+      },0);
+      // TC cuello = op más lenta
+      opsFlujo.forEach(o=>{ const tc=(o.min||0)*(o.piezas||1)/(o.recursos||1); if(tc>tcCuello){tcCuello=tc;opCuello=o;} });
+    }
 
-      const capDiaN = tcDia>0 ? Math.floor(tiempoReal/tcDia) : 0;
-      const wip = capAnterior!==null ? Math.max(0, capAnterior-capDiaN) : 0;
-      // Utilización = TC del operador más cargado ÷ tiempo real del turno
-      const utilizDia = tiempoReal>0 ? Math.min(100,(tcDia/tiempoReal*100)) : 0;
-      capPorDia.push({dia, tc:tcDia, cap:capDiaN, esCuello:false, label:tcDiaLabel, cargaOps:cargaPorOpDia});
-      utilizPorDia.push({dia, real:utilizDia});
-      wipPorDia.push({dia, wip});
-      capAnterior = capDiaN;
+    const label = modo==='serie'
+      ? (opCuello ? 'Cuello: '+(opCuello.puesto||opCuello.nombre||'—')+' ('+tcCuello.toFixed(2)+' min)' : tcCuello.toFixed(2)+' min')
+      : 'Paralelo — '+opsFlujo.length+' ops ('+tcCuello.toFixed(2)+' min TC máx)';
+
+    return {flujo:f, ops:opsFlujo, tc:tcCuello, cap:capFlujo, modo, operadores:operadoresFlujo, opCuello, label};
+  });
+
+  // Ops sin flujo asignado
+  const opsSinFlujo = opsActivas.filter(o=>!o.flujo||!flujos.find(f=>f.id===o.flujo));
+  if(opsSinFlujo.length){
+    const modIdxsSF = new Set();
+    opsSinFlujo.forEach(o=>{
+      const opIdx=data.ops.indexOf(o);
+      (asigs[opIdx]||asigs[String(opIdx)]||[]).forEach(x=>modIdxsSF.add(parseInt(x)));
     });
-    // Marcar el día cuello (menor capacidad)
-    const minCap = Math.min(...capPorDia.map(d=>d.cap));
-    capPorDia.forEach(d=>{ d.esCuello = d.cap===minCap; });
-    // Capacidad total = mínimo de todos los días
-    capDia = minCap;
+    const cargaOpSF={};
+    modIdxsSF.forEach(mIdx=>{cargaOpSF[mIdx]=0;});
+    opsSinFlujo.forEach(o=>{
+      const opIdx=data.ops.indexOf(o);
+      const tcOp=(o.min||0)*(o.piezas||1)/(o.recursos||1);
+      const opAsigs=(asigs[opIdx]||asigs[String(opIdx)]||[]).map(x=>parseInt(x));
+      const nAsigs=opAsigs.length||1;
+      opAsigs.forEach(mIdx=>{if(cargaOpSF[mIdx]!==undefined)cargaOpSF[mIdx]+=tcOp/nAsigs;});
+    });
+    let tcSF=0, opSF=null;
+    if(modIdxsSF.size>0){
+      tcSF=Math.max(...Object.values(cargaOpSF),0);
+      const mIdxSF=Object.keys(cargaOpSF).reduce((a,b)=>cargaOpSF[a]>cargaOpSF[b]?a:b);
+      opSF=data.mod[parseInt(mIdxSF)];
+    } else {
+      opsSinFlujo.forEach(o=>{const tc=(o.min||0)*(o.piezas||1)/(o.recursos||1);if(tc>tcSF){tcSF=tc;opSF=o;}});
+    }
+    const capSF=tcSF>0?Math.floor(tiempoReal/tcSF):0;
+    resultadosPorFlujo.push({flujo:{id:'__sf',nombre:'Sin flujo'},ops:opsSinFlujo,tc:tcSF,cap:capSF,modo:'serie',operadores:[],opCuello:opSF,label:'Cuello: '+(opSF?.puesto||opSF?.nombre||'—')+' ('+tcSF.toFixed(2)+' min)'});
   }
+
+  // Capacidad total = suma de todos los flujos con ops
+  const flujosCap = resultadosPorFlujo.filter(r=>r.cap>0);
+  const capDia = flujosCap.reduce((a,r)=>a+r.cap,0);
+  const flujoBottleneck = flujosCap.length>0 ? flujosCap.reduce((a,b)=>a.cap<b.cap?a:b) : null;
+  const tiempoCiclo = flujoBottleneck ? flujoBottleneck.tc : (opsActivas.length>0?Math.max(...opsActivas.map(o=>(o.min||0)*(o.piezas||1)/(o.recursos||1)),0):0.001);
+  const tcCaminoCritico = tiempoCiclo;
+  const leadTimeCritico = tiempoCiclo;
+  const tcBalanceo = numOperadores>0 ? totalOps/numOperadores : 0;
+  const tcLabel = flujoBottleneck ? 'Flujo cuello: '+flujoBottleneck.flujo.nombre+' — '+flujoBottleneck.label : 'Sin datos';
+  const hayAsignacion = opsActivas.some(o=>(asigs[data.ops.indexOf(o)]||[]).length>0);
+  const hayMultiDia = false;
+  const diasCiclo = 1;
+  const etapasInfo = [];
+  const hayEtapas = false;
+  const tcOperadores = Math.max(...Object.values(cargaOp).filter(v=>v>0),0);
+  const maxCarga = Math.max(...Object.values(cargaOp),0.01);
+  const capPorDia=[], wipPorDia=[], utilizPorDia=[];
   const demandaDia = demanda>0 ? demanda/dias : 0;
   const taktTime = demandaDia>0 ? tiempoReal/demandaDia : 0;
-
   const eficiencia = (tiempoCiclo>0&&numOperadores>0) ? (totalOps/(tiempoCiclo*numOperadores)*100) : 0;
-  const opsTeoricos = taktTime>0 ? Math.ceil(totalOps/(taktTime*((!hayMultiDia&&modo==='paralelo')?numOperadores:1))) : null;
-  const maxCarga = Math.max(...Object.values(cargaPorOp).filter(v=>typeof v==='number'),0.01);
-  const tiempoMuerto = (!hayMultiDia&&modo==='serie')&&tiempoCiclo>0 ? tiempoCiclo - (totalOps/numOperadores) : 0;
+  const opsTeoricos = taktTime>0 ? Math.ceil(totalOps/taktTime) : null;
+  const tiempoMuerto = 0;
 
-  let estadoColor = 'var(--text-muted)', estadoLabel = 'Captura Takt Time para comparar';
-  if(taktTime>0 && tiempoCiclo>0){
-    if(tiempoCiclo < taktTime*0.95){ estadoColor='var(--ok)'; estadoLabel='TC < TT — Capacidad suficiente'; }
-    else if(tiempoCiclo <= taktTime*1.05){ estadoColor='var(--warn)'; estadoLabel='TC ≈ TT — Ritmo exacto'; }
-    else { estadoColor='var(--bad)'; estadoLabel='TC > TT — No cubre demanda'; }
+  let estadoColor='var(--text-muted)', estadoLabel='Captura Takt Time para comparar';
+  if(taktTime>0&&tiempoCiclo>0){
+    if(tiempoCiclo<taktTime*0.95){estadoColor='var(--ok)';estadoLabel='TC < TT — Capacidad suficiente';}
+    else if(tiempoCiclo<=taktTime*1.05){estadoColor='var(--warn)';estadoLabel='TC ≈ TT — Ritmo exacto';}
+    else{estadoColor='var(--bad)';estadoLabel='TC > TT — No cubre demanda';}
   }
 
   s('resultsBlock').style.display='';
 
-  const card=(label,valor,unidad,formula,color)=>`
-    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:16px 20px;margin-bottom:10px;box-shadow:var(--shadow);">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">${label}</div>
-      <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:700;color:${color||'var(--accent)'};">${valor}</div>
-      <div style="font-size:12px;color:var(--text-tertiary);margin-top:2px;">${unidad}</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border2);line-height:1.8;font-family:var(--font-mono);">${formula}</div>
-    </div>`;
+  const card=(label,valor,unidad,formula,color)=>
+    '<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:16px 20px;margin-bottom:10px;box-shadow:var(--shadow);">'
+    +'<div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">'+label+'</div>'
+    +'<div style="font-family:var(--font-display);font-size:1.8rem;font-weight:700;color:'+(color||'var(--accent)')+';">'+valor+'</div>'
+    +'<div style="font-size:12px;color:var(--text-tertiary);margin-top:2px;">'+unidad+'</div>'
+    +'<div style="font-size:12px;color:var(--text-muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border2);line-height:1.8;font-family:var(--font-mono);">'+formula+'</div>'
+    +'</div>';
 
-  s('resGrid').innerHTML=
-    /* ── BLOQUE 1: TIEMPOS ── */
+  // ── Bloque capacidad por flujo (string concat, sin template literals anidados) ──
+  function mkFlujoBlock(r, ri){
+    const esCuello = flujoBottleneck && r.flujo.id===flujoBottleneck.flujo.id;
+    const colores = ['#D85A30','#1D9E75','#378ADD','#7F77DD','#D4537E','#639922','#EF9F27'];
+    const color = colores[ri%colores.length];
+    const modeTag = r.modo==='paralelo'
+      ? '<span style="font-size:10px;background:var(--ok-bg);color:var(--ok);border-radius:4px;padding:1px 6px;font-weight:700;">Paralelo</span>'
+      : '<span style="font-size:10px;background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:1px 6px;font-weight:700;">Serie</span>';
+    const opsRows = r.ops.map(o=>{
+      const tcOp=(o.min||0)*(o.piezas||1)/(o.recursos||1);
+      const capOp=tcOp>0?Math.floor(tiempoReal/tcOp)*(o.recursos||1):0;
+      const isC=o===r.opCuello;
+      const pct=r.tc>0?Math.min(100,tcOp/r.tc*100):0;
+      const bc=pct>=95?'var(--bad)':pct>=70?'var(--warn)':'var(--ok)';
+      return '<div style="padding:5px 6px;border-bottom:1px solid rgba(0,0,0,.05);">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">'
+        +'<span style="flex:1;font-size:12px;font-weight:'+(isC?700:500)+';color:var(--text-primary);">'+o.nombre+(isC?' 🔴':'')+(o.recursos>1?' x'+o.recursos:'')+'</span>'
+        +'<span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">'+capOp+' pzas</span>'
+        +'<span style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:'+bc+';">'+tcOp.toFixed(2)+' min</span>'
+        +'</div>'
+        +'<div style="height:3px;background:var(--border2);border-radius:99px;overflow:hidden;">'
+        +'<div style="height:100%;width:'+pct.toFixed(1)+'%;background:'+bc+';border-radius:99px;"></div>'
+        +'</div></div>';
+    }).join('');
+    const opRows = r.operadores.length>0
+      ? '<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.07);">'
+        +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:5px;">Operadores</div>'
+        +r.operadores.map(m=>{
+          const mIdx=data.mod.indexOf(m);
+          const carga=cargaOp[mIdx]||0;
+          const pct2=r.tc>0?Math.min(100,carga/r.tc*100):0;
+          const bc2=pct2>=95?'var(--bad)':pct2>=70?'var(--warn)':'var(--ok)';
+          return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+            +'<span style="font-size:12px;flex:1;color:var(--text-primary);">'+m.puesto+'</span>'
+            +'<span style="font-family:var(--font-mono);font-size:11px;color:'+bc2+';font-weight:700;">'+carga.toFixed(2)+' min ('+pct2.toFixed(0)+'%)</span>'
+            +'<div style="width:70px;height:4px;background:var(--border2);border-radius:99px;overflow:hidden;"><div style="height:100%;width:'+pct2.toFixed(1)+'%;background:'+bc2+';border-radius:99px;"></div></div>'
+            +'</div>';
+        }).join('')+'</div>'
+      : '<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Sin operadores asignados</div>';
+    return '<div style="margin-bottom:14px;padding:12px 14px;border-radius:var(--r);border-left:3px solid '+color+';background:'+(esCuello?'var(--bad-bg)':'var(--surface2)')+';">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">'
+      +'<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13px;font-weight:700;color:var(--text-primary);">'+r.flujo.nombre+'</span>'+modeTag
+      +(esCuello?'<span style="font-size:10px;background:var(--bad-bg);color:var(--bad);border-radius:4px;padding:1px 6px;font-weight:700;border:1px solid rgba(217,53,53,.3);">🔴 cuello</span>':'')
+      +'</div>'
+      +'<span style="font-family:var(--font-display);font-size:1.3rem;font-weight:700;color:'+(esCuello?'var(--bad)':'var(--ok)')+';">'+r.cap+' pzas/día</span>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">'+r.label+'</div>'
+      +opsRows+opRows+'</div>';
+  }
+
+  const flujoBlocksHtml = resultadosPorFlujo.filter(r=>r.ops.length>0).map((r,ri)=>mkFlujoBlock(r,ri)).join('');
+  const demandaRowHtml = demanda>0
+    ? '<div style="margin-top:10px;padding:10px 14px;border-radius:var(--r);background:'+(capDia>=demanda/dias?'var(--ok-bg)':'var(--bad-bg)')+';border:1px solid '+(capDia>=demanda/dias?'rgba(30,158,94,.3)':'rgba(217,53,53,.3)')+';">'
+      +'<span style="font-size:12px;color:'+(capDia>=demanda/dias?'var(--ok)':'var(--bad)')+';font-weight:600;">'+(capDia>=demanda/dias?'✓ Capacidad suficiente':'⚠ Capacidad insuficiente')+' — Demanda: '+Math.ceil(demanda/dias)+' pzas/día · Sistema: '+capDia+' pzas/día</span></div>'
+    : '';
+
+  s('resGrid').innerHTML =
+    // BLOQUE 1: TIEMPOS
     `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow);">
-      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px;">⏱ Tiempos
-        <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:${hayMultiDia?'rgba(91,184,232,0.12)':modo==='paralelo'?'var(--ok-bg)':'var(--accent-bg)'};color:${hayMultiDia?'#2a7aaa':modo==='paralelo'?'var(--ok)':'var(--accent)'};">${hayMultiDia?diasCiclo+' días':modo==='paralelo'?'Paralelo':'Serie'}</span>
+      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);">⏱ Tiempos
+        <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--accent-bg);color:var(--accent);">Por flujos</span>
       </div>
-      ${hayMultiDia?`<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border2);">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">TC por etapa</div>
-        ${etapasInfo.map(e=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;">
-          <span style="font-size:10px;padding:1px 6px;border-radius:20px;background:${e.modo==='paralelo'?'var(--ok-bg)':'var(--accent-bg)'};color:${e.modo==='paralelo'?'var(--ok)':'var(--accent)'};font-weight:600;">Día ${e.dia}</span>
-          <span style="color:var(--text-primary);font-weight:500;">${e.nombre}</span>
-          <span style="margin-left:auto;font-family:var(--font-mono);font-weight:700;color:${e.tc===tiempoCiclo?'var(--bad)':'var(--text-tertiary)'};">${e.tc.toFixed(2)} min${e.tc===tiempoCiclo?' 🔴 cuello':''}</span>
-        </div>`).join('')}
-      </div>`:''}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px;">
         <div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Disponible</div>
@@ -2644,17 +2785,12 @@ function calcularResultados(){
         <div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Real</div>
           <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:${tiempoReal>=0?'var(--accent)':'var(--bad)'};">${tiempoReal.toFixed(2)} min</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${disponible} − ${totalCons.toFixed(2)} cons = ${tiempoReal.toFixed(2)}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${disponible} − ${totalCons.toFixed(2)} = ${tiempoReal.toFixed(2)}</div>
         </div>
         <div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Tiempo Ciclo</div>
-          <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--accent);">${tiempoCiclo>0?tiempoCiclo.toFixed(2)+' min':'—'}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${tiempoCiclo>0?tcLabel:'sin datos'}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Lead Time</div>
-          <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--text-tertiary);">${leadTimeCritico>0?leadTimeCritico.toFixed(2)+' min':'—'}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${leadTimeCritico>0?'una pieza de inicio a fin':'sin datos'}</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">TC cuello sistema</div>
+          <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--bad);">${tiempoCiclo>0?tiempoCiclo.toFixed(2)+' min':'—'}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${tcLabel}</div>
         </div>
         <div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Takt Time</div>
@@ -2664,236 +2800,43 @@ function calcularResultados(){
       </div>
     </div>` +
 
-    /* ── BLOQUE 2: CAPACIDAD Y DEMANDA ── */
+    // BLOQUE 2: CAPACIDAD POR FLUJO
+    '<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow);">'
+    +'<div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);">📦 Capacidad por flujo</div>'
+    + flujoBlocksHtml
+    +'<div style="padding:10px 14px;background:var(--surface2);border-radius:var(--r);display:flex;align-items:center;justify-content:space-between;margin-top:6px;border:1px solid var(--border2);">'
+    +'<span style="font-size:13px;font-weight:700;color:var(--text-primary);">Total sistema</span>'
+    +'<span style="font-family:var(--font-display);font-size:1.4rem;font-weight:700;color:var(--accent);">'+capDia+' pzas/día</span>'
+    +'</div>'
+    + demandaRowHtml
+    +'</div>' +
+
+    // BLOQUE 3: BALANCEO DE OPERADORES
     `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow);">
-      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);">📦 Capacidad y Demanda</div>
-
-      <!-- Detalle por operación — siempre visible -->
-      <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border2);">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:10px;">Capacidad por día</div>
-
-        <!-- Header -->
-        <div style="display:grid;grid-template-columns:1fr 110px 110px;gap:8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);padding:4px 8px;margin-bottom:4px;">
-          <span>Operación</span>
-          <span style="text-align:right;">Instalada</span>
-          <span style="text-align:right;">Real (personal)</span>
-        </div>
-
-        ${(hayMultiDia?capPorDia.map(d=>({dia:d.dia,cap:d.cap,tc:d.tc,esCuello:d.esCuello})):
-          [{dia:1,cap:capDia,tc:tiempoCiclo,esCuello:true}]).map(d=>{
-          const opsDia = hayMultiDia ? opsActivas.filter(o=>(o.dia||1)===d.dia) : opsActivas;
-
-          // Build operator cycle map: for each op, find which operator does it and their full cycle load for this day
-          const opCicloMap = {}; // opIdx → ciclo del operador (sum of his ops in this day)
-          opsDia.forEach(o=>{
-            const opIdx = data.ops.indexOf(o);
-            const opAsigs = (asigs[opIdx]||asigs[String(opIdx)]||[]).map(x=>parseInt(x));
-            if(opAsigs.length>0){
-              const mIdx = opAsigs[0];
-              // Sum all ops assigned to this operator in this day
-              const cargaOp = opsDia.reduce((acc,op2)=>{
-                const op2Idx = data.ops.indexOf(op2);
-                const op2Asigs = (asigs[op2Idx]||asigs[String(op2Idx)]||[]).map(x=>parseInt(x));
-                if(op2Asigs.includes(mIdx)) acc += (op2.min||0)*(op2.piezas||1)/(op2.recursos||1);
-                return acc;
-              },0);
-              opCicloMap[opIdx] = cargaOp;
-            }
-          });
-
-          const rows = opsDia.map(o=>{
-            const opIdx = data.ops.indexOf(o);
-            const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
-            const capInstalada = tcOp>0 ? Math.floor(tiempoReal/tcOp) : 0;
-            // Real: based on operator's full cycle
-            const cicloOp = opCicloMap[opIdx];
-            const capReal = cicloOp>0 ? Math.floor(tiempoReal/cicloOp) : capInstalada;
-            const isCuello = hayMultiDia && d.esCuello && capReal===d.cap;
-            const pzas = o.piezas||1;
-            return `<div style="display:grid;grid-template-columns:1fr 110px 110px;gap:8px;padding:5px 8px;border-bottom:1px solid var(--border2);align-items:center;${isCuello?'background:var(--bad-bg);border-radius:4px;':''}">
-              <span style="font-size:12px;color:var(--text-primary);font-weight:500;">${o.nombre}${pzas>1?` <span style="font-size:10px;color:var(--ok);">×${pzas}</span>`:''}${isCuello?' <span style="font-size:9px;color:var(--bad);font-weight:700;">🔴</span>':''}</span>
-              <span style="text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">${capInstalada}</span>
-              <span style="text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:700;color:${cicloOp>0?'var(--accent)':'var(--text-muted)'};">${capReal}${cicloOp===0?' <span style="font-size:9px;">sin asig.</span>':''}</span>
-            </div>`;
-          }).join('');
-
-          return `<div style="margin-bottom:10px;">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);padding:4px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px;">
-              📅 Día ${d.dia}${d.esCuello?' · 🔴 cuello':''}
-            </div>
-            ${rows}
-          </div>`;
-        }).join('')}
-        ${(hayMultiDia?capPorDia:[{dia:1,cap:capDia,tc:tiempoCiclo,esCuello:true,cargaOps:cargaPorOp}]).map(d=>{
-          const wip = wipPorDia.find(w=>w.dia===d.dia)||{wip:0};
-          const barColor = d.esCuello?'var(--bad)':'var(--ok)';
-          const opsDia = opsActivas.filter(o=>(o.dia||1)===d.dia);
-
-          // Utilización por operación = (TC op × piezas del día) ÷ tiempo disponible
-          const utilizOps = opsDia.map(o=>{
-            const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
-            const pct = tiempoReal>0 ? Math.min(100,(tcOp*d.cap/tiempoReal*100)) : 0;
-            const color = pct>=90?'var(--bad)':pct>=70?'var(--warn)':'var(--ok)';
-            return {nombre:o.nombre, pct, color, tcOp};
-          });
-
-          // Utilización por operador = suma de (TC op × piezas) de todas sus ops en el día ÷ tiempo disponible
-          const utilizMod = {};
-          modPresentes.forEach(m=>{ utilizMod[data.mod.indexOf(m)] = 0; });
-          opsDia.forEach(o=>{
-            const opIdx = data.ops.indexOf(o);
-            const tcOp = (o.min||0)*(o.piezas||1)/(o.recursos||1);
-            const opAsigs = asigs[opIdx] || asigs[String(opIdx)] || [];
-            opAsigs.map(x=>parseInt(x)).forEach(mIdx=>{
-              if(utilizMod[mIdx]!==undefined) utilizMod[mIdx] += tcOp*d.cap;
-            });
-          });
-
-          return `<div style="margin-bottom:12px;padding:14px 16px;background:var(--surface2);border-radius:var(--r);border-left:3px solid ${barColor};">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <div style="font-weight:600;font-size:13px;color:var(--text-primary);">
-                Día ${d.dia}
-                ${d.esCuello?'<span style="margin-left:6px;font-size:10px;background:var(--bad-bg);color:var(--bad);border-radius:4px;padding:1px 6px;font-weight:700;">🔴 cuello</span>':''}
-              </div>
-              <div style="font-family:var(--font-display);font-size:1.3rem;font-weight:700;color:${barColor};">${d.cap} pzas/día</div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;color:var(--text-muted);margin-bottom:12px;">
-              <div>TC cuello: <strong style="color:var(--text-primary);">${d.tc.toFixed(2)} min</strong></div>
-              <div>WIP acum: <strong style="color:${wip.wip>0?'var(--warn)':'var(--ok)'};">${wip.wip} pzas/día</strong></div>
-            </div>
-            <div style="font-size:10px;color:var(--text-muted);margin-bottom:6px;">${d.label||''}</div>
-
-            <!-- Utilización por operación -->
-            <div style="margin-bottom:10px;">
-              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px;">⚙️ Utilización por operación</div>
-              ${utilizOps.map(u=>`
-                <div style="margin-bottom:5px;">
-                  <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">
-                    <span style="color:var(--text-primary);">${u.nombre}</span>
-                    <span style="font-family:var(--font-mono);font-weight:700;color:${u.color};">${u.pct.toFixed(1)}%</span>
-                  </div>
-                  <div style="height:5px;background:var(--border2);border-radius:3px;overflow:hidden;">
-                    <div style="height:100%;width:${u.pct}%;background:${u.color};border-radius:3px;"></div>
-                  </div>
-                </div>`).join('')}
-            </div>
-
-            <!-- Utilización por operador -->
-            ${Object.keys(utilizMod).filter(k=>utilizMod[k]>0).length>0?`
-            <div>
-              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:6px;">👷 Utilización por operador</div>
-              ${Object.entries(utilizMod).filter(([_,v])=>v>0).map(([mIdx,total])=>{
-                const op = data.mod[parseInt(mIdx)];
-                const pct = tiempoReal>0 ? Math.min(100,(total/tiempoReal*100)) : 0;
-                const color = pct>=90?'var(--bad)':pct>=70?'var(--warn)':'var(--ok)';
-                return `<div style="margin-bottom:5px;">
-                  <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">
-                    <span style="color:var(--text-primary);">${op?.puesto||'—'}</span>
-                    <span style="font-family:var(--font-mono);font-weight:700;color:${color};">${pct.toFixed(1)}%</span>
-                  </div>
-                  <div style="height:5px;background:var(--border2);border-radius:3px;overflow:hidden;">
-                    <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;"></div>
-                  </div>
-                </div>`;
-              }).join('')}
-            </div>`:''}
-
-            <div style="font-size:10px;color:var(--text-muted);margin-top:8px;border-top:1px solid var(--border2);padding-top:6px;">${tiempoReal.toFixed(0)} min reales ÷ ${d.tc.toFixed(2)} min/ciclo = ${d.cap} pzas</div>
-          </div>`;
-        }).join('')}
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
-          <div style="padding:10px 14px;background:var(--surface2);border-radius:var(--r);text-align:center;">
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Capacidad total (cuello)</div>
-            <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--bad);">${capDia} pzas/día</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">limitada por ${capPorDia.find(d=>d.esCuello)?'Día '+capPorDia.find(d=>d.esCuello).dia:'el cuello'}</div>
-          </div>
-          <div style="padding:10px 14px;background:var(--surface2);border-radius:var(--r);text-align:center;">
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Lead Time</div>
-            <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--accent);">${leadTimeDias} día${leadTimeDias!==1?'s':''}</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">de inicio a pieza terminada</div>
-          </div>
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px;">
-        ${!hayMultiDia?`<div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Capacidad / día</div>
-          <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--accent);">${capDia>0?capDia+' pzas':'—'}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${capDia>0?tiempoReal.toFixed(2)+' / '+tiempoCiclo.toFixed(2)+' = '+capDia:'Se requiere TC'}</div>
-        </div>`:''}
-        <div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Ops. teóricos mín.</div>
-          <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:${opsTeoricos!==null?(opsTeoricos<=numOperadores?'var(--ok)':'var(--bad)'):'var(--text-muted)'};">${opsTeoricos!==null?opsTeoricos+' ops.':'—'}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${opsTeoricos!==null?'ceil('+totalOps.toFixed(2)+'/'+taktTime.toFixed(2)+') = '+opsTeoricos:'captura demanda'}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">TC vs Takt Time</div>
-          <div style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:${estadoColor};">${estadoLabel}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${tiempoCiclo>0&&taktTime>0?'TC '+tiempoCiclo.toFixed(2)+' vs TT '+taktTime.toFixed(2):'—'}</div>
-        </div>
-      </div>
-    </div>` +
-
-    /* ── BLOQUE 3: BALANCEO ── */
-    `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow);">
-      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);">👥 Balanceo</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px;margin-bottom:16px;">
-        <div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Operadores presentes</div>
-          <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:${numOperadores===data.mod.length?'var(--ok)':'var(--warn)'};">${numOperadores} / ${data.mod.length}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${modPresentes.map(m=>m.puesto).join(', ')||'Sin personal'}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Eficiencia línea</div>
-          <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:${eficiencia>=85?'var(--ok)':eficiencia>=70?'var(--warn)':'var(--bad)'};">${eficiencia>0?eficiencia.toFixed(1)+'%':'—'}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${eficiencia>0?totalOps.toFixed(2)+' / ('+tiempoCiclo.toFixed(2)+'×'+numOperadores+') = '+eficiencia.toFixed(1)+'%':'sin datos'}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:4px;">Tiempo muerto / op.</div>
-          <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--accent);">${tiempoMuerto>=0&&tiempoCiclo>0?tiempoMuerto.toFixed(2)+' min':'—'}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${tiempoCiclo>0?'TC '+tiempoCiclo.toFixed(2)+' − carga '+(totalOps/numOperadores).toFixed(2)+' = '+tiempoMuerto.toFixed(2):'sin datos'}</div>
-        </div>
-      </div>
-      ${hayAsignacion&&modPresentes.length>0?`
-      <div style="border-top:1px solid var(--border2);padding-top:14px;">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:10px;">Carga real por operador</div>
-        ${modPresentes.map(m=>{
-          const mIdx = data.mod.indexOf(m);
-          const carga = cargaPorOp[mIdx]||0;
-          const pct = maxCarga>0?(carga/maxCarga*100):0;
-          const esCuello = carga===tiempoCiclo;
-          const barColor = esCuello?'var(--bad)':pct>=70?'var(--warn)':'var(--ok)';
-          return '<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span style="font-weight:600;color:var(--text-primary);">'+m.puesto+(esCuello?' <span style="font-size:10px;background:var(--bad-bg);color:var(--bad);border-radius:4px;padding:1px 5px;">cuello</span>':'')+'</span><span style="font-family:var(--font-mono);font-weight:700;color:'+barColor+';">'+carga.toFixed(2)+' min</span></div><div style="height:8px;background:var(--border2);border-radius:4px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:4px;transition:width .3s;"></div></div></div>';
-        }).join('')}
-      </div>`:''}
-    </div>` +
-
-    /* ── BLOQUE 4: CARGA POR OPERACIÓN ── */
-    `<div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);">
-        <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);">📊 Carga por operación</div>
-        ${tiempoCiclo>0?`<div style="font-size:11px;color:var(--text-muted);">TC = ${tiempoCiclo.toFixed(2)} min (100%)</div>`:''}
-      </div>
-      ${opsActivas.length>0?opsActivas.map(o=>{
-        const pct=tiempoCiclo>0?(o.min/tiempoCiclo*100):0;
-        const barColor=pct>=95?'var(--bad)':pct>=70?'var(--warn)':'var(--ok)';
-        return `<div style="margin-bottom:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:5px;">
-            <span style="color:var(--text-primary);font-weight:500;">${o.nombre}</span>
-            <span style="color:${barColor};font-weight:700;font-family:var(--font-mono);">${o.min.toFixed(2)} min · ${pct.toFixed(0)}%</span>
-          </div>
-          <div style="height:10px;background:var(--border2);border-radius:5px;overflow:hidden;">
-            <div style="height:100%;width:${Math.min(pct,100)}%;background:${barColor};border-radius:5px;transition:width .4s;"></div>
-          </div>
-        </div>`;
-      }).join(''):`<div style="color:var(--text-muted);font-size:13px;">Sin operaciones activas</div>`}
+      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border2);">👥 Carga de operadores</div>
+      ${modPresentes.length===0?'<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px;">Sin operadores registrados</div>':
+        '<div style="overflow-x:auto;">'
+        + modPresentes.map(m=>{
+            const mIdx=data.mod.indexOf(m);
+            const carga=cargaOp[mIdx]||0;
+            const pct=maxCarga>0?Math.min(100,carga/maxCarga*100):0;
+            const color=pct>=95?'var(--bad)':pct>=70?'var(--warn)':'var(--ok)';
+            const flujoNombre=(cur().flujos||[]).find(f=>f.id===(data.ops.find(o=>{
+              const oi=data.ops.indexOf(o);
+              return (asigs[oi]||asigs[String(oi)]||[]).map(x=>parseInt(x)).includes(mIdx);
+            })?.flujo))?.nombre||'Sin flujo';
+            return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border2);">'
+              +'<div style="flex:1;min-width:100px;font-size:13px;font-weight:500;color:var(--text-primary);">'+m.puesto+'<br><span style="font-size:10px;color:var(--text-muted);">'+flujoNombre+'</span></div>'
+              +'<div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:'+color+';min-width:70px;text-align:right;">'+carga.toFixed(2)+' min</div>'
+              +'<div style="flex:1;max-width:160px;height:6px;background:var(--border2);border-radius:99px;overflow:hidden;"><div style="height:100%;width:'+pct.toFixed(1)+'%;background:'+color+';border-radius:99px;"></div></div>'
+              +'</div>';
+          }).join('')
+        +'</div>'
+      }
     </div>`;
 }
 
-// ═══════════════════════════════════════════════════
-// CIF
-// ═══════════════════════════════════════════════════
-const CIF_COLORS=['#e8a840','#5bb8e8','#e05c5c','#6fc98c','#c87de8','#e88a40','#40c8e8','#e8c840','#e87840','#40e8b8','#e84060','#a0c840','#5870e8','#e8a040','#40e870','#e84898','#60b8e8','#c8e840','#e840c8'];
+
 function saveCIF(){
   const concepto=s('cifConcepto').value;
   const monto=parseFloat(s('cifMonto').value);
@@ -2925,6 +2868,7 @@ function editCIF(i){
   openModal('modal-cif', false);
 }
 function delCIF(i){ cur().cif.splice(i,1); markUpdated(); renderCIF(); }
+const CIF_COLORS=['#e8a840','#5bb8e8','#e05c5c','#6fc98c','#c87de8','#e88a40','#40c8e8','#e8c840','#e87840','#40e8b8','#e84060','#a0c840','#5870e8','#e8a040','#40e870','#e84898','#60b8e8','#c8e840','#e840c8'];
 function renderCIF(){
   const cif=cur().cif;
   const wrap=s('cifTablaWrap'), totBlock=s('cifTotalesBlock');
