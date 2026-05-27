@@ -886,7 +886,7 @@ function openDet(idx){
 function goBack(){closeCmp();if(prevView==='city'&&curCity)openCity(curCity);else showOv();}
 function editDet(){if(detIdx!==null)openM(detIdx);}
 function addDetPhoto(){v('d-pi').click();}
-function detPhotos(e){if(!e.target.files.length||detIdx===null)return;const d=DATA[detIdx];if(!d.photos)d.photos=[];Array.from(e.target.files).forEach(f=>{const r=new FileReader();r.onload=ev=>{d.photos.push(ev.target.result);openDet(detIdx);};r.readAsDataURL(f);});}
+function detPhotos(e){if(!e.target.files.length||detIdx===null)return;const d=DATA[detIdx];if(!d.photos)d.photos=[];Array.from(e.target.files).forEach(f=>{const r=new FileReader();r.onload=ev=>{d.photos.push(ev.target.result);openDet(detIdx);fbSave();};r.readAsDataURL(f);});}
 
 // ── CAROUSEL ──
 function buildCarousel(photos){
@@ -997,20 +997,29 @@ const _fbSessionId=(()=>{
 
 function _waitFb(){return new Promise(r=>{const c=()=>_fbRef?r():setTimeout(c,100);c();});}
 
-function _fbSerialize(){
-  // Strip photos (too heavy for RTDB) — store flag only
-  const dataToSave=DATA.map(d=>{
-    const {photos,...rest}=d;
-    return{...rest,_hasPhotos:!!(photos&&photos.length)};
-  });
+function _compressPhoto(base64,maxW,maxH,quality){return new Promise(res=>{const img=new Image();img.onload=()=>{const sc=Math.min(1,maxW/img.width,maxH/img.height);const w=Math.round(img.width*sc),h=Math.round(img.height*sc);const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',quality));};img.src=base64;});}
+
+async function _fbSerializeAsync(){
+  // Compress photos before saving to RTDB (max 800px, 0.6 quality)
+  const dataToSave=await Promise.all(DATA.map(async d=>{
+    const photos=d.photos&&d.photos.length
+      ?await Promise.all(d.photos.map(p=>p.startsWith('data:image')?_compressPhoto(p,800,800,0.6):Promise.resolve(p)))
+      :[];
+    return{...d,photos};
+  }));
   return{data:dataToSave,zones:ZONES,_savedAt:Date.now(),_sessionId:_fbSessionId};
+}
+
+function _fbSerialize(){
+  // Fallback sync version (no photos) — use _fbSerializeAsync for saves
+  return{data:DATA.map(d=>({...d})),zones:ZONES,_savedAt:Date.now(),_sessionId:_fbSessionId};
 }
 
 function _fbApply(remote){
   if(!remote)return;
   if(remote.data&&Array.isArray(remote.data)&&remote.data.length){
     DATA.length=0;
-    remote.data.forEach(d=>{DATA.push({...d,photos:[]});});
+    remote.data.forEach(d=>{DATA.push({...d,photos:d.photos||[]});});
   }
   if(remote.zones){Object.assign(ZONES,remote.zones);}
 }
@@ -1037,12 +1046,12 @@ async function fbPush(){
     await _waitFb();
     const snap=await _fbRef.get();
     const remote=snap.val();
-    const local=_fbSerialize();
+    const local=await _fbSerializeAsync();
     const toSave=remote?_fbMerge(local,remote):local;
     toSave._savedAt=Date.now();toSave._sessionId=_fbSessionId;
     await _fbRef.set(toSave);
     _pendingSave=false;_lastFbSave=Date.now();_fbUI('ok');
-    console.log('[FB-INFRA] push OK');
+    console.log('[FB-INFRA] push OK con fotos');
   }catch(e){
     console.error('[FB-INFRA] push:',e.message);_fbUI('error');
     setTimeout(()=>{if(_pendingSave)fbPush();},5000);
