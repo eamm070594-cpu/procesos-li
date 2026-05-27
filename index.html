@@ -671,7 +671,7 @@ dialog::backdrop{background:rgba(26,34,51,.35);backdrop-filter:blur(4px)}
       <button class="snav-btn admin-only" data-view="bitacora"><span class="icon">📓</span> Bitácora</button>
       <div class="snav-section">Herramientas</div>
       <button class="snav-btn" data-view="controlct"><span class="icon">🏭</span> Control CT</button>
-      <button class="snav-btn" data-view="infraestructura"><span class="icon">🏢</span> Infraestructura</button>
+      <button class="snav-btn" onclick="window.open('infraestructura_dashboard.html','_blank')"><span class="icon">🏢</span> Infraestructura</button>
       <button class="snav-btn" data-view="roi"><span class="icon">📈</span> Plan de Inversión ↗</button>
       <div class="snav-section">Sistema</div>
       <button class="snav-btn" data-view="ajustes"><span class="icon">⚙️</span> Ajustes</button>
@@ -1214,21 +1214,6 @@ function doPost(e){
       <iframe id="cct-frame" src="" style="display:none;flex:1;width:100%;height:100%;border:none;background:var(--bg);" onload="document.getElementById('cct-loading').style.display='none';this.style.display='flex';"></iframe>
     </div>
 
-  <!-- ─── VIEW: Infraestructura Comercial ─── -->
-    <div class="view" id="view-infraestructura" style="padding:0;overflow:hidden;display:none;flex-direction:column;height:100%">
-      <div style="display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border2);flex-shrink:0;z-index:10;">
-        <button onclick="showView('revisar')" style="display:flex;align-items:center;gap:6px;background:transparent;border:none;cursor:pointer;color:var(--accent);font-family:var(--font-body);font-size:13px;font-weight:600;padding:4px 8px;border-radius:var(--r);transition:background .12s;" onmouseover="this.style.background='var(--accent-bg)'" onmouseout="this.style.background='transparent'">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-          Ingeniería de Procesos
-        </button>
-        <span style="font-size:12px;color:var(--muted);">/ Infraestructura Comercial</span>
-      </div>
-      <div id="infra-loading" style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;gap:8px;">
-        <span style="animation:pulse .8s infinite">⏳</span> Cargando Infraestructura…
-      </div>
-      <iframe id="infra-frame" src="" style="display:none;flex:1;width:100%;height:100%;border:none;background:var(--bg);" onload="document.getElementById('infra-loading').style.display='none';this.style.display='flex';"></iframe>
-    </div>
-
   <!-- ─── VIEW: ROI / Plan de Inversión ─── -->
     <div class="view" id="view-roi" style="padding:0;overflow:hidden;display:none;flex-direction:column;height:100%">
       <div style="display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border2);flex-shrink:0;z-index:10;">
@@ -1351,7 +1336,7 @@ function doPost(e){
     <button class="drawer-item" onclick="showView('calendario');closeMasDrawer()"><span style="font-size:28px">🗓</span><span>Calendario</span></button>
     <button class="drawer-item admin-only" onclick="showView('evaluacion');closeMasDrawer()"><span style="font-size:28px">🏆</span><span>Evaluación</span></button>
     <button class="drawer-item" onclick="showView('controlct');closeMasDrawer()"><span style="font-size:28px">🏭</span><span>Control CT</span></button>
-    <button class="drawer-item" onclick="showView('infraestructura');closeMasDrawer()"><span style="font-size:28px">🏢</span><span>Infraestructura</span></button>
+    <button class="drawer-item" onclick="window.open('infraestructura_dashboard.html','_blank');closeMasDrawer()"><span style="font-size:28px">🏢</span><span>Infraestructura</span></button>
     <button class="drawer-item" onclick="showView('roi');closeMasDrawer()"><span style="font-size:28px">📈</span><span>Plan de Inversión ↗</span></button>
     <button class="drawer-item" onclick="showView('ajustes');closeMasDrawer()"><span style="font-size:28px">⚙️</span><span>Ajustes</span></button>
   </div>
@@ -1687,7 +1672,7 @@ function showView(v){
   // Reset ingeniero/proyecto screens when navigating via main nav
   _currentIngenieroId=null;_currentProyectoId=null;
   // Restaurar sidebar si venimos de Control CT
-  if(v!=='controlct' && v!=='roi' && v!=='infraestructura'){
+  if(v!=='controlct' && v!=='roi'){
     const sidebar=document.getElementById('sidebar');
     if(sidebar) sidebar.style.display='';
   }
@@ -1713,7 +1698,6 @@ function renderView(v){
     directivo:renderDirectivo,
     centros:renderCentros,
     controlct:renderControlCT,
-    infraestructura:renderInfraestructura,
     roi:renderROI,
   };
   if(fns[v])fns[v]();
@@ -3830,20 +3814,6 @@ function renderControlCT(){
     loading.style.display = 'flex';
     frame.style.display = 'none';
     frame.src = 'Control_CT_v7.html';
-  }
-}
-
-function renderInfraestructura(){
-  const frame = document.getElementById('infra-frame');
-  const loading = document.getElementById('infra-loading');
-  if(!frame) return;
-  const sidebar = document.getElementById('sidebar');
-  if(sidebar) sidebar.style.display='none';
-  document.getElementById('content')?.style.setProperty('margin-left','0');
-  if(!frame.src || frame.src === window.location.href || frame.src === ''){
-    loading.style.display = 'flex';
-    frame.style.display = 'none';
-    frame.src = 'infraestructura_dashboard.html';
   }
 }
 
