@@ -310,15 +310,26 @@ body.dark .btn-add{color:var(--accent);}
 .dash-chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px 22px;}
 
 /* EQUIPO VIEW */
-.equipo-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;}
-.equipo-section-title{font-size:0.65rem;font-weight:700;letter-spacing:3px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-.ingeniero-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:16px;transition:border-color .15s;}
-.ingeniero-card:hover{border-color:var(--border-mid);}
-.ing-avatar{width:40px;height:40px;border-radius:50%;background:var(--selected-ac,#333);display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;color:#fff;flex-shrink:0;text-transform:uppercase;}
-.ing-name{font-size:0.9rem;font-weight:700;letter-spacing:1px;color:var(--text-primary);text-transform:uppercase;}
-.ing-role{font-size:0.65rem;letter-spacing:2px;color:var(--text-secondary);text-transform:uppercase;}
+.equipo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;}
+.equipo-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.equipo-section-header{display:flex;align-items:center;gap:10px;padding:14px 20px;background:var(--bg2);border-bottom:1px solid var(--border);}
+.equipo-section-title{font-size:0.6rem;font-weight:800;letter-spacing:3px;color:var(--text-secondary);text-transform:uppercase;flex:1;}
+.equipo-section-count{font-size:0.6rem;font-weight:700;letter-spacing:1px;color:var(--text-tertiary);background:var(--hover-bg);border:1px solid var(--border);border-radius:20px;padding:2px 8px;}
+.equipo-section-body{padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+.ingeniero-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:14px;transition:border-color .15s,box-shadow .15s;cursor:default;}
+.ingeniero-card:hover{border-color:var(--border-mid);box-shadow:0 2px 8px rgba(0,0,0,0.06);}
+.ing-avatar{width:44px;height:44px;border-radius:10px;background:var(--selected-ac,#333);display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;color:#fff;flex-shrink:0;text-transform:uppercase;letter-spacing:1px;}
+.ing-badge{display:inline-flex;align-items:center;gap:4px;font-size:0.55rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border-radius:4px;margin-bottom:4px;}
+.ing-badge.gerente{background:rgba(155,143,232,0.12);border:1px solid rgba(155,143,232,0.3);color:#9b8fe8;}
+.ing-badge.ingeniero{background:rgba(212,98,42,0.1);border:1px solid rgba(212,98,42,0.25);color:var(--accent);}
+.ing-name{font-size:0.82rem;font-weight:700;letter-spacing:.5px;color:var(--text-primary);}
 .ing-areas{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
-.area-chip{font-size:0.58rem;font-weight:700;letter-spacing:1px;padding:2px 8px;border-radius:6px;background:var(--hover-bg);border:1px solid var(--border);color:var(--text-primary);}
+.area-chip{font-size:0.55rem;font-weight:700;letter-spacing:.5px;padding:2px 7px;border-radius:5px;background:var(--hover-bg);border:1px solid var(--border);color:var(--text-secondary);}
+.ing-actions{display:flex;gap:5px;margin-left:auto;flex-shrink:0;}
+.equipo-empty{color:var(--text-tertiary);font-size:0.72rem;letter-spacing:1px;padding:12px 4px;text-align:center;}
+.btn-add-eng{display:inline-flex;align-items:center;gap:7px;padding:8px 18px;border-radius:8px;border:1px solid var(--accent);background:var(--accent-bg);color:var(--accent);font-family:var(--font-body);font-size:0.65rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:background .15s;}
+.btn-add-eng:hover{background:rgba(212,98,42,0.12);}
+.btn-add-eng svg{width:13px;height:13px;}
 
 /* TABULADOR */
 .tab-group-block{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden;}
@@ -364,15 +375,9 @@ body.dark .dash-alert-title{color:#e05c5c;}
 </style>
 </head>
 <body>
-<button id="btnBackIP" onclick="volverAIP()" title="Regresar a Ingeniería de Procesos" style="position:fixed;top:14px;left:18px;z-index:9999;display:flex;align-items:center;gap:6px;border-radius:20px;padding:6px 14px;cursor:pointer;font-family:var(--font-body);font-size:12px;font-weight:600;background:var(--accent-bg);border:1px solid rgba(212,98,42,0.25);color:var(--accent);transition:background .15s;">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-  LI Procesos
-</button>
 
-<button id="themeToggle" onclick="toggleTheme()">
-  <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-  <span id="themeLabel">Oscuro</span>
-</button>
+
+
 
 <div id="page">
   <div id="sideList"></div>
@@ -684,6 +689,9 @@ body.dark .dash-alert-title{color:#e05c5c;}
   <div id="dashboardView">
     <div class="dash-header">
       <div style="flex:1;"><div class="dash-title">Dashboard General</div><div class="dash-subtitle">Comparativo de todos los centros de trabajo</div></div>
+      <button onclick="volverAIP()" style="display:inline-flex;align-items:center;gap:5px;margin-right:8px;padding:6px 13px;border-radius:8px;border:1px solid rgba(212,98,42,0.25);background:var(--accent-bg);color:var(--accent);font-family:var(--font-body);font-size:11px;font-weight:700;letter-spacing:.04em;cursor:pointer;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>LI Procesos
+      </button>
       <button class="dash-back" onclick="closeDashboard()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Volver
       </button>
@@ -744,9 +752,12 @@ body.dark .dash-alert-title{color:#e05c5c;}
   <div id="costosView">
     <div class="dash-header">
       <div style="flex:1;"><div class="dash-title">Costos CT</div><div class="dash-subtitle">Desglose de MOD y CIF por centro de trabajo</div></div>
-      <button class="snap-btn" id="btnExportarExcel" onclick="exportarHistoricoExcel()" style="display:inline-flex;align-items:center;gap:6px;margin-right:8px;">
+      <button id="btnExportarExcel" onclick="exportarHistoricoExcel()" style="display:inline-flex;align-items:center;gap:6px;margin-right:10px;padding:7px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-primary);font-family:var(--font-body);font-size:12px;font-weight:600;letter-spacing:.04em;cursor:pointer;transition:background .15s;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
         Exportar Excel
+      </button>
+      <button onclick="volverAIP()" style="display:inline-flex;align-items:center;gap:5px;margin-right:8px;padding:6px 13px;border-radius:8px;border:1px solid rgba(212,98,42,0.25);background:var(--accent-bg);color:var(--accent);font-family:var(--font-body);font-size:11px;font-weight:700;letter-spacing:.04em;cursor:pointer;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>LI Procesos
       </button>
       <button class="dash-back" onclick="closeCostos()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Volver
@@ -786,6 +797,9 @@ body.dark .dash-alert-title{color:#e05c5c;}
   <div id="tabuladorView">
     <div class="dash-header">
       <div style="flex:1;"><div class="dash-title">Tabulador</div><div class="dash-subtitle">Niveles y categorías salariales</div></div>
+      <button onclick="volverAIP()" style="display:inline-flex;align-items:center;gap:5px;margin-right:8px;padding:6px 13px;border-radius:8px;border:1px solid rgba(212,98,42,0.25);background:var(--accent-bg);color:var(--accent);font-family:var(--font-body);font-size:11px;font-weight:700;letter-spacing:.04em;cursor:pointer;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>LI Procesos
+      </button>
       <button class="dash-back" onclick="closeTabulador()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Volver
       </button>
@@ -812,32 +826,42 @@ body.dark .dash-alert-title{color:#e05c5c;}
   <!-- EQUIPO VIEW -->
   <div id="equipoView">
     <div class="dash-header">
-      <div style="flex:1;"><div class="dash-title">Equipo</div><div class="dash-subtitle">Ingenieros responsables y áreas designadas</div></div>
+      <div style="flex:1;">
+        <div class="dash-title">Equipo</div>
+        <div class="dash-subtitle">Ingenieros responsables y centros de trabajo asignados</div>
+      </div>
+      <button class="btn-add-eng" onclick="openModal('modal-ingeniero')" style="margin-right:10px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        + Registrar
+      </button>
+      <button onclick="volverAIP()" style="display:inline-flex;align-items:center;gap:5px;margin-right:8px;padding:6px 13px;border-radius:8px;border:1px solid rgba(212,98,42,0.25);background:var(--accent-bg);color:var(--accent);font-family:var(--font-body);font-size:11px;font-weight:700;letter-spacing:.04em;cursor:pointer;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>LI Procesos
+      </button>
       <button class="dash-back" onclick="closeEquipo()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Volver
       </button>
     </div>
     <div class="dash-body">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-        <button class="btn-add" id="btnAddIngeniero" onclick="openModal('modal-ingeniero')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Registrar Ingeniero
-        </button>
-      </div>
-      <div class="equipo-section">
-        <div class="equipo-section-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          Gerencia
+      <div class="equipo-grid">
+        <div class="equipo-section">
+          <div class="equipo-section-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9b8fe8" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            <span class="equipo-section-title">Gerencia</span>
+            <span class="equipo-section-count" id="gerenciaCount">0</span>
+          </div>
+          <div class="equipo-section-body" id="gerenciaWrap">
+            <div class="equipo-empty">Sin gerente designado</div>
+          </div>
         </div>
-        <div id="gerenciaWrap"><div style="color:var(--text-tertiary);font-size:0.75rem;letter-spacing:1px;">Sin gerente designado</div></div>
-      </div>
-      <div class="equipo-section">
-        <div class="equipo-section-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Ingenieros y Áreas
-        </div>
-        <div id="ingenierosList" style="display:flex;flex-direction:column;gap:10px;">
-          <div style="color:var(--text-tertiary);font-size:0.75rem;letter-spacing:1px;">Sin ingenieros registrados</div>
+        <div class="equipo-section" style="grid-column:span 2;">
+          <div class="equipo-section-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span class="equipo-section-title">Ingenieros de Proceso</span>
+            <span class="equipo-section-count" id="ingenierosCount">0</span>
+          </div>
+          <div class="equipo-section-body" id="ingenierosList">
+            <div class="equipo-empty">Sin ingenieros registrados</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1497,14 +1521,13 @@ function toggleAsigDiagrama(opIdx, mIdx, val){
 
 
 function volverAIP(){
-  // Si está dentro de un iframe de Ingeniería de Procesos
   if(window.parent && window.parent !== window && typeof window.parent.showView === 'function'){
     window.parent.showView('equipo');
   } else {
-    // Abierto directo — ir a index.html
     window.location.href = 'index.html';
   }
 }
+
 
 // ═══════════════════════════════════════════════════
 // HELPERS
@@ -3203,28 +3226,30 @@ function renderIngenieros(){
   const gerWrap=s('gerenciaWrap');
   if(gerentes.length){
     gerWrap.innerHTML=gerentes.map(g=>{const idx=equipoState.ingenieros.indexOf(g);return ingCard(g,idx,true);}).join('');
-  } else gerWrap.innerHTML=`<div style="color:var(--text-tertiary);font-size:0.75rem;letter-spacing:1px;">Sin gerente designado</div>`;
+  } else gerWrap.innerHTML=`<div class="equipo-empty">Sin gerente designado</div>`;
+  if(s('gerenciaCount')) s('gerenciaCount').textContent=gerentes.length;
   const ingWrap=s('ingenierosList');
   if(ingenieros.length){
     ingWrap.innerHTML=ingenieros.map(g=>{const idx=equipoState.ingenieros.indexOf(g);return ingCard(g,idx,false);}).join('');
-  } else ingWrap.innerHTML=`<div style="color:var(--text-tertiary);font-size:0.75rem;letter-spacing:1px;">Sin ingenieros registrados</div>`;
+  } else ingWrap.innerHTML=`<div class="equipo-empty">Sin ingenieros registrados</div>`;
+  if(s('ingenierosCount')) s('ingenierosCount').textContent=ingenieros.length;
 }
 function ingCard(g, idx, isGerente){
   const initials=g.nombre.trim().split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-  const rolLabel=isGerente?'Gerente':'Ingeniero';
+  const avatarColor=isGerente?'#9b8fe8':getAc(idx);
   const areaChips=isGerente
-    ?`<span class="area-chip" style="background:rgba(155,143,232,0.15);border-color:rgba(155,143,232,0.3);color:#9b8fe8;">Todos los centros</span>`
-    :g.areas.map(ai=>`<span class="area-chip">${centros[ai].n}</span>`).join('');
+    ?`<span class="area-chip" style="background:rgba(155,143,232,0.12);border-color:rgba(155,143,232,0.3);color:#9b8fe8;">Todos los centros</span>`
+    :(g.areas||[]).map(ai=>`<span class="area-chip">${centros[ai]?centros[ai].n:ai}</span>`).join('');
   return`<div class="ingeniero-card">
-    <div class="ing-avatar" style="background:${isGerente?'#9b8fe8':getAc(idx)};">${initials}</div>
-    <div style="flex:1;">
+    <div class="ing-avatar" style="background:${avatarColor};">${initials}</div>
+    <div style="flex:1;min-width:0;">
+      <div><span class="ing-badge ${isGerente?'gerente':'ingeniero'}">${isGerente?'Gerencia':'Ing. Proceso'}</span></div>
       <div class="ing-name">${g.nombre}</div>
-      <div class="ing-role">${rolLabel}</div>
       ${areaChips?`<div class="ing-areas">${areaChips}</div>`:''}
     </div>
-    <div style="display:flex;gap:6px;">
-      <button class="item-edit" onclick="editIngeniero(${idx})">✎</button>
-      <button class="item-del" onclick="delIngeniero(${idx})">✕</button>
+    <div class="ing-actions">
+      <button class="item-edit" onclick="editIngeniero(${idx})" title="Editar">✎</button>
+      <button class="item-del" onclick="delIngeniero(${idx})" title="Eliminar">✕</button>
     </div>
   </div>`;
 }
@@ -3404,6 +3429,8 @@ function renderCostos(){
         salario = getSalarioNivel(m.grupoIdx, m.categoriaIdx, m.nivelIdx);
       } else if(m.salario) {
         salario = parseFloat(m.salario)||0;
+      } else if(m.costo) {
+        salario = parseFloat(m.costo)||0;
       }
       if(salario) modTotal += salario;
       // Get grupo, categoria, nivel names from tabulador
@@ -4208,7 +4235,7 @@ async function exportarHistoricoExcel(){
     }
 
     const rows = [
-      makeRow('MOI', ct=>ct.mod),
+      makeRow('MOD', ct=>ct.mod),
       ...conceptos.map(c=>makeRow(c, ct=>{
         const cf=ct.cifItems.find(x=>(x.concepto||'Sin concepto')===c);
         return cf?parseFloat(cf.monto)||0:0;
