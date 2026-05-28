@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
@@ -743,6 +744,10 @@ body.dark .dash-alert-title{color:#e05c5c;}
   <div id="costosView">
     <div class="dash-header">
       <div style="flex:1;"><div class="dash-title">Costos CT</div><div class="dash-subtitle">Desglose de MOD y CIF por centro de trabajo</div></div>
+      <button class="snap-btn" id="btnExportarExcel" onclick="exportarHistoricoExcel()" style="display:inline-flex;align-items:center;gap:6px;margin-right:8px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        Exportar Excel
+      </button>
       <button class="dash-back" onclick="closeCostos()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>Volver
       </button>
@@ -4126,6 +4131,205 @@ window.addEventListener('DOMContentLoaded', async () => {
   buildGrid();
   _checkAutoSnapshot();
 });
+
+// ═══════════════════════════════════════════════════
+// EXPORTAR HISTORICO A EXCEL
+// ═══════════════════════════════════════════════════
+async function exportarHistoricoExcel(){
+  const btn = document.getElementById('btnExportarExcel');
+  if(btn){ btn.disabled=true; btn.textContent='Generando...'; }
+
+  try {
+    // Esperar ExcelJS
+    if(typeof ExcelJS === 'undefined'){
+      await new Promise((res,rej)=>{
+        const sc=document.createElement('script');
+        sc.src='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+        sc.onload=res; sc.onerror=rej;
+        document.head.appendChild(sc);
+      });
+    }
+
+    // ── Misma lógica de salario que renderCostos ──
+    function _getSalNivel(grupoIdx, categoriaIdx, nivelIdx){
+      if(grupoIdx==null||grupoIdx===''||categoriaIdx==null||categoriaIdx===''||nivelIdx==null||nivelIdx==='') return null;
+      const niv = tabulador.niveles.find(n=>n.grupoIdx==grupoIdx&&n.categoriaIdx==categoriaIdx&&n.idx==nivelIdx);
+      return niv ? parseFloat(niv.salario)||0 : null;
+    }
+
+    // ── Calcular métricas por CT ──────────────────
+    const ctData = centros.map((c,i)=>{
+      const st = state[i]||{};
+      const p  = st.params||{disponible:480,dias:22};
+      const diasMes = parseFloat(p.dias)||22;
+      const consMin = (st.cons&&st.cons.items ? st.cons.items.filter(x=>x.activa!==false).reduce((a,x)=>a+(x.min||0),0) : 0);
+      const tiempoRealMin = (parseFloat(p.disponible)||480) - consMin;
+      const horasMes = (tiempoRealMin/60)*diasMes;
+
+      // MOD — exactamente igual que renderCostos
+      const modItems = (st.mod||[]).filter(m=>m.presente!==false);
+      let modTotal = 0;
+      modItems.forEach(m=>{
+        let salario = null;
+        if(m.grupoIdx!=null&&m.grupoIdx!==''&&m.categoriaIdx!=null&&m.categoriaIdx!==''&&m.nivelIdx!=null&&m.nivelIdx!==''){
+          salario = _getSalNivel(m.grupoIdx, m.categoriaIdx, m.nivelIdx);
+        } else if(m.salario){
+          salario = parseFloat(m.salario)||0;
+        } else if(m.costo){
+          salario = parseFloat(m.costo)||0;
+        }
+        modTotal += salario||0;
+      });
+
+      const cifItems = st.cif||[];
+      const cifTotal = cifItems.reduce((a,cf)=>a+(parseFloat(cf.monto)||0),0);
+      const grandTotal = modTotal + cifTotal;
+
+      return { name:c.n, mod:modTotal, cif:cifTotal, grandTotal, horasMes, cifItems };
+    });
+
+    // ── Conceptos únicos ──────────────────────────
+    const conceptos = [...new Set(ctData.flatMap(ct=>ct.cifItems.map(cf=>cf.concepto||'Sin concepto')))];
+
+    // ── Totales globales ──────────────────────────
+    const grandTotalAll = ctData.reduce((a,ct)=>a+ct.grandTotal,0);
+    const totalHoras    = ctData.reduce((a,ct)=>a+ct.horasMes,0);
+
+    function makeRow(label, getFn){
+      const r = {label}; let sum=0;
+      ctData.forEach((ct,i)=>{
+        const m=getFn(ct); sum+=m;
+        r['p'+i] = ct.grandTotal>0 ? m/ct.grandTotal : 0;
+        r['t'+i] = m;  // monto mensual absoluto
+      });
+      r.pTot = grandTotalAll>0 ? sum/grandTotalAll : 0;
+      r.tTot = sum;  // total mensual global
+      return r;
+    }
+
+    const rows = [
+      makeRow('MOI', ct=>ct.mod),
+      ...conceptos.map(c=>makeRow(c, ct=>{
+        const cf=ct.cifItems.find(x=>(x.concepto||'Sin concepto')===c);
+        return cf?parseFloat(cf.monto)||0:0;
+      })),
+      makeRow('TOTAL', ct=>ct.grandTotal),
+    ];
+
+    // ── Crear workbook ────────────────────────────
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Historico CT', {
+      views:[{state:'frozen',xSplit:1,ySplit:2}],
+      pageSetup:{orientation:'landscape',fitToPage:true}
+    });
+
+    // Anchos de columna
+    ws.columns = [
+      {width:28},{width:14},{width:13},
+      ...ctData.flatMap(()=>[{width:12},{width:13}])
+    ];
+
+    // Helpers de estilo
+    const rgb = h=>({argb:'FF'+h});
+    const fill = h=>({type:'pattern',pattern:'solid',fgColor:rgb(h)});
+    const font = (h,bold,sz)=>({name:'Arial',size:sz||9,bold:!!bold,color:rgb(h)});
+    const aln  = (h,v)=>({horizontal:h||'right',vertical:v||'middle'});
+    const bt   = {style:'thin',  color:{argb:'FFC4CDD8'}};
+    const bm   = {style:'medium',color:{argb:'FF1A2233'}};
+    const bAll = (t,b)=>({top:t||bt,bottom:b||bt,left:bt,right:bt});
+
+    function sty(cell,bg,fg,bold,numFmt,hAlign,bTop,bBot){
+      cell.fill      = fill(bg);
+      cell.font      = font(fg||'1A2233',bold);
+      cell.alignment = aln(hAlign||'right');
+      cell.border    = bAll(bTop,bBot);
+      if(numFmt) cell.numFmt=numFmt;
+    }
+
+    // ── Fila 1: Título + CT names ─────────────────
+    ws.getRow(1).height=22;
+    ws.mergeCells(1,1,1,3);
+    sty(ws.getCell(1,1),'1A2233','FFFFFF',true,null,'left',bm,bt);
+    ws.getCell(1,1).value='Historico de información de CT';
+    [2,3].forEach(c=>sty(ws.getCell(1,c),'1A2233','FFFFFF',false,null,'left',bm,bt));
+
+    ctData.forEach((ct,i)=>{
+      const col=4+i*2;
+      ws.mergeCells(1,col,1,col+1);
+      sty(ws.getCell(1,col),'2C3E50','FFFFFF',true,null,'center',bm,bt);
+      ws.getCell(1,col).value=ct.name;
+      sty(ws.getCell(1,col+1),'2C3E50','FFFFFF',false,null,'center',bm,bt);
+    });
+
+    // ── Fila 2: Subheaders ────────────────────────
+    ws.getRow(2).height=16;
+    const hdrs=['CONCEPTO','% Total','Mensual Total',...ctData.flatMap(()=>['%','Mensual'])];
+    hdrs.forEach((h,i)=>{
+      const cell=ws.getCell(2,i+1);
+      cell.value=h;
+      sty(cell,'34495E','B8C8D8',true,null,i===0?'left':'right',bt,bm);
+    });
+
+    // ── Filas de datos ────────────────────────────
+    rows.forEach((row,ri)=>{
+      const R=ri+3;
+      const isMOI  =ri===0;
+      const isTotal=ri===rows.length-1;
+      const isEven =ri%2===0;
+      ws.getRow(R).height=15;
+
+      const bg  = isMOI?'D4622A':isTotal?'1A2233':(isEven?'EAECF0':'F7F9FC');
+      const fg  = (isMOI||isTotal)?'FFFFFF':'1A2233';
+      const pFg = (isMOI||isTotal)?'FFFFFF':'1A6B3C';
+      const tFg = (isMOI||isTotal)?'FFFFFF':'1A3A6B';
+      const bld = isMOI||isTotal;
+      const bT  = isTotal?bm:bt;
+
+      // Concepto
+      const cCell=ws.getCell(R,1);
+      cCell.value=row.label;
+      sty(cCell,bg,fg,bld,null,'left',bT,bt);
+
+      // % Total
+      const ptCell=ws.getCell(R,2);
+      ptCell.value=row.pTot;
+      sty(ptCell,bg,pFg,bld,'0.000%','right',bT,bt);
+
+      // Tasa Total
+      const ttCell=ws.getCell(R,3);
+      ttCell.value=row.tTot;
+      sty(ttCell,bg,tFg,bld,'#,##0.00','right',bT,bt);
+
+      // Por CT
+      ctData.forEach((_,ci)=>{
+        const pCell=ws.getCell(R,4+ci*2);
+        pCell.value=row['p'+ci];
+        sty(pCell,bg,pFg,bld,'0.000%','right',bT,bt);
+
+        const tCell=ws.getCell(R,5+ci*2);
+        tCell.value=row['t'+ci];
+        sty(tCell,bg,tFg,bld,'#,##0.00','right',bT,bt);
+      });
+    });
+
+    // ── Descargar ─────────────────────────────────
+    const buffer=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const fecha=new Date().toLocaleDateString('es-MX',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');
+    a.href=url; a.download=`Historico_CT_${fecha}.xlsx`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+  } catch(e){
+    console.error('Export error:',e);
+    alert('Error al exportar: '+e.message);
+  } finally {
+    if(btn){ btn.disabled=false; btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> Exportar Excel'; }
+  }
+}
 </script>
 
 </body>
