@@ -846,7 +846,8 @@ function selectWinner(winIdx,ciudad){
     if(!sub.length)return;
     const vals=sub.map(d=>calcRow(d).rentam2).filter(x=>x>0);
     if(!vals.length)return;
-    snapshots[t+'/'+o]={min:Math.min(...vals),max:Math.max(...vals),avg:vals.reduce((s,n)=>s+n,0)/vals.length,n:sub.length};
+    const snapKey=(t+'_'+o).replace(/[.#$/[\]]/g,'_');
+    snapshots[snapKey]={min:Math.min(...vals),max:Math.max(...vals),avg:vals.reduce((s,n)=>s+n,0)/vals.length,n:sub.length,tipo:t,obra:o};
   }));
   for(let i=DATA.length-1;i>=0;i--){
     if(DATA[i].ciudad===ciudad&&DATA[i].status==='analisis'&&i!==winIdx)DATA.splice(i,1);
