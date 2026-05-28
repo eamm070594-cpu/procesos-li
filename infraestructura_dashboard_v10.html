@@ -343,6 +343,7 @@ input[type="file"]{display:none;}
   <div class="top-actions">
     <button class="t-btn active" onclick="showOv(this)">Dashboard</button>
     <button class="t-btn" onclick="showView('fv',this)">➕ Gestión</button>
+    <button class="t-btn" onclick="showView('cfg',this)">⚙️ Configuración</button>
     <span class="badge-cnt" id="nav-count">26 propiedades</span>
   </div>
 </div>
@@ -434,6 +435,12 @@ input[type="file"]{display:none;}
     <!-- GESTIÓN -->
     <div class="view" id="view-fv">
       <div class="fv"><div class="fv-hdr"><div><h2>Gestión de Propiedades</h2><p style="color:var(--muted);font-size:13px;margin-top:3px">Agrega, edita o elimina inmuebles.</p></div><button class="btn-add" onclick="openM(null)">＋ Nueva Propiedad</button></div><div id="plist"></div></div>
+    </div>
+
+    <div class="view" id="view-cfg">
+      <div class="fv"><div class="fv-hdr"><div><h2>⚙️ Configuración — Rangos de Inversión</h2><p style="color:var(--muted);font-size:13px;margin-top:3px">Edita los rangos estimados de inversión inicial por tipo y obra.</p></div><button class="btn-add" onclick="saveInvRanges()">💾 Guardar Cambios</button></div>
+      <div id="inv-ranges-editor"></div>
+      </div>
     </div>
 
   </div>
@@ -671,7 +678,7 @@ function showOv(btn){
   if(btn)btn.classList.add('active');else document.querySelector('.t-btn').classList.add('active');
   rT();
 }
-function showView(n,btn){document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('active'));v('view-'+n).classList.add('active');if(btn)btn.classList.add('active');if(n==='fv')rPL();}
+function showView(n,btn){document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.t-btn').forEach(b=>b.classList.remove('active'));v('view-'+n).classList.add('active');if(btn)btn.classList.add('active');if(n==='fv')rPL();if(n==='cfg')renderInvEditor();}
 
 function rT(){
   const opData=DATA.filter(d=>d.status==='operacion');
@@ -742,6 +749,118 @@ function commitEdit(inp,idx,field){
   rFinTable(fD());
 }
 
+
+// ── CONFIGURACIÓN RANGOS ──
+function renderInvEditor(){
+  const rows=Object.entries(INV_RANGES).map(([k,r])=>{
+    const label=k.replace('/',' / Obra ');
+    return`<div class="card" style="margin-bottom:12px">
+      <div class="card-hdr"><h3>🏗️ ${label}</h3></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:14px">
+        ${['alta','media','baja','muyBaja'].map(nivel=>{
+          const colors={alta:'#ef4444',media:'#f59e0b',baja:'#10b981',muyBaja:'#06b6d4'};
+          const labels={alta:'Alta',media:'Media',baja:'Baja',muyBaja:'Muy Baja'};
+          return`<div>
+            <div style="font-size:11px;font-weight:700;color:${colors[nivel]};margin-bottom:4px">${labels[nivel]}</div>
+            <input type="number" id="inv_${k.replace(/[ /]/g,'_')}_${nivel}" value="${r[nivel]}"
+              style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);color:var(--fg);font-size:12px;box-sizing:border-box">
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  v('inv-ranges-editor').innerHTML=rows;
+}
+function saveInvRanges(){
+  Object.keys(INV_RANGES).forEach(k=>{
+    const safe=k.replace(/[ /]/g,'_');
+    ['alta','media','baja','muyBaja'].forEach(nivel=>{
+      const el=v('inv_'+safe+'_'+nivel);
+      if(el)INV_RANGES[k][nivel]=parseFloat(el.value)||INV_RANGES[k][nivel];
+    });
+  });
+  fbSave();
+  toast('✅ Rangos guardados');
+}
+
+
+// ── RANGOS FIJOS DE INVERSIÓN ──
+const INV_RANGES={
+  'Oficina/Blanca':  {alta:1500000,media:1000000,baja:625000,muyBaja:375000},
+  'Oficina/Gris':    {alta:2250000,media:1500000,baja:875000,muyBaja:500000},
+  'Oficina/Negra':   {alta:3000000,media:2000000,baja:1250000,muyBaja:750000},
+  'Local Comercial/Blanca':{alta:3500000,media:2450000,baja:1400000,muyBaja:875000},
+  'Local Comercial/Gris':  {alta:4550000,media:3150000,baja:1925000,muyBaja:1225000},
+  'Local Comercial/Negra': {alta:5600000,media:4200000,baja:2450000,muyBaja:1575000},
+};
+function getInvLabel(tipo,obra,adecuacion){
+  const key=tipo+'/'+obra;
+  const r=INV_RANGES[key];
+  if(!r)return null;
+  if(adecuacion>=r.alta)return{label:'Alta',color:'#ef4444'};
+  if(adecuacion>=r.media)return{label:'Media',color:'#f59e0b'};
+  if(adecuacion>=r.baja)return{label:'Baja',color:'#10b981'};
+  return{label:'Muy Baja',color:'#06b6d4'};
+}
+
+// ── SELECCIONAR GANADOR ──
+function openWinnerModal(ciudad){
+  const props=DATA.filter(d=>d.ciudad===ciudad&&d.status==='analisis');
+  if(!props.length){toast('No hay propiedades en análisis para cerrar');return;}
+  const html=`<div id="winner-modal" style="position:fixed;inset:0;background:#0008;z-index:9999;display:flex;align-items:center;justify-content:center">
+    <div style="background:var(--s1);border:1px solid var(--bd);border-radius:16px;padding:28px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto">
+      <h3 style="margin:0 0 6px;font-size:16px">🏆 Seleccionar Ganador — ${ciudad}</h3>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 18px">Elige la propiedad ganadora. Las demás en análisis serán eliminadas y los rangos quedarán fijos.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${props.map((d)=>{
+          const c=calcRow(d);
+          const inv=getInvLabel(d.tipo,d.obra,d.adecuacion_total);
+          const oi=DATA.indexOf(d);
+          return`<div onclick="selectWinner(${oi},'${ciudad}')" style="cursor:pointer;border:2px solid var(--bd);border-radius:10px;padding:12px 14px;background:var(--s2)" onmouseenter="this.style.borderColor='#2563eb'" onmouseleave="this.style.borderColor='var(--bd)'">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="font-weight:700;font-size:13px">${d.nombre}</div>
+              <div style="font-size:11px;color:var(--muted)">${d.tipo} / ${d.obra}</div>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:6px;font-size:11px">
+              <span style="color:#93c5fd">💰 ${fmt(c.mn)}/mes</span>
+              <span style="color:#86efac">📐 ${fmt(c.cm2)}/m²</span>
+              ${inv?`<span style="color:${inv.color}">🏗️ Inv. ${inv.label}</span>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
+        <button onclick="closeWinnerModal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);color:var(--fg);cursor:pointer;font-size:12px">Cancelar</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+function closeWinnerModal(){const m=document.getElementById('winner-modal');if(m)m.remove();}
+function selectWinner(winIdx,ciudad){
+  const winner=DATA[winIdx];
+  const tipos=['Oficina','Local Comercial'],obras=['Blanca','Gris','Negra'];
+  const snapshots={};
+  tipos.forEach(t=>obras.forEach(o=>{
+    const sub=DATA.filter(d=>d.ciudad===ciudad&&d.tipo===t&&d.obra===o);
+    if(!sub.length)return;
+    const vals=sub.map(d=>calcRow(d).rentam2).filter(x=>x>0);
+    if(!vals.length)return;
+    snapshots[t+'/'+o]={min:Math.min(...vals),max:Math.max(...vals),avg:vals.reduce((s,n)=>s+n,0)/vals.length,n:sub.length};
+  }));
+  for(let i=DATA.length-1;i>=0;i--){
+    if(DATA[i].ciudad===ciudad&&DATA[i].status==='analisis'&&i!==winIdx)DATA.splice(i,1);
+  }
+  const newIdx=DATA.indexOf(winner);
+  DATA[newIdx].status='operacion';
+  DATA[newIdx]._rentaSnapshot=snapshots;
+  DATA[newIdx]._winnerCity=ciudad;
+  fbSave();
+  closeWinnerModal();
+  toast('🏆 '+winner.nombre+' seleccionada como ganadora');
+  openCity(ciudad);
+}
+
 // ── CITY VIEW ──
 function bSB(){
   const opC=[...new Set(DATA.filter(d=>d.status==='operacion').map(d=>d.ciudad))].sort();
@@ -758,7 +877,8 @@ function openCity(ciudad){
   const col=CD[ciudad]||'#6b7280',ico=CE[ciudad]||'🏢';
   const mns=props.map(d=>calcRow(d).mn),c5s=props.map(d=>calcRow(d).c5);
   const minMn=Math.min(...mns),minC5=Math.min(...c5s);
-  v('city-hero').innerHTML=`<div class="ch-left"><div class="ch-icon" style="background:${col}25">${ico}</div><div><div class="ch-title">${ciudad}</div><div class="ch-sub">${props.filter(d=>d.status==='operacion').length} en operación · ${props.filter(d=>d.status==='analisis').length} en análisis</div></div></div><div class="ch-kpis"><div class="chk"><div class="chk-v">${fmt(minMn)}</div><div class="chk-l">Menor Costo/mes</div></div><div class="chk"><div class="chk-v">${fmt(minC5)}</div><div class="chk-l">Menor Costo 5 años</div></div><div class="chk"><div class="chk-v">${props.length}</div><div class="chk-l">Propiedades</div></div></div>`;
+  const hasAnalisis=props.some(d=>d.status==='analisis');
+  v('city-hero').innerHTML=`<div class="ch-left"><div class="ch-icon" style="background:${col}25">${ico}</div><div><div class="ch-title">${ciudad}</div><div class="ch-sub">${props.filter(d=>d.status==='operacion').length} en operación · ${props.filter(d=>d.status==='analisis').length} en análisis</div></div></div><div class="ch-kpis"><div class="chk"><div class="chk-v">${fmt(minMn)}</div><div class="chk-l">Menor Costo/mes</div></div><div class="chk"><div class="chk-v">${fmt(minC5)}</div><div class="chk-l">Menor Costo 5 años</div></div><div class="chk"><div class="chk-v">${props.length}</div><div class="chk-l">Propiedades</div></div>${hasAnalisis?`<div class="chk"><button onclick="openWinnerModal('${ciudad}')" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;font-weight:700">🏆 Seleccionar Ganador</button></div>`:''}</div>`;
   v('city-props-t').textContent='Propiedades en '+ciudad;
   rCityTable(ciudad);
   buildRangos(ciudad);
@@ -838,7 +958,8 @@ function buildRangos(ciudad){
         const c=calcRow(d),oi=DATA.indexOf(d);
         const st=d.status==='operacion'?'<span class="st-op" style="font-size:9px">✅</span>':'<span class="st-an" style="font-size:9px">🔍</span>';
         const ti=d.tipo==='Oficina'?'<span class="tipo-of">Oficina</span>':'<span class="tipo-lc">Local</span>';
-        return`<tr><td class="t-cell">${d.nombre}</td><td>${ti}</td><td>${d.obra}</td><td>${st}</td>
+        const invL=getInvLabel(d.tipo,d.obra,d.adecuacion_total);
+        return`<tr><td class="t-cell">${d.nombre}${d._winnerCity?'<span style="margin-left:4px">🏆</span>':''}</td><td>${ti}</td><td>${d.obra}</td><td>${st}</td>
           <td><span class="calc-cell v-avg" onmouseenter="showTT(event,DATA[${oi}],'mn')" onmouseleave="hideTT()">${fmt(c.mn)}</span></td>
           <td><span class="calc-cell" onmouseenter="showTT(event,DATA[${oi}],'cm2')" onmouseleave="hideTT()">${fmt(c.cm2)}</span></td>
           <td><span class="calc-cell" onmouseenter="showTT(event,DATA[${oi}],'adm2')" onmouseleave="hideTT()">${fmt(c.adm2)}</span></td>
@@ -850,7 +971,13 @@ function buildRangos(ciudad){
 
   v('rangos-content').innerHTML=`
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">${hl.map(h=>`<div class="rh"><div class="rh-lbl">${h.l}</div><div class="rh-val">${h.v}</div><div class="rh-sub">${h.s}</div></div>`).join('')}</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:14px;padding:10px 14px;background:var(--s2);border-radius:8px;border:1px solid var(--bd)">📌 Los rangos se calculan automáticamente de las propiedades reales en ${ciudad}. Conforme agregas más propiedades, los rangos se vuelven más precisos.</p>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:14px;padding:10px 14px;background:var(--s2);border-radius:8px;border:1px solid var(--bd)">📌 Los rangos de renta se calculan de las propiedades reales en ${ciudad}. Los rangos de inversión son estándar por tipo y obra.</p>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-hdr"><h3>🏗️ Rangos Estimados de Inversión Inicial (MXN)</h3><span style="font-size:11px;color:var(--muted)">Estándar — aplica para todas las ciudades</span></div>
+      <div style="overflow-x:auto;padding:4px"><table class="rang-table"><thead><tr><th>Tipo / Obra</th><th style="color:#ef4444">Alta</th><th style="color:#f59e0b">Media</th><th style="color:#10b981">Baja</th><th style="color:#06b6d4">Muy Baja</th></tr></thead><tbody>
+        ${Object.entries(INV_RANGES).map(([k,r])=>`<tr><td class="t-cell">${k.replace('/',' / Obra ')}</td><td style="color:#ef4444">${fmt(r.alta)}</td><td style="color:#f59e0b">${fmt(r.media)}</td><td style="color:#10b981">${fmt(r.baja)}</td><td style="color:#06b6d4">${fmt(r.muyBaja)}</td></tr>`).join('')}
+      </tbody></table></div>
+    </div>
     ${tablesHtml}`;
 }
 
@@ -903,7 +1030,7 @@ function setMP(idx){const imgs=v('d-carousel').querySelectorAll('img');if(!imgs.
 function rPL(){const l=v('plist');if(!DATA.length){l.innerHTML='<div style="text-align:center;padding:36px;color:var(--muted)">Sin propiedades.</div>';return;}l.innerHTML=DATA.map((d,i)=>{const c=calcRow(d),ct=CC[d.ciudad]||'tag-gdl',ob=d.obra==='Blanca'?'ob-b':'ob-g';const th=d.photos&&d.photos.length?`<img src="${d.photos[0]}">`:'🏢';const st=d.status==='operacion'?'<span class="st-op" style="font-size:9px">✅</span>':'<span class="st-an" style="font-size:9px">🔍</span>';return`<div class="pli" style="animation-delay:${i*12}ms"><div class="pli-th">${th}</div><div class="pli-info"><div class="pli-n">${d.nombre} ${st}</div><div class="pli-m"><span class="city-tag ${ct}">${d.ciudad}</span><span class="${ob}">${d.obra}</span><span>${d.tipo}</span><span style="font-weight:700">${fmt(c.mn)}/mes</span></div></div><div class="pli-a">${d.link?`<a href="${d.link}" target="_blank" class="ico-btn">🔗</a>`:''}<button class="ico-btn" onclick="openM(${i})">✏️</button><button class="ico-btn" onclick="askDel(${i})" style="color:var(--danger)">🗑️</button></div></div>`;}).join('');}
 function bCR(){v('cr-rows').innerHTML=CRIT.map((c,i)=>`<div class="cr-row"><div style="font-size:12px">${c.name}</div><div style="font-size:10px;color:var(--muted)">${c.w>0?'×'+c.w:''}</div><div class="stars">${[1,2,3,4,5].map(n=>`<button class="sb2${cScores[i]===n?' active':''}" onclick="setSt(${i},${n})">${n}</button>`).join('')}</div></div>`).join('');}
 function setSt(ci,val){cScores[ci]=val;bCR();recalcM();uSP();}
-function uSP(){let s=0;CRIT.forEach((c,i)=>{if(c.w>0)s+=cScores[i]*c.w*5;});s+=cScores[6];s=Math.round(Math.min(35,s));const col=gSC(s);v('sp-n').textContent=s;v('sp-n').style.color=col;v('sp-s').textContent=gSL(s);v('sp-s').style.color=col;v('sp-f').style.width=(s/35*100)+'%';v('sp-f').style.background=col;return s;}
+function uSP(){let s=0;CRIT.forEach((c,i)=>{s+=cScores[i];});s=Math.round(Math.min(35,s));const col=gSC(s);v('sp-n').textContent=s;v('sp-n').style.color=col;v('sp-s').textContent=gSL(s);v('sp-s').style.color=col;v('sp-f').style.width=(s/35*100)+'%';v('sp-f').style.background=col;return s;}
 function recalcM(){
   const r=parseFloat(v('f-r').value)||0,mt=parseFloat(v('f-mt').value)||0,sv=parseFloat(v('f-sv').value)||0;
   const ad=parseFloat(v('f-ad').value)||0,pen=parseFloat(v('f-pen').value)||0;
