@@ -631,9 +631,9 @@ function _initFb(){
 function _fbSerialize(){
   /* Convertir D completo a JSON-safe. Las fotos (base64) se excluyen
      para no saturar Firebase — se guardan solo en memoria/localStorage */
-  const sf=foto=>(foto&&foto.startsWith('https://'))?foto:null;
-  const machines = D.machines.map(m => ({...m,foto:sf(m.foto)}));
-  const troqueles = D.troqueles.map(t => ({...t,foto:sf(t.foto)}));
+    // Fotos incluidas — base64 cabe bien para 100 fotos
+  const machines = D.machines.map(m => ({...m}));
+  const troqueles = D.troqueles.map(t => ({...t}));
   return {
     params:    D.params,
     centros:   D.centros,
@@ -657,7 +657,8 @@ function _fbApply(data){
     const local=D[k]||[];const remote=data[k]||[];
     return remote.map(r=>{
       const loc=local.find(l=>l.id===r.id);
-      const remoteFoto=r.foto&&r.foto.startsWith('https://')?r.foto:null;
+      // Accept both Storage URLs and base64
+      const remoteFoto=r.foto||null;
       const localFoto=loc?.foto||null;
       return{...r,foto:remoteFoto||localFoto};
     });
@@ -1036,20 +1037,14 @@ function renderMaquinas(){
   }).join('');
 }
 
-async function uploadTQPhoto(id,input){
+function uploadTQPhoto(id,input){
   if(!input.files||!input.files[0])return;
   const file=input.files[0];
-  const reader=new FileReader();
-  reader.onload=e=>{const t=gTQ(id);if(t){t.foto=e.target.result;renderTroqueles();}};
-  reader.readAsDataURL(file);
-  if(!_fbStorage){const t=gTQ(id);if(t)fbSave();toast('Foto guardada localmente','ok');return;}
-  try{
-    toast('Subiendo foto…','ok');
-    const ref=_fbStorage.ref(`ct_mh/troqueles/${id}_${Date.now()}.jpg`);
-    await ref.put(file);const url=await ref.getDownloadURL();
-    const t=gTQ(id);if(t){t.foto=url;renderTroqueles();fbSave();}
-    toast('Foto guardada en Storage','ok');
-  }catch(e){console.error(e);const t=gTQ(id);if(t)fbSave();toast('Foto guardada localmente','ok');}
+  compressAndSave(file, url=>{
+    const t=gTQ(id);if(!t)return;
+    t.foto=url;renderTroqueles();fbSave();
+    toast('Foto guardada','ok');
+  });
 }
 function _uploadTQPhoto_REMOVED(id,input){
   if(!input.files||!input.files[0])return;
@@ -1057,20 +1052,39 @@ function _uploadTQPhoto_REMOVED(id,input){
   reader.onload=e=>{const t=gTQ(id);if(t){t.foto=e.target.result;renderTroqueles();fbSave();toast('Foto actualizada','ok');}};
   reader.readAsDataURL(input.files[0]);
 }
-async function uploadMachPhoto(id,input){
+
+/* Comprime imagen a max 800px / ~80KB antes de guardar en Firebase */
+function compressAndSave(file, callback){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=800;
+      let w=img.width, h=img.height;
+      if(w>MAX||h>MAX){
+        if(w>h){h=Math.round(h*MAX/w);w=MAX;}
+        else{w=Math.round(w*MAX/h);h=MAX;}
+      }
+      const canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      const ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,w,h);
+      const compressed=canvas.toDataURL('image/jpeg',0.75);
+      callback(compressed);
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function uploadMachPhoto(id,input){
   if(!input.files||!input.files[0])return;
   const file=input.files[0];
-  const reader=new FileReader();
-  reader.onload=e=>{const m=gM(id);if(m){m.foto=e.target.result;renderMaquinas();}};
-  reader.readAsDataURL(file);
-  if(!_fbStorage){const m=gM(id);if(m)fbSave();toast('Foto guardada localmente','ok');return;}
-  try{
-    toast('Subiendo foto…','ok');
-    const ref=_fbStorage.ref(`ct_mh/maquinas/${id}_${Date.now()}.jpg`);
-    await ref.put(file);const url=await ref.getDownloadURL();
-    const m=gM(id);if(m){m.foto=url;renderMaquinas();fbSave();}
-    toast('Foto guardada en Storage','ok');
-  }catch(e){console.error(e);const m=gM(id);if(m)fbSave();toast('Foto guardada localmente','ok');}
+  // Compress before saving
+  compressAndSave(file, url=>{
+    const m=gM(id);if(!m)return;
+    m.foto=url;renderMaquinas();fbSave();
+    toast('Foto guardada','ok');
+  });
 }
 function _uploadMachPhoto_REMOVED(id,input){
   if(!input.files||!input.files[0])return;
