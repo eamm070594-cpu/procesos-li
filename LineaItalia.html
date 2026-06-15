@@ -532,6 +532,7 @@ body{overflow-y:auto}
 .mdt-ben-l { font-size:12px; color:#374151; }
 .mdt-ben-cat { font-size:10px; color:#9A9890; margin-top:1px; font-family:var(--mono); }
 .mdt-ben-v { font-size:13px; font-weight:700; color:#16A34A; font-family:var(--mono); }
+.mdt-ben-row.open .ben-chev { transform: rotate(90deg); }
 .mdt-total-row {
   display:flex; justify-content:space-between; align-items:center;
   padding:12px 14px; background:#F0FDF4; border-radius:8px; margin-top:10px;
@@ -2248,11 +2249,82 @@ function buildMachinePages() {
     ].forEach(function(row){
       html += '<div class="mdt-row"><span class="mdt-row-l">'+row[0]+'</span><span class="mdt-row-v '+row[2]+'">'+row[1]+'</span></div>';
     });
-    html += '</div>';
+
+    // ── Sección expandible: cómo se calculó ──
+    var finCalcId = 'fin-calc-'+m.id;
+    html += '<button onclick="(function(btn){var d=document.getElementById(\''+finCalcId+'\');var open=d.style.display===\'block\';d.style.display=open?\'none\':\'block\';btn.innerHTML=open?\'▶ Ver cómo se calculó\':\'▼ Ocultar cálculo\';})(this)" style="margin-top:12px;width:100%;text-align:left;background:none;border:none;cursor:pointer;font-size:11px;font-weight:600;color:#6B7280;font-family:var(--sans);padding:4px 0;display:flex;align-items:center;gap:5px">▶ Ver cómo se calculó</button>';
+    html += '<div id="'+finCalcId+'" style="display:none;margin-top:6px;background:#F8FAFF;border:1px solid #DBEAFE;border-radius:10px;padding:14px;font-size:11px;font-family:var(--mono)">';
+
+    // Bloque 1: Inversión neta
+    html += '<div style="margin-bottom:12px">';
+    html += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#6B7280;margin-bottom:6px;font-family:var(--sans);font-weight:600">① Inversión neta (CAPEX)</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:3px">';
+    html += '<div style="display:flex;justify-content:space-between"><span style="color:#374151">Inversión bruta</span><span style="color:#1E1C18;font-weight:600">'+fmt(m.inv)+'</span></div>';
+    if((m.replaceVal||0)>0){
+      html += '<div style="display:flex;justify-content:space-between"><span style="color:#16A34A">− Venta máquina reemplazada</span><span style="color:#16A34A;font-weight:600">'+fmt(m.replaceVal)+'</span></div>';
+    }
+    html += '<div style="display:flex;justify-content:space-between;border-top:1px solid #DBEAFE;padding-top:4px;margin-top:2px"><span style="color:#2563EB;font-weight:600">= Inversión neta</span><span style="color:#2563EB;font-weight:700">'+fmt(r.netInv)+'</span></div>';
+    html += '</div></div>';
+
+    // Bloque 2: OPEX
+    html += '<div style="margin-bottom:12px">';
+    html += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#6B7280;margin-bottom:6px;font-family:var(--sans);font-weight:600">② OPEX anual</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:3px">';
+    var opexVars = [];
+    if(m.vars && typeof m.vars==='object' && !Array.isArray(m.vars)) Object.keys(m.vars).forEach(function(vid){
+      var mv2=m.vars[vid]; if(!mv2||!mv2.on) return;
+      var vd2=VAR_LIB.find(function(v){return v.id===vid;});
+      if(vd2&&vd2.cat==='opex') opexVars.push({name:vd2.name, val:calcVar(m.id,vid)});
+    });
+    if((m.opx_extra||0)>0) opexVars.push({name:'OPEX extra (manual)', val:m.opx_extra});
+    if(opexVars.length===0){
+      html += '<div style="color:#9A9890">Sin costos OPEX configurados</div>';
+    } else {
+      opexVars.forEach(function(ov){
+        html += '<div style="display:flex;justify-content:space-between"><span style="color:#374151">'+ov.name+'</span><span style="color:#DC2626;font-weight:600">'+fmt(ov.val)+'</span></div>';
+      });
+      html += '<div style="display:flex;justify-content:space-between;border-top:1px solid #DBEAFE;padding-top:4px;margin-top:2px"><span style="color:#DC2626;font-weight:600">= Total OPEX</span><span style="color:#DC2626;font-weight:700">'+fmt(r.opx)+'</span></div>';
+    }
+    html += '</div></div>';
+
+    // Bloque 3: Flujo neto
+    html += '<div style="margin-bottom:12px">';
+    html += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#6B7280;margin-bottom:6px;font-family:var(--sans);font-weight:600">③ Flujo neto anual</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:3px">';
+    html += '<div style="display:flex;justify-content:space-between"><span style="color:#374151">Beneficio anual</span><span style="color:#16A34A;font-weight:600">'+fmt(r.ab)+'</span></div>';
+    html += '<div style="display:flex;justify-content:space-between"><span style="color:#DC2626">− OPEX anual</span><span style="color:#DC2626;font-weight:600">'+fmt(r.opx)+'</span></div>';
+    html += '<div style="display:flex;justify-content:space-between;border-top:1px solid #DBEAFE;padding-top:4px;margin-top:2px"><span style="color:#1E1C18;font-weight:600">= Flujo neto</span><span style="color:#1E1C18;font-weight:700">'+fmt(r.fl)+'</span></div>';
+    html += '</div></div>';
+
+    // Bloque 4: Payback
+    html += '<div style="margin-bottom:12px">';
+    html += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#6B7280;margin-bottom:6px;font-family:var(--sans);font-weight:600">④ Payback</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:3px">';
+    html += '<div style="display:flex;justify-content:space-between"><span style="color:#374151">Inversión neta</span><span style="color:#2563EB;font-weight:600">'+fmt(r.netInv)+'</span></div>';
+    html += '<div style="display:flex;justify-content:space-between"><span style="color:#374151">÷ Flujo neto anual</span><span style="color:#1E1C18;font-weight:600">'+fmt(r.fl)+'</span></div>';
+    html += '<div style="display:flex;justify-content:space-between;border-top:1px solid #DBEAFE;padding-top:4px;margin-top:2px"><span style="color:#D97706;font-weight:600">= Payback</span><span style="color:#D97706;font-weight:700">'+(isFinite(r.pay)?r.pay.toFixed(2)+' años':'No aplica')+'</span></div>';
+    html += '</div></div>';
+
+    // Bloque 5: ROI
+    html += '<div>';
+    html += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#6B7280;margin-bottom:6px;font-family:var(--sans);font-weight:600">⑤ ROI Simple</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:3px">';
+    html += '<div style="display:flex;justify-content:space-between"><span style="color:#374151">Flujo neto × vida útil</span><span style="color:#1E1C18;font-weight:600">'+fmt(r.fl)+' × '+m.yr+' = '+fmt(r.fl*m.yr)+'</span></div>';
+    if((m.res||0)>0){
+      html += '<div style="display:flex;justify-content:space-between"><span style="color:#374151">+ Valor de rescate</span><span style="color:#1E1C18;font-weight:600">'+fmt(m.res)+'</span></div>';
+    }
+    html += '<div style="display:flex;justify-content:space-between"><span style="color:#374151">− Inversión neta</span><span style="color:#DC2626;font-weight:600">'+fmt(r.netInv)+'</span></div>';
+    html += '<div style="display:flex;justify-content:space-between"><span style="color:#374151">= Ganancia neta</span><span style="color:#1E1C18;font-weight:600">'+fmt(r.ng)+'</span></div>';
+    html += '<div style="display:flex;justify-content:space-between"><span style="color:#374151">÷ Inversión neta</span><span style="color:#1E1C18;font-weight:600">'+fmt(r.netInv)+'</span></div>';
+    html += '<div style="display:flex;justify-content:space-between;border-top:1px solid #DBEAFE;padding-top:4px;margin-top:2px"><span style="color:'+roiColor+';font-weight:600">= ROI Simple</span><span style="color:'+roiColor+';font-weight:700;font-size:14px">'+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(1)+'%':'--')+'</span></div>';
+    html += '</div></div>';
+
+    html += '</div>'; // fin fin-calc
+    html += '</div>'; // fin mdt-card financiero
 
     // Beneficios
     html += '<div class="mdt-card">';
-    html += '<div class="mdt-card-title">Beneficios Anuales</div>';
+    html += '<div class="mdt-card-title" style="display:flex;align-items:center;justify-content:space-between">Beneficios Anuales<span style="font-size:10px;font-weight:400;color:#9A9890;text-transform:none;letter-spacing:0">Clic en cada fila para ver el cálculo</span></div>';
     var anyBen = false;
     if (m.vars && typeof m.vars === 'object' && !Array.isArray(m.vars)) Object.keys(m.vars).forEach(function(vid) {
       var mv = m.vars[vid];
@@ -2262,10 +2334,53 @@ function buildMachinePages() {
       var res = calcVar(m.id, vid);
       if (res <= 0) return;
       anyBen = true;
-      html += '<div class="mdt-ben-row">';
-      html += '<div><div class="mdt-ben-l">'+vdef.name+'</div><div class="mdt-ben-cat">'+vdef.cat+'</div></div>';
+      var benId = 'ben-detail-'+m.id+'-'+vid;
+      // Build desglose HTML
+      var desglose = '';
+      if (mv.mode === 'simple') {
+        desglose += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0">';
+        desglose += '<span style="font-size:10px;font-family:var(--mono);background:#EFF6FF;color:#2563EB;padding:2px 7px;border-radius:4px">Valor directo</span>';
+        desglose += '<span style="font-size:12px;color:#4B5563">Resultado anual capturado manualmente</span>';
+        desglose += '<span style="font-family:var(--mono);font-size:12px;font-weight:700;color:#16A34A;margin-left:auto">'+fmt(res)+'</span>';
+        desglose += '</div>';
+      } else {
+        var gp2 = getGP();
+        var rows2 = mv.detail || (vdef ? JSON.parse(JSON.stringify(vdef.detail)) : []);
+        var acc2 = null;
+        rows2.forEach(function(row, ri) {
+          var val2 = row.type === 'global' ? resolveGlobal(row.val, gp2) : parseNum(row.val);
+          var prevAcc = acc2;
+          if (acc2 === null) { acc2 = val2; }
+          else {
+            if (row.op==='+') acc2=acc2+val2;
+            else if (row.op==='-') acc2=acc2-val2;
+            else if (row.op==='*') acc2=acc2*val2;
+            else if (row.op==='/') acc2=val2!==0?acc2/val2:0;
+          }
+          var dispVal2 = row.type==='money' ? fmt(val2) : row.type==='pct' ? (val2*100).toFixed(1)+'%' : fmtNum(val2);
+          var isGlob = row.type==='global';
+          desglose += '<div style="display:grid;grid-template-columns:18px 1fr 80px 80px;gap:6px;align-items:center;padding:4px 0;border-bottom:1px solid #F8F9FA">';
+          desglose += '<span style="font-size:10px;font-family:var(--mono);color:#9A9890;text-align:center">'+(ri===0?'=':row.op)+'</span>';
+          desglose += '<span style="font-size:11px;color:'+(isGlob?'#7C3AED':'#374151')+'">'+(isGlob?'⚙ ':'')+row.label+'</span>';
+          desglose += '<span style="font-family:var(--mono);font-size:11px;font-weight:600;color:'+(isGlob?'#7C3AED':'#2563EB')+';text-align:right">'+dispVal2+'</span>';
+          desglose += '<span style="font-family:var(--mono);font-size:11px;color:#6B7280;text-align:right">= '+fmt(acc2)+'</span>';
+          desglose += '</div>';
+        });
+      }
+      html += '<div class="mdt-ben-row" style="cursor:pointer;user-select:none" onclick="(function(el){el.classList.toggle(\'open\');var d=document.getElementById(\''+benId+'\');if(d){d.style.display=d.style.display===\'block\'?\'none\':\'block\'}})(this)">';
+      html += '<div style="flex:1"><div style="display:flex;align-items:center;gap:7px">';
+      html += '<span style="font-size:11px;color:#9A9890;transition:transform .2s;display:inline-block" class="ben-chev">▶</span>';
+      html += '<div><div class="mdt-ben-l">'+vdef.name+'</div><div class="mdt-ben-cat">'+CAT_NAMES[vdef.cat]+'</div></div>';
+      html += '</div></div>';
       html += '<div class="mdt-ben-v">'+fmt(res)+'</div>';
       html += '</div>';
+      html += '<div id="'+benId+'" style="display:none;background:#F8FAFF;border-radius:8px;padding:10px 14px;margin:-4px 0 6px;border:1px solid #DBEAFE">';
+      html += '<div style="font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em;color:#6B7280;margin-bottom:8px;display:grid;grid-template-columns:18px 1fr 80px 80px;gap:6px"><span></span><span>Concepto</span><span style="text-align:right">Valor</span><span style="text-align:right">Acumulado</span></div>';
+      html += desglose;
+      html += '<div style="margin-top:8px;display:flex;justify-content:flex-end;gap:4px;align-items:center">';
+      html += '<span style="font-size:11px;color:#6B7280">Resultado anual =</span>';
+      html += '<span style="font-family:var(--mono);font-size:14px;font-weight:700;color:#16A34A">'+fmt(res)+'</span>';
+      html += '</div></div>';
     });
     if (!anyBen) html += '<div style="font-size:12px;color:#9A9890;padding:14px 0;text-align:center">Active variables en Configuración</div>';
     if (hd) {
