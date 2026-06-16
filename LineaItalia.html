@@ -176,6 +176,23 @@ body{overflow-y:auto}
 
 .g{color:var(--green)}.r{color:var(--red)}.a{color:var(--amber)}.b{color:var(--blue)}
 
+/* ── TOOLTIPS ── */
+.tip-wrap{position:relative;display:inline-block;cursor:help}
+.tip-wrap .tip-box{
+  display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+  background:#1E2A4A;color:white;border-radius:9px;padding:10px 13px;width:220px;
+  font-size:11px;font-family:'DM Sans',sans-serif;line-height:1.55;
+  box-shadow:0 8px 24px rgba(0,0,0,.22);z-index:999;pointer-events:none;
+}
+.tip-wrap .tip-box::after{
+  content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:6px solid transparent;border-top-color:#1E2A4A;
+}
+.tip-wrap:hover .tip-box,.tip-wrap:focus-within .tip-box{display:block}
+.tip-label{font-weight:700;font-size:12px;margin-bottom:5px;color:#F0A84A}
+.tip-row{display:flex;justify-content:space-between;gap:8px;margin-bottom:2px}
+.tip-formula{font-family:'DM Mono',monospace;font-size:10px;color:#93C5FD;margin-top:6px;border-top:1px solid rgba(255,255,255,.12);padding-top:5px}
+
 /* ── RESUMEN STYLES ── */
 
 
@@ -876,6 +893,16 @@ body{overflow-y:auto}
           <span class="nav-icon">👤</span>
           <span class="nav-label">Responsables</span>
         </div>
+        <div class="res-nav-divider"></div>
+        <div class="res-nav-section">Dirección</div>
+        <div class="res-nav-item" id="snav-financiamiento" onclick="resGoTo('financiamiento')">
+          <span class="nav-icon">💳</span>
+          <span class="nav-label">Análisis Financiero</span>
+        </div>
+        <div class="res-nav-item" id="snav-reporte" onclick="resGoTo('reporte')">
+          <span class="nav-icon">📋</span>
+          <span class="nav-label">Reporte Directivo</span>
+        </div>
       </div>
     </div>
     <!-- MAIN -->
@@ -914,8 +941,14 @@ body{overflow-y:auto}
         <div class="res-page-sub">Checklist de tareas, responsables y fechas por maquina</div>
 
         <div class="gantt-tabs">
-          <button class="gantt-tab on" onclick="ganttSwitchTab('checklist',this)">☑ Checklist por maquina</button>
+          <button class="gantt-tab on" onclick="ganttSwitchTab('dashboard',this)">📊 Dashboard</button>
+          <button class="gantt-tab" onclick="ganttSwitchTab('checklist',this)">☑ Checklist por maquina</button>
           <button class="gantt-tab" onclick="ganttSwitchTab('timeline',this)">▦ Vista de tiempo (Gantt)</button>
+        </div>
+
+        <!-- DASHBOARD PANEL -->
+        <div id="gantt-panel-dashboard" class="gantt-panel on">
+          <div id="gantt-dashboard-content" style="padding:16px 0"></div>
         </div>
 
         <!-- CHECKLIST PANEL -->
@@ -1002,6 +1035,16 @@ body{overflow-y:auto}
           </div>
           <div id="resp-list"></div>
         </div>
+      </div>
+
+      <!-- FINANCIAMIENTO PAGE -->
+      <div id="res-pg-financiamiento" class="res-page" style="padding:28px 32px 60px">
+        <div id="financiamiento-content"></div>
+      </div>
+
+      <!-- REPORTE DIRECTIVO PAGE -->
+      <div id="res-pg-reporte" class="res-page" style="padding:28px 32px 60px">
+        <div id="reporte-content"></div>
       </div>
 
     </div>
@@ -2077,6 +2120,14 @@ function resGoTo(idx) {
     var gp = document.getElementById('res-pg-gantt');
     if (gp) gp.classList.add('on');
     ganttOnOpen();
+  } else if (idx === 'financiamiento') {
+    var fp2 = document.getElementById('res-pg-financiamiento');
+    if (fp2) fp2.classList.add('on');
+    renderFinanciamiento();
+  } else if (idx === 'reporte') {
+    var rep = document.getElementById('res-pg-reporte');
+    if (rep) rep.classList.add('on');
+    renderReporte();
   } else if (idx === 0) {
     var dp = document.getElementById('res-pg-dash');
     if (dp) dp.classList.add('on');
@@ -2086,10 +2137,12 @@ function resGoTo(idx) {
   }
   document.querySelectorAll('.res-nav-item').forEach(function(el){ el.classList.remove('on'); });
   var navEl;
-  if (idx === 'resp')       navEl = document.getElementById('snav-resp');
-  else if (idx === 'gantt') navEl = document.getElementById('snav-gantt');
-  else if (idx === 0)  navEl = document.getElementById('snav-dash');
-  else                 navEl = document.getElementById('snav-m'+(idx-1));
+  if (idx === 'resp')         navEl = document.getElementById('snav-resp');
+  else if (idx === 'gantt')   navEl = document.getElementById('snav-gantt');
+  else if (idx === 'financiamiento') navEl = document.getElementById('snav-financiamiento');
+  else if (idx === 'reporte') navEl = document.getElementById('snav-reporte');
+  else if (idx === 0)    navEl = document.getElementById('snav-dash');
+  else                   navEl = document.getElementById('snav-m'+(idx-1));
   if (navEl) navEl.classList.add('on');
   var main = document.querySelector('.res-main');
   if (main) main.scrollTop = 0;
@@ -2126,8 +2179,20 @@ function renderDash() {
     h += '<div class="maq-col-model">'+m.model+'</div></div></div></td>';
     h += '<td style="text-align:right"><div class="maq-col-inv">'+fmt(r.netInv||m.inv)+'</div>'+(m.replaceVal>0?'<div style="font-size:10px;color:#16A34A">neto</div>':'')+'</td>';
     h += '<td style="text-align:right"><div class="maq-col-ben">'+(hd?fmt(r.ab):'Pendiente')+'</div></td>';
-    h += '<td style="text-align:right"><div class="maq-col-roi-val" style="color:'+roiColor+'">'+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'--')+'</div></td>';
-    h += '<td style="text-align:right"><div class="maq-col-pay">'+(isFinite(r.pay)?r.pay.toFixed(1)+' años':'--')+'</div></td>';
+    h += '<td style="text-align:right"><div class="tip-wrap">';
+    h += '<div class="maq-col-roi-val" style="color:'+roiColor+'">'+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'--')+'</div>';
+    h += '<div class="tip-box"><div class="tip-label">¿Qué es el ROI?</div>';
+    h += '<div>Es la ganancia total que genera la inversión, expresada como porcentaje.</div>';
+    if(hd){ h += '<div class="tip-row" style="margin-top:5px"><span>Ganancia neta:</span><span style="font-weight:700;color:#4ADE80">'+fmt(r.ng)+'</span></div>'; }
+    h += '<div class="tip-formula">ROI = (Ganancia neta ÷ Inversión) × 100</div></div>';
+    h += '</div></td>';
+    h += '<td style="text-align:right"><div class="tip-wrap">';
+    h += '<div class="maq-col-pay">'+(isFinite(r.pay)?r.pay.toFixed(1)+' años':'--')+'</div>';
+    h += '<div class="tip-box"><div class="tip-label">¿Qué es el Payback?</div>';
+    h += '<div>Es el tiempo en años que tarda la máquina en pagar su propio costo con los ahorros que genera.</div>';
+    if(isFinite(r.pay)){ h += '<div class="tip-row" style="margin-top:5px"><span>Flujo neto/año:</span><span style="font-weight:700;color:#4ADE80">'+fmt(r.fl)+'</span></div>'; }
+    h += '<div class="tip-formula">Payback = Inversión neta ÷ Flujo neto anual</div></div>';
+    h += '</div></td>';
     h += '<td><div class="maq-col-pdf" onclick="event.stopPropagation()">';
     h += '<button class="maq-pdf-btn'+(hasCot?'':' off')+'" onclick="openPdfModal(\''+m.id+'\',\'cot\')">📄 Cot.</button>';
     h += '<button class="maq-pdf-btn'+(hasFicha?'':' off')+'" onclick="openPdfModal(\''+m.id+'\',\'ficha\')">📋 Ficha</button>';
@@ -2180,8 +2245,16 @@ function buildMachinePages() {
     html += '<div><div class="mdt-name">'+m.name+'</div><div class="mdt-model">'+m.model+'</div></div>';
     html += '<div class="mdt-top-kpis">';
     html += '<div class="mdt-kpi"><div class="mdt-kpi-l">Inv. neta</div><div class="mdt-kpi-v" style="color:#2563EB;font-size:13px">'+fmt(r.netInv||m.inv)+'</div></div>';
-    html += '<div class="mdt-kpi"><div class="mdt-kpi-l">ROI '+m.yr+' años</div><div class="mdt-kpi-v" style="color:'+roiColor+'">'+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'--')+'</div></div>';
-    html += '<div class="mdt-kpi"><div class="mdt-kpi-l">Payback</div><div class="mdt-kpi-v" style="color:#D97706">'+(isFinite(r.pay)?r.pay.toFixed(1)+' años':'--')+'</div></div>';
+    html += '<div class="mdt-kpi tip-wrap" style="position:relative"><div class="mdt-kpi-l">ROI '+m.yr+' años</div><div class="mdt-kpi-v" style="color:'+roiColor+'">'+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'--')+'</div>';
+    html += '<div class="tip-box" style="right:0;left:auto;transform:none"><div class="tip-label">¿Qué es el ROI?</div>';
+    html += '<div>Porcentaje de ganancia total sobre la inversión, considerando toda la vida útil de la máquina.</div>';
+    if(hd){ html += '<div class="tip-row" style="margin-top:5px"><span>Ganancia neta:</span><span style="font-weight:700;color:#4ADE80">'+fmt(r.ng)+'</span></div>'; }
+    html += '<div class="tip-formula">ROI = (Ganancia neta ÷ Inversión) × 100</div></div></div>';
+    html += '<div class="mdt-kpi tip-wrap" style="position:relative"><div class="mdt-kpi-l">Payback</div><div class="mdt-kpi-v" style="color:#D97706">'+(isFinite(r.pay)?r.pay.toFixed(1)+' años':'--')+'</div>';
+    html += '<div class="tip-box" style="right:0;left:auto;transform:none"><div class="tip-label">¿Qué es el Payback?</div>';
+    html += '<div>Tiempo en años para que la máquina pague su propio costo con los ahorros que genera.</div>';
+    if(isFinite(r.pay)){ html += '<div class="tip-row" style="margin-top:5px"><span>Flujo neto/año:</span><span style="font-weight:700;color:#4ADE80">'+fmt(r.fl)+'</span></div>'; }
+    html += '<div class="tip-formula">Payback = Inversión neta ÷ Flujo neto anual</div></div></div>';
     html += '</div>';
     html += '<div class="mdt-pdf-btns">';
     html += '<button class="mdt-pdf-btn'+(hasCot?'':' off')+'" onclick="openPdfModal(\''+m.id+'\',\'cot\')">📄 Cotización</button>';
@@ -2252,7 +2325,7 @@ function buildMachinePages() {
 
     // ── Sección expandible: cómo se calculó ──
     var finCalcId = 'fin-calc-'+m.id;
-    html += '<button onclick="(function(btn){var d=document.getElementById(\''+finCalcId+'\');var open=d.style.display===\'block\';d.style.display=open?\'none\':\'block\';btn.innerHTML=open?\'▶ Ver cómo se calculó\':\'▼ Ocultar cálculo\';})(this)" style="margin-top:12px;width:100%;text-align:left;background:none;border:none;cursor:pointer;font-size:11px;font-weight:600;color:#6B7280;font-family:var(--sans);padding:4px 0;display:flex;align-items:center;gap:5px">▶ Ver cómo se calculó</button>';
+    html += '<button onclick="(function(btn){var d=document.getElementById(\''+finCalcId+'\');var open=d.style.display===\'block\';d.style.display=open?\'none\':\'block\';btn.innerHTML=open?\'▶ Ver detalle\':\'▼ Ocultar detalle\';})(this)" style="margin-top:12px;width:100%;text-align:left;background:none;border:none;cursor:pointer;font-size:11px;font-weight:600;color:#6B7280;font-family:var(--sans);padding:4px 0;display:flex;align-items:center;gap:5px">▶ Ver detalle</button>';
     html += '<div id="'+finCalcId+'" style="display:none;margin-top:6px;background:#F8FAFF;border:1px solid #DBEAFE;border-radius:10px;padding:14px;font-size:11px;font-family:var(--mono)">';
 
     // Bloque 1: Inversión neta
@@ -3947,7 +4020,7 @@ function ganttInitTasks() {
   });
 }
 
-var GANTT_ACTIVE_TAB = 'checklist';
+var GANTT_ACTIVE_TAB = 'dashboard';
 
 // Aplica fechas sugeridas solo a tareas que NO tienen fecha aun
 function ganttSuggestDates() {
@@ -3990,7 +4063,8 @@ function ganttSwitchTab(tab, btn) {
   document.querySelectorAll('.gantt-panel').forEach(function(p){ p.classList.remove('on'); });
   var panel = document.getElementById('gantt-panel-'+tab);
   if (panel) panel.classList.add('on');
-  if (tab === 'checklist') ganttRenderChecklist();
+  if (tab === 'dashboard') ganttRenderDashboard();
+  else if (tab === 'checklist') ganttRenderChecklist();
   else ganttRenderTimeline();
 }
 
@@ -4275,9 +4349,1001 @@ function ganttRenderTimeline() {
 
 function ganttOnOpen() {
   ganttInitTasks();
-  if (GANTT_ACTIVE_TAB === 'checklist') ganttRenderChecklist();
+  if (GANTT_ACTIVE_TAB === 'dashboard') ganttRenderDashboard();
+  else if (GANTT_ACTIVE_TAB === 'checklist') ganttRenderChecklist();
   else ganttRenderTimeline();
 }
+
+// ══════════════════════════════════════════════════════
+//  REPORTE DIRECTIVO + FORMATO DE APROBACION
+// ══════════════════════════════════════════════════════
+
+function renderReporte() {
+  var el = document.getElementById('reporte-content');
+  if (!el) return;
+
+  var today = new Date();
+  var MS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var fechaStr = today.getDate() + ' de ' + MS[today.getMonth()] + ' de ' + today.getFullYear();
+
+  var results = MACHINES.map(function(m){ return { m:m, r:calcROI(m) }; });
+  var totCapex = results.reduce(function(s,x){ return s + (x.m.inv||0); }, 0);
+  var totNeto  = results.reduce(function(s,x){ return s + (x.r.netInv||x.m.inv||0); }, 0);
+  var totBen   = results.reduce(function(s,x){ return s + x.r.ab; }, 0);
+  var totOpex  = results.reduce(function(s,x){ return s + x.r.opx; }, 0);
+  var totFl    = results.reduce(function(s,x){ return s + x.r.fl; }, 0);
+  var totNg    = results.reduce(function(s,x){ return s + x.r.ng; }, 0);
+  var wd       = results.filter(function(x){ return x.r.ab > 0; });
+  var avgRoi   = wd.length ? wd.reduce(function(s,x){ return s + x.r.roi; }, 0) / wd.length : 0;
+  var bestPay  = results.map(function(x){ return x.r.pay; }).filter(isFinite);
+  var minPay   = bestPay.length ? Math.min.apply(null, bestPay) : Infinity;
+  var maxYr    = results.reduce(function(s,x){ return Math.max(s, x.m.yr||0); }, 0);
+
+  var h = '';
+
+  // ── Encabezado del reporte ──
+  h += '<div style="max-width:860px;margin:0 auto">';
+
+  h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;padding-bottom:18px;border-bottom:2px solid #1E2A4A">';
+  h += '<div>';
+  h += '<div style="font-family:\'Fraunces\',serif;font-size:26px;font-weight:700;color:#1E1C18;line-height:1.1">Reporte Directivo de Inversión</div>';
+  h += '<div style="font-size:14px;color:#6B7280;margin-top:4px">Linea Italia · Plan de Inversión en Maquinaria 2026</div>';
+  h += '</div>';
+  h += '<div style="text-align:right">';
+  h += '<div style="font-size:12px;color:#9A9890;font-family:\'DM Mono\',monospace">'+fechaStr+'</div>';
+  h += '<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end">';
+  h += '<button onclick="window.print()" style="padding:6px 14px;border-radius:7px;border:1px solid #E5E7EB;background:white;font-size:11px;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;color:#374151">🖨 Imprimir</button>';
+  h += '</div></div></div>';
+
+  // ── Resumen Ejecutivo ──
+  h += '<div style="background:#1E2A4A;border-radius:12px;padding:22px 26px;margin-bottom:24px;color:white">';
+  h += '<div style="font-family:\'Fraunces\',serif;font-size:16px;font-weight:600;margin-bottom:14px;color:#F0A84A">Resumen Ejecutivo</div>';
+  h += '<div style="font-size:13px;line-height:1.7;color:rgba(255,255,255,.85)">';
+  h += 'Se presenta a la Dirección General el plan de inversión en <b style="color:white">'+MACHINES.length+' equipos de maquinaria</b> ';
+  h += 'para la planta de Linea Italia en Aguascalientes. La inversión total neta asciende a <b style="color:#F0A84A">'+fmt(totNeto)+'</b>, ';
+  h += 'con un beneficio anual proyectado de <b style="color:#4ADE80">'+fmt(totBen)+'</b> ';
+  h += 'y una ganancia neta acumulada de <b style="color:#4ADE80">'+fmt(totNg)+'</b> durante la vida útil. ';
+  if (isFinite(minPay)) {
+    h += 'El equipo con menor tiempo de recuperación presenta un payback de <b style="color:#FCD34D">'+minPay.toFixed(1)+' años</b>. ';
+  }
+  h += 'El ROI promedio ponderado del portafolio es de <b style="color:#F0A84A">'+(avgRoi>=0?'+':'')+avgRoi.toFixed(0)+'%</b>. ';
+  h += 'Se recomienda la aprobación integral del paquete dado que los equipos tienen dependencias técnicas entre sí (el extractor de polvo es prerequisito operativo para el CNC y el taladro).';
+  h += '</div>';
+  // Summary numbers strip
+  h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px">';
+  var kpis = [
+    ['CAPEX Total', fmt(totCapex), '#93C5FD'],
+    ['Inversión Neta', fmt(totNeto), '#F0A84A'],
+    ['Beneficio Anual', fmt(totBen), '#4ADE80'],
+    ['ROI Promedio', (avgRoi>=0?'+':'')+avgRoi.toFixed(0)+'%', '#4ADE80']
+  ];
+  kpis.forEach(function(k){
+    h += '<div style="background:rgba(255,255,255,.07);border-radius:8px;padding:12px 14px">';
+    h += '<div style="font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.07em;font-family:\'DM Mono\',monospace;margin-bottom:4px">'+k[0]+'</div>';
+    h += '<div style="font-size:18px;font-weight:700;color:'+k[2]+';font-family:\'DM Mono\',monospace">'+k[1]+'</div>';
+    h += '</div>';
+  });
+  h += '</div></div>';
+
+  // ── Justificación por equipo ──
+  h += '<div style="font-family:\'Fraunces\',serif;font-size:17px;font-weight:600;color:#1E1C18;margin-bottom:16px">Justificación por Equipo</div>';
+
+  results.forEach(function(x, idx) {
+    var m = x.m; var r = x.r;
+    var hd = r.ab > 0;
+    var roiColor = hd ? (r.roi>=100?'#16A34A':r.roi>=50?'#D97706':'#DC2626') : '#6B7280';
+
+    // Collect active benefit variables
+    var benVars = [];
+    if (m.vars && typeof m.vars === 'object' && !Array.isArray(m.vars)) {
+      Object.keys(m.vars).forEach(function(vid){
+        var mv = m.vars[vid]; if (!mv || !mv.on) return;
+        var vdef = VAR_LIB.find(function(v){ return v.id===vid; });
+        if (!vdef || vdef.cat === 'opex') return;
+        benVars.push({ name: vdef.name, cat: CAT_NAMES[vdef.cat]||vdef.cat, val: calcVar(m.id, vid) });
+      });
+    }
+    var opexVars = [];
+    if (m.vars && typeof m.vars === 'object' && !Array.isArray(m.vars)) {
+      Object.keys(m.vars).forEach(function(vid){
+        var mv = m.vars[vid]; if (!mv || !mv.on) return;
+        var vdef = VAR_LIB.find(function(v){ return v.id===vid; });
+        if (!vdef || vdef.cat !== 'opex') return;
+        opexVars.push({ name: vdef.name, val: calcVar(m.id, vid) });
+      });
+    }
+
+    h += '<div style="background:white;border:1px solid #E9ECEF;border-radius:12px;margin-bottom:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)">';
+
+    // Machine header
+    h += '<div style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid #F1F3F5;background:#FAFBFC">';
+    h += '<div style="width:12px;height:12px;border-radius:50%;background:'+m.color+';flex-shrink:0"></div>';
+    h += '<div style="flex:1">';
+    h += '<div style="font-size:14px;font-weight:700;color:#1E1C18">'+m.name+'</div>';
+    h += '<div style="font-size:11px;color:#9A9890;font-family:\'DM Mono\',monospace">'+m.model+'</div>';
+    h += '</div>';
+    h += '<div style="display:flex;gap:10px;flex-shrink:0">';
+    h += '<div style="text-align:right"><div style="font-size:10px;color:#9A9890">Inversión neta</div><div style="font-size:13px;font-weight:700;color:#2563EB;font-family:\'DM Mono\',monospace">'+fmt(r.netInv||m.inv)+'</div></div>';
+    if (hd) {
+      h += '<div style="text-align:right"><div style="font-size:10px;color:#9A9890">Beneficio/año</div><div style="font-size:13px;font-weight:700;color:#16A34A;font-family:\'DM Mono\',monospace">'+fmt(r.ab)+'</div></div>';
+      h += '<div style="text-align:right"><div style="font-size:10px;color:#9A9890">ROI '+m.yr+' años</div><div style="font-size:15px;font-weight:800;color:'+roiColor+';font-family:\'DM Mono\',monospace">'+(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%</div></div>';
+      if (isFinite(r.pay)) { h += '<div style="text-align:right"><div style="font-size:10px;color:#9A9890">Payback</div><div style="font-size:13px;font-weight:700;color:#D97706;font-family:\'DM Mono\',monospace">'+r.pay.toFixed(1)+' años</div></div>'; }
+    }
+    h += '</div></div>';
+
+    // Body
+    h += '<div style="padding:16px 20px">';
+
+    // Frase
+    if (m.frase) {
+      h += '<div style="font-size:13px;color:#374151;line-height:1.6;background:#F8FAFF;border-left:3px solid #1E2A4A;padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:14px;font-style:italic">'+m.frase+'</div>';
+    }
+
+    // Two columns: justification + numbers
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">';
+
+    // Left: impact points
+    h += '<div>';
+    h += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9A9890;margin-bottom:8px">Justificación Operativa</div>';
+    m.impactos.forEach(function(imp){
+      h += '<div style="display:flex;gap:8px;margin-bottom:6px;align-items:flex-start">';
+      h += '<span style="font-size:15px;flex-shrink:0;margin-top:1px">'+imp.icon+'</span>';
+      h += '<div><div style="font-size:12px;font-weight:600;color:#1E1C18">'+imp.text+'</div>';
+      if(imp.sub) h += '<div style="font-size:11px;color:#6B7280">'+imp.sub+'</div>';
+      h += '</div></div>';
+    });
+    h += '</div>';
+
+    // Right: financial breakdown
+    h += '<div>';
+    h += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9A9890;margin-bottom:8px">Desglose Financiero</div>';
+    // benefits
+    if (benVars.length) {
+      benVars.forEach(function(bv){
+        h += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #F8F9FA;font-size:11px">';
+        h += '<span style="color:#374151">'+bv.name+'</span>';
+        h += '<span style="font-family:\'DM Mono\',monospace;font-weight:700;color:#16A34A">'+fmt(bv.val)+'/año</span>';
+        h += '</div>';
+      });
+      h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12px;font-weight:700;border-top:1px solid #E5E7EB;margin-top:4px">';
+      h += '<span style="color:#16A34A">Total beneficio anual</span><span style="font-family:\'DM Mono\',monospace;color:#16A34A">'+fmt(r.ab)+'</span></div>';
+    } else {
+      h += '<div style="font-size:11px;color:#9A9890;padding:8px 0">Sin variables configuradas</div>';
+    }
+    if (opexVars.length || r.opx > 0) {
+      h += '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:11px;color:#DC2626">';
+      h += '<span>OPEX anual (costos de operación)</span><span style="font-family:\'DM Mono\',monospace;font-weight:700">'+fmt(r.opx)+'</span></div>';
+      h += '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;font-weight:700">';
+      h += '<span style="color:#1E1C18">Flujo neto anual</span><span style="font-family:\'DM Mono\',monospace;color:#1E1C18">'+fmt(r.fl)+'</span></div>';
+    }
+    if (hd) {
+      h += '<div style="background:#F0FDF4;border-radius:8px;padding:10px 12px;margin-top:8px">';
+      h += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span style="color:#16A34A">Ganancia neta ('+m.yr+' años)</span><span style="font-family:\'DM Mono\',monospace;font-weight:700;color:#16A34A">'+fmt(r.ng)+'</span></div>';
+      h += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span style="color:#374151">Inversión neta</span><span style="font-family:\'DM Mono\',monospace;font-weight:700;color:#2563EB">'+fmt(r.netInv||m.inv)+'</span></div>';
+      if(isFinite(r.pay)) { h += '<div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#374151">Payback</span><span style="font-family:\'DM Mono\',monospace;font-weight:700;color:#D97706">'+r.pay.toFixed(1)+' años</span></div>'; }
+      h += '</div>';
+    }
+    h += '</div></div>'; // two columns
+    h += '</div></div>'; // body + card
+  }); // end machines loop
+
+  // ── Tabla consolidada ──
+  h += '<div style="margin-bottom:24px">';
+  h += '<div style="font-family:\'Fraunces\',serif;font-size:17px;font-weight:600;color:#1E1C18;margin-bottom:14px">Resumen Consolidado del Portafolio</div>';
+  h += '<div style="background:white;border:1px solid #E9ECEF;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)">';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  h += '<thead><tr style="background:#1E2A4A;color:white">';
+  ['Equipo','Inversión Neta','Beneficio/Año','OPEX/Año','Flujo Neto/Año','ROI','Payback','Ganancia Neta'].forEach(function(col, ci){
+    h += '<th style="padding:10px 14px;text-align:'+(ci===0?'left':'right')+';font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;white-space:nowrap">'+col+'</th>';
+  });
+  h += '</tr></thead><tbody>';
+  results.forEach(function(x, i){
+    var m = x.m; var r = x.r;
+    var hd = r.ab > 0;
+    var bg = i % 2 === 0 ? '#FAFBFC' : 'white';
+    var rc = hd ? (r.roi>=100?'#16A34A':r.roi>=50?'#D97706':'#DC2626') : '#9A9890';
+    h += '<tr style="background:'+bg+';border-bottom:1px solid #F1F3F5">';
+    h += '<td style="padding:10px 14px"><div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:50%;background:'+m.color+';flex-shrink:0"></div><span style="font-weight:600;color:#1E1C18">'+m.name+'</span></div></td>';
+    h += '<td style="padding:10px 14px;text-align:right;font-family:\'DM Mono\',monospace;font-weight:600;color:#2563EB">'+fmt(r.netInv||m.inv)+'</td>';
+    h += '<td style="padding:10px 14px;text-align:right;font-family:\'DM Mono\',monospace;font-weight:600;color:#16A34A">'+(hd?fmt(r.ab):'—')+'</td>';
+    h += '<td style="padding:10px 14px;text-align:right;font-family:\'DM Mono\',monospace;color:#DC2626">'+(r.opx>0?fmt(r.opx):'—')+'</td>';
+    h += '<td style="padding:10px 14px;text-align:right;font-family:\'DM Mono\',monospace;font-weight:600">'+(hd?fmt(r.fl):'—')+'</td>';
+    h += '<td style="padding:10px 14px;text-align:right;font-weight:700;color:'+rc+'">'+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'—')+'</td>';
+    h += '<td style="padding:10px 14px;text-align:right;font-family:\'DM Mono\',monospace;color:#D97706">'+(isFinite(r.pay)?r.pay.toFixed(1)+' años':'—')+'</td>';
+    h += '<td style="padding:10px 14px;text-align:right;font-family:\'DM Mono\',monospace;font-weight:700;color:#16A34A">'+(hd?fmt(r.ng):'—')+'</td>';
+    h += '</tr>';
+  });
+  // Totals row
+  h += '<tr style="background:#1E2A4A;color:white;font-weight:700">';
+  h += '<td style="padding:10px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.05em">TOTAL PORTAFOLIO</td>';
+  h += '<td style="padding:10px 14px;text-align:right;font-family:\'DM Mono\',monospace">'+fmt(totNeto)+'</td>';
+  h += '<td style="padding:10px 14px;text-align:right;font-family:\'DM Mono\',monospace;color:#4ADE80">'+fmt(totBen)+'</td>';
+  h += '<td style="padding:10px 14px;text-align:right;font-family:\'DM Mono\',monospace;color:#FCA5A5">'+fmt(totOpex)+'</td>';
+  h += '<td style="padding:10px 14px;text-align:right;font-family:\'DM Mono\',monospace">'+fmt(totFl)+'</td>';
+  h += '<td style="padding:10px 14px;text-align:right;color:#F0A84A">'+(avgRoi>=0?'+':'')+avgRoi.toFixed(0)+'%</td>';
+  h += '<td style="padding:10px 14px;text-align:right;color:#FCD34D">'+(isFinite(minPay)?minPay.toFixed(1)+' años (mejor)':'—')+'</td>';
+  h += '<td style="padding:10px 14px;text-align:right;font-family:\'DM Mono\',monospace;color:#4ADE80">'+fmt(totNg)+'</td>';
+  h += '</tr>';
+  h += '</tbody></table></div></div>';
+
+  // ── Recomendaciones ──
+  h += '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:18px 22px;margin-bottom:24px">';
+  h += '<div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:10px">⚠ Consideraciones para la Dirección</div>';
+  h += '<ul style="font-size:12px;color:#78350F;line-height:1.8;padding-left:18px">';
+  h += '<li>El Extractor de Polvo (EXT) es <b>prerequisito técnico</b> para operar el CNC y el Taladro — su aprobación no es independiente.</li>';
+  h += '<li>Los beneficios están calculados sobre parámetros de operación actuales. Variaciones en volumen de producción o precios de material impactan los resultados.</li>';
+  h += '<li>Los tiempos de entrega de los equipos KDT son de <b>75–90 días</b> desde la firma de orden de compra. El extractor tiene entrega inmediata.</li>';
+  h += '<li>Se requiere firma del Gerente de Planta y del Director de Finanzas para liberar los anticipos a proveedor.</li>';
+  h += '</ul></div>';
+
+  // ══════════════════════════════════════
+  // FORMATO DE APROBACIÓN
+  // ══════════════════════════════════════
+  h += '<div style="background:white;border:2px solid #1E2A4A;border-radius:14px;padding:28px 32px;margin-top:8px">';
+
+  // Header aprobación
+  h += '<div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #1E2A4A;padding-bottom:14px;margin-bottom:20px">';
+  h += '<div>';
+  h += '<div style="font-family:\'Fraunces\',serif;font-size:20px;font-weight:700;color:#1E2A4A">Formato de Aprobación de Inversión</div>';
+  h += '<div style="font-size:12px;color:#6B7280;margin-top:2px;font-family:\'DM Mono\',monospace">Linea Italia · Plan de Inversión en Maquinaria 2026</div>';
+  h += '</div>';
+  h += '<div style="text-align:right">';
+  h += '<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:#9A9890">Folio: LI-INV-2026-01</div>';
+  h += '<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:#9A9890">Fecha: '+fechaStr+'</div>';
+  h += '</div></div>';
+
+  // Datos de la solicitud
+  h += '<div style="margin-bottom:20px">';
+  h += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#9A9890;margin-bottom:10px">1. Datos de la Solicitud</div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  var fields1 = [
+    ['Empresa / División', 'Linea Italia — Aguascalientes'],
+    ['Área solicitante', 'Dirección de Producción / Planta'],
+    ['Tipo de inversión', 'CAPEX — Adquisición de maquinaria'],
+    ['Número de equipos', MACHINES.length + ' equipos'],
+    ['Inversión total (CAPEX)', fmt(totCapex)],
+    ['Inversión neta (descontando reemplazos)', fmt(totNeto)]
+  ];
+  fields1.forEach(function(f){
+    h += '<div style="border:1px solid #E5E7EB;border-radius:8px;padding:10px 13px">';
+    h += '<div style="font-size:10px;color:#9A9890;font-family:\'DM Mono\',monospace;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">'+f[0]+'</div>';
+    h += '<div style="font-size:13px;font-weight:600;color:#1E1C18">'+f[1]+'</div>';
+    h += '</div>';
+  });
+  h += '</div></div>';
+
+  // Justificación resumida
+  h += '<div style="margin-bottom:20px">';
+  h += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#9A9890;margin-bottom:10px">2. Justificación de la Inversión</div>';
+  h += '<div style="border:1px solid #E5E7EB;border-radius:8px;padding:13px 16px;font-size:12px;color:#374151;line-height:1.7">';
+  h += 'La inversión contempla la renovación de la línea de maquinaria principal de la planta de Aguascalientes. ';
+  h += 'Los equipos actuales presentan alto costo de mantenimiento correctivo, tiempos muertos recurrentes y limitaciones de capacidad que restringen el crecimiento. ';
+  h += 'El paquete propuesto genera un beneficio anual estimado de <b>'+fmt(totBen)+'</b> mediante la combinación de: ';
+  h += 'reducción de mantenimiento correctivo, eliminación de scrap, liberación de personal en actividades de bajo valor, ';
+  h += 'y habilitación de nuevos productos y acabados que hoy no se pueden ofrecer al mercado. ';
+  h += 'El ROI promedio del portafolio es de <b>'+(avgRoi>=0?'+':'')+avgRoi.toFixed(0)+'%</b> y la ganancia neta acumulada asciende a <b>'+fmt(totNg)+'</b>.';
+  h += '</div></div>';
+
+  // Análisis financiero en el formato
+  h += '<div style="margin-bottom:20px">';
+  h += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#9A9890;margin-bottom:10px">3. Análisis Financiero del Portafolio</div>';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:12px;border:1px solid #E5E7EB;border-radius:8px;overflow:hidden">';
+  h += '<thead><tr style="background:#F8F9FA">';
+  h += '<th style="padding:8px 12px;text-align:left;color:#6B7280;font-weight:600;border-bottom:1px solid #E5E7EB">Concepto</th>';
+  h += '<th style="padding:8px 12px;text-align:right;color:#6B7280;font-weight:600;border-bottom:1px solid #E5E7EB">Importe</th>';
+  h += '<th style="padding:8px 12px;text-align:left;color:#6B7280;font-weight:600;border-bottom:1px solid #E5E7EB">Nota</th>';
+  h += '</tr></thead><tbody>';
+  var finRows = [
+    ['Inversión total (CAPEX)', fmt(totCapex), 'Suma de cotizaciones aprobadas por proveedor'],
+    ['Valor equipo a reemplazar (recuperación)', fmt(totCapex - totNeto), 'Reduce la inversión neta'],
+    ['Inversión neta', fmt(totNeto), 'Base para cálculo de ROI y payback'],
+    ['Beneficio anual proyectado', fmt(totBen), 'Ahorros y mejoras cuantificadas'],
+    ['OPEX anual adicional', fmt(totOpex), 'Costos de operación de los nuevos equipos'],
+    ['Flujo neto anual', fmt(totFl), 'Beneficio menos OPEX'],
+    ['Ganancia neta acumulada', fmt(totNg), 'Flujo neto × vida útil + rescate − inversión'],
+    ['ROI simple (promedio portafolio)', (avgRoi>=0?'+':'')+avgRoi.toFixed(1)+'%', 'Ganancia neta ÷ inversión neta'],
+    ['Payback (mejor equipo)', isFinite(minPay)?minPay.toFixed(1)+' años':'—', 'Tiempo para recuperar inversión']
+  ];
+  finRows.forEach(function(row, ri){
+    var isBold = ri === 2 || ri === 7;
+    var bg = ri % 2 === 0 ? 'white' : '#FAFBFC';
+    h += '<tr style="background:'+bg+';border-bottom:1px solid #F1F3F5">';
+    h += '<td style="padding:8px 12px;color:#374151;font-weight:'+(isBold?700:400)+'">'+row[0]+'</td>';
+    h += '<td style="padding:8px 12px;text-align:right;font-family:\'DM Mono\',monospace;font-weight:700;color:'+(isBold?'#1E2A4A':'#1E1C18')+'">'+row[1]+'</td>';
+    h += '<td style="padding:8px 12px;color:#9A9890;font-size:11px">'+row[2]+'</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table></div>';
+
+  // Equipment list in format
+  h += '<div style="margin-bottom:20px">';
+  h += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#9A9890;margin-bottom:10px">4. Listado de Equipos Solicitados</div>';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:11px;border:1px solid #E5E7EB;border-radius:8px;overflow:hidden">';
+  h += '<thead><tr style="background:#F8F9FA">';
+  ['#','Equipo','Proveedor / Folio','Inversión','ROI','Payback','Cotización'].forEach(function(col, ci){
+    h += '<th style="padding:7px 10px;text-align:'+(ci<=2?'left':'right')+';color:#6B7280;font-weight:600;border-bottom:1px solid #E5E7EB;font-size:10px;text-transform:uppercase;letter-spacing:.05em">'+col+'</th>';
+  });
+  h += '</tr></thead><tbody>';
+  results.forEach(function(x, i){
+    var m = x.m; var r = x.r; var hd = r.ab > 0;
+    var rc = hd ? (r.roi>=100?'#16A34A':r.roi>=50?'#D97706':'#DC2626') : '#9A9890';
+    var hasCot = m.cotPdf && m.cotPdf.length > 10;
+    h += '<tr style="background:'+(i%2===0?'white':'#FAFBFC')+';border-bottom:1px solid #F1F3F5">';
+    h += '<td style="padding:8px 10px;color:#9A9890">'+(i+1)+'.</td>';
+    h += '<td style="padding:8px 10px"><div style="display:flex;align-items:center;gap:6px"><div style="width:7px;height:7px;border-radius:50%;background:'+m.color+';flex-shrink:0"></div><b>'+m.name+'</b></div></td>';
+    h += '<td style="padding:8px 10px;color:#6B7280;font-size:10px;font-family:\'DM Mono\',monospace">'+m.model+'</td>';
+    h += '<td style="padding:8px 10px;text-align:right;font-family:\'DM Mono\',monospace;font-weight:700;color:#2563EB">'+fmt(r.netInv||m.inv)+'</td>';
+    h += '<td style="padding:8px 10px;text-align:right;font-weight:700;color:'+rc+'">'+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'—')+'</td>';
+    h += '<td style="padding:8px 10px;text-align:right;font-family:\'DM Mono\',monospace;color:#D97706">'+(isFinite(r.pay)?r.pay.toFixed(1)+' años':'—')+'</td>';
+    h += '<td style="padding:8px 10px;text-align:right">';
+    if(hasCot) h += '<button onclick="openPdfModal(\''+m.id+'\',\'cot\')" style="padding:3px 8px;border:1px solid #3B82F6;border-radius:4px;background:white;font-size:10px;color:#2563EB;cursor:pointer">Ver PDF</button>';
+    else h += '<span style="color:#D1D5DB;font-size:10px">Pendiente</span>';
+    h += '</td></tr>';
+  });
+  h += '</tbody></table></div>';
+
+  // Condiciones de aprobación
+  h += '<div style="margin-bottom:22px">';
+  h += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#9A9890;margin-bottom:10px">5. Condiciones de Aprobación</div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">';
+  var conds = [
+    '□  Autorización de presupuesto de CAPEX por Dirección Financiera',
+    '□  Revisión y validación de cotizaciones por área de Compras',
+    '□  Confirmación de espacio físico y obra civil por Gerencia de Planta',
+    '□  Plan de instalación y cronograma aprobado por Producción',
+    '□  Seguro de activos actualizado antes de la llegada de equipos',
+    '□  Capacitación de operadores incluida en plan de implementación'
+  ];
+  conds.forEach(function(c){
+    h += '<div style="border:1px solid #E5E7EB;border-radius:7px;padding:9px 12px;color:#374151">'+c+'</div>';
+  });
+  h += '</div></div>';
+
+  // Signature blocks
+  h += '<div style="border-top:1px solid #E5E7EB;padding-top:20px">';
+  h += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#9A9890;margin-bottom:16px">6. Firmas de Autorización</div>';
+  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">';
+  var signatories = [
+    ['Gerente de Planta', 'Elaboró y solicita', 'Aguascalientes, '+fechaStr],
+    ['Director de Finanzas', 'Aprueba presupuesto CAPEX', 'Aguascalientes, '+fechaStr],
+    ['Director General', 'Aprobación final', 'Aguascalientes, '+fechaStr]
+  ];
+  signatories.forEach(function(sig){
+    h += '<div style="text-align:center">';
+    h += '<div style="height:48px;border-bottom:1.5px solid #1E2A4A;margin-bottom:8px"></div>';
+    h += '<div style="font-size:12px;font-weight:700;color:#1E1C18">'+sig[0]+'</div>';
+    h += '<div style="font-size:10px;color:#6B7280;margin-top:2px">'+sig[1]+'</div>';
+    h += '<div style="font-size:10px;color:#9A9890;font-family:\'DM Mono\',monospace;margin-top:2px">'+sig[2]+'</div>';
+    h += '</div>';
+  });
+  h += '</div>';
+  h += '<div style="margin-top:18px;padding:10px 14px;background:#F8F9FA;border-radius:8px;font-size:10px;color:#9A9890;line-height:1.6">';
+  h += '<b style="color:#374151">Nota:</b> Este documento fue generado automáticamente por el sistema de Plan de Inversión de Linea Italia. ';
+  h += 'Los valores de ROI, payback y beneficios son proyecciones basadas en los parámetros configurados y están sujetos a validación final por el área de Finanzas. ';
+  h += 'Una vez firmado, este documento autoriza el inicio del proceso de compra conforme a las políticas de adquisición de la empresa.';
+  h += '</div></div>';
+
+  h += '</div>'; // formato de aprobación
+  h += '</div>'; // max-width wrapper
+
+  el.innerHTML = h;
+}
+
+
+// ══════════════════════════════════════════════════════
+//  GANTT DASHBOARD — RESUMEN POR SECCIÓN DE TAREAS
+// ══════════════════════════════════════════════════════
+
+function ganttRenderDashboard() {
+  var el = document.getElementById('gantt-dashboard-content');
+  if (!el) return;
+  ganttInitTasks();
+
+  var tasks = GANTT_TASKS;
+  var totalTasks = tasks.length;
+  var doneTasks  = tasks.filter(function(t){ return t.status === 'done'; }).length;
+  var progTasks  = tasks.filter(function(t){ return t.status === 'progress'; }).length;
+  var pendTasks  = tasks.filter(function(t){ return t.status === 'pending' || !t.status; }).length;
+  var overallPct = totalTasks ? Math.round(doneTasks / totalTasks * 100) : 0;
+
+  var h = '';
+  h += '<div style="background:white;border:1px solid #E9ECEF;border-radius:14px;padding:20px 24px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.05)">';
+  h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">';
+  h += '<div><div style="font-size:14px;font-weight:700;color:#1E1C18">Progreso General</div><div style="font-size:12px;color:#9A9890;margin-top:2px">' + totalTasks + ' tareas totales</div></div>';
+  h += '<div style="font-size:36px;font-weight:900;color:' + (overallPct>=100?'#16A34A':overallPct>=50?'#D97706':'#2563EB') + ';font-family:DM Mono,monospace">' + overallPct + '%</div>';
+  h += '</div>';
+  h += '<div style="height:10px;background:#F1F3F5;border-radius:99px;overflow:hidden;margin-bottom:12px"><div style="height:100%;width:' + overallPct + '%;background:' + (overallPct>=100?'#16A34A':'#2563EB') + ';border-radius:99px"></div></div>';
+  h += '<div style="display:flex;gap:16px">';
+  [['✓ Completadas',doneTasks,'#16A34A','#F0FDF4'],['↻ En curso',progTasks,'#D97706','#FEF3C7'],['○ Pendientes',pendTasks,'#6B7280','#F8F9FA']].forEach(function(it){
+    h += '<div style="flex:1;background:'+it[3]+';border-radius:10px;padding:10px 14px;text-align:center"><div style="font-size:20px;font-weight:800;color:'+it[2]+';font-family:DM Mono,monospace">'+it[1]+'</div><div style="font-size:11px;color:'+it[2]+';margin-top:2px">'+it[0]+'</div></div>';
+  });
+  h += '</div></div>';
+
+  h += '<div style="background:white;border:1px solid #E9ECEF;border-radius:14px;padding:20px 24px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.05)">';
+  h += '<div style="font-size:14px;font-weight:700;color:#1E1C18;margin-bottom:16px">Progreso por Máquina</div>';
+  MACHINES.forEach(function(m){
+    var mt=tasks.filter(function(t){return t.maqId===m.id;});
+    var md=mt.filter(function(t){return t.status==='done';}).length;
+    var mp=mt.filter(function(t){return t.status==='progress';}).length;
+    var pct=mt.length?Math.round(md/mt.length*100):0;
+    var col=pct>=100?'#16A34A':pct>=50?'#D97706':m.color;
+    h += '<div style="margin-bottom:14px">';
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">';
+    h += '<div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:'+m.color+'"></div><span style="font-size:12px;font-weight:600;color:#1E1C18">'+m.name.split(' ').slice(0,4).join(' ')+'</span></div>';
+    h += '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:11px;color:#9A9890">'+md+'/'+mt.length+'</span>'+(mp>0?'<span style="font-size:10px;background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:9px">↻ '+mp+'</span>':'')+'<span style="font-size:13px;font-weight:800;color:'+col+';font-family:DM Mono,monospace;min-width:36px;text-align:right">'+pct+'%</span></div>';
+    h += '</div><div style="height:8px;background:#F1F3F5;border-radius:99px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:99px"></div></div></div>';
+  });
+  h += '</div>';
+
+  var phaseMap={};
+  tasks.forEach(function(t){var ph=t.phase||'Sin fase';if(!phaseMap[ph])phaseMap[ph]={total:0,done:0,prog:0};phaseMap[ph].total++;if(t.status==='done')phaseMap[ph].done++;if(t.status==='progress')phaseMap[ph].prog++;});
+  var phases=Object.keys(phaseMap);
+  if(phases.length>0){
+    h += '<div style="background:white;border:1px solid #E9ECEF;border-radius:14px;padding:20px 24px;box-shadow:0 1px 4px rgba(0,0,0,.05)">';
+    h += '<div style="font-size:14px;font-weight:700;color:#1E1C18;margin-bottom:16px">Progreso por Fase</div>';
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">';
+    var phC=['#2563EB','#7C3AED','#D97706','#DC2626','#059669','#0891B2','#1E2A4A'];
+    phases.forEach(function(ph,pi){
+      var pd=phaseMap[ph];var pPct=pd.total?Math.round(pd.done/pd.total*100):0;var pCol=pPct>=100?'#16A34A':phC[pi%phC.length];
+      h += '<div style="background:#F8F9FA;border-radius:10px;padding:14px 16px">';
+      h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div style="font-size:12px;font-weight:600;color:#374151;line-height:1.3;max-width:180px">'+ph+'</div><div style="font-size:16px;font-weight:800;color:'+pCol+';font-family:DM Mono,monospace">'+pPct+'%</div></div>';
+      h += '<div style="height:6px;background:#E5E7EB;border-radius:99px;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:'+pPct+'%;background:'+pCol+';border-radius:99px"></div></div>';
+      h += '<div style="font-size:10px;color:#9A9890">'+pd.done+' completadas · '+pd.prog+' en curso · '+(pd.total-pd.done-pd.prog)+' pendientes</div>';
+      h += '</div>';
+    });
+    h += '</div></div>';
+  }
+  el.innerHTML = h;
+}
+
+// ══════════════════════════════════════════════════════
+//  ANÁLISIS FINANCIERO — v2 sin re-render en inputs
+// ══════════════════════════════════════════════════════
+
+var FIN_DATA = {};
+var FIN_ACTIVE_MACHINE = null;
+
+function finGetData(mid) {
+  if (!FIN_DATA[mid]) {
+    FIN_DATA[mid] = {
+      mode: 'resumen',
+      credito: { anticipo: 0, tasa: 12, plazo: 36, comision: 0 },
+      arrendadoras: [
+        { nombre: 'Opción A', plazo_meses: 36, renta_mensual: 0, valor_residual_pct: 10, gastos_iniciales: 0 },
+        { nombre: 'Opción B', plazo_meses: 36, renta_mensual: 0, valor_residual_pct: 10, gastos_iniciales: 0 },
+        { nombre: 'Opción C', plazo_meses: 36, renta_mensual: 0, valor_residual_pct: 10, gastos_iniciales: 0 }
+      ],
+      arr_open: {}
+    };
+  }
+  return FIN_DATA[mid];
+}
+
+function finCalcCredito(inv, anticipo_amt, tasa_anual, plazo_meses, comision_pct) {
+  var anticipo = parseFloat(anticipo_amt) || 0;
+  var monto = inv - anticipo;
+  var comision = monto * ((parseFloat(comision_pct)||0) / 100);
+  var monto_real = monto + comision;
+  var tasa_m = (parseFloat(tasa_anual)||0) / 100 / 12;
+  var plazo = parseInt(plazo_meses) || 36;
+  var mensualidad = tasa_m > 0
+    ? monto_real * tasa_m * Math.pow(1+tasa_m, plazo) / (Math.pow(1+tasa_m, plazo) - 1)
+    : monto_real / plazo;
+  var total_rentas = mensualidad * plazo;
+  var costo_financiero = total_rentas + comision - monto;
+  return { anticipo:anticipo, monto:monto, comision:comision, mensualidad:mensualidad,
+           total_rentas:total_rentas, costo_financiero:costo_financiero,
+           egreso_total:anticipo+total_rentas, tasa_m:tasa_m, plazo_meses:plazo };
+}
+
+function finCalcArrendadora(inv, arr) {
+  var renta = parseFloat(arr.renta_mensual)||0;
+  var gastos = parseFloat(arr.gastos_iniciales)||0;
+  var residual = inv * ((parseFloat(arr.valor_residual_pct)||10) / 100);
+  var plazo = parseInt(arr.plazo_meses)||36;
+  var total_rentas = renta * plazo;
+  var egreso_total = gastos + total_rentas + residual;
+  return { renta:renta, total_rentas:total_rentas, residual:residual, gastos:gastos,
+           egreso_total:egreso_total, costo_financiero:egreso_total-inv, plazo:plazo };
+}
+
+function finAmortTable(arr, inv) {
+  var plazo = parseInt(arr.plazo_meses)||36;
+  var renta = parseFloat(arr.renta_mensual)||0;
+  var residual = inv * ((parseFloat(arr.valor_residual_pct)||10)/100);
+  var gastos = parseFloat(arr.gastos_iniciales)||0;
+  if (renta <= 0) return [];
+  var PV = inv - gastos;
+  // Newton-Raphson para tasa implícita
+  var r = 0.01;
+  for (var i=0; i<100; i++) {
+    var pn = Math.pow(1+r, -plazo);
+    var f  = renta*(1-pn)/r + residual*pn - PV;
+    var df = renta*((pn*(plazo/r) - (1-pn)/r)/r) - residual*plazo*pn/(1+r);
+    var rn = r - f/df;
+    if (Math.abs(rn-r)<1e-12) { r=rn; break; }
+    r = rn;
+  }
+  var rows=[], saldo=PV, acR=0, acI=0, acK=0;
+  for (var m=1; m<=plazo; m++) {
+    var interes=saldo*r, capital=renta-interes;
+    saldo-=capital; if(saldo<0.01)saldo=0;
+    acR+=renta; acI+=interes; acK+=capital;
+    rows.push({mes:m,renta:renta,interes:interes,capital:capital,saldo:Math.max(0,saldo),acR:acR,acI:acI,acK:acK});
+  }
+  rows.tasaAnual = r*12*100;
+  return rows;
+}
+
+// ── Render principal — solo estructura, sin re-render por inputs ──
+function renderFinanciamiento() {
+  var el = document.getElementById('financiamiento-content');
+  if (!el) return;
+  if (!FIN_ACTIVE_MACHINE && MACHINES.length) FIN_ACTIVE_MACHINE = MACHINES[0].id;
+
+  var m = MACHINES.find(function(x){ return x.id===FIN_ACTIVE_MACHINE; });
+  if (!m) return;
+  var r  = calcROI(m);
+  var inv = r.netInv || m.inv || 0;
+  var fd = finGetData(m.id);
+  var hd = r.ab > 0;
+
+  var h = '<div style="max-width:1040px;margin:0 auto">';
+  h += '<div style="font-family:Fraunces,serif;font-size:22px;font-weight:700;color:#1E1C18;margin-bottom:4px">Análisis Financiero</div>';
+  h += '<div style="font-size:13px;color:#6B7280;margin-bottom:20px">Compara las 3 opciones de financiamiento para esta máquina.</div>';
+
+  // Pills de máquinas
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px">';
+  MACHINES.forEach(function(mx) {
+    var ia = FIN_ACTIVE_MACHINE===mx.id;
+    h += '<button onclick="finSelectMachine(\''+mx.id+'\')" style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:50px;border:2px solid '+(ia?mx.color:'#E5E7EB')+';background:'+(ia?mx.color+'18':'white')+';cursor:pointer;font-size:12px;font-weight:'+(ia?700:500)+';color:'+(ia?'#1E1C18':'#6B7280')+';font-family:DM Sans,sans-serif">';
+    h += '<div style="width:9px;height:9px;border-radius:50%;background:'+mx.color+';flex-shrink:0"></div>'+mx.code+' — '+mx.name.split(' ').slice(0,3).join(' ')+'</button>';
+  });
+  h += '</div>';
+
+  // Header máquina
+  h += '<div style="background:white;border:1px solid #E9ECEF;border-radius:16px;overflow:hidden;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.07)">';
+  h += '<div style="display:flex">';
+  h += '<div style="width:190px;flex-shrink:0;background:#F1F3F5;position:relative;min-height:120px">';
+  if (m.heroPhoto) h += '<img src="'+m.heroPhoto+'" style="width:100%;height:100%;object-fit:cover;display:block">';
+  else h += '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.2">📷</div>';
+  h += '</div>';
+  h += '<div style="flex:1;padding:16px 20px">';
+  h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><div style="width:12px;height:12px;border-radius:50%;background:'+m.color+'"></div><div style="font-family:Fraunces,serif;font-size:17px;font-weight:700;color:#1E1C18">'+m.name+'</div></div>';
+  h += '<div style="font-size:11px;color:#9A9890;font-family:DM Mono,monospace;margin-bottom:12px">'+m.model+'</div>';
+  h += '<div style="display:flex;gap:10px;flex-wrap:wrap">';
+  h += '<div style="background:#EFF6FF;border-radius:10px;padding:9px 13px"><div style="font-size:10px;color:#3B82F6;margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em">Inversión neta</div><div style="font-size:15px;font-weight:800;color:#2563EB;font-family:DM Mono,monospace">'+fmt(inv)+'</div></div>';
+  // ROI con tooltip
+  var roiC=r.roi>=100?'#16A34A':r.roi>=50?'#D97706':'#DC2626';
+  h += '<div class="tip-wrap" style="background:#F8F9FA;border-radius:10px;padding:9px 13px;cursor:help">';
+  h += '<div style="font-size:10px;color:#9A9890;margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em">ROI '+m.yr+' años ⓘ</div>';
+  h += '<div style="font-size:15px;font-weight:800;color:'+roiC+';font-family:DM Mono,monospace">'+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'—')+'</div>';
+  h += '<div class="tip-box"><div class="tip-label">¿Qué es el ROI?</div>';
+  h += '<div>Ganancia total expresada como % de la inversión.</div>';
+  if(hd)h+='<div class="tip-row" style="margin-top:5px"><span>Ganancia neta:</span><span style="font-weight:700;color:#4ADE80">'+fmt(r.ng)+'</span></div>';
+  h += '<div class="tip-formula">ROI = (Ganancia neta ÷ Inversión) × 100</div></div></div>';
+  // Payback con tooltip
+  h += '<div class="tip-wrap" style="background:#F8F9FA;border-radius:10px;padding:9px 13px;cursor:help">';
+  h += '<div style="font-size:10px;color:#9A9890;margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em">Payback ⓘ</div>';
+  h += '<div style="font-size:15px;font-weight:800;color:#D97706;font-family:DM Mono,monospace">'+(isFinite(r.pay)?r.pay.toFixed(1)+' años':'—')+'</div>';
+  h += '<div class="tip-box"><div class="tip-label">¿Qué es el Payback?</div>';
+  h += '<div>Años que tarda la máquina en pagar su costo con los ahorros que genera.</div>';
+  if(isFinite(r.pay))h+='<div class="tip-row" style="margin-top:5px"><span>Flujo neto/año:</span><span style="font-weight:700;color:#4ADE80">'+fmt(r.fl)+'</span></div>';
+  h += '<div class="tip-formula">Payback = Inversión ÷ Flujo neto anual</div></div></div>';
+  h += '</div></div></div>';
+
+  // Mode tabs
+  h += '<div style="display:flex;border-top:1px solid #F1F3F5">';
+  [['resumen','📊 Resumen'],['contado','💵 Contado'],['credito','🏦 Crédito'],['arrendamiento','📑 Arrendamiento']].forEach(function(pair){
+    var isOn=fd.mode===pair[0];
+    h += '<button onclick="finSetMode(\''+m.id+'\',\''+pair[0]+'\')" style="flex:1;padding:11px 0;border:none;border-top:3px solid '+(isOn?m.color:'transparent')+';background:'+(isOn?'white':'#FAFBFC')+';font-size:12px;font-weight:'+(isOn?700:500)+';color:'+(isOn?'#1E1C18':'#6B7280')+';cursor:pointer;font-family:DM Sans,sans-serif">'+pair[1]+'</button>';
+  });
+  h += '</div></div>';
+
+  // Mode body (NO inputs here — rendered separately to avoid re-render on typing)
+  h += '<div id="fin-mode-body"></div>';
+  h += '</div>';
+  el.innerHTML = h;
+
+  // Render mode body separately so it can be updated without full re-render
+  finRenderModeBody(m, fd, inv, r);
+}
+
+function finRenderModeBody(m, fd, inv, r) {
+  var el = document.getElementById('fin-mode-body');
+  if (!el) return;
+  var hd = r.ab > 0;
+
+  if (fd.mode === 'resumen') {
+    el.innerHTML = finRenderResumen(m, fd, inv, r, hd);
+  } else if (fd.mode === 'contado') {
+    el.innerHTML = finRenderContado(m, fd, inv, r, hd);
+  } else if (fd.mode === 'credito') {
+    el.innerHTML = finRenderCreditoShell(m, fd, inv, r, hd);
+    finRecalcCredito(m.id);  // populate dynamic parts
+  } else if (fd.mode === 'arrendamiento') {
+    el.innerHTML = finRenderArrShell(m, fd, inv, r, hd);
+    finRecalcArr(m.id);
+  }
+}
+
+// ── RESUMEN: comparativa de las 3 opciones ─────────────────────────────────
+function finRenderResumen(m, fd, inv, r, hd) {
+  var cr = fd.credito;
+  var calcC = finCalcCredito(inv, cr.anticipo||0, cr.tasa||12, cr.plazo||36, cr.comision||0);
+
+  // Best arrendadora
+  var activeArrs = fd.arrendadoras.filter(function(a){return a.renta_mensual>0;});
+  var bestArr = activeArrs.length ? activeArrs.slice().sort(function(a,b){return finCalcArrendadora(inv,a).egreso_total-finCalcArrendadora(inv,b).egreso_total;})[0] : null;
+  var calcA = bestArr ? finCalcArrendadora(inv,bestArr) : null;
+
+  var roiAdj = calcC.egreso_total>0 ? ((r.ng - calcC.costo_financiero)/calcC.egreso_total*100) : null;
+  var payAdj = r.fl>0 ? calcC.egreso_total/r.fl : null;
+  var roiArr = calcA && calcA.egreso_total>0 ? ((r.ng - calcA.costo_financiero)/calcA.egreso_total*100) : null;
+  var payArr = calcA && r.fl>0 ? calcA.egreso_total/r.fl : null;
+
+  var cards = [
+    {
+      id:'contado', icon:'💵', label:'Contado',
+      color:'#16A34A', bg:'#F0FDF4', border:'#BBF7D0',
+      tagline:'Sin costo financiero. Máximo rendimiento.',
+      rows:[
+        ['Desembolso inicial', fmt(inv)],
+        ['Costo financiero', '$0'],
+        ['Egreso total', fmt(inv)],
+        ['ROI', hd?(r.roi>=0?'+':'')+r.roi.toFixed(1)+'%':'—'],
+        ['Payback', isFinite(r.pay)?r.pay.toFixed(1)+' años':'—'],
+      ],
+      badge: hd && isFinite(r.pay) && r.pay < 2 ? '★ Recuperación rápida' : null
+    },
+    {
+      id:'credito', icon:'🏦', label:'Crédito bancario',
+      color:'#2563EB', bg:'#EFF6FF', border:'#BFDBFE',
+      tagline: cr.anticipo>0 || cr.tasa>0 ? 'Anticipo '+fmt(cr.anticipo||0)+' · '+((cr.tasa||12).toFixed(1))+'% anual · '+(cr.plazo||36)+' meses' : 'Configura los parámetros en la pestaña Crédito.',
+      rows:[
+        ['Anticipo', fmt(calcC.anticipo)],
+        ['Mensualidad', fmt(calcC.mensualidad)],
+        ['Costo financiero', fmt(calcC.costo_financiero)],
+        ['Egreso total', fmt(calcC.egreso_total)],
+        ['ROI ajustado', roiAdj!==null?(roiAdj>=0?'+':'')+roiAdj.toFixed(1)+'%':'—'],
+        ['Payback ajustado', payAdj&&isFinite(payAdj)?payAdj.toFixed(1)+' años':'—'],
+      ],
+      badge: null
+    },
+    {
+      id:'arrendamiento', icon:'📑', label:'Arrendamiento',
+      color:'#7C3AED', bg:'#F5F3FF', border:'#DDD6FE',
+      tagline: bestArr ? '★ '+bestArr.nombre+' · Renta '+fmt(bestArr.renta_mensual)+'/mes' : 'Configura las arrendadoras en la pestaña Arrendamiento.',
+      rows: bestArr ? [
+        ['Gastos iniciales', fmt(calcA.gastos)],
+        ['Renta mensual', fmt(calcA.renta)],
+        ['Total rentas', fmt(calcA.total_rentas)],
+        ['Valor residual', fmt(calcA.residual)],
+        ['Egreso total', fmt(calcA.egreso_total)],
+        ['Costo financiero', fmt(calcA.costo_financiero)],
+        ['ROI ajustado', roiArr!==null?(roiArr>=0?'+':'')+roiArr.toFixed(1)+'%':'—'],
+        ['Payback ajustado', payArr&&isFinite(payArr)?payArr.toFixed(1)+' años':'—'],
+      ] : [['Estado','Sin datos']],
+      badge: null
+    }
+  ];
+
+  // Determine winner (lowest egreso total where we have data)
+  var egresos = [inv];
+  if (calcC.anticipo>=0 && (cr.tasa>0||cr.plazo>0)) egresos.push(calcC.egreso_total); else egresos.push(Infinity);
+  egresos.push(calcA ? calcA.egreso_total : Infinity);
+  var minEgreso = Math.min.apply(null, egresos);
+
+  var h = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">';
+  cards.forEach(function(card, ci){
+    var myEgreso = ci===0?inv:ci===1?calcC.egreso_total:(calcA?calcA.egreso_total:Infinity);
+    var isWinner = isFinite(myEgreso) && myEgreso===minEgreso && myEgreso<Infinity;
+    h += '<div style="background:'+card.bg+';border:2px solid '+(isWinner?card.color:card.border)+';border-radius:14px;padding:18px 16px;position:relative">';
+    if (isWinner) h += '<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:'+card.color+';color:white;font-size:10px;font-weight:700;padding:3px 10px;border-radius:9px;white-space:nowrap">★ MENOR EGRESO</div>';
+    if (card.badge) h += '<div style="position:absolute;top:-10px;right:12px;background:'+card.color+';color:white;font-size:9px;font-weight:700;padding:2px 8px;border-radius:9px;white-space:nowrap">'+card.badge+'</div>';
+    h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:20px">'+card.icon+'</span><span style="font-size:14px;font-weight:700;color:#1E1C18">'+card.label+'</span></div>';
+    h += '<div style="font-size:11px;color:#6B7280;margin-bottom:14px;line-height:1.5">'+card.tagline+'</div>';
+    h += '<table style="width:100%;border-collapse:collapse">';
+    card.rows.forEach(function(row, ri){
+      h += '<tr style="border-bottom:1px solid rgba(0,0,0,.06)"><td style="padding:5px 0;font-size:11px;color:#6B7280">'+row[0]+'</td><td style="padding:5px 0;font-size:12px;font-weight:700;color:#1E1C18;text-align:right;font-family:DM Mono,monospace">'+row[1]+'</td></tr>';
+    });
+    h += '</table>';
+    h += '<button onclick="finSetMode(\''+m.id+'\',\''+card.id+'\')" style="margin-top:14px;width:100%;padding:8px 0;border-radius:8px;border:1.5px solid '+card.color+';background:transparent;color:'+card.color+';font-size:12px;font-weight:600;cursor:pointer;font-family:DM Sans,sans-serif">Ver detalle →</button>';
+    h += '</div>';
+  });
+  h += '</div>';
+  h += '<div style="background:#F8F9FA;border-radius:10px;padding:14px 16px;font-size:12px;color:#6B7280;text-align:center">💡 Configura los parámetros en cada pestaña. El resumen se actualiza automáticamente.</div>';
+  return h;
+}
+
+// ── CONTADO ───────────────────────────────────────────────────────────────
+function finRenderContado(m, fd, inv, r, hd) {
+  var h = '<div style="background:white;border:1px solid #E9ECEF;border-radius:14px;padding:22px 24px;box-shadow:0 1px 4px rgba(0,0,0,.05)">';
+  h += '<div style="font-size:13px;font-weight:700;color:#1E1C18;margin-bottom:16px">Escenario: Pago de contado</div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">';
+  h += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9A9890;margin-bottom:10px">Resumen financiero</div>';
+  [['Inversión neta',fmt(inv),'#2563EB'],['Beneficio anual',hd?fmt(r.ab):'Pendiente','#16A34A'],['OPEX anual',fmt(r.opx),'#DC2626'],['Flujo neto anual',hd?fmt(r.fl):'—','#1E1C18'],['Ganancia neta ('+m.yr+' años)',hd?fmt(r.ng):'—','#16A34A'],['ROI',hd?(r.roi>=0?'+':'')+r.roi.toFixed(1)+'%':'—',r.roi>=100?'#16A34A':r.roi>=50?'#D97706':'#DC2626'],['Payback',isFinite(r.pay)?r.pay.toFixed(1)+' años':'—','#D97706'],['Costo financiero','$0','#9A9890']].forEach(function(row,ri){
+    h += '<div style="display:flex;justify-content:space-between;padding:7px 10px;border-radius:7px;background:'+(ri%2===0?'#F8F9FA':'white')+';margin-bottom:3px"><span style="font-size:12px;color:#374151">'+row[0]+'</span><span style="font-size:'+(ri>=5?'14':'12')+'px;font-weight:'+(ri>=5?800:600)+';color:'+row[2]+';font-family:DM Mono,monospace">'+row[1]+'</span></div>';
+  });
+  h += '</div>';
+  h += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9A9890;margin-bottom:10px">Veredicto</div>';
+  h += '<div style="background:linear-gradient(135deg,#1E2A4A,#2A3A6A);border-radius:12px;padding:20px;color:white;margin-bottom:12px">';
+  h += '<div style="font-size:11px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:6px">ROI Simple</div>';
+  h += '<div style="font-size:48px;font-weight:900;line-height:1;color:'+(r.roi>=100?'#4ADE80':r.roi>=50?'#F0A84A':'#F87171')+'">'+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'--')+'</div>';
+  h += '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:6px">en '+m.yr+' años · sin costo financiero</div>';
+  if(isFinite(r.pay))h+='<div style="margin-top:12px;background:rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;font-size:13px;font-weight:700;color:#FCD34D">⏱ Se paga en '+r.pay.toFixed(1)+' años</div>';
+  h += '</div>';
+  h += '<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:13px 15px;font-size:12px;color:#166534;line-height:1.6">✓ <b>Máximo rendimiento.</b> El flujo neto de <b>'+fmt(r.fl)+'/año</b> va 100% a recuperar la inversión desde el día 1.</div>';
+  h += '</div></div></div>';
+  return h;
+}
+
+// ── CRÉDITO — shell con inputs, sin re-render al teclear ────────────────────
+function finRenderCreditoShell(m, fd, inv, r, hd) {
+  var cr = fd.credito;
+  var h = '<div style="background:white;border:1px solid #E9ECEF;border-radius:14px;padding:22px 24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)">';
+  h += '<div style="font-size:13px;font-weight:700;color:#1E1C18;margin-bottom:18px">Escenario: Crédito bancario</div>';
+  h += '<div style="display:grid;grid-template-columns:260px 1fr 1fr;gap:16px;margin-bottom:20px">';
+
+  // Inputs — onblur en lugar de oninput para no re-renderizar mientras se escribe
+  h += '<div style="background:#F8F9FA;border-radius:12px;padding:16px" id="fin-cred-inputs">';
+  h += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9A9890;margin-bottom:14px">Parámetros</div>';
+  function credInput(id, label, val, unit, hint) {
+    return '<div style="margin-bottom:12px">'
+      +'<label style="font-size:12px;color:#374151;font-weight:500;display:block;margin-bottom:4px">'+label+(hint?'<span style="font-size:10px;color:#9A9890"> ('+hint+')</span>':'')+'</label>'
+      +'<div style="display:flex;align-items:center;background:white;border:1.5px solid #E5E7EB;border-radius:8px;overflow:hidden">'
+      +'<input id="fin-c-'+id+'" type="number" value="'+(val||0)+'" min="0" '
+      +'onblur="finCreditoBlur(\''+m.id+'\')" '
+      +'onkeydown="if(event.key===\'Enter\')finCreditoBlur(\''+m.id+'\')" '
+      +'style="flex:1;border:none;outline:none;padding:7px 10px;font-size:13px;font-family:DM Mono,monospace;color:#1E1C18;background:transparent">'
+      +'<span style="padding:7px 10px;font-size:12px;color:#9A9890;background:#F8F9FA;border-left:1px solid #E5E7EB;white-space:nowrap">'+unit+'</span>'
+      +'</div></div>';
+  }
+  h += credInput('anticipo','Anticipo',cr.anticipo,'$');
+  h += credInput('tasa','Tasa anual',cr.tasa,'%','CAT aprox.');
+  h += credInput('plazo','Plazo',cr.plazo,'meses');
+  h += credInput('comision','Comisión apertura',cr.comision,'%','del monto');
+  h += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #E5E7EB"><div style="font-size:11px;color:#9A9890;margin-bottom:3px">Monto a financiar</div><div id="fin-c-monto" style="font-size:16px;font-weight:700;color:#2563EB;font-family:DM Mono,monospace">'+fmt((inv-(cr.anticipo||0)))+'</div></div>';
+  h += '</div>';
+
+  // Dynamic results (updated on blur)
+  h += '<div id="fin-c-results"></div>';
+  h += '<div id="fin-c-verdict"></div>';
+  h += '</div>';
+  h += '<div id="fin-c-grafica"></div>';
+  h += '</div>';
+  return h;
+}
+
+function finCreditoBlur(mid) {
+  // Read current input values without re-rendering the whole page
+  var fd = finGetData(mid);
+  fd.credito.anticipo  = parseFloat(document.getElementById('fin-c-anticipo')?document.getElementById('fin-c-anticipo').value:0)||0;
+  fd.credito.tasa      = parseFloat(document.getElementById('fin-c-tasa')?document.getElementById('fin-c-tasa').value:12)||0;
+  fd.credito.plazo     = parseInt(document.getElementById('fin-c-plazo')?document.getElementById('fin-c-plazo').value:36)||36;
+  fd.credito.comision  = parseFloat(document.getElementById('fin-c-comision')?document.getElementById('fin-c-comision').value:0)||0;
+  finRecalcCredito(mid);
+}
+
+function finRecalcCredito(mid) {
+  var fd = finGetData(mid);
+  var m  = MACHINES.find(function(x){return x.id===mid;});
+  if (!m) return;
+  var r   = calcROI(m);
+  var inv = r.netInv || m.inv || 0;
+  var hd  = r.ab > 0;
+  var cr  = fd.credito;
+  var calc = finCalcCredito(inv, cr.anticipo||0, cr.tasa||0, cr.plazo||36, cr.comision||0);
+  var ngAdj  = r.ng - calc.costo_financiero;
+  var roiAdj = calc.egreso_total>0 ? (ngAdj/calc.egreso_total*100) : 0;
+  var payAdj = r.fl>0 ? calc.egreso_total/r.fl : Infinity;
+
+  // Update monto display
+  var montoEl = document.getElementById('fin-c-monto');
+  if (montoEl) montoEl.textContent = fmt(calc.monto);
+
+  // Results column
+  var rEl = document.getElementById('fin-c-results');
+  if (rEl) {
+    var h = '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9A9890;margin-bottom:10px">Costo del crédito</div>';
+    [['Anticipo',fmt(calc.anticipo),'#2563EB'],['Comisión apertura',fmt(calc.comision),'#9A9890'],['Mensualidad',fmt(calc.mensualidad),'#374151'],['Pago anual',fmt(calc.mensualidad*12),'#374151'],['Total rentas',fmt(calc.total_rentas),'#374151'],['Costo financiero',fmt(calc.costo_financiero),'#DC2626'],['Egreso total',fmt(calc.egreso_total),'#1E1C18']].forEach(function(row,ri){
+      h += '<div style="display:flex;justify-content:space-between;padding:6px 10px;border-radius:7px;background:'+(ri%2===0?'#F8F9FA':'white')+';margin-bottom:3px"><span style="font-size:12px;color:#374151">'+row[0]+'</span><span style="font-size:'+(ri===6?'14':'12')+'px;font-weight:'+(ri===6?800:600)+';color:'+row[2]+';font-family:DM Mono,monospace">'+row[1]+'</span></div>';
+    });
+    h += '</div>';
+    rEl.innerHTML = h;
+  }
+
+  // Verdict column
+  var vEl = document.getElementById('fin-c-verdict');
+  if (vEl) {
+    var v = '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9A9890;margin-bottom:10px">ROI ajustado</div>';
+    v += '<div style="background:linear-gradient(135deg,#1E2A4A,#2A3A6A);border-radius:12px;padding:16px;color:white;margin-bottom:10px">';
+    v += '<div style="font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:4px">ROI con crédito</div>';
+    v += '<div style="font-size:40px;font-weight:900;line-height:1;color:'+(roiAdj>=100?'#4ADE80':roiAdj>=50?'#F0A84A':'#F87171')+'">'+(hd?(roiAdj>=0?'+':'')+roiAdj.toFixed(0)+'%':'--')+'</div>';
+    v += '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px">vs contado: '+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'—')+'</div></div>';
+    v += '<div style="display:flex;gap:8px"><div style="flex:1;background:#FEF3C7;border-radius:9px;padding:10px 12px;text-align:center"><div style="font-size:10px;color:#92400E;margin-bottom:3px">Payback ajustado</div><div style="font-size:15px;font-weight:800;color:#D97706;font-family:DM Mono,monospace">'+(isFinite(payAdj)?payAdj.toFixed(1)+' años':'—')+'</div></div>';
+    v += '<div style="flex:1;background:#FEE2E2;border-radius:9px;padding:10px 12px;text-align:center"><div style="font-size:10px;color:#991B1B;margin-bottom:3px">Costo financiero</div><div style="font-size:15px;font-weight:800;color:#DC2626;font-family:DM Mono,monospace">'+fmt(calc.costo_financiero)+'</div></div></div>';
+    v += '</div>';
+    vEl.innerHTML = v;
+  }
+
+  // Gráfica proyección anual
+  var gEl = document.getElementById('fin-c-grafica');
+  if (gEl && r.ab) gEl.innerHTML = finGraficaCredito(m, r, inv, calc);
+}
+
+function finGraficaCredito(m, r, inv, calc) {
+  var W=700,H=300,PL=80,PR=30,PT=30,PB=50,cW=W-PL-PR,cH=H-PT-PB;
+  var plazoAnios=calc.plazo_meses/12;
+  var anos=Math.max(m.yr,Math.ceil(plazoAnios)+1);
+  var pts_c=[],pts_k=[],ac=-calc.anticipo,ak=-inv;
+  for(var yi=0;yi<=anos;yi++){
+    pts_c.push({x:yi,y:ac});pts_k.push({x:yi,y:ak});
+    if(yi<anos){var pg=yi<plazoAnios?calc.mensualidad*12:0;ac+=r.fl-pg;ak+=r.fl;}
+  }
+  var all=pts_c.map(function(p){return p.y;}).concat(pts_k.map(function(p){return p.y;}));
+  var minV=Math.min.apply(null,all)*1.1,maxV=Math.max.apply(null,all)*1.1;
+  if(minV>=0)minV=-inv*.15;if(maxV<=0)maxV=inv*.5;
+  function xp(y){return PL+(y/anos)*cW;}
+  function yp(v){return PT+cH-((v-minV)/(maxV-minV))*cH;}
+  var y0=yp(0);
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">';
+  svg+='<rect width="'+W+'" height="'+H+'" fill="#FAFBFC" rx="10"/>';
+  svg+='<line x1="'+PL+'" y1="'+y0+'" x2="'+(W-PR)+'" y2="'+y0+'" stroke="#E5E7EB" stroke-width="1.5" stroke-dasharray="4,3"/>';
+  svg+='<text x="'+(PL-6)+'" y="'+(y0+4)+'" fill="#9A9890" font-size="9" text-anchor="end" font-family="DM Mono,monospace">$0</text>';
+  for(var xi=0;xi<=anos;xi++){var xp2=xp(xi);svg+='<line x1="'+xp2+'" y1="'+PT+'" x2="'+xp2+'" y2="'+(PT+cH)+'" stroke="#F1F3F5" stroke-width="1"/>';svg+='<text x="'+xp2+'" y="'+(PT+cH+18)+'" fill="#9A9890" font-size="9" text-anchor="middle" font-family="DM Mono,monospace">Año '+xi+'</text>';}
+  function findPB(pts){for(var i=1;i<pts.length;i++){if(pts[i-1].y<0&&pts[i].y>=0)return (i-1)+(-pts[i-1].y)/(pts[i].y-pts[i-1].y);}return null;}
+  var pbC=findPB(pts_c),pbK=findPB(pts_k);
+  if(pbC!==null){var xpbC=xp(pbC);svg+='<line x1="'+xpbC+'" y1="'+PT+'" x2="'+xpbC+'" y2="'+(PT+cH)+'" stroke="#2563EB" stroke-width="1.5" stroke-dasharray="5,3"/>';svg+='<rect x="'+(xpbC-22)+'" y="'+(PT+4)+'" width="44" height="16" rx="4" fill="#2563EB"/>';svg+='<text x="'+xpbC+'" y="'+(PT+15)+'" fill="white" font-size="9" text-anchor="middle" font-weight="600">'+pbC.toFixed(1)+' años</text>';}
+  if(pbK!==null&&Math.abs(pbK-(pbC||0))>0.2){var xpbK=xp(pbK);svg+='<line x1="'+xpbK+'" y1="'+PT+'" x2="'+xpbK+'" y2="'+(PT+cH)+'" stroke="#16A34A" stroke-width="1.5" stroke-dasharray="5,3"/>';svg+='<rect x="'+(xpbK-22)+'" y="'+(PT+22)+'" width="44" height="16" rx="4" fill="#16A34A"/>';svg+='<text x="'+xpbK+'" y="'+(PT+33)+'" fill="white" font-size="9" text-anchor="middle" font-weight="600">'+pbK.toFixed(1)+' años</text>';}
+  function mkLine(pts,col,dash){var d=pts.map(function(p,i){return(i===0?'M':'L')+' '+xp(p.x)+','+yp(p.y);}).join(' ');return '<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="2.5" stroke-linejoin="round"'+(dash?' stroke-dasharray="'+dash+'"':'')+'/>';}
+  svg+=mkLine(pts_k,'#16A34A',null)+mkLine(pts_c,'#2563EB',null);
+  pts_k.forEach(function(p){svg+='<circle cx="'+xp(p.x)+'" cy="'+yp(p.y)+'" r="3.5" fill="#16A34A" stroke="white" stroke-width="1.5"/>';});
+  pts_c.forEach(function(p){svg+='<circle cx="'+xp(p.x)+'" cy="'+yp(p.y)+'" r="3.5" fill="#2563EB" stroke="white" stroke-width="1.5"/>';});
+  svg+='<rect x="'+(PL+10)+'" y="'+(PT+8)+'" width="12" height="3" rx="1.5" fill="#16A34A"/><text x="'+(PL+26)+'" y="'+(PT+14)+'" fill="#374151" font-size="10">Contado</text>';
+  svg+='<rect x="'+(PL+90)+'" y="'+(PT+8)+'" width="12" height="3" rx="1.5" fill="#2563EB"/><text x="'+(PL+106)+'" y="'+(PT+14)+'" fill="#374151" font-size="10">Crédito</text>';
+  svg+='</svg>';
+  return '<div style="background:white;border:1px solid #E9ECEF;border-radius:12px;padding:18px 20px;margin-bottom:16px"><div style="font-size:13px;font-weight:700;color:#1E1C18;margin-bottom:4px">📈 Proyección anual: Crédito vs Contado</div><div style="font-size:11px;color:#6B7280;margin-bottom:12px">Flujo acumulado. La línea cruza $0 cuando la inversión queda recuperada.</div>'+svg+'</div>';
+}
+
+// ── ARRENDAMIENTO — shell con inputs, amortización on-demand ───────────────
+function finRenderArrShell(m, fd, inv, r, hd) {
+  var h = '<div style="background:white;border:1px solid #E9ECEF;border-radius:14px;padding:22px 24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)">';
+  h += '<div style="font-size:13px;font-weight:700;color:#1E1C18;margin-bottom:6px">Escenario: Arrendamiento</div>';
+  h += '<div style="font-size:12px;color:#6B7280;margin-bottom:18px">Captura los datos de cada arrendadora. El botón <b>📊 Amortización</b> muestra la tabla mes a mes.</div>';
+
+  // Tabla de arrendadoras
+  h += '<div style="overflow-x:auto;margin-bottom:20px" id="fin-arr-table">';
+  h += finArrTable(m, fd, inv);
+  h += '</div>';
+
+  // Área de amortización (por demanda)
+  h += '<div id="fin-arr-amort"></div>';
+  h += '</div>';
+  return h;
+}
+
+function finArrTable(m, fd, inv) {
+  var arrCalcs = fd.arrendadoras.map(function(arr){ return finCalcArrendadora(inv, arr); });
+  var activeArrs = fd.arrendadoras.filter(function(a){ return a.renta_mensual > 0; });
+  var bestEgreso = activeArrs.length ? Math.min.apply(null, activeArrs.map(function(a){ return finCalcArrendadora(inv,a).egreso_total; })) : null;
+
+  var h = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  h += '<thead><tr style="background:#1E2A4A;color:white">';
+  ['','Arrendadora','Plazo (m)','Renta mensual ($)','Residual (%)','Gastos ($)','Total rentas','Egreso total','Costo financiero',''].forEach(function(col,ci){
+    h += '<th style="padding:9px 10px;text-align:'+(ci<=1||ci===9?'left':'right')+';font-size:10px;text-transform:uppercase;white-space:nowrap;font-weight:600">'+col+'</th>';
+  });
+  h += '</tr></thead><tbody>';
+
+  fd.arrendadoras.forEach(function(arr, ai) {
+    var calc = arrCalcs[ai];
+    var isActive = arr.renta_mensual > 0;
+    var isBest = isActive && calc.egreso_total === bestEgreso;
+    h += '<tr style="background:'+(isBest?'#F0FDF4':ai%2===0?'white':'#FAFBFC')+';border-bottom:1px solid #F1F3F5">';
+    h += '<td style="padding:7px 10px;width:24px">'+(isBest?'<span style="background:#16A34A;color:white;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px">★</span>':'')+'</td>';
+    h += '<td style="padding:7px 10px"><input value="'+arr.nombre+'" onblur="finArrBlur(\''+m.id+'\','+ai+',\'nombre\',this.value)" style="border:1px solid #E5E7EB;border-radius:6px;padding:5px 8px;font-size:12px;font-weight:600;outline:none;width:110px"></td>';
+    ['plazo_meses','renta_mensual','valor_residual_pct','gastos_iniciales'].forEach(function(field){
+      h += '<td style="padding:7px 8px;text-align:right"><input type="number" value="'+(arr[field]||0)+'" onblur="finArrBlur(\''+m.id+'\','+ai+',\''+field+'\',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()" style="border:1px solid #E5E7EB;border-radius:6px;padding:5px 8px;font-size:12px;font-family:DM Mono,monospace;color:#2563EB;background:#EFF6FF;outline:none;text-align:right;width:90px"></td>';
+    });
+    h += '<td style="padding:7px 10px;text-align:right;font-family:DM Mono,monospace;font-weight:600;color:#374151">'+(isActive?fmt(calc.total_rentas):'—')+'</td>';
+    h += '<td style="padding:7px 10px;text-align:right;font-family:DM Mono,monospace;font-weight:800;font-size:13px;color:'+(isBest?'#16A34A':'#1E1C18')+'">'+(isActive?fmt(calc.egreso_total):'—')+'</td>';
+    h += '<td style="padding:7px 10px;text-align:right;font-family:DM Mono,monospace;font-weight:700;color:#DC2626">'+(isActive?fmt(calc.costo_financiero):'—')+'</td>';
+    h += '<td style="padding:7px 10px;text-align:center">'+(isActive?'<button onclick="finToggleAmort(\''+m.id+'\','+ai+')" style="padding:4px 10px;border-radius:7px;background:#EFF6FF;border:1px solid #BFDBFE;color:#2563EB;font-size:11px;cursor:pointer">📊 Amortización</button>':'')+'</td>';
+    h += '</tr>';
+    // Amortización inline expandible
+    h += '<tr id="fin-amort-row-'+m.id+'-'+ai+'" style="display:none"><td colspan="10" style="padding:0;background:#FAFBFC"><div id="fin-amort-content-'+m.id+'-'+ai+'" style="padding:16px 20px"></div></td></tr>';
+  });
+  h += '<tr><td colspan="10" style="padding:8px 10px"><button onclick="finAddArr(\''+m.id+'\')" style="padding:5px 14px;border:1.5px dashed #D1D5DB;border-radius:7px;background:transparent;font-size:11px;color:#9A9890;cursor:pointer">+ Agregar arrendadora</button></td></tr>';
+  h += '</tbody></table>';
+  return h;
+}
+
+function finToggleAmort(mid, ai) {
+  var row = document.getElementById('fin-amort-row-'+mid+'-'+ai);
+  if (!row) return;
+  var isOpen = row.style.display !== 'none';
+  if (isOpen) {
+    row.style.display = 'none';
+    return;
+  }
+  row.style.display = '';
+  var contentEl = document.getElementById('fin-amort-content-'+mid+'-'+ai);
+  if (!contentEl) return;
+  var fd  = finGetData(mid);
+  var m   = MACHINES.find(function(x){return x.id===mid;});
+  if (!m) return;
+  var inv = (calcROI(m).netInv || m.inv || 0);
+  var arr = fd.arrendadoras[ai];
+  contentEl.innerHTML = finBuildAmortTable(arr, inv);
+}
+
+function finBuildAmortTable(arr, inv) {
+  var rows = finAmortTable(arr, inv);
+  if (!rows.length) return '<p style="color:#9A9890;font-size:12px;padding:8px">Ingresa una renta mensual válida.</p>';
+
+  var h = '<div style="font-size:12px;font-weight:600;color:#1E1C18;margin-bottom:8px">Tabla de amortización — '+arr.nombre+'</div>';
+  h += '<div style="font-size:11px;color:#6B7280;margin-bottom:10px">Tasa implícita anual: <b style="color:#7C3AED">'+rows.tasaAnual.toFixed(2)+'%</b> · Valor residual: <b>'+fmt(inv*(arr.valor_residual_pct/100))+'</b></div>';
+  h += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
+  h += '<thead><tr style="background:#1E2A4A;color:white"><th style="padding:6px 10px;text-align:right">Mes</th><th style="padding:6px 10px;text-align:right">Renta</th><th style="padding:6px 10px;text-align:right">Interés implícito</th><th style="padding:6px 10px;text-align:right">Amort. capital</th><th style="padding:6px 10px;text-align:right">Saldo pendiente</th><th style="padding:6px 10px;text-align:right">Renta acum.</th><th style="padding:6px 10px;text-align:right">Interés acum.</th><th style="padding:6px 10px;text-align:right">Capital acum.</th></tr></thead><tbody>';
+  rows.forEach(function(row, ri) {
+    var isLast = ri===rows.length-1;
+    var bg = isLast?'#F0FDF4':ri%2===0?'white':'#FAFBFC';
+    h += '<tr style="background:'+bg+';border-bottom:1px solid #F1F3F5">';
+    h += '<td style="padding:4px 10px;text-align:right;font-weight:600">'+row.mes+'</td>';
+    h += '<td style="padding:4px 10px;text-align:right;font-family:DM Mono,monospace">'+fmt(row.renta)+'</td>';
+    h += '<td style="padding:4px 10px;text-align:right;font-family:DM Mono,monospace;color:#DC2626">'+fmt(row.interes)+'</td>';
+    h += '<td style="padding:4px 10px;text-align:right;font-family:DM Mono,monospace;color:#16A34A">'+fmt(row.capital)+'</td>';
+    h += '<td style="padding:4px 10px;text-align:right;font-family:DM Mono,monospace;font-weight:'+(isLast?800:600)+';color:'+(isLast?'#16A34A':'#1E1C18')+'">'+fmt(row.saldo)+'</td>';
+    h += '<td style="padding:4px 10px;text-align:right;font-family:DM Mono,monospace;color:#6B7280">'+fmt(row.acR)+'</td>';
+    h += '<td style="padding:4px 10px;text-align:right;font-family:DM Mono,monospace;color:#DC2626">'+fmt(row.acI)+'</td>';
+    h += '<td style="padding:4px 10px;text-align:right;font-family:DM Mono,monospace;color:#16A34A">'+fmt(row.acK)+'</td>';
+    h += '</tr>';
+  });
+  var last=rows[rows.length-1];
+  h += '<tr style="background:#1E2A4A;color:white;font-weight:700"><td style="padding:6px 10px;text-align:right;font-size:10px">TOTAL</td><td style="padding:6px 10px;text-align:right;font-family:DM Mono,monospace">'+fmt(last.acR)+'</td><td style="padding:6px 10px;text-align:right;font-family:DM Mono,monospace;color:#FCA5A5">'+fmt(last.acI)+'</td><td style="padding:6px 10px;text-align:right;font-family:DM Mono,monospace;color:#86EFAC">'+fmt(last.acK)+'</td><td colspan="4" style="padding:6px 10px;text-align:center;font-size:10px;color:rgba(255,255,255,.6)">+ Residual '+fmt(inv*(arr.valor_residual_pct/100))+'</td></tr>';
+  h += '</tbody></table></div>';
+  return h;
+}
+
+function finAmortTable(arr, inv) {
+  var plazo=parseInt(arr.plazo_meses)||36;
+  var renta=parseFloat(arr.renta_mensual)||0;
+  var residual=inv*((parseFloat(arr.valor_residual_pct)||10)/100);
+  var gastos=parseFloat(arr.gastos_iniciales)||0;
+  if(renta<=0)return[];
+  var PV=inv-gastos;
+  var r=0.01;
+  for(var i=0;i<100;i++){var pn=Math.pow(1+r,-plazo),f=renta*(1-pn)/r+residual*pn-PV,df=renta*((pn*(plazo/r)-(1-pn)/r)/r)-residual*plazo*pn/(1+r),rn=r-f/df;if(Math.abs(rn-r)<1e-12){r=rn;break;}r=rn;}
+  var rows=[],saldo=PV,acR=0,acI=0,acK=0;
+  for(var m2=1;m2<=plazo;m2++){var interes=saldo*r,capital=renta-interes;saldo-=capital;if(saldo<0.01)saldo=0;acR+=renta;acI+=interes;acK+=capital;rows.push({mes:m2,renta:renta,interes:interes,capital:capital,saldo:Math.max(0,saldo),acR:acR,acI:acI,acK:acK});}
+  rows.tasaAnual=r*12*100;
+  return rows;
+}
+
+function finRecalcArr(mid) {
+  var fd = finGetData(mid);
+  var m  = MACHINES.find(function(x){return x.id===mid;});
+  if (!m) return;
+  var inv = (calcROI(m).netInv || m.inv || 0);
+  var tableEl = document.getElementById('fin-arr-table');
+  if (tableEl) tableEl.innerHTML = finArrTable(m, fd, inv);
+}
+
+function finArrBlur(mid, ai, field, val) {
+  var fd = finGetData(mid);
+  if (!fd.arrendadoras[ai]) return;
+  fd.arrendadoras[ai][field] = field==='nombre' ? val : (parseFloat(val)||0);
+  finRecalcArr(mid);
+}
+
+function finSelectMachine(mid) { FIN_ACTIVE_MACHINE=mid; renderFinanciamiento(); }
+function finSetMode(mid, mode) { finGetData(mid).mode=mode; renderFinanciamiento(); }
+function finAddArr(mid) {
+  var fd=finGetData(mid);
+  fd.arrendadoras.push({nombre:'Opción '+(fd.arrendadoras.length+1),plazo_meses:36,renta_mensual:0,valor_residual_pct:10,gastos_iniciales:0});
+  finRecalcArr(mid);
+}
+
 
 // ── FIREBASE ─────────────────────────────────────────────────────────────────
 const FB_URL = 'https://ingenieria-de-procesos-24ba4-default-rtdb.firebaseio.com';
