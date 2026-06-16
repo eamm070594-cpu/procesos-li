@@ -143,7 +143,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .back-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--s);color:var(--muted);font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;margin-bottom:18px;width:fit-content;}
 .back-btn:hover{border-color:var(--a2);color:var(--a2);}
 .det-grid{display:grid;grid-template-columns:1fr 350px;gap:20px;}
-.carousel{position:relative;height:160px;background:#111827;border-radius:12px 12px 0 0;overflow:hidden;}
+.carousel{position:relative;height:340px;background:#111827;border-radius:12px 12px 0 0;overflow:hidden;}
 .carousel img{width:100%;height:100%;object-fit:contain;display:none;background:#111827;}
 .carousel img.active{display:block;}
 .car-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#4b5563;}
@@ -152,9 +152,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .car-ctr{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:#000000bb;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;}
 .add-ph-btn{position:absolute;bottom:10px;right:10px;padding:5px 12px;background:#ffffffee;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;color:var(--a2);font-family:'Inter',sans-serif;}
 .thumbs{display:flex;gap:7px;padding:9px 13px;background:var(--s);border:1px solid var(--bd);border-top:none;border-radius:0 0 12px 12px;overflow-x:auto;}
-.thumb{width:54px;height:40px;border-radius:6px;object-fit:cover;cursor:pointer;border:2px solid transparent;flex-shrink:0;}
+.thumb{width:92px;height:70px;border-radius:6px;object-fit:cover;cursor:pointer;border:2px solid transparent;flex-shrink:0;}
 .thumb.active{border-color:var(--a2);}
-.tadd{width:54px;height:40px;border-radius:6px;border:2px dashed var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--light);font-size:17px;flex-shrink:0;}
+.tadd{width:92px;height:70px;border-radius:6px;border:2px dashed var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--light);font-size:17px;flex-shrink:0;}
 .tadd:hover{border-color:var(--a2);color:var(--a2);}
 .sh{border-radius:12px;padding:22px;margin-bottom:12px;color:#fff;text-align:center;}
 .sh-opt{background:linear-gradient(135deg,#047857,#10b981);}
@@ -210,7 +210,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .pu-area:hover{border-color:var(--a2);}
 .pp-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px;}
 .pp-item{position:relative;}
-.pp-item img{width:68px;height:50px;border-radius:6px;object-fit:cover;}
+.pp-item img{width:130px;height:98px;border-radius:8px;object-fit:cover;}
 .rm-p{position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--danger);color:#fff;border:none;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;}
 .ss-box{background:#f0f7ff;border:1px solid #bfdbfe;border-radius:11px;padding:16px;margin:12px 0;}
 .ss-box h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--a2);margin-bottom:10px;}
@@ -243,8 +243,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .btn-add{display:flex;align-items:center;gap:7px;padding:10px 20px;border-radius:8px;background:var(--a2);color:#fff;border:none;font-family:'Inter',sans-serif;font-weight:700;font-size:13px;cursor:pointer;}
 .pli{display:flex;align-items:center;gap:13px;background:var(--s);border:1px solid var(--bd);border-radius:11px;padding:13px 16px;margin-bottom:8px;}
 .pli:hover{border-color:var(--a2);}
-.pli-th{width:60px;height:44px;border-radius:7px;background:#f0f2f7;display:flex;align-items:center;justify-content:center;color:var(--light);font-size:19px;flex-shrink:0;overflow:hidden;}
-.pli-th img{width:60px;height:44px;object-fit:cover;border-radius:7px;}
+.pli-th{width:96px;height:72px;border-radius:7px;background:#f0f2f7;display:flex;align-items:center;justify-content:center;color:var(--light);font-size:24px;flex-shrink:0;overflow:hidden;}
+.pli-th img{width:96px;height:72px;object-fit:cover;border-radius:7px;}
 .pli-n{font-weight:700;font-size:13px;}
 .pli-m{font-size:11px;color:var(--muted);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 .pli-a{display:flex;gap:5px;flex-shrink:0;margin-left:auto;}
@@ -299,6 +299,31 @@ input[type="file"]{display:none;}
 .cmp-name-b{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 10px;font-size:11px;font-weight:700;color:#15803d;}
 .cmp-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;border:1px solid var(--a2);background:transparent;color:var(--a2);font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;}
 .cmp-btn:hover{background:var(--a2);color:#fff;}
+/* MULTI COMPARE — ranking dentro del panel lateral (mismo cmp-panel) */
+.mcmp-summary{margin:0 0 14px;padding:12px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;font-size:12px;line-height:1.5;color:var(--text);}
+.mcmp-summary.good{background:#f0fdf4;border-color:#86efac;}
+.mcmp-rank-list{display:flex;flex-direction:column;gap:8px;}
+.mcmp-rank-card{display:flex;flex-direction:column;gap:9px;padding:12px 13px;border-radius:11px;border:1px solid var(--bd);background:var(--s);}
+.mcmp-rank-card.self{border-color:var(--a2);background:#eff6ff;}
+.mcmp-rank-card.best{border-color:#10b981;}
+.mcmp-rank-top{display:flex;align-items:center;gap:10px;}
+.mcmp-rank-num{width:30px;height:30px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:var(--muted);flex-shrink:0;}
+.mcmp-rank-num.gold{background:#fef3c720;font-size:16px;}
+.mcmp-rank-info{flex:1;min-width:0;}
+.mcmp-rank-name{font-weight:800;font-size:12.5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.mcmp-rank-meta{font-size:10px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.mcmp-rank-metrics{display:flex;gap:8px;padding-left:40px;}
+.mcmp-rm{flex:1;background:var(--s2);border-radius:7px;padding:6px 9px;}
+.mcmp-rank-card.self .mcmp-rm{background:#dbeafe;}
+.mcmp-rm-lbl{font-size:8.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;}
+.mcmp-rm-val{font-size:13px;font-weight:800;}
+.mcmp-hint{font-size:10.5px;color:var(--muted);text-align:center;margin-bottom:10px;}
+.mcmp-rank-card.clickable{cursor:pointer;transition:border-color .12s,background .12s;}
+.mcmp-rank-card.clickable:hover{border-color:var(--a2);background:#f8faff;}
+.mcmp-rank-arrow{font-size:14px;opacity:.45;flex-shrink:0;}
+.cmp-back-btn{display:flex;align-items:center;gap:6px;padding:6px 13px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);color:var(--muted);font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;margin-bottom:12px;}
+.cmp-back-btn:hover{color:var(--a2);border-color:var(--a2);}
+.mcmp-self-badge{font-size:9px;font-weight:800;color:var(--a2);background:#dbeafe;padding:1px 7px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px;}
 /* DASHBOARD SECTIONS */
 .ov-section{margin-bottom:26px;}
 .ov-sec-hdr{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
@@ -307,7 +332,7 @@ input[type="file"]{display:none;}
 .prop-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
 .prop-card{background:var(--s);border:1px solid var(--bd);border-radius:13px;overflow:hidden;cursor:pointer;transition:all .15s;}
 .prop-card:hover{border-color:var(--a2);box-shadow:0 4px 18px #2563eb15;transform:translateY(-1px);}
-.prop-card-img{height:130px;background:#1f2937;overflow:hidden;}
+.prop-card-img{height:200px;background:#1f2937;overflow:hidden;}
 .prop-card-img img{width:100%;height:100%;object-fit:cover;}
 .prop-card-img .no-img{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:34px;opacity:.25;}
 .prop-card-body{padding:13px 15px;}
@@ -318,10 +343,10 @@ input[type="file"]{display:none;}
 .pcm-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:2px;font-weight:600;}
 .pcm-val{font-size:13px;font-weight:800;}
 /* PHOTO THUMB IN TABLE */
-.prop-thumb{width:46px;height:34px;border-radius:5px;object-fit:cover;flex-shrink:0;}
-.prop-thumb-ph{width:46px;height:34px;border-radius:5px;background:#e5e8ed;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:var(--light);}
+.prop-thumb{width:74px;height:56px;border-radius:6px;object-fit:cover;flex-shrink:0;}
+.prop-thumb-ph{width:74px;height:56px;border-radius:6px;background:#e5e8ed;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;color:var(--light);}
 /* CAROUSEL FIX - smaller height */
-.carousel{position:relative;height:160px;background:#111827;border-radius:12px 12px 0 0;overflow:hidden;}
+.carousel{position:relative;height:340px;background:#111827;border-radius:12px 12px 0 0;overflow:hidden;}
 .carousel img{width:100%;height:100%;object-fit:contain;display:none;background:#111827;}
 /* ZONES */
 .zones-list{list-style:none;padding:0;}
@@ -393,15 +418,17 @@ input[type="file"]{display:none;}
       </div>
     </div>
 
-    <!-- COMPARE PANEL -->
+    <!-- COMPARE PANEL (lateral deslizante, se reusa para las 3 comparativas) -->
     <div class="cmp-panel" id="cmp-panel">
       <div class="cmp-hdr">
-        <h3>⚖️ Comparar Propiedad</h3>
+        <h3 id="cmp-title">⚖️ Comparar Propiedad</h3>
         <button class="cmp-close" onclick="closeCmp()">✕</button>
       </div>
       <div class="cmp-body">
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Selecciona con qué propiedad comparar:</p>
-        <select class="cmp-select" id="cmp-select" onchange="renderCmp()"><option value="">— Selecciona propiedad —</option></select>
+        <div id="cmp-select-wrap">
+          <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Selecciona con qué propiedad comparar:</p>
+          <select class="cmp-select" id="cmp-select" onchange="renderCmp()"><option value="">— Selecciona propiedad —</option></select>
+        </div>
         <div id="cmp-content"></div>
       </div>
     </div>
@@ -425,6 +452,8 @@ input[type="file"]{display:none;}
             <div class="icard"><h4>Datos del Inmueble</h4><div id="d-inf"></div></div>
             <div class="icard"><h4>Ranking</h4><div id="d-rnk"></div></div>
             <div id="d-lb"></div>
+            <button class="cmp-btn" style="width:100%;justify-content:center;margin-bottom:9px;background:#eff6ff" onclick="openMultiCmp('analisis')">📋 Comparar vs Opciones de esta Ciudad</button>
+            <button class="cmp-btn" style="width:100%;justify-content:center;margin-bottom:9px;background:#f0fdf4;border-color:var(--a3);color:#15803d" onclick="openMultiCmp('operacion')">✅ Sucursales Actuales</button>
             <button class="cmp-btn" style="width:100%;justify-content:center;margin-bottom:9px" onclick="openCmp()">⚖️ Comparar con otra propiedad</button>
             <button class="edit-btn" onclick="editDet()">✏️ Editar Propiedad</button>
           </div>
@@ -1029,6 +1058,12 @@ function setMP(idx){const imgs=v('d-carousel').querySelectorAll('img');if(!imgs.
 
 // ── GESTIÓN ──
 function rPL(){const l=v('plist');if(!DATA.length){l.innerHTML='<div style="text-align:center;padding:36px;color:var(--muted)">Sin propiedades.</div>';return;}l.innerHTML=DATA.map((d,i)=>{const c=calcRow(d),ct=CC[d.ciudad]||'tag-gdl',ob=d.obra==='Blanca'?'ob-b':'ob-g';const th=d.photos&&d.photos.length?`<img src="${d.photos[0]}">`:'🏢';const st=d.status==='operacion'?'<span class="st-op" style="font-size:9px">✅</span>':'<span class="st-an" style="font-size:9px">🔍</span>';return`<div class="pli" style="animation-delay:${i*12}ms"><div class="pli-th">${th}</div><div class="pli-info"><div class="pli-n">${d.nombre} ${st}</div><div class="pli-m"><span class="city-tag ${ct}">${d.ciudad}</span><span class="${ob}">${d.obra}</span><span>${d.tipo}</span><span style="font-weight:700">${fmt(c.mn)}/mes</span></div></div><div class="pli-a">${d.link?`<a href="${d.link}" target="_blank" class="ico-btn">🔗</a>`:''}<button class="ico-btn" onclick="openM(${i})">✏️</button><button class="ico-btn" onclick="askDel(${i})" style="color:var(--danger)">🗑️</button></div></div>`;}).join('');}
+function _scoreToStars(score){
+  // Reconstruye los 7 criterios a partir de un total guardado (datos legados sin criteria_scores),
+  // preservando exactamente la suma original (sin redondeos que la alteren).
+  const n=CRIT.length,base=Math.floor(score/n),rem=Math.round(score)-base*n;
+  return CRIT.map((_,i)=>Math.max(0,Math.min(5,base+(i<rem?1:0))));
+}
 function bCR(){v('cr-rows').innerHTML=CRIT.map((c,i)=>`<div class="cr-row"><div style="font-size:12px">${c.name}</div><div style="font-size:10px;color:var(--muted)">${c.w>0?'×'+c.w:''}</div><div class="stars">${[1,2,3,4,5].map(n=>`<button class="sb2${cScores[i]===n?' active':''}" onclick="setSt(${i},${n})">${n}</button>`).join('')}</div></div>`).join('');}
 function setSt(ci,val){cScores[ci]=val;bCR();recalcM();uSP();}
 function uSP(){let s=0;CRIT.forEach((c,i)=>{s+=cScores[i];});s=Math.round(Math.min(35,s));const col=gSC(s);v('sp-n').textContent=s;v('sp-n').style.color=col;v('sp-s').textContent=gSL(s);v('sp-s').style.color=col;v('sp-f').style.width=(s/35*100)+'%';v('sp-f').style.background=col;return s;}
@@ -1047,7 +1082,7 @@ function rmP(i){modalPhotosArr.splice(i,1);rMP();}
 function openM(idx){
   editIdx=idx;cScores=Array(7).fill(0);modalPhotosArr=[];v('f-pp').innerHTML='';
   if(idx===null){v('m-t').textContent='Nueva Propiedad';['f-n','f-lnk','f-addr','f-maplink','f-r','f-mt','f-sv','f-ad','f-pen','f-m2','f-m2a'].forEach(id=>v(id).value='');v('f-c').value='';v('f-o').value='';v('f-st').value='analisis';v('f-tipo').value='Oficina';}
-  else{const d=DATA[idx];v('m-t').textContent='Editar: '+d.nombre;v('f-n').value=d.nombre;v('f-lnk').value=d.link||'';v('f-addr').value=d.address||'';v('f-maplink').value=d.maplink||'';v('f-c').value=d.ciudad;v('f-o').value=d.obra;v('f-st').value=d.status||'analisis';v('f-tipo').value=d.tipo||'Oficina';v('f-r').value=d.renta;v('f-mt').value=d.mantenimiento;v('f-sv').value=d.servicios;v('f-ad').value=d.adecuacion_total;v('f-pen').value=d.penalizacion;v('f-m2').value=d.m2;v('f-m2a').value=d.m2_adecuado;modalPhotosArr=[...(d.photos||[])];rMP();const a=Math.round(d.exposure_score/7);cScores=Array(7).fill(Math.min(5,Math.max(1,a)));}
+  else{const d=DATA[idx];v('m-t').textContent='Editar: '+d.nombre;v('f-n').value=d.nombre;v('f-lnk').value=d.link||'';v('f-addr').value=d.address||'';v('f-maplink').value=d.maplink||'';v('f-c').value=d.ciudad;v('f-o').value=d.obra;v('f-st').value=d.status||'analisis';v('f-tipo').value=d.tipo||'Oficina';v('f-r').value=d.renta;v('f-mt').value=d.mantenimiento;v('f-sv').value=d.servicios;v('f-ad').value=d.adecuacion_total;v('f-pen').value=d.penalizacion;v('f-m2').value=d.m2;v('f-m2a').value=d.m2_adecuado;modalPhotosArr=[...(d.photos||[])];rMP();cScores=(d.criteria_scores&&d.criteria_scores.length===CRIT.length)?[...d.criteria_scores]:_scoreToStars(d.exposure_score||0);}
   bCR();recalcM();uSP();v('mo').classList.add('open');document.body.style.overflow='hidden';
 }
 function closeM(){v('mo').classList.remove('open');document.body.style.overflow='';}
@@ -1056,7 +1091,7 @@ function saveProp(){
   const n=v('f-n').value.trim(),ci=v('f-c').value,o=v('f-o').value,r=parseFloat(v('f-r').value);
   if(!n||!ci||!o||!r){toast('⚠️ Completa los campos requeridos');return;}
   const m2=parseFloat(v('f-m2').value)||0,m2a=parseFloat(v('f-m2a').value)||0,ad=parseFloat(v('f-ad').value)||0,pen=parseFloat(v('f-pen').value)||0,sc=uSP();
-  const p={nombre:n,ciudad:ci,obra:o,tipo:v('f-tipo').value,status:v('f-st').value,link:v('f-lnk').value.trim(),address:v('f-addr').value.trim(),maplink:v('f-maplink').value.trim(),photos:[...modalPhotosArr],renta:r,m2,m2_adecuado:m2a,adecuacion_total:ad,penalizacion:pen,exposure_score:sc,mantenimiento:parseFloat(v('f-mt').value)||0,servicios:parseFloat(v('f-sv').value)||0};
+  const p={nombre:n,ciudad:ci,obra:o,tipo:v('f-tipo').value,status:v('f-st').value,link:v('f-lnk').value.trim(),address:v('f-addr').value.trim(),maplink:v('f-maplink').value.trim(),photos:[...modalPhotosArr],renta:r,m2,m2_adecuado:m2a,adecuacion_total:ad,penalizacion:pen,exposure_score:sc,criteria_scores:[...cScores],mantenimiento:parseFloat(v('f-mt').value)||0,servicios:parseFloat(v('f-sv').value)||0};
   if(editIdx===null){DATA.push(p);toast('✅ Propiedad agregada');}else{DATA[editIdx]=p;toast('✅ Actualizada');}
   closeM();rPL();updNC();bSB();rT();if(curCity)openCity(curCity);fbSave();
 }
@@ -1080,11 +1115,13 @@ function addZone(){
 }
 function removeZone(ciudad,idx){getZones(ciudad).splice(idx,1);renderZones(ciudad);fbSave();}
 
-// ── COMPARE PANEL ──
+// ── COMPARE PANEL (panel lateral compartido por las 3 comparativas) ──
 function openCmp(){
   if(detIdx===null)return;
   const sel=v('cmp-select');
   sel.innerHTML='<option value="">— Selecciona propiedad —</option>'+DATA.map((p,i)=>{if(i===detIdx)return'';return`<option value="${i}">${p.nombre} (${p.ciudad} · ${p.tipo})</option>`;}).join('');
+  v('cmp-title').textContent='⚖️ Comparar Propiedad';
+  v('cmp-select-wrap').style.display='';
   v('cmp-content').innerHTML='<p style="font-size:12px;color:var(--muted);text-align:center;padding:20px">Selecciona una propiedad para ver la comparativa</p>';
   v('cmp-panel').classList.add('open');
   v('view-det').querySelector('.dv').style.marginRight='430px';
@@ -1096,7 +1133,10 @@ function closeCmp(){
 function renderCmp(){
   const bIdx=parseInt(v('cmp-select').value);
   if(isNaN(bIdx)||detIdx===null){return;}
-  const a=DATA[detIdx],b=DATA[bIdx],ca=calcRow(a),cb=calcRow(b);
+  v('cmp-content').innerHTML=buildCmpHTML(detIdx,bIdx);
+}
+function buildCmpHTML(aIdx,bIdx){
+  const a=DATA[aIdx],b=DATA[bIdx],ca=calcRow(a),cb=calcRow(b);
   function diff(va,vb,lower=true){
     if(!vb)return'';const d=((va-vb)/vb*100);if(Math.abs(d)<0.5)return`<span class="cmp-diff same">≈</span>`;
     const better=(lower&&d<0)||(!lower&&d>0);
@@ -1105,11 +1145,86 @@ function renderCmp(){
   const calcR=[{l:'Renta año 1',va:fmt(a.renta),vb:fmt(b.renta),ra:a.renta,rb:b.renta},{l:'Pago Fijo',va:fmt(ca.pf),vb:fmt(cb.pf),ra:ca.pf,rb:cb.pf},{l:'Aumento 60m',va:fmt(ca.au),vb:fmt(cb.au),ra:ca.au,rb:cb.au},{l:'Renta Promedio',va:fmt(ca.rp),vb:fmt(cb.rp),ra:ca.rp,rb:cb.rp},{l:'Adec/mes',va:fmt(ca.am),vb:fmt(cb.am),ra:ca.am,rb:cb.am},{l:'Pen/mes',va:fmt(ca.pm),vb:fmt(cb.pm),ra:ca.pm,rb:cb.pm}];
   const metR=[{l:'⭐ Costo Norm/mes',va:fmt(ca.mn),vb:fmt(cb.mn),ra:ca.mn,rb:cb.mn},{l:'⭐ $/m²/mes',va:fmt(ca.cm2),vb:fmt(cb.cm2),ra:ca.cm2,rb:cb.cm2},{l:'⭐ Adec/m²',va:fmt(ca.adm2),vb:fmt(cb.adm2),ra:ca.adm2,rb:cb.adm2},{l:'⭐ Costo 5 años',va:fmt(ca.c5),vb:fmt(cb.c5),ra:ca.c5,rb:cb.c5},{l:'Score',va:a.exposure_score+'/35',vb:b.exposure_score+'/35',ra:a.exposure_score,rb:b.exposure_score,hi:true},{l:'m² totales',va:a.m2+'m²',vb:b.m2+'m²',ra:a.m2,rb:b.m2,neu:true},{l:'m² adecuados',va:a.m2_adecuado+'m²',vb:b.m2_adecuado+'m²',ra:a.m2_adecuado,rb:b.m2_adecuado,neu:true}];
   const bR=rows=>rows.map(r=>`<div class="cmp-row"><span class="cmp-lbl">${r.l}</span><div class="cmp-vals"><span class="cmp-a">${r.va}</span><span class="cmp-b">${r.vb}</span>${r.neu?'':diff(r.ra,r.rb,!r.hi)}</div></div>`).join('');
-  v('cmp-content').innerHTML=`
+  return`
     <div class="cmp-names"><div class="cmp-name-a">🔵 ${a.nombre}<div style="font-size:10px;font-weight:400;margin-top:2px">${a.ciudad} · ${a.tipo}</div></div><div class="cmp-name-b">🟢 ${b.nombre}<div style="font-size:10px;font-weight:400;margin-top:2px">${b.ciudad} · ${b.tipo}</div></div></div>
     <div class="cmp-col"><div class="cmp-col-title">📊 Desglose del Cálculo</div>${bR(calcR)}</div>
     <div class="cmp-col"><div class="cmp-col-title">💰 Métricas Clave</div>${bR(metR)}</div>
     <p style="font-size:10px;color:var(--muted);margin-top:8px;text-align:center">% = diferencia de 🔵 vs 🟢 · Verde = mejor · Rojo = peor</p>`;
+}
+// Click en una tarjeta del ranking (Opciones en Análisis / Sucursales) → comparativa detallada vs la propiedad en pantalla
+let _mcmpList=null,_mcmpMode=null;
+function showMcmpDetail(bIdx){
+  if(detIdx===null||bIdx===detIdx)return;
+  v('cmp-content').innerHTML=`<button class="cmp-back-btn" onclick="backToMcmpList()">← Volver a la lista</button>`+buildCmpHTML(detIdx,bIdx);
+}
+function backToMcmpList(){
+  if(!_mcmpList)return;
+  v('cmp-content').innerHTML=renderMultiCmpRanking(_mcmpList,_mcmpMode);
+}
+
+// ── MULTI COMPARE (vs Opciones en Análisis de la misma ciudad / vs Operación) — mismo panel lateral ──
+function openMultiCmp(mode){
+  if(detIdx===null)return;
+  const self=DATA[detIdx];
+  let others;
+  if(mode==='analisis'){
+    others=DATA.map((d,i)=>({d,i})).filter(o=>o.i!==detIdx&&o.d.status==='analisis'&&o.d.ciudad===self.ciudad);
+  }else{
+    others=DATA.map((d,i)=>({d,i})).filter(o=>o.i!==detIdx&&o.d.status==='operacion');
+  }
+  const includeSelf=self.status===mode; // solo mostramos "Tu propiedad" si de verdad pertenece a esa categoría
+  const list=includeSelf?[{d:self,i:detIdx,isSelf:true},...others.map(o=>({d:o.d,i:o.i,isSelf:false}))]:others.map(o=>({d:o.d,i:o.i,isSelf:false}));
+  v('cmp-title').textContent=mode==='analisis'?`📋 Opciones en Análisis · ${self.ciudad}`:'✅ Sucursales Actuales';
+  v('cmp-select-wrap').style.display='none';
+  const isEmpty=mode==='analisis'?!others.length:!list.length;
+  if(isEmpty){
+    const msg=mode==='analisis'?`No hay otras propiedades en análisis en ${self.ciudad} para comparar.`:'No hay sucursales en operación registradas para comparar.';
+    v('cmp-content').innerHTML=`<p style="padding:30px 10px;text-align:center;color:var(--muted);font-size:12px">${msg}</p>`;
+    _mcmpList=null;_mcmpMode=null;
+  }else{
+    _mcmpList=list;_mcmpMode=mode;
+    v('cmp-content').innerHTML=renderMultiCmpRanking(list,mode);
+  }
+  v('cmp-panel').classList.add('open');
+  v('view-det').querySelector('.dv').style.marginRight='430px';
+}
+function closeMultiCmp(){closeCmp();}
+function renderMultiCmpRanking(list,mode){
+  const ranked=list.map(o=>({...o,c:calcRow(o.d)})).sort((a,b)=>a.c.mn-b.c.mn);
+  const total=ranked.length,hasSelf=ranked.some(o=>o.isSelf),best=ranked[0];
+  const noun=mode==='operacion'?'sucursal':'opción';
+  const nounPl=mode==='operacion'?'sucursales':'opciones';
+  const ctxLbl=mode==='operacion'?'en operación':'en análisis';
+  let summary;
+  if(hasSelf){
+    const selfRank=ranked.findIndex(o=>o.isSelf)+1;
+    summary=selfRank===1
+      ?`<div class="mcmp-summary good">🏆 Tu propiedad es la ${noun} <strong>más económica</strong> de las ${total} comparadas.</div>`
+      :`<div class="mcmp-summary">Tu propiedad ocupa el lugar <strong>#${selfRank} de ${total}</strong> por costo mensual. La más económica es <strong>${best.d.nombre}</strong> con ${fmt(best.c.mn)}/mes.</div>`;
+  }else{
+    summary=`<div class="mcmp-summary">Hay <strong>${total}</strong> ${total===1?noun:nounPl} ${ctxLbl}. La de menor costo es <strong>${best.d.nombre}</strong> con ${fmt(best.c.mn)}/mes.</div>`;
+  }
+  const cards=ranked.map((o,idx)=>{
+    const rk=idx+1,medal=rk===1?'🥇':rk===2?'🥈':rk===3?'🥉':rk;
+    const ctg=CC[o.d.ciudad]||'tag-gdl',col=gSC(o.d.exposure_score);
+    const clickAttr=o.isSelf?'':` onclick="showMcmpDetail(${o.i})"`;
+    return`<div class="mcmp-rank-card ${o.isSelf?'self':'clickable'} ${rk===1?'best':''}"${clickAttr}>
+      <div class="mcmp-rank-top">
+        <div class="mcmp-rank-num ${rk<=3?'gold':''}">${medal}</div>
+        <div class="mcmp-rank-info">
+          <div class="mcmp-rank-name">${o.d.nombre}${o.isSelf?'<span class="mcmp-self-badge">Tu propiedad</span>':''}</div>
+          <div class="mcmp-rank-meta"><span class="city-tag ${ctg}">${o.d.ciudad}</span> · ${o.d.tipo} · ${o.d.obra}</div>
+        </div>
+        ${o.isSelf?'':'<div class="mcmp-rank-arrow">⚖️</div>'}
+      </div>
+      <div class="mcmp-rank-metrics">
+        <div class="mcmp-rm"><div class="mcmp-rm-lbl">Costo/mes</div><div class="mcmp-rm-val">${fmt(o.c.mn)}</div></div>
+        <div class="mcmp-rm"><div class="mcmp-rm-lbl">Score</div><div class="mcmp-rm-val" style="color:${col}">${o.d.exposure_score}/35</div></div>
+      </div>
+    </div>`;
+  }).join('');
+  const hasClickable=ranked.some(o=>!o.isSelf);
+  return`${summary}${hasClickable?'<p class="mcmp-hint">👆 Toca una propiedad para ver la comparativa completa contra la tuya</p>':''}<div class="mcmp-rank-list">${cards}</div>`;
 }
 
 // ── FIREBASE — mismo patrón que Control CT ──
