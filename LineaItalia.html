@@ -90,7 +90,7 @@ body{overflow-y:auto}
 .fld input:focus{border-color:var(--blue)}
 .fld input.money{color:var(--blue);background:var(--blue-l);font-family:var(--mono);font-weight:500;text-align:right}
 .cfg-foto{width:100%;height:110px;border:0.5px dashed var(--border);border-radius:8px;overflow:hidden;position:relative;cursor:pointer;margin-top:4px;background:var(--bg)}
-.cfg-foto img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+.cfg-foto img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none}
 .cfg-foto-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
 .cfg-foto-ph-i{font-size:22px;opacity:.2}
 .cfg-foto-ph-l{font-size:9px;font-family:var(--mono);opacity:.35}
@@ -269,7 +269,7 @@ body{overflow-y:auto}
 .fld input.blue{color:var(--blue);background:var(--blue-l);font-family:var(--mono);font-weight:500}
 /* Foto config compartida */
 .cfg-foto{width:100%;height:120px;border:0.5px dashed var(--border);border-radius:8px;overflow:hidden;position:relative;cursor:pointer;margin-top:6px;background:var(--bg)}
-.cfg-foto img{width:100%;height:100%;object-fit:cover;display:none}
+.cfg-foto img{width:100%;height:100%;object-fit:contain;display:none}
 .cfg-foto-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
 .cfg-foto-ph-i{font-size:22px;opacity:.2}
 .cfg-foto-ph-l{font-size:9px;font-family:var(--mono);opacity:.35}
@@ -533,6 +533,38 @@ body{overflow-y:auto}
 .mdt-impacto-text { font-size:13px; font-weight:600; color:#1E1C18; }
 .mdt-impacto-sub { font-size:11px; color:#7A7870; margin-top:2px; }
 
+/* Condición actual + puntos críticos (negativo) */
+.mdt-act-hero {
+  width:100%; height:200px; border-radius:12px; overflow:hidden;
+  background:#FEF2F2; position:relative; cursor:pointer;
+  border:1px solid #FECACA;
+}
+.mdt-act-hero img { width:100%; height:100%; object-fit:contain; }
+.mdt-act-hero-ph {
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:8px;
+}
+.mdt-act-hero-ph-i { font-size:32px; opacity:.25; }
+.mdt-act-hero-ph-l { font-size:11px; color:#DC2626; text-align:center; padding:0 16px; }
+.mdt-act-hero-inp { display:none; }
+.mdt-act-hero-chg {
+  position:absolute; bottom:8px; right:8px;
+  background:rgba(0,0,0,.5); color:white; font-size:10px;
+  padding:3px 8px; border-radius:4px; border:none; cursor:pointer;
+}
+.mdt-critico {
+  display:flex; align-items:flex-start; gap:12px; padding:10px 0;
+  border-bottom:1px solid #F1F3F5;
+}
+.mdt-critico:last-child { border-bottom:none; }
+.mdt-critico-icon {
+  width:36px; height:36px; border-radius:9px; background:#FEE2E2;
+  display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;
+}
+.mdt-critico-text { font-size:13px; font-weight:600; color:#991B1B; }
+.mdt-critico-sub { font-size:11px; color:#B91C1C; opacity:.8; margin-top:2px; }
+.mdt-critico-empty { font-size:12px; color:#9A9890; padding:8px 0; }
+
 /* Specs grid */
 .mdt-specs-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .mdt-spec-item {
@@ -708,6 +740,79 @@ body{overflow-y:auto}
 .seg-panel { display:none; }
 .seg-panel.on { display:block; }
 
+/* ── SITUACIÓN ACTUAL — tablas de respaldo ── */
+.sa-acc {
+  background: white; border-radius: 12px; margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
+  overflow: hidden;
+}
+.sa-acc-hdr {
+  display: flex; align-items: center; gap: 12px;
+  padding: 15px 20px; cursor: pointer; border: none;
+  width: 100%; background: white; text-align: left; transition: background .15s;
+}
+.sa-acc-hdr:hover { background: #FAFBFF; }
+.sa-acc-hdr-icon {
+  width: 36px; height: 36px; border-radius: 9px; background: #FEF3C7;
+  display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+}
+.sa-acc-title { font-size: 14px; font-weight: 700; color: #1E1C18; flex: 1; }
+.sa-acc-sub { font-size: 11px; color: #9A9890; margin-top: 2px; }
+.sa-acc-chev { font-size: 11px; color: #9A9890; transition: transform .2s; }
+.sa-acc-chev.open { transform: rotate(180deg); }
+.sa-acc-body { display: none; border-top: 1px solid #F1F3F5; }
+.sa-acc-body.open { display: block; }
+.sa-tabs {
+  display: flex; gap: 2px; padding: 12px 16px 0;
+  border-bottom: 1px solid #F1F3F5; background: #FAFBFC; flex-wrap: wrap;
+}
+.sa-tab {
+  padding: 6px 14px; border-radius: 7px 7px 0 0; border: none;
+  background: transparent; cursor: pointer; font-size: 11px; font-weight: 500;
+  font-family: var(--sans); color: #6B7280;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s;
+}
+.sa-tab:hover { color: #1E1C18; }
+.sa-tab.on { color: #1E1C18; border-bottom-color: #B85C00; background: white; font-weight: 700; }
+.sa-panel { display: none; }
+.sa-panel.on { display: block; }
+.sa-tbl-wrap { overflow-x: auto; }
+.sa-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.sa-tbl thead tr { background: #F8F9FA; }
+.sa-tbl th {
+  padding: 9px 14px; text-align: left; font-size: 10px; font-weight: 700;
+  color: #6B7280; text-transform: uppercase; letter-spacing: .05em;
+  border-bottom: 2px solid #E9ECEF; white-space: nowrap;
+}
+.sa-tbl th.right { text-align: right; }
+.sa-tbl td { padding: 8px 14px; border-bottom: 1px solid #F1F3F5; color: #374151; vertical-align: middle; }
+.sa-tbl tr:last-child td { border-bottom: none; }
+.sa-tbl tr:hover td { background: #FAFBFF; }
+.sa-tbl td.right { text-align: right; font-family: var(--mono); font-weight: 600; }
+.sa-tbl td.red   { color: #DC2626; font-family: var(--mono); font-weight: 700; text-align: right; }
+.sa-tbl td.amber { color: #D97706; font-family: var(--mono); font-weight: 700; text-align: right; }
+.sa-tbl td.green { color: #16A34A; font-family: var(--mono); font-weight: 700; text-align: right; }
+.sa-tbl td.blue  { color: #2563EB; font-family: var(--mono); font-weight: 700; text-align: right; }
+.sa-tbl td.mono  { font-family: var(--mono); }
+.sa-tbl tr.sa-total td { background: #F0F9FF; font-weight: 700; border-top: 2px solid #BFDBFE; }
+.sa-tbl tr.sa-total-red td { background: #FEF2F2; font-weight: 700; border-top: 2px solid #FCA5A5; }
+.sa-summary-strip {
+  display: flex; gap: 10px; padding: 12px 16px;
+  background: #FAFBFC; border-bottom: 1px solid #F1F3F5; flex-wrap: wrap;
+}
+.sa-kpi-mini {
+  background: white; border: 1px solid #E9ECEF; border-radius: 9px; padding: 9px 14px; min-width: 130px;
+}
+.sa-kpi-mini-lbl { font-size: 10px; color: #9A9890; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
+.sa-kpi-mini-val { font-size: 16px; font-weight: 800; font-family: var(--mono); line-height: 1; }
+.sa-kpi-mini-val.red   { color: #DC2626; }
+.sa-kpi-mini-val.amber { color: #D97706; }
+.sa-kpi-mini-val.green { color: #16A34A; }
+.sa-kpi-mini-val.blue  { color: #2563EB; }
+.sa-kpi-mini-sub { font-size: 10px; color: #9A9890; margin-top: 3px; }
+.sa-source { font-size: 10px; color: #9A9890; padding: 8px 16px 10px; border-top: 1px solid #F1F3F5; font-style: italic; }
+
+/* ── PDF DOCUMENT SLOTS ── */
 /* ── PDF DOCUMENT SLOTS ── */
 .docs-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px}
 .doc-slot{background:var(--bg);border:0.5px solid var(--border);border-radius:10px;overflow:hidden}
@@ -804,6 +909,302 @@ body{overflow-y:auto}
 .pdf-btn{padding:5px 11px;border-radius:6px;border:0.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#D4D0C6;cursor:pointer;font-size:11px;font-weight:500;font-family:var(--sans);transition:all .18s}
 .pdf-btn:hover{background:rgba(240,168,74,.2);border-color:var(--amber-m);color:var(--amber-m)}
 .pdf-btn.off{opacity:.3;cursor:default;pointer-events:none}
+
+/* ═══════════════════════════════════════════════════════
+   CONTEXT DRAWER — Panel lateral de datos de contexto
+═══════════════════════════════════════════════════════ */
+
+/* Wrapper que contiene res-main + drawer */
+.res-main-wrap {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  transition: all .3s cubic-bezier(.4,0,.2,1);
+  min-width: 0;
+}
+
+/* El drawer */
+#ctx-drawer {
+  width: 0;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: white;
+  border-left: 1px solid #E5E7EB;
+  transition: width .3s cubic-bezier(.4,0,.2,1);
+  display: flex;
+  flex-direction: column;
+}
+#ctx-drawer.open {
+  width: 50vw;
+}
+
+/* Botón flotante para abrir el drawer */
+#ctx-drawer-btn {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 200;
+  background: #1E2A4A;
+  color: white;
+  border: none;
+  border-radius: 8px 0 0 8px;
+  padding: 12px 8px;
+  cursor: pointer;
+  font-size: 18px;
+  box-shadow: -2px 0 8px rgba(0,0,0,.15);
+  transition: all .2s;
+  writing-mode: vertical-lr;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+#ctx-drawer-btn:hover { background: #2d3f6b; }
+#ctx-drawer-btn.open { right: 50vw; border-radius: 8px 0 0 8px; background: #B85C00; }
+
+/* Drawer "Condición Actual" — igual mecánica que CONTEXTO pero del lado izquierdo */
+#act-drawer {
+  width: 0;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: white;
+  border-right: 1px solid #E5E7EB;
+  transition: width .3s cubic-bezier(.4,0,.2,1);
+  display: flex;
+  flex-direction: column;
+  order: -1;
+}
+#act-drawer.open {
+  width: 50vw;
+}
+#act-drawer-btn {
+  position: fixed;
+  left: 220px;
+  top: 50%;
+  z-index: 200;
+  background: #991B1B;
+  color: white;
+  border: none;
+  border-radius: 0 8px 8px 0;
+  padding: 12px 8px;
+  cursor: pointer;
+  font-size: 18px;
+  box-shadow: 2px 0 8px rgba(0,0,0,.15);
+  transition: background .2s;
+  writing-mode: vertical-lr;
+  transform: translateY(-50%) rotate(180deg);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+#act-drawer-btn:hover { background: #b91c1c; }
+#act-drawer-btn.open { background: #7F1D1D; }
+
+/* Drawer header */
+.ctx-hdr {
+  padding: 14px 16px;
+  border-bottom: 1px solid #E5E7EB;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.ctx-hdr-title { font-size: 13px; font-weight: 700; color: #1E1C18; flex: 1; }
+.ctx-hdr-sub { font-size: 11px; color: #9A9890; margin-top: 1px; }
+.ctx-close-btn {
+  background: transparent;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  width: 28px; height: 28px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #6B7280;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.ctx-close-btn:hover { background: #F3F4F6; }
+.ctx-edit-tabs-btn {
+  background: transparent;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  width: 28px; height: 28px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #6B7280;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.ctx-edit-tabs-btn:hover, .ctx-edit-tabs-btn.on { background: #FFF7ED; color: #B85C00; border-color: #FED7AA; }
+.ctx-tab-edit-row {
+  display: flex; align-items: center; gap: 4px;
+  padding: 5px 8px; border-bottom: 1px solid #F1F3F5;
+}
+.ctx-tab-edit-row input {
+  flex: 1; min-width: 0; border: 1px solid #E5E7EB; border-radius: 5px;
+  padding: 4px 6px; font-size: 11px; font-family: var(--sans);
+}
+.ctx-tab-del-btn {
+  background: transparent; border: none; color: #DC2626; cursor: pointer;
+  font-size: 13px; padding: 2px 6px; border-radius: 4px; flex-shrink: 0;
+}
+.ctx-tab-del-btn:hover { background: #FEE2E2; }
+.ctx-tab-add-btn {
+  width: 100%; padding: 7px; font-size: 11px; font-weight: 600;
+  color: #B85C00; background: #FFF7ED; border: none; cursor: pointer;
+}
+.ctx-tab-add-btn:hover { background: #FFEDD5; }
+
+/* Machine selector */
+.ctx-maq-sel {
+  padding: 10px 14px;
+  border-bottom: 1px solid #F1F3F5;
+  flex-shrink: 0;
+}
+.ctx-maq-sel select {
+  width: 100%;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: var(--sans);
+  color: #1E1C18;
+  background: white;
+  cursor: pointer;
+}
+
+/* Tabs inside drawer */
+.ctx-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #E5E7EB;
+  flex-shrink: 0;
+  overflow-x: auto;
+  background: #FAFBFC;
+}
+.ctx-tab {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B7280;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  font-family: var(--sans);
+  transition: all .15s;
+}
+.ctx-tab:hover { color: #1E1C18; }
+.ctx-tab.on { color: #B85C00; border-bottom-color: #B85C00; background: white; }
+
+/* Drawer body */
+.ctx-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+/* Paste area */
+.ctx-paste-wrap {
+  padding: 12px 14px;
+}
+.ctx-paste-lbl {
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ctx-paste-lbl span {
+  font-weight: 400;
+  color: #9A9890;
+}
+.ctx-paste-area {
+  width: 100%;
+  min-height: 70px;
+  border: 1.5px dashed #D1D5DB;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: #374151;
+  box-sizing: border-box;
+  resize: vertical;
+  background: #FAFBFC;
+  outline: none;
+  transition: border-color .15s;
+}
+.ctx-paste-area:focus { border-color: #B85C00; background: white; }
+.ctx-paste-area::placeholder { color: #C4C4C0; font-style: italic; }
+
+/* Preview table */
+.ctx-preview {
+  margin-top: 10px;
+  overflow-x: auto;
+}
+.ctx-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.ctx-tbl th {
+  background: #F3F4F6;
+  padding: 5px 8px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border: 1px solid #E5E7EB;
+  white-space: nowrap;
+}
+.ctx-tbl td {
+  padding: 4px 8px;
+  border: 1px solid #E9ECEF;
+  color: #1E1C18;
+  white-space: nowrap;
+}
+.ctx-tbl tr:nth-child(even) td { background: #FAFBFC; }
+
+/* Clear button */
+.ctx-clear-btn {
+  font-size: 10px;
+  color: #9A9890;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--sans);
+  margin-left: auto;
+}
+.ctx-clear-btn:hover { color: #DC2626; background: #FEF2F2; }
+
+/* Empty state */
+.ctx-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: #9A9890;
+  font-size: 12px;
+}
+.ctx-empty-icon { font-size: 28px; margin-bottom: 8px; }
+
+/* Note text */
+.ctx-note {
+  padding: 8px 14px 12px;
+  font-size: 10px;
+  color: #9A9890;
+  line-height: 1.5;
+}
+
 </style>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -906,6 +1307,27 @@ body{overflow-y:auto}
       </div>
     </div>
     <!-- MAIN -->
+    <!-- Context Drawer Button -->
+    <button id="ctx-drawer-btn" onclick="ctxToggle()" title="Datos de contexto">
+      <span style="transform:rotate(180deg);display:inline-block">📋</span>
+      <span>CONTEXTO</span>
+    </button>
+    <!-- Condición Actual Drawer Button (lado izquierdo) -->
+    <button id="act-drawer-btn" onclick="actToggle()" title="Condición actual y puntos críticos">
+      <span>🔧</span>
+      <span>CONDICIÓN ACTUAL</span>
+    </button>
+    <div class="res-main-wrap">
+    <div id="act-drawer">
+      <div class="ctx-hdr">
+        <div>
+          <div class="ctx-hdr-title" style="color:#991B1B">🔧 Condición Actual</div>
+          <div class="ctx-hdr-sub" id="act-hdr-maq">Selecciona una máquina</div>
+        </div>
+        <button class="ctx-close-btn" onclick="actToggle()">✕</button>
+      </div>
+      <div class="ctx-body" id="act-body"></div>
+    </div><!-- /act-drawer -->
     <div class="res-main">
       <!-- Dashboard page -->
       <div class="res-page on" id="res-pg-dash">
@@ -923,6 +1345,7 @@ body{overflow-y:auto}
             <thead><tr>
               <th>Máquina</th>
               <th style="text-align:right">Inversión</th>
+              <th style="text-align:right">Inversión Bruta</th>
               <th style="text-align:right">Beneficio / año</th>
               <th style="text-align:right">ROI</th>
               <th style="text-align:right">Payback</th>
@@ -1048,6 +1471,26 @@ body{overflow-y:auto}
       </div>
 
     </div>
+    </div><!-- /res-main-wrap -->
+    <!-- ═══ CONTEXT DRAWER ═══ -->
+    <div id="ctx-drawer">
+      <div class="ctx-hdr">
+        <div>
+          <div class="ctx-hdr-title">📋 Datos de contexto</div>
+          <div class="ctx-hdr-sub" id="ctx-hdr-maq">Selecciona una máquina</div>
+        </div>
+        <button class="ctx-edit-tabs-btn" onclick="ctxToggleEditTabs()" title="Editar pestañas (renombrar / eliminar)">⚙</button>
+        <button class="ctx-close-btn" onclick="ctxToggle()">✕</button>
+      </div>
+      <div class="ctx-maq-sel">
+        <select id="ctx-maq-select" onchange="ctxSelMaq(this.value)">
+          <option value="">— Selecciona máquina —</option>
+        </select>
+      </div>
+      <div class="ctx-tabs" id="ctx-tabs"></div>
+      <div class="ctx-body" id="ctx-body"></div>
+    </div><!-- /ctx-drawer -->
+
   </div>
 </div> (only in resumen) -->
 <div class="navs" id="navs" style="display:none">
@@ -1302,7 +1745,7 @@ var MACHINES = [
   {id:"m1", code:"CNC", color:"#F87171",
    name:"Router CNC KDT KN-3410 DE", model:"Trimaq - Folio 4531 - AGS",
    inv:1269541, opx_extra:0, yr:8, res:119828, xlsxLink:"", videoUrl:"", cotLink:"", slidePhotos:[],
-   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null,
+   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null, criticos:[],
    frase:"Elimina el cuello de botella principal. El CNC actual cuesta mas en mantenimiento que la maquina nueva.",
    impactos:[
      {icon:"⚡", text:"Cambio de 12 herramientas automatico", sub:"Sin tiempos muertos entre operaciones"},
@@ -1323,7 +1766,7 @@ var MACHINES = [
   {id:"m2", code:"ENC", color:"#34D399",
    name:"Enchapadora KDT KE-710 BT 40", model:"Trimaq - Folio 4529 - AGS",
    inv:1790000, opx_extra:0, yr:10, res:154310, xlsxLink:"", videoUrl:"", cotLink:"", slidePhotos:[],
-   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null,
+   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null, criticos:[],
    frase:"Abre tres nuevos acabados que hoy se rechazan. Retorno automatico incluido sin costo adicional.",
    impactos:[
      {icon:"🔄", text:"Retorno automatico KHF-530 incluido", sub:"Elimina operacion manual entre pasadas"},
@@ -1341,7 +1784,7 @@ var MACHINES = [
   {id:"m3", code:"EXT", color:"#A78BFA",
    name:"Extractor de Polvo SMT MS-400", model:"Trimaq - Folio 4533 - 5 unidades",
    inv:1249138, opx_extra:0, yr:15, res:62285, xlsxLink:"", videoUrl:"", cotLink:"", slidePhotos:[],
-   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null,
+   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null, criticos:[],
    frase:"Prerequisito para operar las maquinas nuevas. Elimina $453,600 anuales en mantenimiento por polvo.",
    impactos:[
      {icon:"🌪", text:"Sirve a 3 maquinas simultaneo", sub:"Enchapadora, CNC y Taladro"},
@@ -1358,7 +1801,7 @@ var MACHINES = [
   {id:"m4", code:"TAL", color:"#FBBF24",
    name:"Taladro CNC KDT KD-612 GNH", model:"Trimaq - Folio 4532 - AGS",
    inv:1624828, opx_extra:0, yr:8, res:159483, xlsxLink:"", videoUrl:"", cotLink:"", slidePhotos:[],
-   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null,
+   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null, criticos:[],
    frase:"El mas rentable del paquete. ROI 647% en 8 anos. Se paga solo en 13 meses.",
    impactos:[
      {icon:"🏆", text:"ROI 647% — El mas rentable", sub:"Ganancia neta $10,507,653 en 8 anos"},
@@ -1376,7 +1819,7 @@ var MACHINES = [
   {id:"m5", code:"DOB", color:"#60A5FA",
    name:"Dobladora CNC G.Weike GWK-10032", model:"G.Weike Tech - USD 30,550 - Importacion",
    inv:672395, opx_extra:0, yr:7, res:54990, xlsxLink:"", videoUrl:"", cotLink:"", slidePhotos:[],
-   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null,
+   heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null, criticos:[],
    frase:"Abre el mercado de mueble metalico. ROI 541% con nuevos productos que hoy son imposibles.",
    impactos:[
      {icon:"🏅", text:"2do mas rentable — ROI 541%", sub:"Ganancia neta $3,638,515 en 7 anos"},
@@ -1569,6 +2012,7 @@ function renderMachines() {
         {id:"vars", label:"Variables y calculo"},
         {id:"specs", label:"Especificaciones"},
         {id:"impactos", label:"Puntos de impacto"},
+        {id:"condicion", label:"Condición Actual"},
         {id:"docs", label:"📎 Documentos"}
       ];
       tabs.forEach(function(t) {
@@ -1581,6 +2025,7 @@ function renderMachines() {
       else if (curTab === "vars") h += renderTabVars(m);
       else if (curTab === "specs") h += renderTabSpecs(m);
       else if (curTab === "impactos") h += renderTabImpactos(m);
+      else if (curTab === "condicion") h += renderTabCondicion(m);
       else if (curTab === "docs") h += renderTabDocs(m);
     }
 
@@ -1605,6 +2050,7 @@ function renderTabId(m) {
   h += '</div>';
   h += '<div class="fld" style="margin-bottom:8px"><label>Link a respaldo Excel (Google Sheets / OneDrive)</label><input value="' + (m.xlsxLink||"") + '" placeholder="https://..." oninput="updM(\'' + m.id + '\',\'xlsxLink\',this.value)"></div>';
   h += '<div class="fld" style="margin-bottom:12px"><label>Link a cotizacion (PDF / Drive / carpeta)</label><input value="' + (m.cotLink||"") + '" placeholder="https://..." oninput="updM(\'' + m.id + '\',\'cotLink\',this.value)"></div>';
+  h += '<div class="fld" style="margin-bottom:12px"><label>Link de video (YouTube o video directo) — boton ▶ en detalle de maquina</label><input value="' + (m.videoUrl||"") + '" placeholder="https://..." oninput="updM(\'' + m.id + '\',\'videoUrl\',this.value);saveLS()"></div>';
   h += '<div class="fld"><label>Foto de la maquina (se usa en presentacion)</label></div>';
   h += '<div class="cfg-foto" onclick="document.getElementById(\'cfgi-' + m.id + '\').click()">';
   h += '<input type="file" accept="image/*" class="cfg-foto-inp" id="cfgi-' + m.id + '" onchange="loadCfgFoto(\'' + m.id + '\',this)">';
@@ -1816,6 +2262,67 @@ function renderTabImpactos(m) {
   return h;
 }
 
+// ── TAB: CONDICIÓN ACTUAL — foto de la maquina actual + puntos criticos ───────
+function renderTabCondicion(m) {
+  if (!m.criticos) m.criticos = [];
+  var h = '<div class="mac-panel on">';
+  h += '<div class="fld" style="margin-bottom:8px"><label>Foto de la condicion actual de la maquina</label></div>';
+  h += '<div class="cfg-foto" onclick="document.getElementById(\'acti-' + m.id + '\').click()">';
+  h += '<input type="file" accept="image/*" class="cfg-foto-inp" id="acti-' + m.id + '" onchange="loadActFoto(\'' + m.id + '\',this)">';
+  h += '<img id="actfotoimg-' + m.id + '" src="' + (m.actPhoto||"") + '" style="display:' + (m.actPhoto?"block":"none") + '">';
+  h += '<div class="cfg-foto-ph" id="actfotoph-' + m.id + '" style="display:' + (m.actPhoto?"none":"flex") + '">';
+  h += '<div class="cfg-foto-ph-i">📷</div><div class="cfg-foto-ph-l">Clic para subir — foto del estado actual</div></div></div>';
+  h += '<div class="fld" style="margin:14px 0 8px"><label>Puntos críticos — problemas o limitaciones de la maquina actual</label></div>';
+  h += '<table class="ct-table" style="margin-bottom:8px"><thead><tr><th>Icono</th><th>Concepto</th><th>Detalle</th><th></th></tr></thead><tbody>';
+  m.criticos.forEach(function(c, ii) {
+    h += '<tr>';
+    h += '<td><input class="ct-inp text" style="width:50px;text-align:center" value="'+c.icon+'" oninput="updCritico(\''+m.id+'\','+ii+',\'icon\',this.value)"></td>';
+    h += '<td><input class="ct-inp text" value="'+c.text+'" oninput="updCritico(\''+m.id+'\','+ii+',\'text\',this.value)"></td>';
+    h += '<td><input class="ct-inp text" value="'+c.sub+'" oninput="updCritico(\''+m.id+'\','+ii+',\'sub\',this.value)"></td>';
+    h += '<td><button class="tbl-del" onclick="delCritico(\''+m.id+'\','+ii+')">&#215;</button></td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  h += '<button class="add-row" onclick="addCritico(\''+m.id+'\')">+ Agregar punto crítico</button>';
+  h += '</div>';
+  return h;
+}
+
+function loadActFoto(mid, inp) {
+  var file = inp.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var m = MACHINES.find(function(x){ return x.id===mid; });
+    if (m) m.actPhoto = e.target.result;
+    var img = document.getElementById("actfotoimg-"+mid);
+    var ph = document.getElementById("actfotoph-"+mid);
+    if (img) { img.src = e.target.result; img.style.display = "block"; }
+    if (ph) ph.style.display = "none";
+    saveLS();
+  };
+  reader.readAsDataURL(file); inp.value = "";
+}
+
+function updCritico(mid, ii, key, val) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (m && m.criticos && m.criticos[ii]) { m.criticos[ii][key] = val; saveLS(); }
+}
+function delCritico(mid, ii) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (!m || !m.criticos) return;
+  m.criticos.splice(ii, 1);
+  openMaqId = mid; renderMachines();
+  saveLS();
+}
+function addCritico(mid) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (!m) return;
+  if (!m.criticos) m.criticos = [];
+  m.criticos.push({icon:"⚠", text:"Nuevo punto crítico", sub:"Descripcion"});
+  openMaqId = mid; switchTab(mid, "condicion");
+  saveLS();
+}
+
 // ── INTERACTIONS ──────────────────────────────────────────────────────────────
 function toggleMaq(mid) {
   openMaqId = (openMaqId === mid) ? null : mid;
@@ -2001,7 +2508,7 @@ function addMachine() {
     seguimiento:{entries:[]},
     inv:inv, opx_extra:0, yr:8,
     res:Math.round(inv*0.1), xlsxLink:"",
-    heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null,
+    heroPhoto:null, carPhotos:[], actPhoto:null, propPhoto:null, criticos:[],
     frase:"Descripcion de impacto pendiente",
     impactos:[
       {icon:"⚡", text:"Punto de impacto 1", sub:"Descripcion"},
@@ -2134,6 +2641,9 @@ function resGoTo(idx) {
   } else {
     var mp = document.getElementById('res-pg-m'+(idx-1));
     if (mp) mp.classList.add('on');
+    // Auto-update context drawer to the selected machine
+    if (MACHINES[idx-1]) ctxSetMachine(MACHINES[idx-1].id);
+    if (MACHINES[idx-1]) actSetMachine(MACHINES[idx-1].id);
   }
   document.querySelectorAll('.res-nav-item').forEach(function(el){ el.classList.remove('on'); });
   var navEl;
@@ -2147,6 +2657,12 @@ function resGoTo(idx) {
   var main = document.querySelector('.res-main');
   if (main) main.scrollTop = 0;
 }
+
+// ══ SITUACIÓN ACTUAL — accordion + tabs ═══════════════════════════════════
+
+
+
+// ══ FIN SITUACIÓN ACTUAL ═══════════════════════════════════════════════════
 
 function renderDash() {
   var results = MACHINES.map(function(m){ return calcROI(m); });
@@ -2178,6 +2694,7 @@ function renderDash() {
     h += '<div><div class="maq-col-nameval">'+m.name+'</div>';
     h += '<div class="maq-col-model">'+m.model+'</div></div></div></td>';
     h += '<td style="text-align:right"><div class="maq-col-inv">'+fmt(r.netInv||m.inv)+'</div>'+(m.replaceVal>0?'<div style="font-size:10px;color:#16A34A">neto</div>':'')+'</td>';
+    h += '<td style="text-align:right"><div class="maq-col-inv">'+fmt(m.inv)+'</div></td>';
     h += '<td style="text-align:right"><div class="maq-col-ben">'+(hd?fmt(r.ab):'Pendiente')+'</div></td>';
     h += '<td style="text-align:right"><div class="tip-wrap">';
     h += '<div class="maq-col-roi-val" style="color:'+roiColor+'">'+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'--')+'</div>';
@@ -2235,6 +2752,7 @@ function buildMachinePages() {
     var roiColor = hd ? (r.roi>=100?'#16A34A':r.roi>=50?'#D97706':'#DC2626') : '#9A9890';
     var hasCot = m.cotPdf && m.cotPdf.length > 10;
     var hasFicha = m.fichaPdf && m.fichaPdf.length > 10;
+    var hasVideo = m.videoUrl && m.videoUrl.length > 5;
 
     html += '<div class="maq-detail-page" id="res-pg-m'+i+'">';
 
@@ -2244,6 +2762,7 @@ function buildMachinePages() {
     html += '<div class="mdt-color-bar" style="background:'+m.color+'"></div>';
     html += '<div><div class="mdt-name">'+m.name+'</div><div class="mdt-model">'+m.model+'</div></div>';
     html += '<div class="mdt-top-kpis">';
+    html += '<div class="mdt-kpi"><div class="mdt-kpi-l">Inv. bruta</div><div class="mdt-kpi-v" style="color:#6B7280;font-size:13px">'+fmt(m.inv)+'</div></div>';
     html += '<div class="mdt-kpi"><div class="mdt-kpi-l">Inv. neta</div><div class="mdt-kpi-v" style="color:#2563EB;font-size:13px">'+fmt(r.netInv||m.inv)+'</div></div>';
     html += '<div class="mdt-kpi tip-wrap" style="position:relative"><div class="mdt-kpi-l">ROI '+m.yr+' años</div><div class="mdt-kpi-v" style="color:'+roiColor+'">'+(hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'--')+'</div>';
     html += '<div class="tip-box" style="right:0;left:auto;transform:none"><div class="tip-label">¿Qué es el ROI?</div>';
@@ -2259,6 +2778,7 @@ function buildMachinePages() {
     html += '<div class="mdt-pdf-btns">';
     html += '<button class="mdt-pdf-btn'+(hasCot?'':' off')+'" onclick="openPdfModal(\''+m.id+'\',\'cot\')">📄 Cotización</button>';
     html += '<button class="mdt-pdf-btn'+(hasFicha?'':' off')+'" onclick="openPdfModal(\''+m.id+'\',\'ficha\')">📋 Ficha Técnica</button>';
+    html += '<button class="mdt-pdf-btn'+(hasVideo?'':' off')+'" onclick="openVideoModal(\''+m.id+'\')" title="'+(hasVideo?'Reproducir video':'Sin video — agrega un link en Configuración')+'">▶ Video</button>';
     html += '</div>';
     html += '<button class="mdt-pdf-btn" onclick="segOpenFor(\''+m.id+'\')" style="background:#1E2A4A;color:white;border-color:#1E2A4A">📊 Seguimiento</button>';
     html += '</div>'; // topbar
@@ -2494,6 +3014,8 @@ function buildMachinePages() {
       html += '</div></div>';
     }
 
+
+    // ── Situación Actual — tablas de respaldo ──
 
     html += '</div>'; // mdt-body
 
@@ -3013,7 +3535,7 @@ function renderConfig(){
       h+='<div class="f2"><div class="fld"><label>Nombre completo</label><input value="'+m.name+'" oninput="updM(\''+m.id+'\',\'name\',this.value)"></div>';
       h+='<div class="fld"><label>Modelo / Proveedor</label><input value="'+m.model+'" oninput="updM(\''+m.id+'\',\'model\',this.value)"></div></div>';
       h+='<div class="f3"><div class="fld"><label>Inversion total ($)</label><input class="blue" type="number" value="'+m.inv+'" oninput="updM(\''+m.id+'\',\'inv\',parseFloat(this.value)||0);recalc()"></div>';
-      h+='<div class="fld"><label>OPEX anual ($)</label><input class="blue" type="number" value="'+m.opx+'" oninput="updM(\''+m.id+'\',\'opx\',parseFloat(this.value)||0);recalc()"></div>';
+      h+='<div class="fld"><label>OPEX anual ($)</label><input class="blue" type="number" value="'+(m.opx||0)+'" oninput="updM(\''+m.id+'\',\'opx\',parseFloat(this.value)||0)" onblur="recalc()"></div>';
       h+='<div class="fld"><label>Vida util (anos)</label><input class="blue" type="number" value="'+m.yr+'" oninput="updM(\''+m.id+'\',\'yr\',parseFloat(this.value)||1);recalc()"></div></div>';
       h+='<div class="f3"><div class="fld"><label>Valor rescate ($)</label><input class="blue" type="number" value="'+m.res+'" oninput="updM(\''+m.id+'\',\'res\',parseFloat(this.value)||0);recalc()"></div>';
       h+='<div class="fld" style="grid-column:span 2"><label>Link a Excel (Google Sheets o OneDrive)</label><input value="'+(m.xlsxLink||"")+'" placeholder="https://..." oninput="updM(\''+m.id+'\',\'xlsxLink\',this.value)"></div></div>';
@@ -3299,33 +3821,47 @@ function delDocPdf(mid, key) {
 
 // ── PDF VIEWER — opens in new tab (avoids file:// iframe security restriction) ──
 
+function dataURLtoBlob(dataUrl) {
+  var parts = dataUrl.split(',');
+  var meta = parts[0] || '';
+  var mimeMatch = meta.match(/data:([^;]+);base64/);
+  var mime = mimeMatch ? mimeMatch[1] : 'application/pdf';
+  var binary = atob(parts[1] || '');
+  var len = binary.length;
+  var bytes = new Uint8Array(len);
+  for (var i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
 function openPdfModal(mid, key) {
   var m = MACHINES.find(function(x){ return x.id === mid; });
   if (!m) return;
   var pdfData = m[key+'Pdf'];
-  var name = m[key+'PdfName'] || 'Documento.pdf';
   if (!pdfData || pdfData.length < 10) { alert('Sin PDF cargado.'); return; }
-  var label = key === 'cot' ? 'Cotizacion' : 'Ficha Tecnica';
-  var w = window.open('', '_blank');
-  if (!w) { alert('Permite popups para este archivo en el navegador.'); return; }
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + name + '</title>'
-    + '<style>*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%;background:#404040}'
-    + '.bar{background:#1E1C18;padding:8px 16px;display:flex;align-items:center;gap:10px;height:44px;flex-shrink:0}'
-    + '.bt{font-family:sans-serif;font-size:13px;font-weight:600;color:#F5F2EC;flex:1}'
-    + '.bs{font-family:monospace;font-size:10px;color:#5A5750}'
-    + '.bc{padding:4px 12px;border-radius:5px;border:0.5px solid rgba(255,255,255,.15);background:transparent;color:#9A9790;cursor:pointer;font-size:11px}'
-    + '.bc:hover{background:rgba(255,255,255,.08);color:#fff}'
-    + 'iframe{width:100%;height:calc(100vh - 44px);border:none;display:block}'
-    + '</style></head><body>'
-    + '<div class="bar"><div class="bt">' + (m.name||'') + ' — ' + label + '</div>'
-    + '<div class="bs">' + name + '</div>'
-    + '<button class="bc" onclick="window.close()">✕ Cerrar</button></div>'
-    + '<iframe src="' + pdfData + '" title="' + name + '"></iframe>'
-    + '</body></html>');
-  w.document.close();
+  try {
+    var blob = dataURLtoBlob(pdfData);
+    var blobUrl = URL.createObjectURL(blob);
+    var w = window.open(blobUrl, '_blank');
+    if (!w) { alert('El navegador bloqueó la ventana. Permite popups para este sitio e intenta de nuevo.'); URL.revokeObjectURL(blobUrl); return; }
+    setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 60000);
+  } catch(e) {
+    alert('No se pudo abrir el documento: ' + e.message);
+  }
 }
 
 function closePdfModal() {} // kept for compatibility
+
+function openVideoModal(mid) {
+  var m = MACHINES.find(function(x){ return x.id === mid; });
+  if (!m) return;
+  var url = m.videoUrl;
+  if (!url || url.length < 5) { alert('Sin video — agrega un link en Configuración (pestaña Identificación).'); return; }
+  // Abrir el link directamente en una pestaña nueva. Incrustar YouTube en un
+  // popup en blanco suele dar "error 153" (restricción de reproducción en
+  // otros sitios), asi que es mas confiable mandar al usuario directo al video.
+  var w = window.open(url, '_blank');
+  if (!w) { alert('El navegador bloqueó la ventana. Permite popups para este sitio e intenta de nuevo.'); }
+}
 
 
 
@@ -4905,7 +5441,7 @@ function renderFinanciamiento() {
   h += '<div style="background:white;border:1px solid #E9ECEF;border-radius:16px;overflow:hidden;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.07)">';
   h += '<div style="display:flex">';
   h += '<div style="width:190px;flex-shrink:0;background:#F1F3F5;position:relative;min-height:120px">';
-  if (m.heroPhoto) h += '<img src="'+m.heroPhoto+'" style="width:100%;height:100%;object-fit:cover;display:block">';
+  if (m.heroPhoto) h += '<img src="'+m.heroPhoto+'" style="width:100%;height:100%;object-fit:contain;display:block">';
   else h += '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.2">📷</div>';
   h += '</div>';
   h += '<div style="flex:1;padding:16px 20px">';
@@ -5346,6 +5882,389 @@ function finAddArr(mid) {
 
 
 // ── FIREBASE ─────────────────────────────────────────────────────────────────
+
+
+// ═══════════════════════════════════════════════════════════════
+//  CONTEXT DRAWER — Datos de contexto por máquina (paste Excel)
+// ═══════════════════════════════════════════════════════════════
+
+var _ctxOpen = false;
+var _ctxMid  = null;   // machine id currently shown
+var _ctxTab  = 'gastos'; // current tab key
+var _ctxTabsEdit = false; // tabs edit mode (rename/delete)
+
+var CTX_TABS = [
+  { key: 'gastos',   icon: '💰', label: 'Gastos' },
+  { key: 'paros',    icon: '⏸', label: 'Paros' },
+  { key: 'rechazos', icon: '❌', label: 'Rechazos' },
+  { key: 'mod',      icon: '👷', label: 'MOD' },
+  { key: 'extra1',   icon: '📄', label: 'Extra 1' },
+  { key: 'extra2',   icon: '📄', label: 'Extra 2' },
+];
+
+function ctxToggle() {
+  _ctxOpen = !_ctxOpen;
+  var drawer = document.getElementById('ctx-drawer');
+  var btn    = document.getElementById('ctx-drawer-btn');
+  if (!drawer || !btn) return;
+  if (_ctxOpen) {
+    drawer.classList.add('open');
+    btn.classList.add('open');
+    btn.innerHTML = '<span>✕</span><span>CERRAR</span>';
+    // Populate machine selector
+    ctxRefreshMaqSel();
+    // If no machine selected, try to pick the active one
+    if (!_ctxMid && MACHINES.length > 0) {
+      _ctxMid = MACHINES[0].id;
+      document.getElementById('ctx-maq-select').value = _ctxMid;
+    }
+    ctxRenderTabsBar();
+    ctxRender();
+  } else {
+    drawer.classList.remove('open');
+    btn.classList.remove('open');
+    btn.innerHTML = '<span style="transform:rotate(180deg);display:inline-block">📋</span><span>CONTEXTO</span>';
+  }
+}
+
+function ctxRefreshMaqSel() {
+  var sel = document.getElementById('ctx-maq-select');
+  if (!sel) return;
+  var cur = sel.value || _ctxMid || '';
+  sel.innerHTML = '<option value="">— Selecciona máquina —</option>';
+  MACHINES.forEach(function(m) {
+    var opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.name || m.id;
+    if (m.id === cur) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function ctxSelMaq(mid) {
+  _ctxMid = mid;
+  ctxRender();
+}
+
+// Toggle "editar pestañas" mode: shows rename inputs + delete buttons
+function ctxToggleEditTabs() {
+  _ctxTabsEdit = !_ctxTabsEdit;
+  var btn = document.querySelector('.ctx-edit-tabs-btn');
+  if (btn) btn.classList.toggle('on', _ctxTabsEdit);
+  ctxRenderTabsBar();
+}
+
+// Renders the tabs bar — either normal clickable tabs, or edit mode (rename/delete)
+function ctxRenderTabsBar() {
+  var wrap = document.getElementById('ctx-tabs');
+  if (!wrap) return;
+  var html = '';
+  if (!_ctxTabsEdit) {
+    CTX_TABS.forEach(function(t) {
+      html += '<button class="ctx-tab' + (_ctxTab === t.key ? ' on' : '') + '" onclick="ctxTab(\'' + t.key + '\')">' + t.icon + ' ' + escapeHtml(t.label) + '</button>';
+    });
+  } else {
+    CTX_TABS.forEach(function(t, i) {
+      html += '<div class="ctx-tab-edit-row">';
+      html += '<span style="flex-shrink:0">' + t.icon + '</span>';
+      html += '<input value="' + escapeHtml(t.label) + '" oninput="ctxRenameTab(' + i + ',this.value)">';
+      html += '<button class="ctx-tab-del-btn" onclick="ctxDeleteTab(' + i + ')" title="Eliminar pestaña">🗑</button>';
+      html += '</div>';
+    });
+    html += '<button class="ctx-tab-add-btn" onclick="ctxAddTab()">+ Agregar pestaña</button>';
+  }
+  wrap.innerHTML = html;
+  wrap.classList.toggle('ctx-tabs-editing', _ctxTabsEdit);
+}
+
+function ctxRenameTab(i, val) {
+  if (!CTX_TABS[i]) return;
+  CTX_TABS[i].label = val;
+  saveLS();
+}
+
+function ctxDeleteTab(i) {
+  if (!CTX_TABS[i]) return;
+  if (CTX_TABS.length <= 1) { alert('Debe quedar al menos una pestaña.'); return; }
+  if (!confirm('¿Eliminar la pestaña "' + CTX_TABS[i].label + '"? Los datos guardados en esa pestaña dejarán de mostrarse.')) return;
+  var deletedKey = CTX_TABS[i].key;
+  CTX_TABS.splice(i, 1);
+  if (_ctxTab === deletedKey) _ctxTab = CTX_TABS[0].key;
+  ctxRenderTabsBar();
+  ctxRender();
+  saveLS();
+}
+
+function ctxAddTab() {
+  var key = 'tab' + Date.now();
+  CTX_TABS.push({ key: key, icon: '📄', label: 'Nueva pestaña' });
+  _ctxTabsEdit = true;
+  ctxRenderTabsBar();
+  saveLS();
+}
+
+function ctxTab(key) {
+  _ctxTab = key;
+  ctxRenderTabsBar();
+  ctxRender();
+}
+
+function ctxRender() {
+  var body = document.getElementById('ctx-body');
+  var hdrSub = document.getElementById('ctx-hdr-maq');
+  if (!body) return;
+
+  if (!_ctxMid) {
+    body.innerHTML = '<div class="ctx-empty"><div class="ctx-empty-icon">📋</div><div>Selecciona una máquina para ver o agregar datos de contexto</div></div>';
+    if (hdrSub) hdrSub.textContent = 'Selecciona una máquina';
+    return;
+  }
+
+  var m = MACHINES.find(function(x) { return x.id === _ctxMid; });
+  if (!m) return;
+  if (!m.sa) m.sa = {};
+
+  if (hdrSub) hdrSub.textContent = m.name || m.id;
+
+  var tabInfo = CTX_TABS.find(function(t) { return t.key === _ctxTab; }) || CTX_TABS[0];
+  var savedData = m.sa[_ctxTab] || '';
+
+  var html = '<div class="ctx-paste-wrap">';
+
+  // Label + clear button
+  html += '<div class="ctx-paste-lbl">';
+  html += '<span>' + tabInfo.icon + ' ' + tabInfo.label + '</span>';
+  html += '<span>— Pega aquí las celdas de Excel (Ctrl+V)</span>';
+  if (savedData) {
+    html += '<button class="ctx-clear-btn" onclick="ctxClear()">🗑 Limpiar</button>';
+  }
+  html += '</div>';
+
+  // Textarea
+  html += '<textarea class="ctx-paste-area" id="ctx-paste-area"';
+  html += ' placeholder="Copia un rango de celdas en Excel (Ctrl+C) y pégalas aquí (Ctrl+V). Las columnas separadas por tabulador se convierten automáticamente en tabla."';
+  html += ' oninput="ctxOnInput(this.value)"';
+  html += '>' + escapeHtml(savedData) + '</textarea>';
+
+  // Preview table
+  if (savedData.trim()) {
+    html += '<div class="ctx-preview">';
+    html += ctxBuildTable(savedData);
+    html += '</div>';
+  } else {
+    html += '<div class="ctx-note">💡 Para pegar desde Excel: selecciona las celdas en Excel → Ctrl+C → haz clic en el área de texto → Ctrl+V</div>';
+  }
+
+  html += '</div>';
+  body.innerHTML = html;
+}
+
+function ctxOnInput(val) {
+  if (!_ctxMid) return;
+  var m = MACHINES.find(function(x) { return x.id === _ctxMid; });
+  if (!m) return;
+  if (!m.sa) m.sa = {};
+  m.sa[_ctxTab] = val;
+  fbSave();
+  // Re-render preview only (not the textarea, to not disrupt typing)
+  var preview = document.querySelector('.ctx-preview') || document.querySelector('.ctx-note');
+  if (preview) {
+    var parent = preview.parentNode;
+    // Remove existing preview/note
+    document.querySelectorAll('.ctx-preview, .ctx-note').forEach(function(el) { el.remove(); });
+    // Re-add clear button if not there
+    var clearBtn = document.querySelector('.ctx-clear-btn');
+    if (!clearBtn && val.trim()) {
+      var lbl = document.querySelector('.ctx-paste-lbl');
+      if (lbl) {
+        var btn = document.createElement('button');
+        btn.className = 'ctx-clear-btn';
+        btn.onclick = ctxClear;
+        btn.textContent = '🗑 Limpiar';
+        lbl.appendChild(btn);
+      }
+    }
+    if (val.trim()) {
+      var div = document.createElement('div');
+      div.className = 'ctx-preview';
+      div.innerHTML = ctxBuildTable(val);
+      document.querySelector('.ctx-paste-wrap').appendChild(div);
+    } else {
+      var note = document.createElement('div');
+      note.className = 'ctx-note';
+      note.textContent = '💡 Para pegar desde Excel: selecciona las celdas en Excel → Ctrl+C → haz clic en el área de texto → Ctrl+V';
+      document.querySelector('.ctx-paste-wrap').appendChild(note);
+    }
+  }
+}
+
+function ctxClear() {
+  if (!_ctxMid) return;
+  var m = MACHINES.find(function(x) { return x.id === _ctxMid; });
+  if (!m) return;
+  if (!m.sa) m.sa = {};
+  m.sa[_ctxTab] = '';
+  fbSave();
+  ctxRender();
+}
+
+function ctxBuildTable(tsv) {
+  if (!tsv || !tsv.trim()) return '';
+  var lines = tsv.trim().split('\n');
+  if (!lines.length) return '';
+  var html = '<table class="ctx-tbl"><thead><tr>';
+  // First row = headers
+  var headers = lines[0].split('\t');
+  headers.forEach(function(h) {
+    html += '<th>' + escapeHtml(h.trim()) + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+  // Rest = data rows
+  for (var i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    var cols = lines[i].split('\t');
+    html += '<tr>';
+    cols.forEach(function(c) {
+      html += '<td>' + escapeHtml(c.trim()) + '</td>';
+    });
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  return html;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// When switching machines via the dashboard, auto-update the drawer
+function ctxSetMachine(mid) {
+  if (!_ctxOpen) return;
+  _ctxMid = mid;
+  var sel = document.getElementById('ctx-maq-select');
+  if (sel) sel.value = mid;
+  ctxRender();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DRAWER "CONDICIÓN ACTUAL" — foto + puntos críticos (lado izquierdo)
+//  Misma mecánica que el drawer de CONTEXTO, pero abre del lado izquierdo
+//  y solo se muestra si el usuario lo selecciona (no va en la página principal).
+// ═══════════════════════════════════════════════════════════════
+
+var _actOpen = false;
+var _actMid  = null;
+
+function actToggle() {
+  _actOpen = !_actOpen;
+  var drawer = document.getElementById('act-drawer');
+  var btn    = document.getElementById('act-drawer-btn');
+  if (!drawer || !btn) return;
+  if (_actOpen) {
+    drawer.classList.add('open');
+    btn.classList.add('open');
+    btn.innerHTML = '<span>✕</span><span>CERRAR</span>';
+    // Si estamos viendo una máquina en este momento, usar esa; si no, usar la última conocida.
+    if (typeof resActivePage === 'number' && resActivePage > 0 && MACHINES[resActivePage-1]) {
+      _actMid = MACHINES[resActivePage-1].id;
+    } else if (!_actMid && MACHINES.length > 0) {
+      _actMid = MACHINES[0].id;
+    }
+    actRender();
+  } else {
+    drawer.classList.remove('open');
+    btn.classList.remove('open');
+    btn.innerHTML = '<span>🔧</span><span>CONDICIÓN ACTUAL</span>';
+  }
+}
+
+// Auto-sync al navegar entre máquinas — siempre se mantiene al día,
+// esté o no abierto el panel, para que nunca muestre datos de otra máquina.
+function actSetMachine(mid) {
+  _actMid = mid;
+  if (_actOpen) actRender();
+}
+
+function actRender() {
+  var body = document.getElementById('act-body');
+  var hdrSub = document.getElementById('act-hdr-maq');
+  if (!body) return;
+
+  if (!_actMid) {
+    body.innerHTML = '<div class="ctx-empty"><div class="ctx-empty-icon">🔧</div><div>Selecciona una máquina para ver su condición actual</div></div>';
+    if (hdrSub) hdrSub.textContent = 'Selecciona una máquina';
+    return;
+  }
+
+  var m = MACHINES.find(function(x){ return x.id === _actMid; });
+  if (!m) return;
+  if (!m.criticos) m.criticos = [];
+
+  if (hdrSub) hdrSub.textContent = m.name || m.id;
+
+  var h = '<div style="padding:14px">';
+  h += '<div class="fld" style="margin-bottom:8px"><label>Foto de la condición actual</label></div>';
+  h += '<div class="mdt-act-hero" style="height:240px" onclick="document.getElementById(\'actdw-inp-' + m.id + '\').click()">';
+  h += '<input type="file" accept="image/*" class="mdt-act-hero-inp" id="actdw-inp-' + m.id + '" onchange="actLoadFoto(\'' + m.id + '\',this)">';
+  h += '<img id="actdw-img-' + m.id + '" src="' + (m.actPhoto||"") + '" style="display:' + (m.actPhoto?"block":"none") + ';width:100%;height:100%;object-fit:contain">';
+  h += '<div class="mdt-act-hero-ph" id="actdw-ph-' + m.id + '" style="display:' + (m.actPhoto?"none":"flex") + '"><div class="mdt-act-hero-ph-i">📷</div><div class="mdt-act-hero-ph-l">Clic para subir foto</div></div>';
+  h += '<button class="mdt-act-hero-chg" onclick="event.stopPropagation();document.getElementById(\'actdw-inp-' + m.id + '\').click()">cambiar</button>';
+  h += '</div>';
+
+  h += '<div class="fld" style="margin:16px 0 8px"><label>Puntos críticos</label></div>';
+  h += '<table class="ct-table" style="margin-bottom:8px"><thead><tr><th>Icono</th><th>Concepto</th><th>Detalle</th><th></th></tr></thead><tbody>';
+  m.criticos.forEach(function(c, ii) {
+    h += '<tr>';
+    h += '<td><input class="ct-inp text" style="width:50px;text-align:center" value="'+c.icon+'" oninput="updCritico(\''+m.id+'\','+ii+',\'icon\',this.value)"></td>';
+    h += '<td><input class="ct-inp text" value="'+c.text+'" oninput="updCritico(\''+m.id+'\','+ii+',\'text\',this.value)"></td>';
+    h += '<td><input class="ct-inp text" value="'+c.sub+'" oninput="updCritico(\''+m.id+'\','+ii+',\'sub\',this.value)"></td>';
+    h += '<td><button class="tbl-del" onclick="actDelCritico(\''+m.id+'\','+ii+')">&#215;</button></td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  if (!m.criticos.length) h += '<div class="mdt-critico-empty">Sin puntos críticos todavía.</div>';
+  h += '<button class="add-row" onclick="actAddCritico(\''+m.id+'\')">+ Agregar punto crítico</button>';
+  h += '</div>';
+  body.innerHTML = h;
+}
+
+function actLoadFoto(mid, inp) {
+  var file = inp.files[0]; if (!file) return;
+  compressImg(file, 1200, 900, 0.85, function(data) {
+    var m = MACHINES.find(function(x){ return x.id===mid; });
+    if (m) m.actPhoto = data;
+    var img = document.getElementById('actdw-img-'+mid);
+    var ph = document.getElementById('actdw-ph-'+mid);
+    if (img) { img.src = data; img.style.display = 'block'; }
+    if (ph) ph.style.display = 'none';
+    saveLS();
+  });
+  inp.value = '';
+}
+
+function actAddCritico(mid) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (!m) return;
+  if (!m.criticos) m.criticos = [];
+  m.criticos.push({icon:"⚠", text:"Nuevo punto crítico", sub:"Descripcion"});
+  actRender();
+  saveLS();
+}
+
+function actDelCritico(mid, ii) {
+  var m = MACHINES.find(function(x){ return x.id===mid; });
+  if (!m || !m.criticos) return;
+  m.criticos.splice(ii, 1);
+  actRender();
+  saveLS();
+}
+
+
 const FB_URL = 'https://ingenieria-de-procesos-24ba4-default-rtdb.firebaseio.com';
 const FB_KEY = 'lineaitalia_roi';
 
@@ -5364,7 +6283,7 @@ function _waitFb() {
 }
 
 function _fbSerialize() {
-  var state = { MACHINES: MACHINES, CTS: CTS, GANTT_TASKS: GANTT_TASKS, RESPONSABLES: RESPONSABLES };
+  var state = { MACHINES: MACHINES, CTS: CTS, GANTT_TASKS: GANTT_TASKS, RESPONSABLES: RESPONSABLES, CTX_TABS: CTX_TABS };
   // Strip PDFs — too large for Firebase
   var copy = JSON.parse(JSON.stringify(state));
   copy.MACHINES.forEach(function(m) { m.cotPdf = null; m.fichaPdf = null; });
@@ -5381,6 +6300,9 @@ function _fbApply(data) {
       if (!sm.fichaPdfName) sm.fichaPdfName = '';
       if (!sm.seguimiento) sm.seguimiento = { entries: [] };
       if (!sm.vars || Array.isArray(sm.vars) || typeof sm.vars !== 'object') sm.vars = {};
+      if (!sm.sa) sm.sa = {};
+      if (!sm.criticos) sm.criticos = [];
+      if (!sm.actPhoto) sm.actPhoto = null;
       MACHINES.push(sm);
     });
   }
@@ -5396,6 +6318,10 @@ function _fbApply(data) {
     while (RESPONSABLES.length) RESPONSABLES.pop();
     (data.RESPONSABLES || []).forEach(function(r) { RESPONSABLES.push(r); });
   }
+  if (data && data.CTX_TABS && data.CTX_TABS.length) {
+    while (CTX_TABS.length) CTX_TABS.pop();
+    data.CTX_TABS.forEach(function(t) { CTX_TABS.push(t); });
+  }
 }
 
 function _fbRefreshUI() {
@@ -5403,6 +6329,8 @@ function _fbRefreshUI() {
   renderMachines();
   if (typeof buildMachinePages === 'function') buildMachinePages();
   if (typeof renderDash === 'function') renderDash();
+  if (typeof ctxRenderTabsBar === 'function') ctxRenderTabsBar();
+  if (typeof ctxRender === 'function') ctxRender();
   // refresh Gantt/Responsables if currently visible
   if (typeof resActivePage !== 'undefined') {
     if (resActivePage === 'gantt') ganttOnOpen();
@@ -5505,7 +6433,7 @@ var LS_KEY = "lineaitalia_v1";
 // ── SAVE TO LOCALSTORAGE (auto) ───────────────────────────────────────────
 function saveLS() {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify({MACHINES:MACHINES, CTS:CTS, GANTT_TASKS:GANTT_TASKS, RESPONSABLES:RESPONSABLES}));
+    localStorage.setItem(LS_KEY, JSON.stringify({MACHINES:MACHINES, CTS:CTS, GANTT_TASKS:GANTT_TASKS, RESPONSABLES:RESPONSABLES, CTX_TABS:CTX_TABS}));
     showSaveBadge();
   } catch(e) { console.warn("localStorage save failed:", e); }
   fbSave();
@@ -5524,7 +6452,7 @@ function showSaveBadge() {
 function saveFile() {
   // Still save to localStorage too
   saveLS();
-  var state = {MACHINES:MACHINES, CTS:CTS, GANTT_TASKS:GANTT_TASKS, RESPONSABLES:RESPONSABLES};
+  var state = {MACHINES:MACHINES, CTS:CTS, GANTT_TASKS:GANTT_TASKS, RESPONSABLES:RESPONSABLES, CTX_TABS:CTX_TABS};
   var tag = '<scr'+'ipt id="ss" type="application/json">'+JSON.stringify(state)+'</sc'+'ript>';
   var html = document.documentElement.outerHTML;
   html = html.replace(/<scr[i]pt id="ss"[\s\S]*?<\/script>/, "");
@@ -5560,6 +6488,8 @@ function clearLS() {
           if(!sm.fichaPdf) sm.fichaPdf=null;
           if(!sm.fichaPdfName) sm.fichaPdfName='';
           if(!sm.seguimiento) sm.seguimiento={entries:[]};
+          if(!sm.criticos) sm.criticos=[];
+          if(!sm.actPhoto) sm.actPhoto=null;
           MACHINES.push(sm);
         });
       }
@@ -5574,6 +6504,10 @@ function clearLS() {
       if (s.RESPONSABLES && s.RESPONSABLES.length) {
         while (RESPONSABLES.length) RESPONSABLES.pop();
         s.RESPONSABLES.forEach(function(r){ RESPONSABLES.push(r); });
+      }
+      if (s.CTX_TABS && s.CTX_TABS.length) {
+        while (CTX_TABS.length) CTX_TABS.pop();
+        s.CTX_TABS.forEach(function(t){ CTX_TABS.push(t); });
       }
       loaded = true;
     }
@@ -5592,12 +6526,18 @@ function clearLS() {
           if(!sm.fichaPdf) sm.fichaPdf=null;
           if(!sm.fichaPdfName) sm.fichaPdfName='';
           if(!sm.seguimiento) sm.seguimiento={entries:[]};
+          if(!sm.criticos) sm.criticos=[];
+          if(!sm.actPhoto) sm.actPhoto=null;
           MACHINES.push(sm);
         });
       }
       if (s.CTS && s.CTS.length) {
         while (CTS.length) CTS.pop();
         s.CTS.forEach(function(ct){ CTS.push(ct); });
+      }
+      if (s.CTX_TABS && s.CTX_TABS.length) {
+        while (CTX_TABS.length) CTX_TABS.pop();
+        s.CTX_TABS.forEach(function(t){ CTX_TABS.push(t); });
       }
       // Migrate embedded state to localStorage
       saveLS();
