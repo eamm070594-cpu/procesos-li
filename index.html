@@ -6,6 +6,7 @@
 <title>LI · Procesos</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -964,6 +965,7 @@ let _proyectosScrollY=0; // dónde estabas desplazado en la lista de Proyectos a
 let _profileUserId=null; // a quién muestra "Mi puesto" — null = el propio usuario en sesión
 let _currentCentroId=null; // qué centro muestra Centro de Trabajo — null = la lista
 let _ctTab='distribucion'; // qué pestaña del detalle de centro está activa
+let _ctCifChart=null; // instancia Chart.js de la dona de CIF — se destruye/recrea en cada render
 let _currentMaquinaId=null; // qué maquina muestra el tab "Máquinas" — null = la lista
 let _maqTab='id'; // sub-tab del detalle de maquina: id | vars | roi
 let _openVarId=null; // que variable esta expandida en el tab Variables
@@ -1710,18 +1712,29 @@ function renderDashboard(root){
   if(!isLeader()){ renderDashboardIndividual(root); return; }
   renderDashboardSecciones(root);
 }
-// admin y líder: visibilidad de ambas Secciones (regla ya existente "líder ve
-// todo, edita solo la suya") — un bloque por Sección real, más "Sin sección
-// asignada" al final si aplica.
+// admin: ve todas las Secciones (toda la operación). Líder: SOLO ve la(s)
+// Sección(es) donde él es el líder — su equipo, nada más (pedido explícito
+// del usuario: "cada líder solo debe ver en su dashboard su información y de
+// su equipo"). Un bloque por Sección visible, más "Sin sección asignada" al
+// final solo para admin (es información cross-equipo, no le toca a un líder).
 function renderDashboardSecciones(root){
   const today=todayISO();
-  const activos=visibleProjects().filter(p=>computeProjectStatus(p)==='Activo').length;
-  const totalProy=visibleProjects().length;
-  const pendientes=reportDeliverables().filter(d=>d.status!=='Entregado').length;
-  const atrasados=reportDeliverables().filter(d=>isOpenOverdueStatus(d.status)&&d.dueDate&&d.dueDate<today).length;
+  const misSecciones=isAdmin()?(DB.secciones||[]):(DB.secciones||[]).filter(s=>s.liderId===SESSION.userId);
+  // KPIs de arriba: se arman con el MISMO alcance que los bloques de abajo (las
+  // Secciones que este rol puede ver) — así un líder ve números de su equipo,
+  // nunca de la operación completa, y admin sigue viendo todo (sus Secciones +
+  // "sin sección").
+  const scopes=misSecciones.map(seccionScope);
+  if(isAdmin()) scopes.push(seccionScope(null));
+  const dashProjects=[...new Map(scopes.flatMap(s=>s.projects).map(p=>[p.id,p])).values()];
+  const dashDeliverables=[...new Map(scopes.flatMap(s=>s.deliverables).map(d=>[d.id,d])).values()];
+  const activos=dashProjects.filter(p=>computeProjectStatus(p)==='Activo').length;
+  const totalProy=dashProjects.length;
+  const pendientes=dashDeliverables.filter(d=>d.status!=='Entregado').length;
+  const atrasados=dashDeliverables.filter(d=>isOpenOverdueStatus(d.status)&&d.dueDate&&d.dueDate<today).length;
   root.innerHTML=`
     <div class="view-head"><div><h1>Dashboard</h1>
-      <div class="view-sub">${isAdmin()?'Toda la operación, de un vistazo.':'Todas las secciones, de un vistazo.'}</div></div></div>
+      <div class="view-sub">${isAdmin()?'Toda la operación, de un vistazo.':'Tu equipo, de un vistazo.'}</div></div></div>
     <div class="grid-cards">
       <div class="card"><div class="small muted">Proyectos activos</div><div style="font-size:30px;font-weight:700;margin-top:4px">${activos}</div><div class="small muted">${totalProy} en total</div></div>
       <div class="card"><div class="small muted">Entregables pendientes</div><div style="font-size:30px;font-weight:700;margin-top:4px">${pendientes}</div></div>
@@ -1730,10 +1743,12 @@ function renderDashboardSecciones(root){
     <div id="dash-secciones"></div>
   `;
   const cont=document.getElementById('dash-secciones');
-  let html=(DB.secciones||[]).map(sec=>dashboardBlockHTML({icon:'🧭',title:sec.nombre,scope:seccionScope(sec)})).join('');
-  const sinSeccion=seccionScope(null);
-  if(sinSeccion.projects.length){
-    html+=dashboardBlockHTML({icon:'⚠️',title:'Sin sección asignada',scope:sinSeccion});
+  let html=misSecciones.map(sec=>dashboardBlockHTML({icon:'🧭',title:sec.nombre,scope:seccionScope(sec)})).join('');
+  if(isAdmin()){
+    const sinSeccion=seccionScope(null);
+    if(sinSeccion.projects.length){
+      html+=dashboardBlockHTML({icon:'⚠️',title:'Sin sección asignada',scope:sinSeccion});
+    }
   }
   cont.innerHTML=html||emptyStateHTML('Sin secciones todavía','Ve a Administración → Secciones para crear la primera.');
 }
@@ -2892,9 +2907,16 @@ function renderCTDistribucion(el,c){
         <div style="font-weight:700;font-size:13.5px">👷 Personal <span class="pill muted">${c.personal.length}</span></div>
         <button class="btn xs primary" id="ct-new-personal">＋ Nuevo</button>
       </div>
-      <table class="tbl" style="margin-top:8px"><thead><tr><th>Puesto</th><th>Costo/mes</th><th>Habilidades</th><th></th></tr></thead>
+      ${isAdmin()?`<table class="tbl" style="margin-top:8px"><thead><tr><th>Puesto</th><th>Costo/mes</th><th>Habilidades</th><th></th></tr></thead>
       <tbody>${c.personal.map((m,i)=>`<tr><td>${esc(m.puesto)}</td><td>$${(m.costo||0).toLocaleString('es-MX',{minimumFractionDigits:2})}</td><td class="small muted">${(m.habilidades||[]).length?m.habilidades.length+' operación(es)':'Todas'}</td>
-        <td style="white-space:nowrap"><button class="btn xs" data-edit-personal="${i}">✎</button> <button class="btn xs danger" data-del-personal="${i}">✕</button></td></tr>`).join('')||'<tr><td colspan="4" class="small muted" style="padding:14px">Sin personal todavía.</td></tr>'}</tbody></table>
+        <td style="white-space:nowrap"><button class="btn xs" data-edit-personal="${i}">✎</button> <button class="btn xs danger" data-del-personal="${i}">✕</button></td></tr>`).join('')||'<tr><td colspan="4" class="small muted" style="padding:14px">Sin personal todavía.</td></tr>'}</tbody>
+      ${c.personal.length?`<tfoot><tr style="font-weight:700"><td>Total</td><td>$${c.personal.reduce((a,m)=>a+(m.costo||0),0).toLocaleString('es-MX',{minimumFractionDigits:2})}</td><td colspan="2"></td></tr></tfoot>`:''}
+      </table>`:`<table class="tbl" style="margin-top:8px"><thead><tr><th>Puesto</th><th>Habilidades</th><th></th></tr></thead>
+      <tbody>${c.personal.map((m,i)=>`<tr><td>${esc(m.puesto)}</td><td class="small muted">${(m.habilidades||[]).length?m.habilidades.length+' operación(es)':'Todas'}</td>
+        <td style="white-space:nowrap"><button class="btn xs" data-edit-personal="${i}">✎</button> <button class="btn xs danger" data-del-personal="${i}">✕</button></td></tr>`).join('')||'<tr><td colspan="3" class="small muted" style="padding:14px">Sin personal todavía.</td></tr>'}</tbody>
+      ${c.personal.length?`<tfoot><tr style="font-weight:700"><td>Costo total de personal</td><td colspan="2">$${c.personal.reduce((a,m)=>a+(m.costo||0),0).toLocaleString('es-MX',{minimumFractionDigits:2})}/mes</td></tr></tfoot>`:''}
+      </table>
+      <div class="small muted" style="padding:10px 16px 14px">🔒 Los sueldos individuales solo los ve el admin. Aquí se muestra el costo total sumado del centro.</div>`}
     </div>
     <div class="card" style="margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -2964,20 +2986,22 @@ async function ctDeleteOperacion(c,idx){
 }
 function ctEditPersonalDlg(c,idx){
   const m=idx!=null?c.personal[idx]:null;
+  const admin=isAdmin();
   const habChecks=c.operaciones.map((o,i)=>`<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;padding:2px 0"><input type="checkbox" value="${i}"${(m?.habilidades||[]).includes(i)?' checked':''}> ${esc(o.nombre)}</label>`).join('');
   openDlg({
     title:m?'Editar personal':'Nuevo personal', sub:esc(c.nombre),
     body:`<label class="lbl">Puesto *</label><input class="input" id="ctm-puesto" value="${esc(m?.puesto||'')}"/>
-      <label class="lbl" style="margin-top:10px">Costo mensual</label><input class="input" type="number" step="0.01" id="ctm-costo" value="${m?.costo||''}"/>
+      ${admin?`<label class="lbl" style="margin-top:10px">Costo mensual</label><input class="input" type="number" step="0.01" id="ctm-costo" value="${m?.costo||''}"/>`:`<div class="small muted" style="margin-top:10px">🔒 El costo mensual solo lo edita el admin.</div>`}
       <label class="lbl" style="margin-top:10px"><input type="checkbox" id="ctm-presente"${m?.presente!==false?' checked':''}/> Presente (cuenta en el balanceo)</label>
       ${c.operaciones.length?`<label class="lbl" style="margin-top:10px">Habilidades <span class="muted">(vacío = puede hacer todas)</span></label><div style="max-height:140px;overflow-y:auto;border:1px solid var(--border2);border-radius:var(--r-sm);padding:8px">${habChecks}</div>`:''}`,
     onSave:()=>{
       const puesto=document.getElementById('ctm-puesto').value.trim();
       if(!puesto){ toast('Ingresa un puesto'); return false; }
       const habilidades=c.operaciones.length?[...document.querySelectorAll('#dlg-body input[type=checkbox]')].filter(cb=>cb!==document.getElementById('ctm-presente')&&cb.checked).map(cb=>Number(cb.value)):[];
-      const entry={puesto,costo:Number(document.getElementById('ctm-costo').value)||0,presente:document.getElementById('ctm-presente').checked,habilidades};
+      const entry={puesto,presente:document.getElementById('ctm-presente').checked,habilidades};
+      if(admin) entry.costo=Number(document.getElementById('ctm-costo').value)||0;
       if(idx!=null) c.personal[idx]={...c.personal[idx],...entry};
-      else c.personal.push(entry);
+      else c.personal.push({costo:0,...entry});
       c.updatedAt=Date.now(); saveDB(); toast(idx!=null?'Personal actualizado ✓':'Personal creado ✓'); render();
     }
   });
@@ -2991,21 +3015,41 @@ async function ctDeletePersonal(c,idx){
 }
 
 /* ── CIF ── */
+const CIF_COLORS=['#e8a840','#5bb8e8','#e05c5c','#6fc98c','#c87de8','#e88a40','#40c8e8','#e8c840','#e87840','#40e8b8','#e84060','#a0c840','#5870e8','#e8a040','#40e870','#e84898','#60b8e8','#c8e840','#e840c8'];
 function renderCTCif(el,c){
   const total=c.cif.reduce((a,x)=>a+(x.monto||0),0);
-  el.innerHTML=`<div class="card" style="padding:0;overflow-x:auto">
+  const mayor=c.cif.length?c.cif.reduce((a,x)=>(x.monto||0)>(a.monto||0)?x:a,c.cif[0]):null;
+  el.innerHTML=`<div class="card" style="padding:0;overflow-x:auto;margin-bottom:16px">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px 0">
       <div style="font-weight:700;font-size:13.5px">💰 CIF — Costos Indirectos de Fabricación <span class="pill muted">${c.cif.length}</span></div>
       <button class="btn xs primary" id="ct-new-cif">＋ Nuevo concepto</button>
     </div>
     <table class="tbl" style="margin-top:8px"><thead><tr><th>Concepto</th><th>Monto/mes</th><th>%</th><th>Nota</th><th></th></tr></thead>
-    <tbody>${c.cif.map((x,i)=>`<tr><td>${esc(x.concepto)}</td><td>$${(x.monto||0).toLocaleString('es-MX',{minimumFractionDigits:2})}</td><td>${total?Math.round((x.monto||0)/total*100):0}%</td><td class="small muted">${esc(x.nota||'')}</td>
+    <tbody>${c.cif.map((x,i)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:50%;background:${CIF_COLORS[i%CIF_COLORS.length]};flex-shrink:0"></span>${esc(x.concepto)}</span></td><td>$${(x.monto||0).toLocaleString('es-MX',{minimumFractionDigits:2})}</td><td>${total?Math.round((x.monto||0)/total*100):0}%</td><td class="small muted">${esc(x.nota||'')}</td>
       <td style="white-space:nowrap"><button class="btn xs" data-edit-cif="${i}">✎</button> <button class="btn xs danger" data-del-cif="${i}">✕</button></td></tr>`).join('')||'<tr><td colspan="5" class="small muted" style="padding:14px">Sin conceptos todavía.</td></tr>'}</tbody>
     ${c.cif.length?`<tfoot><tr style="font-weight:700"><td>Total</td><td>$${total.toLocaleString('es-MX',{minimumFractionDigits:2})}</td><td colspan="3"></td></tr></tfoot>`:''}
-    </table></div>`;
+    </table></div>
+    ${c.cif.length?`<div class="card" style="margin-bottom:16px">
+      <div style="font-weight:700;font-size:13.5px;margin-bottom:10px">📊 Resumen CIF</div>
+      <div class="grid-cards">
+        <div class="card" style="background:var(--surface2)"><div class="small muted">Total CIF mensual</div><div style="font-size:18px;font-weight:700">$${total.toLocaleString('es-MX',{minimumFractionDigits:0})}</div></div>
+        <div class="card" style="background:var(--surface2)"><div class="small muted">Conceptos</div><div style="font-size:18px;font-weight:700">${c.cif.length}</div></div>
+        <div class="card" style="background:var(--surface2)"><div class="small muted">Concepto mayor</div><div style="font-size:15px;font-weight:700">${esc(mayor.concepto)}</div><div class="small muted">$${(mayor.monto||0).toLocaleString('es-MX',{minimumFractionDigits:2})}</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-weight:700;font-size:13.5px;margin-bottom:10px">Distribución del CIF por concepto</div>
+      <div style="position:relative;width:100%;height:300px"><canvas id="ct-cif-chart"></canvas></div>
+    </div>`:''}`;
   document.getElementById('ct-new-cif').addEventListener('click',()=>ctEditCifDlg(c,null));
   el.querySelectorAll('[data-edit-cif]').forEach(b=>b.addEventListener('click',()=>ctEditCifDlg(c,Number(b.dataset.editCif))));
   el.querySelectorAll('[data-del-cif]').forEach(b=>b.addEventListener('click',()=>ctDeleteCif(c,Number(b.dataset.delCif))));
+  if(_ctCifChart){ _ctCifChart.destroy(); _ctCifChart=null; }
+  const canvas=document.getElementById('ct-cif-chart');
+  if(canvas&&window.Chart){
+    const dark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
+    _ctCifChart=new Chart(canvas,{type:'doughnut',data:{labels:c.cif.map(x=>x.concepto),datasets:[{data:c.cif.map(x=>x.monto||0),backgroundColor:c.cif.map((_,i)=>CIF_COLORS[i%CIF_COLORS.length]),borderColor:dark?'#1c1c1e':'#ffffff',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:11}}},tooltip:{callbacks:{label:ctx=>' '+ctx.label+': $'+ctx.parsed.toLocaleString('es-MX',{minimumFractionDigits:2})}}}}});
+  }
 }
 function ctEditCifDlg(c,idx){
   const x=idx!=null?c.cif[idx]:null;
@@ -3046,14 +3090,25 @@ function renderCTResumen(el,c){
     const costoPorOp=modMensual/opTot;
     const modIdeal=costoPorOp*opsTeoricos;
     const costoIdeal=horasMes>0?(modIdeal+cifMensual)/horasMes:0;
-    const diff=costoReal-costoIdeal, isOver=diff>0;
+    const diff=costoReal-costoIdeal, isOver=diff>0, pct=costoIdeal?Math.abs(diff/costoIdeal*100):0;
     idealHTML=`<div style="font-weight:700;font-size:14px;margin-bottom:8px;color:${Math.abs(diff)<costoIdeal*0.05?'var(--warn)':isOver?'var(--bad)':'var(--ok)'}">
         ${Math.abs(diff)<costoIdeal*0.05?'🎯 Operando cerca del ideal':isOver?'🚨 Más personal del que la demanda justifica':'✅ Por debajo del costo ideal'}</div>
       <div class="grid-cards">
         <div class="card" style="background:var(--surface2)"><div class="small muted">Costo real</div><div style="font-size:18px;font-weight:700">$${costoReal.toFixed(2)}/hr</div></div>
         <div class="card" style="background:var(--surface2)"><div class="small muted">Costo ideal</div><div style="font-size:18px;font-weight:700;color:var(--ok)">$${costoIdeal.toFixed(2)}/hr</div></div>
         <div class="card" style="background:var(--surface2)"><div class="small muted">Operadores reales vs. teóricos</div><div style="font-size:18px;font-weight:700">${opTot} vs. ${opsTeoricos}</div></div>
-      </div>`;
+      </div>
+      <div class="small muted" style="margin-top:10px;background:var(--surface2);border-radius:var(--r-sm);padding:10px 12px;line-height:1.9;font-family:monospace">
+        Takt Time = ${r.tiempoReal.toFixed(0)} min ÷ (${r.demanda} pzas ÷ ${r.dias} días) = ${r.taktTime.toFixed(2)} min/pza<br>
+        Operadores teóricos = ⌈${r.totalOps.toFixed(2)} ÷ ${r.taktTime.toFixed(2)}⌉ = ${opsTeoricos}<br>
+        Costo promedio/op = $${modMensual.toLocaleString('es-MX',{minimumFractionDigits:2})} ÷ ${opTot} = $${costoPorOp.toFixed(2)}/op<br>
+        MOD ideal = $${costoPorOp.toFixed(2)} × ${opsTeoricos} = $${modIdeal.toLocaleString('es-MX',{minimumFractionDigits:2})}<br>
+        Total ideal = ($${modIdeal.toLocaleString('es-MX',{minimumFractionDigits:2})} + $${cifMensual.toLocaleString('es-MX',{minimumFractionDigits:2})}) ÷ ${horasMes.toFixed(1)} hrs = $${costoIdeal.toFixed(2)}/hr
+      </div>
+      <div style="margin-top:12px;height:10px;background:var(--surface2);border-radius:5px;overflow:hidden">
+        <div style="height:100%;width:${Math.min(100,(costoIdeal/Math.max(costoReal,costoIdeal,0.01)*100))}%;background:var(--ok);border-radius:5px"></div>
+      </div>
+      <div class="small muted" style="margin-top:4px">Diferencia: ${isOver?'+':''}$${Math.abs(diff).toFixed(2)}/hr (${pct.toFixed(1)}%) · ${isOver?'+$'+Math.abs(diff*horasMes).toLocaleString('es-MX',{minimumFractionDigits:2})+'/mes':'ahorro de $'+Math.abs(diff*horasMes).toLocaleString('es-MX',{minimumFractionDigits:2})+'/mes'}</div>`;
   }
   // Única fuente de la capacidad real del centro — ctCapacidadDia(c) — mismo criterio
   // que el costo/hora: un solo valor, todos lo consultan, nadie lo recalcula aparte.
@@ -3065,6 +3120,10 @@ function renderCTResumen(el,c){
         <div class="card" style="background:var(--surface2)"><div class="small muted">CIF mensual</div><div style="font-size:18px;font-weight:700">$${cifMensual.toLocaleString('es-MX',{minimumFractionDigits:2})}</div></div>
         <div class="card" style="background:var(--surface2)"><div class="small muted">Horas reales/mes</div><div style="font-size:18px;font-weight:700">${horasMes.toFixed(1)}</div></div>
         <div class="card" style="background:var(--surface2)"><div class="small muted">Costo/hora</div><div style="font-size:18px;font-weight:700;color:var(--accent)">$${costoReal.toFixed(2)}</div></div>
+      </div>
+      <div class="small muted" style="margin-top:10px;background:var(--surface2);border-radius:var(--r-sm);padding:10px 12px;line-height:1.9;font-family:monospace">
+        MOD: $${modMensual.toLocaleString('es-MX',{minimumFractionDigits:2})}/mes (${opTot} operario${opTot!==1?'s':''}) · CIF: $${cifMensual.toLocaleString('es-MX',{minimumFractionDigits:2})}/mes<br>
+        Costo/hr = ($${modMensual.toLocaleString('es-MX',{minimumFractionDigits:2})} + $${cifMensual.toLocaleString('es-MX',{minimumFractionDigits:2})}) ÷ ${horasMes.toFixed(1)} hrs = $${costoReal.toFixed(2)}/hr
       </div>
     </div>
     <div class="card" style="margin-bottom:16px">

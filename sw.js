@@ -1,4 +1,6 @@
-const CACHE = 'li-procesos-v1';
+const CACHE = 'li-procesos-v2'; // súbela (v3, v4…) cada vez que quieras forzar que
+                                 // los navegadores que ya instalaron el PWA descarten
+                                 // TODO su caché viejo de un jalón (ver activate abajo).
 const ASSETS = [
   './',
   './index.html',
@@ -26,7 +28,15 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Fetch: cache-first para assets locales, network-first para API
+// FIX: antes esto era cache-first para TODO, incluido index.html — eso significaba
+// que, una vez cacheado, el navegador servía ese mismo index.html para siempre,
+// sin importar cuántas veces se subiera una versión nueva a GitHub Pages (el
+// service worker solo se actualiza a sí mismo si CAMBIA su propio archivo sw.js,
+// que casi nunca cambia — así que nunca se enteraba de que había índice nuevo).
+// Ahora: red primero (siempre intenta traer la versión real más reciente) y solo
+// si falla la red (sin conexión) usa lo último que quedó en caché. Así el PWA
+// sigue funcionando offline, pero JAMÁS se queda atorado en una versión vieja
+// mientras haya internet.
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
@@ -35,20 +45,15 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Cache-first para assets locales
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request)
-        .then(res => {
-          // Solo cachear respuestas válidas de mismo origen
-          if (res.ok && url.origin === self.location.origin) {
-            const clone = res.clone();
-            caches.open(CACHE).then(c => c.put(e.request, clone));
-          }
-          return res;
-        })
-        .catch(() => cached); // Si falla la red, devolver cache si existe
-    })
+    fetch(e.request)
+      .then(res => {
+        if (res.ok && url.origin === self.location.origin) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return res;
+      })
+      .catch(() => caches.match(e.request)) // sin internet → lo último cacheado
   );
 });
