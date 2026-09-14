@@ -1096,7 +1096,7 @@ function ctSubgruposHTML(projectsInGroup, ctIds){
     const enCT=projectsInGroup.filter(p=>(p.centroIds||[]).includes(ctId));
     if(!enCT.length) return;
     cubiertos.add(ctId);
-    html+=`<details class="proj-subgroup" open style="margin-bottom:12px">
+    html+=`<details class="proj-subgroup" style="margin-bottom:12px">
       <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--accent);list-style:none">🏭 ${esc(ct.nombre)} <span class="pill muted" style="margin-left:4px">${enCT.length}</span></summary>
       <div class="proj-cards-scroll" style="margin-top:8px">${enCT.map(projectCardHTML).join('')}</div>
     </details>`;
@@ -1186,12 +1186,12 @@ function openEditProjectDlg(id){
   });
 }
 async function deleteProjectPrompt(id){
-  // Blindaje (revisión post-rewrite): borrar es exclusivo de Admin — antes cualquier
-  // líder que pudiera "manejar" el proyecto también podía borrarlo, sin poder
-  // deshacerlo. El botón ya está oculto para no-admins; esto es el respaldo por si
-  // se llega a llamar esta función desde otro lado.
-  if(!isAdmin()){ toast('Solo un administrador puede eliminar proyectos','err'); return; }
   const p=byId(DB.projects,id); if(!p) return;
+  // Respaldo: el botón ya está oculto salvo para quien administra este proyecto
+  // (admin, o el líder de su Sección/equipo) — esto cubre por si se llega a llamar
+  // esta función desde otro lado. Ya no se filtra entre equipos porque
+  // canManageProject solo da "sí" para el propio equipo de quien pregunta.
+  if(!canManageProject(p)){ toast('No tienes permiso para eliminar este proyecto','err'); return; }
   const n=(DB.deliverables||[]).filter(d=>d.projectId===id).length;
   if(!await appConfirm(`¿Eliminar el proyecto "${p.name}"?`,n?`Se eliminarán también sus ${n} entregable${n!==1?'s':''}.`:'')) return;
   if(!DB._deleted) DB._deleted={};
@@ -1234,9 +1234,9 @@ function renderProyectoDetail(root){
       <div><h1>${esc(p.name)}</h1>
         <div class="view-sub">🏭 ${projectCentrosBadge(p)}${projectSeccionesInfo(p)?' · 🧭 '+projectSeccionesInfo(p):''} · 📅 Entrega: ${fmtDate(p.dueDate)} · ${status==='Cerrado'?'<span class="pill ok">✅ Cerrado</span>':'<span class="pill accent">🟢 Activo</span>'}</div>
       </div>
-      ${(canEdit||isAdmin())?`<div style="display:flex;gap:8px">
-        ${canEdit?'<button class="btn sm" id="btn-edit-proj">✎ Editar</button>':''}
-        ${isAdmin()?'<button class="btn sm danger" id="btn-del-proj">Eliminar</button>':''}
+      ${canEdit?`<div style="display:flex;gap:8px">
+        <button class="btn sm" id="btn-edit-proj">✎ Editar</button>
+        <button class="btn sm danger" id="btn-del-proj">Eliminar</button>
       </div>`:''}
     </div>
     <div class="view-head" style="margin-bottom:10px">
@@ -1249,11 +1249,10 @@ function renderProyectoDetail(root){
   if(canEdit){
     document.getElementById('btn-edit-proj')?.addEventListener('click',()=>openEditProjectDlg(p.id));
     document.getElementById('btn-new-del')?.addEventListener('click',()=>openNewDeliverableDlg(p.id));
-  }
-  // Borrar (proyecto completo, con cascada a sus entregables) sigue siendo
-  // exclusivo de Admin — antes de este fix cualquier líder que pudiera "manejar"
-  // el proyecto también podía borrarlo permanentemente, sin poder deshacerlo.
-  if(isAdmin()){
+    // Borrar (con cascada a sus entregables) — el líder puede borrar los proyectos
+    // que administra (los de su propia gente); ya no depende de ser Admin. Es
+    // seguro porque canManageProject/canManageDeliverable ya están acotados a su
+    // propio equipo, no se filtra a proyectos de otra Sección.
     document.getElementById('btn-del-proj')?.addEventListener('click',()=>deleteProjectPrompt(p.id));
   }
   const list=document.getElementById('del-list');
@@ -1303,7 +1302,7 @@ function deliverableRowHTML(d){
     <td>${fmtDate(d.dueDate)}</td>
     <td>${statusSelect}</td>
     <td>${approveCell}</td>
-    <td style="white-space:nowrap">${canFull?`<button class="btn xs" data-edit-del="${d.id}">✎</button>`:''}${isAdmin()?` <button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}</td>
+    <td style="white-space:nowrap">${canFull?`<button class="btn xs" data-edit-del="${d.id}">✎</button> <button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}</td>
   </tr>`;
 }
 function openNewDeliverableDlg(projectId){
@@ -1361,8 +1360,8 @@ function openEditDeliverableDlg(id){
   });
 }
 async function deleteDeliverablePrompt(id){
-  if(!isAdmin()){ toast('Solo un administrador puede eliminar entregables','err'); return; }
   const d=byId(DB.deliverables,id); if(!d) return;
+  if(!canManageDeliverable(d)){ toast('No tienes permiso para eliminar esto','err'); return; }
   if(!await appConfirm(`¿Eliminar el entregable "${d.name}"?`)) return;
   if(!DB._deleted) DB._deleted={};
   DB._deleted[id]=Date.now();
@@ -2573,13 +2572,12 @@ function compressImg(file,maxW,maxH,quality,callback){
 function renderCentroTrabajo(root){
   if(!dataReady()){ root.innerHTML=loadingHTML('Cargando centros de trabajo…'); return; }
   if(_currentCentroId){ renderCentroDetail(root); return; }
-  const centros=[...(DB.centros||[])].sort((a,b)=>a.nombre.localeCompare(b.nombre));
   root.innerHTML=`<div class="view-head"><div><h1>Centro de Trabajo</h1>
     <div class="view-sub">Balanceo de líneas, CIF, costos y equipos por centro.</div></div></div>
-    <div class="grid-cards" id="ct-grid"></div>`;
-  const grid=document.getElementById('ct-grid');
-  if(!centros.length){ grid.innerHTML=emptyStateHTML('Sin centros todavía','Un admin puede crearlos en Administración → Centros de trabajo.'); return; }
-  grid.innerHTML=centros.map(c=>{
+    <div id="ct-groups"></div>`;
+  const wrap=document.getElementById('ct-groups');
+  if(!(DB.centros||[]).length){ wrap.innerHTML=emptyStateHTML('Sin centros todavía','Un admin puede crearlos en Administración → Centros de trabajo.'); return; }
+  function ctCardHTML(c){
     ctEnsureShape(c);
     const nIng=(c.ingenieroIds||[]).length;
     const costoHr=ctCostoHora(c);
@@ -2590,8 +2588,30 @@ function renderCentroTrabajo(root){
       <div class="small muted" style="margin-top:2px">${costoHr>0?'$'+costoHr.toFixed(2)+'/hr':'Sin costo capturado aún'}</div>
       <div class="small muted" style="margin-top:2px">${capDia>0?'⚙️ '+capDia+' pzas/día (capacidad)':'Sin capacidad calculada aún'}</div>
     </div>`;
-  }).join('');
-  grid.querySelectorAll('[data-open-centro]').forEach(el=>{
+  }
+  // Agrupado por Sección (mismo patrón que Proyectos/Equipo) — así se ve de un
+  // vistazo qué Centros administra cada líder, en vez de una lista plana.
+  let html='';
+  const cubiertos=new Set();
+  (DB.secciones||[]).forEach(sec=>{
+    const cts=(sec.centroIds||[]).map(id=>byId(DB.centros,id)).filter(Boolean).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+    if(!cts.length) return;
+    cts.forEach(c=>cubiertos.add(c.id));
+    const lider=byId(DB.users,sec.liderId);
+    html+=`<div style="margin-bottom:20px">
+      <div style="font-weight:700;font-size:14.5px;margin-bottom:10px">🧭 ${esc(sec.nombre)}${lider?` <span class="small muted" style="font-weight:400">(líder ${esc(lider.name)})</span>`:''} <span class="pill muted" style="margin-left:4px">${cts.length}</span></div>
+      <div class="grid-cards">${cts.map(ctCardHTML).join('')}</div>
+    </div>`;
+  });
+  const sinSeccion=(DB.centros||[]).filter(c=>!cubiertos.has(c.id)).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  if(sinSeccion.length){
+    html+=`<div style="margin-top:${html?'8px':'0'};padding-top:16px;border-top:2px dashed var(--border2)">
+      <div style="font-weight:700;font-size:14.5px;margin-bottom:10px">⚠️ Sin sección asignada <span class="pill muted" style="margin-left:4px">${sinSeccion.length}</span></div>
+      <div class="grid-cards">${sinSeccion.map(ctCardHTML).join('')}</div>
+    </div>`;
+  }
+  wrap.innerHTML=html;
+  wrap.querySelectorAll('[data-open-centro]').forEach(el=>{
     el.addEventListener('click',()=>{ _currentCentroId=el.dataset.openCentro; _ctTab='distribucion'; render(); });
   });
 }
