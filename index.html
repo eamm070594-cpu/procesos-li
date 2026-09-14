@@ -595,6 +595,25 @@ let DB = emptyDB();
 let SESSION = null;
 let _sharedLoaded=false, _appLoaded=false;
 
+// Guarda en localStorage sin nunca tronar la app: es solo una caché para
+// pintar rápido antes de que responda Firebase (que es la fuente de verdad
+// real) — si el navegador ya llenó su cuota (QuotaExceededError, típico
+// cuando se acumulan fotos de máquinas en base64), simplemente se avisa en
+// consola y se sigue de largo. Antes esto tronaba dentro de saveShare()/
+// saveApp(), lo que abortaba saveDB() ANTES de llegar a Firebase o a
+// render() — por fuera se veía como "no guarda nada" o "el diálogo no cierra".
+function lsSetSafe(key,value){
+  try{ localStorage.setItem(key,value); }
+  catch(e){ console.warn('[cache local] no se guardó ('+key+'): '+e.message); }
+}
+// Versión de Centros para la caché local SIN las fotos de máquinas
+// (heroPhoto, base64) — pueden pesar varios MB entre todas y son las que
+// suelen llenar la cuota. Firebase siempre guarda la copia completa; esta
+// caché es desechable y se vuelve a llenar sola en el próximo pullShare().
+function centrosParaCache(centros){
+  return (centros||[]).map(c=>(c.maquinas&&c.maquinas.length)?{...c,maquinas:c.maquinas.map(({heroPhoto,...resto})=>resto)}:c);
+}
+
 // Cache local inmediata (para que un refresh no muestre "vacío" un instante)
 (function loadCache(){
   try{ const s=localStorage.getItem(LS_SHARE); if(s){ const p=JSON.parse(s); Object.assign(DB,{users:p.users||[],secciones:p.secciones||[],centros:p.centros||[],puestos:p.puestos||[],tabulador:p.tabulador||{grupos:[],categorias:[],niveles:[]},globalParams:{...DEFAULT_GLOBAL_PARAMS,...(p.globalParams||{})}}); } }catch{}
@@ -628,13 +647,13 @@ let _shareBusy=false,_appBusy=false;
 let _sharePending=false,_appPending=false;
 
 function saveShare(){
-  localStorage.setItem(LS_SHARE,JSON.stringify({users:DB.users,secciones:DB.secciones,centros:DB.centros,puestos:DB.puestos,tabulador:DB.tabulador,globalParams:DB.globalParams}));
+  lsSetSafe(LS_SHARE,JSON.stringify({users:DB.users,secciones:DB.secciones,centros:centrosParaCache(DB.centros),puestos:DB.puestos,tabulador:DB.tabulador,globalParams:DB.globalParams}));
   _sharePending=true;
   clearTimeout(saveShare._t);
   saveShare._t=setTimeout(pushShare,700);
 }
 function saveApp(){
-  localStorage.setItem(LS_APP,JSON.stringify({projects:DB.projects,deliverables:DB.deliverables,_deleted:DB._deleted||{}}));
+  lsSetSafe(LS_APP,JSON.stringify({projects:DB.projects,deliverables:DB.deliverables,_deleted:DB._deleted||{}}));
   _appPending=true;
   clearTimeout(saveApp._t);
   saveApp._t=setTimeout(pushApp,700);
@@ -676,7 +695,7 @@ async function pullShare(){
     DB.globalParams=toGlobalParams(remote.globalParams);
   }
   _sharedLoaded=true;
-  localStorage.setItem(LS_SHARE,JSON.stringify({users:DB.users,secciones:DB.secciones,centros:DB.centros,puestos:DB.puestos,tabulador:DB.tabulador,globalParams:DB.globalParams}));
+  lsSetSafe(LS_SHARE,JSON.stringify({users:DB.users,secciones:DB.secciones,centros:centrosParaCache(DB.centros),puestos:DB.puestos,tabulador:DB.tabulador,globalParams:DB.globalParams}));
 }
 async function pullApp(){
   const snap=await _refApp.get();
@@ -691,7 +710,7 @@ async function pullApp(){
     DB.deliverables=toArr(remote.deliverables).filter(d=>!deleted[d.id]);
   }
   _appLoaded=true;
-  localStorage.setItem(LS_APP,JSON.stringify({projects:DB.projects,deliverables:DB.deliverables,_deleted:DB._deleted||{}}));
+  lsSetSafe(LS_APP,JSON.stringify({projects:DB.projects,deliverables:DB.deliverables,_deleted:DB._deleted||{}}));
 }
 
 // Escuchar cambios en vivo de otras personas conectadas
