@@ -2175,8 +2175,8 @@ function openResumenPendientesDlg(){
   document.getElementById('dlg-resumen').showModal();
 }
 document.getElementById('dlg-resumen-close').addEventListener('click',()=>document.getElementById('dlg-resumen').close());
-document.getElementById('dlg-resumen-pdf').addEventListener('click',descargarResumenPDF);
-document.getElementById('dlg-resumen-mail').addEventListener('click',enviarResumenPendientesCorreo);
+document.getElementById('dlg-resumen-pdf').addEventListener('click',()=>descargarResumenPDF());
+document.getElementById('dlg-resumen-mail').addEventListener('click',()=>enviarResumenPendientesCorreo());
 document.getElementById('dlg-notif-close').addEventListener('click',()=>document.getElementById('dlg-notif').close());
 document.getElementById('btn-notif').addEventListener('click',openNotifPanel);
 document.getElementById('dlg-enviar-close').addEventListener('click',()=>document.getElementById('dlg-enviar').close());
