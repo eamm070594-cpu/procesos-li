@@ -1205,11 +1205,88 @@ body{overflow-y:auto}
   line-height: 1.5;
 }
 
+/* Imprimir / Guardar como PDF — antes no habia reglas @media print, asi que
+   el navegador imprimia TODO el layout de la app (sidebar, drawers, header)
+   en vez de solo el reporte activo. Regla generica: oculta todo excepto la
+   .res-page que este visible (.on) — sirve tanto para Reporte Directivo
+   como para Reporte Simple (y cualquier reporte futuro) sin repetir codigo. */
+@media print {
+  body * { visibility: hidden; }
+  .res-page.on, .res-page.on * { visibility: visible; }
+  .res-page.on {
+    position: absolute; left: 0; top: 0; width: 100%;
+    padding: 12px 0; overflow: visible; display: block;
+  }
+  .no-print { display: none !important; }
+  table { page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+}
 </style>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
-<body>
+<body class="li-locked">
+<!-- ══════════════════════════════════════════════════════
+     CANDADO DE ACCESO — usa el mismo usuario/contraseña que
+     la app principal (index.html), leyendo DB.users de Firebase.
+     Si ya iniciaste sesión ahí en esta misma pestaña/sesión,
+     entras directo sin volver a escribir nada.
+     ══════════════════════════════════════════════════════ -->
+<style>body.li-locked>*:not(#li-gate){display:none!important}</style>
+<div id="li-gate" style="position:fixed;inset:0;z-index:999999;background:#0f1623;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif">
+  <div style="background:#fff;border-radius:14px;padding:32px 28px;width:min(320px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.35)">
+    <div style="font-size:18px;font-weight:800;color:#0f1623;margin-bottom:4px">Ingeniería de Procesos</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:18px">Línea Italia — inicia sesión para continuar</div>
+    <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Usuario</label>
+    <input id="li-gate-user" style="width:100%;padding:9px 10px;margin:6px 0 12px;border:1px solid #e4e7ed;border-radius:8px;font-size:13px;box-sizing:border-box" placeholder="ej: ramon, francisco…" autocomplete="username"/>
+    <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Contraseña</label>
+    <input id="li-gate-pass" type="password" style="width:100%;padding:9px 10px;margin:6px 0 12px;border:1px solid #e4e7ed;border-radius:8px;font-size:13px;box-sizing:border-box" autocomplete="current-password"/>
+    <div id="li-gate-err" style="display:none;color:#ef4444;font-size:12px;margin-bottom:10px">Usuario o contraseña incorrectos.</div>
+    <button id="li-gate-btn" style="width:100%;padding:11px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;font-size:13px;cursor:pointer">Iniciar sesión</button>
+  </div>
+</div>
+<script>
+(function(){
+  var FB_URL='https://ingenieria-de-procesos-24ba4-default-rtdb.firebaseio.com/li_procesos.json';
+  var ADMIN_USER='amartinez', ADMIN_PASS='Lineaitalia.1', DEFAULT_PASS='LI2025';
+  function unlock(){ document.body.classList.remove('li-locked'); var g=document.getElementById('li-gate'); if(g) g.remove(); }
+  try{
+    var saved=sessionStorage.getItem('li_sess');
+    if(saved){ var s=JSON.parse(saved); if(s&&s.role){ unlock(); return; } }
+  }catch(e){}
+  function norm(name){ return name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'.'); }
+  document.getElementById('li-gate-btn').addEventListener('click', doLogin);
+  document.getElementById('li-gate-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+  async function doLogin(){
+    var u=(document.getElementById('li-gate-user').value||'').trim().toLowerCase();
+    var p=document.getElementById('li-gate-pass').value||'';
+    var btn=document.getElementById('li-gate-btn'); btn.disabled=true; btn.textContent='Verificando…';
+    try{
+      var res=await fetch(FB_URL); var data=await res.json();
+      var users=(data&&data.users)||[];
+      var list=users.map(function(x){
+        var username=x.customUsername||norm(x.name);
+        return {username:username, password:x.loginPassword||DEFAULT_PASS, role:x.loginRole||'user', name:x.name, userId:x.id};
+      });
+      list.push({username:ADMIN_USER,password:ADMIN_PASS,role:'admin',name:'Admin',userId:null});
+      var found=list.find(function(x){ return x.username===u && x.password===p; });
+      if(!found){
+        document.getElementById('li-gate-err').textContent='Usuario o contraseña incorrectos.';
+        document.getElementById('li-gate-err').style.display='block';
+        btn.disabled=false; btn.textContent='Iniciar sesión';
+        return;
+      }
+      var sess={userId:found.userId,name:found.name,role:found.role};
+      try{ sessionStorage.setItem('li_sess', JSON.stringify(sess)); }catch(e2){ /* almacenamiento bloqueado — la sesión no se recuerda, pero el login sí es válido */ }
+      unlock();
+    }catch(e){
+      document.getElementById('li-gate-err').textContent='Error de conexión. Intenta de nuevo.';
+      document.getElementById('li-gate-err').style.display='block';
+      btn.disabled=false; btn.textContent='Iniciar sesión';
+    }
+  }
+})();
+</script>
 
 <!-- HEADER -->
 <div class="hdr">
@@ -1303,6 +1380,10 @@ body{overflow-y:auto}
         <div class="res-nav-item" id="snav-reporte" onclick="resGoTo('reporte')">
           <span class="nav-icon">📋</span>
           <span class="nav-label">Reporte Directivo</span>
+        </div>
+        <div class="res-nav-item" id="snav-reportesimple" onclick="resGoTo('reportesimple')">
+          <span class="nav-icon">📄</span>
+          <span class="nav-label">Reporte Simple</span>
         </div>
       </div>
     </div>
@@ -1470,6 +1551,11 @@ body{overflow-y:auto}
         <div id="reporte-content"></div>
       </div>
 
+      <!-- REPORTE SIMPLE PAGE -->
+      <div id="res-pg-reportesimple" class="res-page" style="padding:28px 32px 60px">
+        <div id="reportesimple-content"></div>
+      </div>
+
     </div>
     </div><!-- /res-main-wrap -->
     <!-- ═══ CONTEXT DRAWER ═══ -->
@@ -1503,6 +1589,19 @@ body{overflow-y:auto}
 // ── DATA ──────────────────────────────────────────────────────────────────────
 
 var GP = {salary:19661, days:21.5, hours:8.5, fx:18, cfe:3.5, months:12};
+
+// Promedio real de piezas/dia por Centro de Trabajo, extraido de los programas de
+// produccion reales de Rodrigo Castañeda (correo). Muestra de 13 dias — no es el
+// historico completo, se puede ampliar despues. Sirve para el estimado de ROI por
+// piezas (ver ctPiezasKey/valorPorPieza en cada maquina, tab "Datos generales").
+var PIEZAS_PROMEDIO_CT = {
+  "TROQUELES": 1148, "CARP": 813, "ENCHAPADO": 731, "ESTRUCTURA MUEBLES": 592,
+  "PINTURA": 965, "LASER": 572, "EST MAMPARAS": 248, "HABILITADO MUEBLE": 187,
+  "CAJAS": 283, "TELAS": 119, "ENSAMBLE MUEBLES": 103, "ENSAMBLE MAMPARAS": 81,
+  "ENSAMBLE ARCHIVEROS": 69, "ESTRUCTURA SILLAS": 28, "ENSAMBLE SILLAS": 66,
+  "ENSAMBLE LIBREROS": 19, "ENSAMBLE SILLONES": 2
+};
+var PIEZAS_PROMEDIO_META = { dias: 13, rango: "17-mar a 08-abr 2026" };
 
 var CTS = [
   {id:"c1", code:"CT-CNC", name:"Corte CNC",    costo:1898},
@@ -1924,6 +2023,33 @@ function calcVar(mId, varId) {
   return acc || 0;
 }
 
+// Igual que calcVar, pero ignora el toggle on/off — sirve para el tab de Auditoria ROI,
+// para mostrar cuanto APORTARIA cada variable si estuviera prendida (aunque hoy no cuente).
+function calcVarRaw(mId, varId) {
+  var m = MACHINES.find(function(x){ return x.id === mId; });
+  if (!m || !m.vars) return 0;
+  var mv = m.vars[varId];
+  if (!mv) return 0;
+  if (mv.mode === "simple") return parseNum(mv.simpleVal) || 0;
+  var gp = getGP();
+  var vdef = VAR_LIB.find(function(v){ return v.id === varId; });
+  var rows = mv.detail || (vdef ? JSON.parse(JSON.stringify(vdef.detail)) : []);
+  var acc = null;
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var val = row.type === "global" ? resolveGlobal(row.val, gp) : parseNum(row.val);
+    if (acc === null) acc = val;
+    else {
+      var op = row.op;
+      if (op === "+") acc = acc + val;
+      else if (op === "-") acc = acc - val;
+      else if (op === "*") acc = acc * val;
+      else if (op === "/") acc = val !== 0 ? acc / val : 0;
+    }
+  }
+  return acc || 0;
+}
+
 function calcOpex(m) {
   var gp = getGP();
   var total = 0;
@@ -1990,7 +2116,7 @@ function renderMachines() {
     var isOpen = openMaqId === m.id;
     var curTab = openMacTab[m.id] || "id";
 
-    h += '<div class="maq-card" style="position:relative">';
+    h += '<div class="maq-card" id="maqcard-' + m.id + '" style="position:relative">';
     h += '<button class="maq-hdr" onclick="toggleMaq(\'' + m.id + '\')">';
     h += '<div class="maq-dot" style="background:' + m.color + '"></div>';
     h += '<div class="maq-name">' + m.name + '</div>';
@@ -2010,6 +2136,7 @@ function renderMachines() {
       var tabs = [
         {id:"id", label:"Identificacion"},
         {id:"vars", label:"Variables y calculo"},
+        {id:"roi", label:"🔍 Auditoria ROI"},
         {id:"specs", label:"Especificaciones"},
         {id:"impactos", label:"Puntos de impacto"},
         {id:"condicion", label:"Condición Actual"},
@@ -2023,6 +2150,7 @@ function renderMachines() {
       // TAB CONTENT
       if (curTab === "id") h += renderTabId(m);
       else if (curTab === "vars") h += renderTabVars(m);
+      else if (curTab === "roi") h += renderTabRoi(m);
       else if (curTab === "specs") h += renderTabSpecs(m);
       else if (curTab === "impactos") h += renderTabImpactos(m);
       else if (curTab === "condicion") h += renderTabCondicion(m);
@@ -2041,6 +2169,15 @@ function renderTabId(m) {
   h += '<div class="fld"><label>Nombre completo</label><input value="' + m.name + '" oninput="updM(\'' + m.id + '\',\'name\',this.value)"></div>';
   h += '<div class="fld"><label>Modelo / Proveedor</label><input value="' + m.model + '" oninput="updM(\'' + m.id + '\',\'model\',this.value)"></div>';
   h += '</div>';
+  h += '<div class="id-grid">';
+  h += '<div class="fld"><label>Estatus de la maquina</label><select onchange="updM(\'' + m.id + '\',\'status\',this.value);saveLS();renderMachines()">';
+  h += '<option value="">— Sin asignar (usa un default automatico) —</option>';
+  STATUS_OPTIONS.forEach(function(s){
+    h += '<option value="' + s.key + '"' + (m.status===s.key?' selected':'') + '>' + s.icon + ' ' + s.label + '</option>';
+  });
+  h += '</select></div>';
+  h += '<div class="fld"><label>Nota de estatus <span style="font-size:10px;color:#9A9890;font-weight:400">(opcional — ej. fecha real)</span></label><input value="' + (m.statusNota||"") + '" placeholder="Ej. Llega 20 oct 2026" oninput="updM(\'' + m.id + '\',\'statusNota\',this.value)" onblur="saveLS()"></div>';
+  h += '</div>';
   h += '<div class="id-grid-3">';
   h += '<div class="fld"><label>Inversion total ($)</label><input class="money" value="' + fmtNum(m.inv) + '" onblur="updM(\'' + m.id + '\',\'inv\',parseNum(this.value));this.value=fmtNum(parseNum(this.value));recalcAll()"></div>';
   h += '<div class="fld"><label>Valor maquina a reemplazar ($) <span style="font-size:10px;color:#9A9890;font-weight:400">(reduce inversion neta)</span></label><input class="money" value="' + fmtNum(m.replaceVal||0) + '" onblur="updM(\'' + m.id + '\',\'replaceVal\',parseNum(this.value));this.value=fmtNum(parseNum(this.value));recalcAll()"></div>';
@@ -2051,6 +2188,61 @@ function renderTabId(m) {
   h += '<div class="fld" style="margin-bottom:8px"><label>Link a respaldo Excel (Google Sheets / OneDrive)</label><input value="' + (m.xlsxLink||"") + '" placeholder="https://..." oninput="updM(\'' + m.id + '\',\'xlsxLink\',this.value)"></div>';
   h += '<div class="fld" style="margin-bottom:12px"><label>Link a cotizacion (PDF / Drive / carpeta)</label><input value="' + (m.cotLink||"") + '" placeholder="https://..." oninput="updM(\'' + m.id + '\',\'cotLink\',this.value)"></div>';
   h += '<div class="fld" style="margin-bottom:12px"><label>Link de video (YouTube o video directo) — boton ▶ en detalle de maquina</label><input value="' + (m.videoUrl||"") + '" placeholder="https://..." oninput="updM(\'' + m.id + '\',\'videoUrl\',this.value);saveLS()"></div>';
+  // ROI por piezas reales — referencia aparte del ROI detallado de abajo
+  h += '<div class="id-grid">';
+  h += '<div class="fld"><label>Centro de Trabajo real (piezas/dia) <span style="font-size:10px;color:#9A9890;font-weight:400">— promedio de ' + PIEZAS_PROMEDIO_META.dias + ' dias reales (' + PIEZAS_PROMEDIO_META.rango + '), correo de programacion de produccion. Dejar en blanco si esta maquina no produce en las unidades de ningun CT (usa la captura manual de abajo)</span></label><select onchange="updM(\'' + m.id + '\',\'ctPiezasKey\',this.value);saveLS();renderMachines()">';
+  h += '<option value="">— Sin asignar —</option>';
+  Object.keys(PIEZAS_PROMEDIO_CT).forEach(function(k){
+    h += '<option value="' + k + '"' + (m.ctPiezasKey===k?' selected':'') + '>' + k + ' (' + PIEZAS_PROMEDIO_CT[k] + ' pz/dia)</option>';
+  });
+  h += '</select></div>';
+  h += '<div class="fld"><label>Valor/costo actual por unidad ($) <span style="font-size:10px;color:#9A9890;font-weight:400">— NO es costo/hora del CT (esas unidades no se pueden mezclar). Si llenas "Costo anterior" abajo, este es el costo AHORA y la ganancia real usa la diferencia; si no, este numero se usa tal cual como ahorro/valor por unidad</span></label><input class="money" value="' + fmtNum(m.valorPorPieza||0) + '" onblur="updM(\'' + m.id + '\',\'valorPorPieza\',parseNum(this.value));this.value=fmtNum(parseNum(this.value));saveLS();renderMachines()"></div>';
+  h += '</div>';
+  h += '<div class="id-grid">';
+  h += '<div class="fld"><label>Costo anterior por unidad ($) <span style="font-size:10px;color:#9A9890;font-weight:400">— opcional. Cuanto costaba antes de tener esta maquina (maquila externa, proceso anterior, etc.). Si lo llenas, la ganancia real usa el ahorro neto (anterior menos el "actual" de arriba) en vez del valor actual solo</span></label><input class="money" value="' + fmtNum(m.costoAnteriorPorPieza||0) + '" onblur="updM(\'' + m.id + '\',\'costoAnteriorPorPieza\',parseNum(this.value));this.value=fmtNum(parseNum(this.value));saveLS();renderMachines()"></div>';
+  h += '</div>';
+  h += '<div class="id-grid-3">';
+  h += '<div class="fld"><label>...o captura manual: cantidad <span style="font-size:10px;color:#9A9890;font-weight:400">— usalo cuando el CT de arriba no aplica. Si se llena, manda sobre el CT</span></label><input class="money" type="number" value="' + (m.unidadManualDia||"") + '" placeholder="Ej. 105" onblur="updM(\'' + m.id + '\',\'unidadManualDia\',parseNum(this.value));saveLS();renderMachines()"></div>';
+  h += '<div class="fld"><label>Cada cuanto <span style="font-size:10px;color:#9A9890;font-weight:400">(esa cantidad, ¿es por dia, semana o mes?)</span></label><select onchange="updM(\'' + m.id + '\',\'unidadManualPeriodo\',this.value);saveLS();renderMachines()">';
+  ['dia','semana','mes'].forEach(function(p){
+    h += '<option value="' + p + '"' + ((m.unidadManualPeriodo||'dia')===p?' selected':'') + '>' + (p==='dia'?'Por dia':p==='semana'?'Por semana':'Por mes') + '</option>';
+  });
+  h += '</select></div>';
+  h += '<div class="fld"><label>Nombre de la unidad <span style="font-size:10px;color:#9A9890;font-weight:400">(ej. hojas, piezas, lotes)</span></label><input value="' + (m.unidadManualEtiqueta||"") + '" placeholder="Ej. hojas" oninput="updM(\'' + m.id + '\',\'unidadManualEtiqueta\',this.value);saveLS()"></div>';
+  h += '</div>';
+  h += '<div class="fld" style="margin-bottom:12px"><label>Fecha real de inicio de operacion <span style="font-size:10px;color:#9A9890;font-weight:400">— para calcular cuanto lleva acumulado a la fecha y si ya se pago sola</span></label><input type="date" value="' + (m.fechaInicioOperacion||"") + '" onchange="updM(\'' + m.id + '\',\'fechaInicioOperacion\',this.value);saveLS();renderMachines()" style="max-width:200px"></div>';
+  (function(){
+    var usaManual = parseNum(m.unidadManualDia) > 0;
+    var ctP = cantidadDiaReal(m);
+    var etiqueta = usaManual ? (m.unidadManualEtiqueta || 'unidades') : 'pz';
+    var costoAnt = parseNum(m.costoAnteriorPorPieza);
+    var vppCrudo = parseNum(m.valorPorPieza);
+    var vpp = valorRealPorUnidad(m); // = anterior - actual si hay costo anterior, si no, el valor tal cual
+    if (ctP && vpp > 0) {
+      var valorDiario = ctP * vpp;
+      var gp = getGP();
+      h += '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:#92400E">';
+      if (costoAnt > 0) {
+        h += '<div style="margin-bottom:4px">Ahorro neto = ' + fmtMoney(costoAnt) + ' (antes) &minus; ' + fmtMoney(vppCrudo) + ' (ahora) = <b>' + fmtMoney(vpp) + '</b>/' + etiqueta.replace(/s$/,'') + '. El OPEX de esta maquina no se resta aparte (ya va incluido en el "ahora").</div>';
+      }
+      if (usaManual) {
+        var periodo = m.unidadManualPeriodo || 'dia';
+        var periodoLbl = periodo==='dia'?'dia':periodo==='semana'?'semana':'mes';
+        var periodDays = periodo==='semana'?7:periodo==='mes'?30.44:1;
+        var totalPeriodo = valorDiario; // ctP ya viene en terminos del periodo elegido, no se reconvierte
+        var anualManual = totalPeriodo * (365 / periodDays);
+        h += '<b>Ganancia real estimada:</b> ' + fmtNum(parseNum(m.unidadManualDia)) + ' ' + etiqueta + '/' + periodoLbl + ' &times; ' + fmtMoney(vpp) + '/' + etiqueta.replace(/s$/,'') + ' = <b>' + fmtMoney(totalPeriodo) + '/' + periodoLbl + '</b> (' + fmtMoney(anualManual) + '/ano, contando los 365 dias del ano)';
+        h += '<div style="font-size:10px;margin-top:2px">Cantidad manual — se anualiza con 365 dias de calendario (no con dias habiles), porque no viene del programa de produccion.</div>';
+      } else {
+        h += '<b>Ganancia real estimada:</b> ' + fmtNum(ctP) + ' ' + etiqueta + '/dia habil &times; ' + fmtMoney(vpp) + '/' + etiqueta.replace(/s$/,'') + ' = <b>' + fmtMoney(valorDiario) + '/dia</b> (' + fmtMoney(valorDiario*(gp.days||21.5)*(gp.months||12)) + '/ano, contando solo dias habiles: ' + (gp.days||21.5) + ' x ' + (gp.months||12) + ')';
+        var nComparten = MACHINES.filter(function(x){ return x.ctPiezasKey === m.ctPiezasKey && !(parseNum(x.unidadManualDia) > 0); }).length;
+        if (nComparten > 1) h += '<div style="font-size:10px;margin-top:2px">CT "' + m.ctPiezasKey + '" (' + PIEZAS_PROMEDIO_CT[m.ctPiezasKey] + ' pz/dia total) repartido entre ' + nComparten + ' maquinas por igual.</div>';
+      }
+      h += '</div>';
+    } else if (m.ctPiezasKey || vppCrudo > 0 || usaManual) {
+      h += '<div style="background:#F3F4F6;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:#6B7280">Falta la cantidad (CT o manual) o el valor por unidad para calcular la ganancia estimada.</div>';
+    }
+  })();
   h += '<div class="fld"><label>Foto de la maquina (se usa en presentacion)</label></div>';
   h += '<div class="cfg-foto" onclick="document.getElementById(\'cfgi-' + m.id + '\').click()">';
   h += '<input type="file" accept="image/*" class="cfg-foto-inp" id="cfgi-' + m.id + '" onchange="loadCfgFoto(\'' + m.id + '\',this)">';
@@ -2225,6 +2417,85 @@ function renderDetailMode(m, vdef, mv) {
   return h;
 }
 
+// ── TAB: AUDITORIA ROI — que se esta considerando y de donde sale el numero final ──
+function renderTabRoi(m) {
+  var h = '<div class="mac-panel on">';
+  var netInv = (m.inv || 0) - (m.replaceVal || 0);
+
+  // ── ROI PROYECTADO — lo que se estimo/supuso al momento de justificar la compra
+  var rp = calcROI(m);
+  h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:14px">📊</span><div style="font-size:13px;font-weight:700;color:#374151">ROI Proyectado <span style="font-weight:400;color:#9A9890">— supuestos capturados al planear la compra</span></div></div>';
+  h += '<div class="var-totals" style="margin-bottom:14px">';
+  h += '<div class="vt-item"><div class="l">Inversion neta</div><div class="v">' + fmtMoney(netInv) + '</div><div class="s">' + fmtMoney(m.inv||0) + ' inv. − ' + fmtMoney(m.replaceVal||0) + ' reemplazo</div></div>';
+  h += '<div class="vt-item"><div class="l">Beneficio anual proyectado</div><div class="v">' + fmtMoney(rp.ab) + '</div><div class="s">suma de variables encendidas</div></div>';
+  h += '<div class="vt-item"><div class="l">OPEX anual</div><div class="v">' + fmtMoney(rp.opx) + '</div></div>';
+  h += '<div class="vt-item"><div class="l">ROI Proyectado</div><div class="v" style="color:' + (rp.ab>0?(rp.roi>=100?"#34D399":rp.roi>=50?"var(--amber-m)":"#F87171"):"#5A5750") + '">' + (rp.ab>0?(rp.roi>=0?"+":"")+rp.roi.toFixed(0)+"%":"--") + '</div><div class="s">' + m.yr + ' anos, rescate ' + fmtMoney(m.res||0) + '</div></div>';
+  h += '<div class="vt-item"><div class="l">Payback proyectado</div><div class="v">' + (isFinite(rp.pay)?rp.pay.toFixed(1)+' anos':'Pendiente') + '</div></div>';
+  h += '</div>';
+
+  h += '<div style="font-size:11.5px;font-weight:700;color:#374151;margin-bottom:8px">Que se esta considerando en el proyectado (todas las variables — prendidas y apagadas)</div>';
+  h += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:22px">';
+  h += '<thead><tr style="background:#F8F9FA;border-bottom:1px solid #E9ECEF">';
+  ['', 'Variable', 'Categoria', 'Valor anual si se activa'].forEach(function(c, i){
+    h += '<th style="padding:8px 10px;text-align:' + (i===3?'right':'left') + ';font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#6B7280;white-space:nowrap">' + c + '</th>';
+  });
+  h += '</tr></thead><tbody>';
+  VAR_LIB.forEach(function(vdef){
+    var mv = (m.vars && m.vars[vdef.id]) || null;
+    var isOn = !!(mv && mv.on);
+    var raw = calcVarRaw(m.id, vdef.id);
+    if (!mv && raw === 0) return;
+    var rowColor = isOn ? '#1E1C18' : '#9CA3AF';
+    h += '<tr style="border-bottom:1px solid #F1F3F5">';
+    h += '<td style="padding:6px 10px">' + (isOn ? '<span style="color:#16A34A">&#9679;</span>' : '<span style="color:#D1D5DB">&#9675;</span>') + '</td>';
+    h += '<td style="padding:6px 10px;color:' + rowColor + '">' + vdef.name + '</td>';
+    h += '<td style="padding:6px 10px;color:' + rowColor + ';font-size:11px">' + (CAT_NAMES[vdef.cat]||vdef.cat) + '</td>';
+    h += '<td style="padding:6px 10px;text-align:right;font-family:\'DM Mono\',monospace;color:' + rowColor + ';white-space:nowrap">' + fmtMoney(raw) + (isOn?'':'  <span style="font-size:9.5px">(apagada, no cuenta)</span>') + '</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table></div>';
+
+  // ── ROI REAL — con base en piezas realmente fabricadas (correo de produccion)
+  h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:14px">✅</span><div style="font-size:13px;font-weight:700;color:#374151">ROI Real <span style="font-weight:400;color:#9A9890">— con base en piezas que de verdad se estan fabricando</span></div></div>';
+  var abReal = gananciaPorPiezas(m);
+  if (abReal !== null) {
+    var rr = roiPorPiezas(m, abReal);
+    var hdReal = abReal > 0;
+    var cantDia = cantidadDiaReal(m);
+    var esManual = parseNum(m.unidadManualDia) > 0;
+    var etiquetaReal = esManual ? (m.unidadManualEtiqueta||'unidades') : 'pz';
+    h += '<div class="var-totals" style="margin-bottom:10px">';
+    h += '<div class="vt-item"><div class="l">' + etiquetaReal + '/dia (real' + (esManual?', captura manual':', muestra '+PIEZAS_PROMEDIO_META.dias+' dias') + ')</div><div class="v">' + fmtNum(cantDia) + '</div><div class="s">' + (esManual?'captura manual':'CT: '+m.ctPiezasKey) + '</div></div>';
+    h += '<div class="vt-item"><div class="l">Beneficio anual real</div><div class="v">' + fmtMoney(abReal) + '</div><div class="s">' + fmtNum(cantDia) + ' ' + etiquetaReal + '/dia &times; ' + fmtMoney(valorRealPorUnidad(m)) + '/' + etiquetaReal.replace(/s$/,'') + (parseNum(m.costoAnteriorPorPieza)>0?' (ahorro neto)':'') + '</div></div>';
+    h += '<div class="vt-item"><div class="l">ROI Real</div><div class="v" style="color:' + (hdReal?(rr.roi>=100?"#34D399":rr.roi>=50?"var(--amber-m)":"#F87171"):"#5A5750") + '">' + (hdReal?(rr.roi>=0?"+":"")+rr.roi.toFixed(0)+"%":"--") + '</div></div>';
+    h += '<div class="vt-item"><div class="l">Payback real</div><div class="v">' + (isFinite(rr.pay)?rr.pay.toFixed(1)+' anos':'Pendiente') + '</div></div>';
+    h += '</div>';
+
+    var acum = acumuladoReal(m);
+    if (acum) {
+      h += '<div style="background:' + (acum.pagada?'#F0FDF4':'#FFFBEB') + ';border:1px solid ' + (acum.pagada?'#BBF7D0':'#FDE68A') + ';border-radius:8px;padding:10px 14px;font-size:12px;color:' + (acum.pagada?'#166534':'#92400E') + ';margin-bottom:10px">';
+      h += 'Operando desde <b>' + m.fechaInicioOperacion + '</b> (' + Math.round(acum.dias) + ' dias, ' + acum.meses.toFixed(1) + ' meses) — ganancia real acumulada: <b>' + fmtMoney(acum.acumulado) + '</b><br>';
+      h += (acum.pagada
+        ? '✅ <b>Ya se pago sola</b> — excedente de ' + fmtMoney(acum.excedente) + ' despues de recuperar la inversion neta (' + fmtMoney(acum.netInv) + ')'
+        : '⏳ Lleva recuperado el <b>' + acum.pctRecuperado.toFixed(0) + '%</b> de la inversion neta (' + fmtMoney(acum.netInv) + ') — faltan ' + fmtMoney(acum.faltante));
+      h += '</div>';
+    } else if (abReal !== null) {
+      h += '<div style="background:#F3F4F6;border-radius:8px;padding:10px 14px;font-size:12px;color:#6B7280;margin-bottom:10px">Captura la "Fecha real de inicio de operacion" en Identificacion para ver cuanto lleva acumulado y si ya se pago sola.</div>';
+    }
+
+    var diff = abReal - rp.ab;
+    var grande = rp.ab > 0 && Math.abs(diff) > rp.ab * 0.3;
+    h += '<div style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:8px;padding:10px 14px;font-size:12px;color:#075985">';
+    h += 'Proyectado vs. Real: <b>' + fmtMoney(rp.ab) + '</b> vs. <b>' + fmtMoney(abReal) + '</b> — diferencia <b style="color:' + (grande?'#DC2626':'#16A34A') + '">' + fmtMoney(diff) + '</b> ' + (grande?'⚠️ se aleja bastante de lo proyectado':'✓ cerca de lo proyectado');
+    h += '</div>';
+  } else {
+    h += '<div style="background:#F3F4F6;border-radius:8px;padding:10px 14px;font-size:12px;color:#6B7280">Todavia no hay ROI Real — asigna el Centro de Trabajo real y el valor/pieza en la pestaña "Identificacion" para calcularlo con piezas fabricadas de verdad.</div>';
+  }
+
+  h += '</div>';
+  return h;
+}
+
 // ── TAB: SPECS ────────────────────────────────────────────────────────────────
 function renderTabSpecs(m) {
   var h = '<div class="mac-panel on">';
@@ -2332,6 +2603,19 @@ function toggleMaq(mid) {
 function switchTab(mid, tab) {
   openMacTab[mid] = tab;
   renderMachines();
+}
+
+// Ir directo a la configuracion (ficha "Identificacion") de una maquina especifica —
+// usado desde Reporte Simple y otras vistas de solo lectura, para editar sin buscarla.
+function irAConfigMaquina(mid) {
+  switchMainScreen('cfg');
+  openMaqId = mid;
+  openMacTab[mid] = 'id';
+  renderMachines();
+  setTimeout(function(){
+    var el = document.getElementById('maqcard-' + mid);
+    if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 60);
 }
 
 function updM(mid, key, val) {
@@ -2635,6 +2919,10 @@ function resGoTo(idx) {
     var rep = document.getElementById('res-pg-reporte');
     if (rep) rep.classList.add('on');
     renderReporte();
+  } else if (idx === 'reportesimple') {
+    var reps = document.getElementById('res-pg-reportesimple');
+    if (reps) reps.classList.add('on');
+    renderReporteSimple();
   } else if (idx === 0) {
     var dp = document.getElementById('res-pg-dash');
     if (dp) dp.classList.add('on');
@@ -2651,6 +2939,7 @@ function resGoTo(idx) {
   else if (idx === 'gantt')   navEl = document.getElementById('snav-gantt');
   else if (idx === 'financiamiento') navEl = document.getElementById('snav-financiamiento');
   else if (idx === 'reporte') navEl = document.getElementById('snav-reporte');
+  else if (idx === 'reportesimple') navEl = document.getElementById('snav-reportesimple');
   else if (idx === 0)    navEl = document.getElementById('snav-dash');
   else                   navEl = document.getElementById('snav-m'+(idx-1));
   if (navEl) navEl.classList.add('on');
@@ -4928,7 +5217,7 @@ function renderReporte() {
   h += '<div style="text-align:right">';
   h += '<div style="font-size:12px;color:#9A9890;font-family:\'DM Mono\',monospace">'+fechaStr+'</div>';
   h += '<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end">';
-  h += '<button onclick="window.print()" style="padding:6px 14px;border-radius:7px;border:1px solid #E5E7EB;background:white;font-size:11px;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;color:#374151">🖨 Imprimir</button>';
+  h += '<button class="no-print" onclick="window.print()" style="padding:6px 14px;border-radius:7px;border:1px solid #E5E7EB;background:white;font-size:11px;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;color:#374151">🖨 Imprimir</button>';
   h += '</div></div></div>';
 
   // ── Resumen Ejecutivo ──
@@ -5262,6 +5551,189 @@ function renderReporte() {
   h += '</div>'; // formato de aprobación
   h += '</div>'; // max-width wrapper
 
+  el.innerHTML = h;
+}
+
+// Estatus de cada maquina — editable a mano en la pestana "Identificacion"
+// de cada maquina (Configuracion). Se guarda en m.status (+ m.statusNota
+// opcional para un detalle libre, ej. una fecha real). Si una maquina
+// todavia no tiene status asignado, se usa un default razonable segun si
+// ya tiene ahorro real capturado — nunca se inventa "anos de antiguedad"
+// que no se documentaron.
+var STATUS_OPTIONS = [
+  {key:'operando',         label:'Operando',           icon:'✅', color:'#16A34A', defaultSub:'Con ahorro real capturado'},
+  {key:'transito',         label:'En transito',         icon:'🚛', color:'#7C3AED', defaultSub:'Comprada, aun no llega a planta'},
+  {key:'recien_instalada', label:'Recien instalada',    icon:'🆕', color:'#2563EB', defaultSub:''},
+  {key:'tramite',          label:'Compra en tramite',   icon:'📄', color:'#D97706', defaultSub:'Solicitud interna, aun no instalada'},
+  {key:'cotizacion',       label:'En cotizacion',       icon:'🚚', color:'#6B7280', defaultSub:'Aun no se compra'},
+  {key:'en_venta',         label:'En venta',            icon:'📤', color:'#DC2626', defaultSub:'Maquina en proceso de venta/baja'}
+];
+function mEstatus(m, hd) {
+  var opt = STATUS_OPTIONS.find(function(s){ return s.key === m.status; });
+  if (opt) return {key:opt.key, label:opt.label, icon:opt.icon, color:opt.color, sub:(m.statusNota||opt.defaultSub)};
+  return hd
+    ? {key:'operando', label:'Operando', icon:'✅', sub:'Con ahorro real capturado', color:'#16A34A'}
+    : {key:'cotizacion', label:'En cotizacion', icon:'🚚', sub:'Aun no se compra', color:'#6B7280'};
+}
+// Prioridad para ordenar Reporte Simple: Operando primero, luego En transito, luego el resto
+var STATUS_SORT_PRIORITY = {operando:0, transito:1, recien_instalada:2, tramite:3, cotizacion:4, en_venta:5};
+function statusSortPriority(m) {
+  var r = calcROI(m);
+  var est = mEstatus(m, r.ab > 0);
+  var p = STATUS_SORT_PRIORITY[est.key];
+  return (p === undefined) ? 99 : p;
+}
+// Ganancia real acumulada con base a piezas realmente fabricadas (no el modelo teorico
+// de variables) — piezas/dia promedio real (del correo de programacion) x valor/ahorro
+// por pieza (capturado a mano en cada maquina, tab "Datos generales"), anualizado con
+// los mismos dias/mes y meses/ano globales que usa el resto de la app. Null si falta
+// el Centro de Trabajo de piezas o el valor por pieza.
+// Cuando varias maquinas comparten el mismo CT (ej. ENCHAPADO: ENC+KENI+HOMAG), el
+// promedio de piezas/dia de ese CT es del CENTRO completo, no de una sola maquina —
+// se reparte en partes iguales entre las que lo comparten (temporal, hasta tener el
+// dato real de cuanto produce cada una).
+function cantidadDiaReal(m) {
+  var manual = parseNum(m.unidadManualDia);
+  if (manual > 0) return manual;
+  if (!m.ctPiezasKey) return null;
+  var total = PIEZAS_PROMEDIO_CT[m.ctPiezasKey];
+  if (total === undefined) return null;
+  var comparten = MACHINES.filter(function(x){
+    return x.ctPiezasKey === m.ctPiezasKey && !(parseNum(x.unidadManualDia) > 0);
+  }).length || 1;
+  return total / comparten;
+}
+// Si hay "costo anterior" capturado, el valor real por unidad es el AHORRO neto
+// (anterior menos actual) — no el costo actual solo ni el anterior solo. Si no hay
+// costo anterior, valorPorPieza se usa tal cual (ya sea ahorro directo o costo/hora).
+function valorRealPorUnidad(m) {
+  var vpp = parseNum(m.valorPorPieza);
+  var ant = parseNum(m.costoAnteriorPorPieza);
+  if (ant > 0) return ant - vpp;
+  return vpp;
+}
+function gananciaPorPiezas(m) {
+  var ctP = cantidadDiaReal(m);
+  var vpp = valorRealPorUnidad(m);
+  if (!ctP || !(vpp > 0)) return null;
+  // CORREGIDO: antes "cantidad manual por dia" se anualizaba con 365 dias de
+  // calendario (asumiendo produccion los 7 dias de la semana, todo el ano),
+  // mientras que el reparto por CT (correo de produccion) se anualizaba con
+  // dias habiles reales — mismo tipo de dato (piezas/dia), dos resultados
+  // distintos para la misma maquina segun de donde saliera la cantidad. Ahora
+  // los dos caminos usan la MISMA base de anualizacion: dias habiles/mes x
+  // meses/ano (Parametros globales).
+  var gp = getGP();
+  var diasHabilesAno = (gp.days || 21.5) * (gp.months || 12);
+  var usaManual = parseNum(m.unidadManualDia) > 0;
+  if (usaManual) {
+    var periodo = m.unidadManualPeriodo || 'dia';
+    var periodosPorAno = periodo === 'semana' ? diasHabilesAno/5 : periodo === 'mes' ? (gp.months||12) : diasHabilesAno;
+    return ctP * vpp * periodosPorAno;
+  }
+  return ctP * vpp * diasHabilesAno;
+}
+// ROI/Payback recalculado sustituyendo el beneficio anual de calcROI (basado en
+// variables teoricas) por la ganancia real por piezas — mismo OPEX/inversion/vida util.
+function roiPorPiezas(m, abReal) {
+  // Si ya hay "costo anterior" (ahorro neto = anterior - actual), el OPEX de esa
+  // maquina normalmente ya quedo reflejado en el "costo actual" — no se resta aparte
+  // para no descontarlo dos veces.
+  var yaEsNeto = parseNum(m.costoAnteriorPorPieza) > 0;
+  var opx = yaEsNeto ? 0 : (calcOpex(m) + (parseNum(m.opx)||0));
+  var fl = abReal - opx;
+  var netInv = (m.inv||0) - (m.replaceVal||0);
+  var tot = fl * m.yr + (m.res||0);
+  var ng = tot - netInv;
+  var roi = netInv > 0 ? (ng / netInv) * 100 : 0;
+  var pay = fl > 0 ? netInv / fl : Infinity;
+  return { roi: roi, pay: pay, fl: fl, netInv: netInv };
+}
+// Ganancia real acumulada desde la fecha real de arranque hasta hoy, y si ya se
+// recupero la inversion neta (usa el flujo neto anual real — ya con OPEX descontado).
+function acumuladoReal(m) {
+  var abReal = gananciaPorPiezas(m);
+  if (abReal === null || !m.fechaInicioOperacion) return null;
+  var inicio = new Date(m.fechaInicioOperacion + 'T00:00:00');
+  if (isNaN(inicio.getTime())) return null;
+  var hoy = new Date();
+  var diasCal = Math.round((hoy - inicio) / 86400000);
+  if (diasCal < 0) return null;
+  var rr = roiPorPiezas(m, abReal);
+  var meses = diasCal / 30.44;
+  var acumulado = (rr.fl / 12) * meses;
+  var pagada = acumulado >= rr.netInv;
+  return {
+    acumulado: acumulado,
+    dias: diasCal,
+    meses: meses,
+    netInv: rr.netInv,
+    pagada: pagada,
+    excedente: acumulado - rr.netInv,
+    faltante: rr.netInv - acumulado,
+    pctRecuperado: rr.netInv > 0 ? Math.min(100, (acumulado / rr.netInv) * 100) : 0
+  };
+}
+// ── REPORTE SIMPLE — tabla plana Descripción / Estatus / Costo / ROI, para
+//    lectura rapida (a diferencia del Reporte Directivo, que es narrativo) ──
+function renderReporteSimple() {
+  var el = document.getElementById('reportesimple-content');
+  if (!el) return;
+  var h = '<div style="max-width:860px;margin:0 auto">';
+  h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">';
+  h += '<div>';
+  h += '<div style="font-family:\'Fraunces\',serif;font-size:22px;font-weight:700;color:#1E1C18">Reporte Simple de Maquinaria</div>';
+  h += '<div style="font-size:12px;color:#9A9890;margin-top:2px">Costo, ganancia real (con base en piezas fabricadas) y tiempo real de recuperación</div>';
+  h += '</div>';
+  h += '<button class="no-print" onclick="window.print()" style="padding:6px 14px;border-radius:7px;border:1px solid #E5E7EB;background:white;font-size:11px;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;color:#374151">&#128424; Imprimir</button>';
+  h += '</div>';
+  h += '<div style="background:white;border:1px solid #E9ECEF;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)">';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:13px">';
+  h += '<thead><tr style="background:#F8F9FA;border-bottom:2px solid #E9ECEF">';
+  ['Descripcion de la maquina','Costo de la maquina','Ganancia Real anual','Payback Real','¿Ya se pago?'].forEach(function(col, ci){
+    h += '<th style="padding:12px 16px;text-align:'+(ci===0?'left':'right')+';font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#6B7280;font-weight:700;white-space:nowrap">'+col+'</th>';
+  });
+  h += '</tr></thead><tbody>';
+  var machinesOrdenadas = MACHINES.slice().sort(function(a, b){
+    return statusSortPriority(a) - statusSortPriority(b);
+  });
+  machinesOrdenadas.forEach(function(m, i){
+    var abReal = gananciaPorPiezas(m);
+    var hd = abReal !== null && abReal > 0;
+    var r = hd ? roiPorPiezas(m, abReal) : {roi:0, pay:Infinity};
+    var payColor = !hd || !isFinite(r.pay) ? '#9CA3AF' : (r.pay<=2?'#16A34A':r.pay<=5?'#D97706':'#DC2626');
+    var payTxt = (hd && isFinite(r.pay)) ? (r.pay<1 ? (r.pay*12).toFixed(1)+' meses' : r.pay.toFixed(1)+' anos') : 'Pendiente';
+    var est = mEstatus(m, hd);
+    h += '<tr onclick="irAConfigMaquina(\''+m.id+'\')" title="Clic para editar esta maquina en Configuracion" style="cursor:pointer;border-bottom:1px solid #F1F3F5'+(i%2?';background:#FAFBFC':'')+'" onmouseover="this.style.background=\'#F3F4F6\'" onmouseout="this.style.background=\''+(i%2?'#FAFBFC':'white')+'\'">';
+    h += '<td style="padding:10px 16px"><div style="display:flex;align-items:center;gap:12px">';
+    if (m.heroPhoto) {
+      h += '<img src="'+m.heroPhoto+'" style="width:88px;height:88px;border-radius:10px;object-fit:cover;border:1px solid #E9ECEF;flex-shrink:0;background:white" alt="'+m.name+'">';
+    } else {
+      h += '<div style="width:88px;height:88px;border-radius:10px;background:#F3F4F6;border:1px solid #E9ECEF;display:flex;align-items:center;justify-content:center;flex-shrink:0"><div style="width:14px;height:14px;border-radius:50%;background:'+m.color+'"></div></div>';
+    }
+    h += '<div>';
+    h += '<div style="font-weight:600;color:#1E1C18">'+m.name+'</div>';
+    if (m.model) h += '<div style="font-size:11px;color:#9A9890;margin-top:1px">'+m.model+'</div>';
+    h += '<div style="font-size:10.5px;font-weight:700;color:'+est.color+';margin-top:3px">'+est.icon+' '+est.label+'</div>';
+    h += '</div></div></td>';
+    h += '<td style="padding:12px 16px;text-align:right;font-family:\'DM Mono\',monospace;font-weight:600;color:#1E1C18;white-space:nowrap">'+fmt(m.inv||0)+'</td>';
+    h += '<td style="padding:12px 16px;text-align:right;font-family:\'DM Mono\',monospace;font-weight:600;color:'+(hd?'#16A34A':'#9CA3AF')+';white-space:nowrap">'+(hd?fmt(abReal):'Pendiente')+'</td>';
+    h += '<td style="padding:12px 16px;text-align:right;font-family:\'DM Mono\',monospace;font-weight:700;color:'+payColor+';white-space:nowrap">'+payTxt+'</td>';
+    var acum = hd ? acumuladoReal(m) : null;
+    h += '<td style="padding:12px 16px;text-align:right;white-space:nowrap">';
+    if (!acum) {
+      h += '<span style="font-size:11px;color:#9A9890">'+(hd?'Falta fecha de arranque':'Pendiente')+'</span>';
+    } else if (acum.pagada) {
+      h += '<div style="font-size:11.5px;font-weight:700;color:#16A34A">✅ Ya se pago</div>';
+      h += '<div style="font-size:10px;color:#9A9890">excedente '+fmt(acum.excedente)+'</div>';
+    } else {
+      h += '<div style="font-size:11.5px;font-weight:700;color:#D97706">⏳ '+acum.pctRecuperado.toFixed(0)+'% recuperado</div>';
+      h += '<div style="font-size:10px;color:#9A9890">faltan '+fmt(acum.faltante)+'</div>';
+    }
+    h += '</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table></div></div>';
   el.innerHTML = h;
 }
 

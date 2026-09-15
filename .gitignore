@@ -1,0 +1,9 @@
+# Respaldos de Firebase: contienen datos reales de personal (nombres, correos,
+# contraseñas en texto plano, sueldos). Nunca deben subirse a un repo público.
+backups/
+
+# Config local de Claude Code, no es parte de la app.
+.claude/
+
+# Capturas de pantalla sueltas usadas solo para dar contexto durante el trabajo.
+Captura de pantalla*.png

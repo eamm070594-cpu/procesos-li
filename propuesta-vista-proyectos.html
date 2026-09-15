@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Propuesta: nueva vista de Proyectos</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#f5f5f7; --surface:#fff; --surface2:#eef0f3; --border:rgba(0,0,0,.1); --border2:rgba(0,0,0,.07);
+  --text:#1d1d1f; --muted:#6e6e73; --accent:#007aff; --ok:#2fb350; --warn:#d97b06; --bad:#e0342a;
+  --ok-bg:rgba(47,179,80,.12); --warn-bg:rgba(217,123,6,.12); --bad-bg:rgba(224,52,42,.12); --accent-bg:rgba(0,122,255,.12);
+  --r:8px; --r2:12px; --r3:16px;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#1c1c1e; --surface:#2c2c2e; --surface2:#3a3a3c; --border:rgba(255,255,255,.14); --border2:rgba(255,255,255,.09);
+    --text:#f5f5f7; --muted:#98989d; --accent:#0a84ff; --ok:#30d158; --warn:#ff9f0a; --bad:#ff453a;
+    --ok-bg:rgba(48,209,88,.16); --warn-bg:rgba(255,159,10,.16); --bad-bg:rgba(255,69,58,.16); --accent-bg:rgba(10,132,255,.18); }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sans-serif;font-size:14px}
+header{padding:20px 24px 0;max-width:1100px;margin:0 auto}
+h1{font-size:22px;font-weight:800;margin:0 0 4px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+.note{background:var(--accent-bg);color:var(--text);border-radius:var(--r2);padding:10px 14px;font-size:12.5px;margin-bottom:16px;line-height:1.5}
+.tabs{display:flex;gap:4px;background:var(--surface2);border-radius:var(--r2);padding:4px;max-width:1100px;margin:0 auto 20px;width:calc(100% - 48px)}
+.tab{flex:1;text-align:center;padding:9px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;color:var(--muted)}
+.tab.active{background:var(--accent);color:#fff}
+main{max-width:1100px;margin:0 auto;padding:0 24px 60px}
+.view{display:none}
+.view.active{display:block}
+.hint{font-size:12.5px;color:var(--muted);margin-bottom:16px}
+
+/* Vista A: urgencia */
+.buckets{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.bucket{border-radius:var(--r2);padding:14px;border:1px solid var(--border2)}
+.bucket.bad{background:var(--bad-bg)} .bucket.warn{background:var(--warn-bg)} .bucket.ok{background:var(--ok-bg)} .bucket.gray{background:var(--surface2)}
+.bucket .n{font-size:26px;font-weight:800}
+.bucket .lbl{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.card .stripe{width:4px;align-self:stretch;border-radius:4px;flex:0 0 4px}
+.stripe.bad{background:var(--bad)} .stripe.warn{background:var(--warn)} .stripe.ok{background:var(--ok)}
+.card .body{flex:1;min-width:0}
+.card .title{font-weight:700;font-size:13.5px}
+.card .meta{font-size:11.5px;color:var(--muted);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap}
+.tag{background:var(--surface2);border-radius:99px;padding:2px 8px;font-size:11px}
+.card .due{font-size:12px;font-weight:700;white-space:nowrap}
+.due.bad{color:var(--bad)} .due.warn{color:var(--warn)} .due.ok{color:var(--ok)}
+.section-title{font-size:13px;font-weight:800;margin:22px 0 8px}
+
+/* Vista B: kanban */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.col{background:var(--surface2);border-radius:var(--r2);padding:10px}
+.col h3{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin:2px 4px 10px;display:flex;justify-content:space-between}
+.kcard{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:10px;margin-bottom:8px;cursor:grab}
+.kcard .title{font-weight:700;font-size:12.5px;margin-bottom:6px}
+.kcard .row{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted)}
+.avatar{width:20px;height:20px;border-radius:50%;background:var(--accent-bg);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800}
+</style>
+</head>
+<body>
+<header>
+  <h1>Propuesta: otra forma de ver Proyectos</h1>
+  <p class="sub">Prototipo desconectado — datos de ejemplo, no toca tu app real. Guardado en tu carpeta procesos-li.</p>
+  <div class="note">Hoy Proyectos se organiza por Centro de Trabajo (Carpintería, Enchapado…). Estas dos vistas alternativas organizan por lo que dijiste que de verdad te importa: <b>fechas</b> primero, o <b>estatus tipo tablero</b> — el Centro de Trabajo pasa a ser una etiqueta, no la estructura.</div>
+</header>
+<div class="tabs">
+  <div class="tab active" data-v="a">A · Por urgencia (fechas primero)</div>
+  <div class="tab" data-v="b">B · Tablero tipo Asana</div>
+</div>
+<main>
+
+  <div class="view active" id="view-a">
+    <p class="hint">Lo primero que ves es qué tan urgente es cada cosa — no de qué área es. El Centro de Trabajo y el proyecto quedan como etiquetas dentro de cada tarjeta.</p>
+    <div class="buckets">
+      <div class="bucket bad"><div class="n">14</div><div class="lbl">Vencidos</div></div>
+      <div class="bucket warn"><div class="n">6</div><div class="lbl">Vencen hoy</div></div>
+      <div class="bucket warn"><div class="n">11</div><div class="lbl">Esta semana</div></div>
+      <div class="bucket ok"><div class="n">32</div><div class="lbl">Al corriente</div></div>
+    </div>
+
+    <div class="section-title">🔴 Vencidos</div>
+    <div class="card"><div class="stripe bad"></div><div class="body"><div class="title">Compra de extractor para carpintería / Enchapado</div><div class="meta"><span class="tag">Carpintería</span><span class="tag">Valeria</span></div></div><div class="due bad">venció hace 3 días</div></div>
+    <div class="card"><div class="stripe bad"></div><div class="body"><div class="title">Mejoras de línea en archiveros</div><div class="meta"><span class="tag">Ensamble Archiveros</span><span class="tag">Daniel</span></div></div><div class="due bad">venció hace 1 día</div></div>
+
+    <div class="section-title">🟠 Vence hoy</div>
+    <div class="card"><div class="stripe warn"></div><div class="body"><div class="title">Control de corte</div><div class="meta"><span class="tag">Carpintería</span><span class="tag">Daniel</span></div></div><div class="due warn">hoy</div></div>
+
+    <div class="section-title">🟡 Esta semana</div>
+    <div class="card"><div class="stripe warn"></div><div class="body"><div class="title">Lay out óptimo Libreros</div><div class="meta"><span class="tag">Empaque de Libreros</span><span class="tag">Israel</span></div></div><div class="due warn">en 3 días</div></div>
+  </div>
+
+  <div class="view" id="view-b">
+    <p class="hint">Arrastra tarjetas entre columnas conforme avanza el trabajo — como Asana/Trello. Cada tarjeta trae fecha y responsable a la vista, sin abrir nada.</p>
+    <div class="kanban">
+      <div class="col"><h3>Pendiente <span>5</span></h3>
+        <div class="kcard"><div class="title">Puesta en marcha CNC Router</div><div class="row"><span class="avatar">D</span><span>21 ago</span></div></div>
+        <div class="kcard"><div class="title">Flujo de trabajo</div><div class="row"><span class="avatar">D</span><span>05 ago</span></div></div>
+      </div>
+      <div class="col"><h3>En progreso <span>8</span></h3>
+        <div class="kcard"><div class="title">Aprovechamiento de sobrante</div><div class="row"><span class="avatar">D</span><span>20 may</span></div></div>
+      </div>
+      <div class="col"><h3>En revisión <span>3</span></h3>
+        <div class="kcard"><div class="title">Corridas piloto — Línea Linconl</div><div class="row"><span class="avatar">V</span><span>05 jun</span></div></div>
+      </div>
+      <div class="col"><h3>Aprobado <span>12</span></h3>
+        <div class="kcard"><div class="title">Cambios de ingeniería a CLAMEX</div><div class="row"><span class="avatar">V</span><span>27 abr</span></div></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+<script>
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('view-'+t.dataset.v).classList.add('active');
+}));
+</script>
+</body>
+</html>

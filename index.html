@@ -79,6 +79,18 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 }
 .brand{font-weight:700;font-size:15px;padding:6px 10px 18px;color:var(--text)}
 .brand span{color:var(--accent)}
+.brand-block{padding:12px 12px 6px}
+.brand-logo{background:#fff;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:center;box-shadow:var(--shadow)}
+.brand-logo img{width:100%;max-width:150px;height:auto;display:block}
+.brand-row{display:flex;align-items:center;justify-content:space-between;padding:0 2px}
+.brand-sub{font-weight:700;font-size:14px;color:var(--text)}
+.brand-sub span{color:var(--accent)}
+.notif-bell{font-size:20px;position:relative;padding:6px 8px}
+.notif-badge-count{
+  position:absolute;top:-2px;right:-2px;background:var(--bad);color:#fff;font-size:10.5px;font-weight:800;
+  border-radius:99px;min-width:17px;height:17px;text-align:center;padding:0 4px;
+  display:none;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--surface);
+}
 .nav-btn{
   display:flex;align-items:center;gap:10px;width:100%;text-align:left;
   padding:10px 12px;border:none;background:none;border-radius:var(--r-sm);
@@ -113,6 +125,8 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 .btn.primary:hover{background:var(--accent2);border-color:var(--accent2)}
 .btn.danger{color:var(--bad);border-color:var(--bad)}
 .btn.danger:hover{background:var(--bad-bg)}
+.btn.ok{color:var(--ok);border-color:var(--ok)}
+.btn.ok:hover{background:var(--ok-bg)}
 .btn.sm{padding:6px 12px;font-size:12.5px}
 .btn.xs{padding:4px 9px;font-size:11.5px;border-radius:8px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
@@ -185,9 +199,19 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
    fila completa se desliza — nunca bajan a una 2ª línea ni empujan al de
    al lado. #proj-cols-nav (◀▶ arriba) es la forma fácil de moverse; el
    scroll con el dedo/mouse sigue funcionando igual, es solo un atajo. */
-.proj-cols{display:flex;gap:16px;align-items:flex-start;overflow-x:auto;padding-bottom:8px;scroll-behavior:smooth}
-.proj-col{flex:0 0 340px;min-width:0} /* min-width:0 — si no, el contenido interno ancho ignora el flex-basis y la columna se estira igual */
-.proj-cols-nav{display:flex;gap:6px;justify-content:flex-end;margin-bottom:8px}
+/* Proyectos — acordeón vertical por Sección/líder: uno debajo del otro, cada
+   uno se abre/cierra con <details>, nunca scroll horizontal. */
+.proj-cols{display:flex;flex-direction:column;gap:10px}
+.proj-col{border:1px solid var(--border2);border-radius:var(--r-sm);background:var(--surface);overflow:hidden}
+.proj-col>summary{
+  cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;font-size:14.5px;
+  display:flex;align-items:center;gap:8px;
+}
+.proj-col>summary::-webkit-details-marker{display:none}
+.proj-col>summary::before{content:'▶';font-size:10px;color:var(--muted);transition:transform .15s}
+.proj-col[open]>summary::before{transform:rotate(90deg)}
+.proj-col-inner{padding:0 14px 14px;display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:start}
+@media (max-width:760px){.proj-col-inner{grid-template-columns:1fr}}
 /* Las tarjetas de proyecto DENTRO de cada líder van apiladas verticalmente
    (una debajo de otra, scroll normal de la página) — nada de una 2ª barra
    de scroll horizontal anidada dentro de la fila de líderes; eso era
@@ -239,23 +263,35 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
 <div id="app">
   <div class="shell">
     <div class="sidebar" id="sidebar">
-      <div class="brand">LI · <span>Procesos</span></div>
+      <div class="brand-block">
+        <div class="brand-logo"><img src="assets/logo-linea-italia.png" alt="Línea Italia"></div>
+        <div class="brand-row">
+          <div class="brand-sub">LI · <span>Procesos</span></div>
+          <div style="display:flex;gap:2px">
+            <button class="icon-btn notif-bell" id="btn-notif" title="Notificaciones — lo que es para ti">🔔<span id="notif-badge" class="notif-badge-count"></span></button>
+            <button class="icon-btn notif-bell leader-only" id="btn-enviar" title="Avisar a mi gente por correo" style="display:none">📤<span id="enviar-badge" class="notif-badge-count"></span></button>
+          </div>
+        </div>
+      </div>
       <button class="nav-btn" data-view="dashboard"><span class="ic">🏠</span> Dashboard</button>
       <button class="nav-btn" data-view="proyectos"><span class="ic">📁</span> Proyectos</button>
       <button class="nav-btn" data-view="equipo"><span class="ic">👥</span> Equipo</button>
-      <button class="nav-btn" data-view="mipuesto"><span class="ic">🪪</span> Mi puesto</button>
       <button class="nav-btn" data-view="centrotrabajo"><span class="ic">🏭</span> Centro de Trabajo</button>
       <button class="nav-btn" data-view="reportemaquinas"><span class="ic">📋</span> ROI Máquinas</button>
       <button class="nav-btn" data-view="reportes"><span class="ic">📊</span> Reportes</button>
       <button class="nav-btn admin-only" data-view="admin" style="display:none"><span class="ic">⚙️</span> Administración</button>
-      <div style="margin:14px 12px 4px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em">Otras apps</div>
       <!-- Apps aparte, no fusionadas todavía (Fases 3/4 del plan) — enlaces
            directos a los archivos .html vecinos, en pestaña nueva porque son
-           otra app completa (con su propia sesión), no una vista del SPA. -->
+           otra app completa (con su propia sesión), no una vista del SPA.
+           admin-only: solo el admin las ve — el resto del equipo usa nada más
+           las vistas nativas de arriba. -->
+      <div class="admin-only" style="display:none">
+      <div style="margin:14px 12px 4px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em">Otras apps</div>
       <a class="nav-btn" href="Control_CT_v7.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic">🏭</span> Centro de Trabajo <span class="small muted" style="margin-left:auto">↗</span></a>
       <a class="nav-btn" href="infraestructura_dashboard_v10.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic">🏗️</span> Infraestructura <span class="small muted" style="margin-left:auto">↗</span></a>
       <a class="nav-btn" href="CT_MH_v8.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic">🔧</span> Máquinas y Herr. <span class="small muted" style="margin-left:auto">↗</span></a>
       <a class="nav-btn" href="LineaItalia.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic">💰</span> Plan de Inversión <span class="small muted" style="margin-left:auto">↗</span></a>
+      </div>
       <div class="sidebar-foot">
         <div class="user-chip">
           <div class="av" id="sb-av">--</div>
@@ -301,7 +337,29 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
   <div class="dlg-body" id="dlg-resumen-body"></div>
   <div class="dlg-foot">
     <button class="btn" id="dlg-resumen-pdf">⬇ Descargar PDF por equipo</button>
+    <button class="btn" id="dlg-resumen-mail">✉️ Enviar por correo</button>
     <button class="btn primary" id="dlg-resumen-close">Cerrar</button>
+  </div>
+</dialog>
+
+<!-- Notificaciones — proyecto/entregable nuevo, aprobación. Automáticas dentro
+     de la app; por correo llevan un botón ✉️ por fila (no hay backend de
+     correo aquí, es mailto: con el link directo ya adentro). -->
+<dialog id="dlg-notif">
+  <div class="dlg-head"><h2>🔔 Notificaciones</h2><div class="sub">Lo que es para ti — proyectos/entregables nuevos y aprobaciones</div></div>
+  <div class="dlg-body" id="dlg-notif-body"></div>
+  <div class="dlg-foot">
+    <button class="btn primary" id="dlg-notif-close">Cerrar</button>
+  </div>
+</dialog>
+
+<!-- 📤 Envío — solo admin/líder. Aparte de la campana a propósito: esto es
+     "avisar a mi gente por correo", no "lo que me toca a mí". -->
+<dialog id="dlg-enviar">
+  <div class="dlg-head"><h2>📤 Avisar a mi equipo por correo</h2><div class="sub">Todo lo que le puedes mandar a tu gente — nada se envía solo, tú confirmas cada uno</div></div>
+  <div class="dlg-body" id="dlg-enviar-body"></div>
+  <div class="dlg-foot">
+    <button class="btn primary" id="dlg-enviar-close">Cerrar</button>
   </div>
 </dialog>
 
@@ -582,13 +640,13 @@ const ADMIN_USER = 'amartinez';
 const ADMIN_PASS = 'Lineaitalia.1';
 const DEFAULT_PASS = 'LI2025';
 
-const DEFAULT_GLOBAL_PARAMS = {salary:19661, days:21.5, hours:8.5, fx:18, cfe:3.5, months:12};
+const DEFAULT_GLOBAL_PARAMS = {salary:19661, days:21.5, hours:8.5, fx:18, cfe:3.5, months:12, ptPenalizacion:0.5};
 function emptyDB(){
   return {
     users:[], secciones:[], centros:[], puestos:[],
     tabulador:{grupos:[],categorias:[],niveles:[]},
     globalParams:{...DEFAULT_GLOBAL_PARAMS},
-    projects:[], deliverables:[], _deleted:{},
+    projects:[], deliverables:[], _deleted:{}, notificaciones:[],
   };
 }
 let DB = emptyDB();
@@ -617,7 +675,7 @@ function centrosParaCache(centros){
 // Cache local inmediata (para que un refresh no muestre "vacío" un instante)
 (function loadCache(){
   try{ const s=localStorage.getItem(LS_SHARE); if(s){ const p=JSON.parse(s); Object.assign(DB,{users:p.users||[],secciones:p.secciones||[],centros:p.centros||[],puestos:p.puestos||[],tabulador:p.tabulador||{grupos:[],categorias:[],niveles:[]},globalParams:{...DEFAULT_GLOBAL_PARAMS,...(p.globalParams||{})}}); } }catch{}
-  try{ const a=localStorage.getItem(LS_APP); if(a){ const p=JSON.parse(a); Object.assign(DB,{projects:p.projects||[],deliverables:p.deliverables||[],_deleted:p._deleted||{}}); } }catch{}
+  try{ const a=localStorage.getItem(LS_APP); if(a){ const p=JSON.parse(a); Object.assign(DB,{projects:p.projects||[],deliverables:toDeliverablesArr(p.deliverables),_deleted:p._deleted||{},notificaciones:toNotifArr(p.notificaciones)}); } }catch{}
 })();
 
 /* ── FIREBASE ──────────────────────────────────────────────
@@ -642,6 +700,21 @@ function cleanUndefined(obj){
 function toArr(v){ return v&&typeof v==='object'&&!Array.isArray(v) ? Object.values(v) : (v||[]); }
 function toTabulador(v){ return {grupos:toArr(v?.grupos),categorias:toArr(v?.categorias),niveles:toArr(v?.niveles)}; }
 function toGlobalParams(v){ return {...DEFAULT_GLOBAL_PARAMS,...(v||{})}; }
+// Firebase Realtime Database no guarda arreglos vacíos [] tal cual — al
+// leerlos de vuelta la clave simplemente no viene (undefined), no []. Una
+// notificación recién creada siempre tiene leidoPor:[] — en cuanto se guarda
+// y se vuelve a leer, esa clave desaparece y cualquier .includes()/.push()
+// sobre ella truena. Se normaliza aquí, en la única puerta de entrada, en
+// vez de defender cada lectura de leidoPor/paraUserIds por separado.
+function toNotifArr(v){ return toArr(v).map(n=>({...n,leidoPor:n.leidoPor||[],paraUserIds:n.paraUserIds||[]})); }
+// Mismo problema que las notificaciones: cambiosFecha:[] se guarda vacío y
+// Firebase se lo come al leerlo de vuelta — se normaliza aquí para que PT
+// nunca truene por un .filter()/.some() sobre undefined. dueDateOriginal
+// también se defiende para entregables creados antes de que existiera ese
+// campo (usa dueDate como si siempre hubiera sido la fecha original).
+function toDeliverablesArr(v){
+  return toArr(v).map(d=>({...d,cambiosFecha:d.cambiosFecha||[],dueDateOriginal:d.dueDateOriginal||d.dueDate||null}));
+}
 
 let _shareBusy=false,_appBusy=false;
 let _sharePending=false,_appPending=false;
@@ -653,7 +726,7 @@ function saveShare(){
   saveShare._t=setTimeout(pushShare,700);
 }
 function saveApp(){
-  lsSetSafe(LS_APP,JSON.stringify({projects:DB.projects,deliverables:DB.deliverables,_deleted:DB._deleted||{}}));
+  lsSetSafe(LS_APP,JSON.stringify({projects:DB.projects,deliverables:DB.deliverables,_deleted:DB._deleted||{},notificaciones:DB.notificaciones||[]}));
   _appPending=true;
   clearTimeout(saveApp._t);
   saveApp._t=setTimeout(pushApp,700);
@@ -677,7 +750,7 @@ async function pushShare(){
 async function pushApp(){
   if(_appBusy)return; _appBusy=true;
   try{
-    await _refApp.set(cleanUndefined({projects:DB.projects,deliverables:DB.deliverables,_deleted:DB._deleted||{},_savedAt:Date.now()}));
+    await _refApp.set(cleanUndefined({projects:DB.projects,deliverables:DB.deliverables,_deleted:DB._deleted||{},notificaciones:DB.notificaciones||[],_savedAt:Date.now()}));
     _appPending=false;
   }catch(e){ console.error('[FB app] push error',e.message); }
   _appBusy=false;
@@ -707,10 +780,11 @@ async function pullApp(){
     const deleted=Object.assign({},DB._deleted||{},remote._deleted||{});
     DB._deleted=deleted;
     DB.projects=toArr(remote.projects).filter(p=>!deleted[p.id]);
-    DB.deliverables=toArr(remote.deliverables).filter(d=>!deleted[d.id]);
+    DB.deliverables=toDeliverablesArr(remote.deliverables).filter(d=>!deleted[d.id]);
+    DB.notificaciones=toNotifArr(remote.notificaciones);
   }
   _appLoaded=true;
-  lsSetSafe(LS_APP,JSON.stringify({projects:DB.projects,deliverables:DB.deliverables,_deleted:DB._deleted||{}}));
+  lsSetSafe(LS_APP,JSON.stringify({projects:DB.projects,deliverables:DB.deliverables,_deleted:DB._deleted||{},notificaciones:DB.notificaciones||[]}));
 }
 
 // Escuchar cambios en vivo de otras personas conectadas
@@ -730,7 +804,8 @@ _refApp.on('value',snap=>{
   const deleted=Object.assign({},DB._deleted||{},remote._deleted||{});
   DB._deleted=deleted;
   DB.projects=toArr(remote.projects).filter(p=>!deleted[p.id]);
-  DB.deliverables=toArr(remote.deliverables).filter(d=>!deleted[d.id]);
+  DB.deliverables=toDeliverablesArr(remote.deliverables).filter(d=>!deleted[d.id]);
+  DB.notificaciones=toNotifArr(remote.notificaciones);
   _appLoaded=true;
   if(SESSION) render();
 });
@@ -782,8 +857,15 @@ function enterApp(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   applyRole();
-  showView('dashboard');
-  openResumenPendientesDlg();
+  checkYGenerarNotificacionesPT();
+  if(location.hash){
+    // Se entró desde un link de notificación (correo) — va directo ahí en
+    // vez de interrumpir con el resumen de pendientes.
+    abrirDesdeHash();
+  } else {
+    showView('dashboard');
+    openResumenPendientesDlg();
+  }
 }
 document.getElementById('btn-login').addEventListener('click',doLogin);
 document.getElementById('li-user').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('li-pass').focus()});
@@ -800,6 +882,12 @@ function isLeader(){ return SESSION?.role==='leader'||SESSION?.role==='admin'; }
 function myUser(){ return SESSION?.userId?byId(DB.users,SESSION.userId):null; }
 function mySeccion(){
   return (DB.secciones||[]).find(s=>s.liderId===SESSION?.userId)||null;
+}
+// Todas las Secciones que este líder encabeza (puede ser más de una) — único
+// criterio de alcance para un líder: admin sigue viendo todo, un líder ve
+// nada más lo de su(s) propia(s) Sección(es), nunca la operación completa.
+function misSeccionesLider(){
+  return (DB.secciones||[]).filter(s=>s.liderId===SESSION?.userId);
 }
 function getMyReports(){
   if(isAdmin()) return DB.users;
@@ -896,10 +984,25 @@ function canUpdateOwnDeliverable(d){
 function applyRole(){
   if(!SESSION) return;
   document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin()?'':'none');
+  document.querySelectorAll('.leader-only').forEach(el=>el.style.display=isLeader()?'':'none');
   const u=myUser();
   document.getElementById('sb-name').textContent=SESSION.name||'—';
   document.getElementById('sb-role').textContent=isAdmin()?'Admin':(SESSION.role==='leader'?'Líder de sección':'Integrante');
   document.getElementById('sb-av').textContent=initials(SESSION.name);
+  refreshNotifBadge();
+}
+// Se refresca en cada render (no solo al abrir el panel) — así el número se
+// actualiza solo cuando llega algo nuevo por Firebase, sin tener que abrir
+// la campana para enterarte.
+function refreshNotifBadge(){
+  if(!SESSION||!dataReady()) return;
+  const n=notifSinLeer().length;
+  const badge=document.getElementById('notif-badge');
+  if(badge){
+    badge.textContent=n>99?'99+':n;
+    badge.style.display=n?'flex':'none'; // el CSS de la clase parte de "none" — hay que forzar a mostrarla, no basta con quitar el inline
+  }
+  refreshEnviarBadge(); // los dos íconos se refrescan siempre juntos, un solo punto de entrada
 }
 
 /* ══════════════════════════════════════════════════════
@@ -910,6 +1013,7 @@ const VIEW_RENDERERS={}; // cada vista registra aquí su función de render
 function showView(name){
   currentView=name;
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
+  refreshNotifBadge();
   const root=document.getElementById('view-root');
   if(name==='admin' && !isAdmin()){ root.innerHTML=noPermissionHTML(); return; }
   const fn=VIEW_RENDERERS[name];
@@ -922,7 +1026,6 @@ function render(){ showView(currentView); }
 document.querySelectorAll('.nav-btn[data-view]').forEach(b=>{
   b.addEventListener('click',()=>{
     if(b.dataset.view==='proyectos') _currentProjectId=null; // el nav siempre regresa a la lista
-    if(b.dataset.view==='mipuesto') _profileUserId=null; // el nav siempre regresa a tu propio expediente
     if(b.dataset.view==='centrotrabajo') _currentCentroId=null; // el nav siempre regresa a la lista
     showView(b.dataset.view);
   });
@@ -968,7 +1071,18 @@ function projectProgress(p){
   return {done,total:dels.length};
 }
 function visibleProjects(){
-  if(isLeader()) return DB.projects||[]; // admin y líderes ven todas (líder: alcance de lectura)
+  if(isAdmin()) return DB.projects||[];
+  if(isLeader()){
+    // Un líder ve solo los proyectos de su(s) propia(s) Sección(es) — nunca
+    // la operación completa (pedido explícito: "para cada líder dejale solo
+    // lo de sus reportes y para mi [admin] todos").
+    const secs=misSeccionesLider();
+    if(!secs.length) return [];
+    const vistos=new Set();
+    const out=[];
+    secs.forEach(sec=>seccionScope(sec).projects.forEach(p=>{ if(!vistos.has(p.id)){ vistos.add(p.id); out.push(p); } }));
+    return out;
+  }
   const mine=SESSION?.userId;
   return (DB.projects||[]).filter(p=>(DB.deliverables||[]).some(d=>d.projectId===p.id&&d.assigneeId===mine));
 }
@@ -1011,27 +1125,42 @@ function renderProyectos(root){
   const liderOpts=[...new Map(
     (DB.secciones||[]).filter(s=>s.liderId).map(s=>[s.liderId, byId(DB.users,s.liderId)])
   ).values()].filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+  // Filtro por persona — para acotar a lo suyo y poder mandarle un aviso
+  // individual (no solo por equipo). Mismo alcance de "a quién puedo ver"
+  // que ya usa el resto de la app (isAdmin ve a todos, un líder solo a los
+  // suyos).
+  const userFilter=root._userFilter||'';
+  // Solo admin/líder puede filtrar por persona y avisar por correo — un
+  // integrante normal no debe ver esto ni de él mismo (getMyReports() siempre
+  // se incluye a sí mismo, por eso antes se colaba este acceso).
+  const userOpts=isLeader()?(isAdmin()?DB.users:getMyReports()).slice().sort((a,b)=>a.name.localeCompare(b.name)):[];
 
   root.innerHTML=`
     <div class="view-head">
       <div><h1>Proyectos</h1><div class="view-sub">Entregables y fechas de tu área, en un solo lugar.</div></div>
       ${canCreate?'<button class="btn primary" id="btn-new-project">＋ Nuevo proyecto</button>':''}
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:${liderOpts.length>1?'10px':'16px'};flex-wrap:wrap;align-items:center" id="proj-tabs">
+    <div style="display:flex;gap:8px;margin-bottom:${liderOpts.length>1||userOpts.length?'10px':'16px'};flex-wrap:wrap;align-items:center" id="proj-tabs">
       <button class="btn sm ${tab==='activos'?'primary':''}" data-t="activos">Activos <span class="pill ${tab==='activos'?'ok':'muted'}" style="margin-left:6px">${countActivos}</span></button>
       <button class="btn sm ${tab==='cerrados'?'primary':''}" data-t="cerrados">Cerrados <span class="pill ${tab==='cerrados'?'ok':'muted'}" style="margin-left:6px">${countCerrados}</span></button>
     </div>
-    ${liderOpts.length>1?`<div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
-      <label class="small muted" for="proj-lider-filter">Filtrar por líder:</label>
-      <select class="select-input" id="proj-lider-filter" style="width:auto;padding:7px 10px;font-size:13px">
-        <option value="">Todos los líderes</option>
-        ${liderOpts.map(u=>`<option value="${u.id}"${liderFilter===u.id?' selected':''}>${esc(u.name)}</option>`).join('')}
-      </select>
-    </div>`:''}
-    <div id="proj-cols-nav" class="proj-cols-nav" style="display:none">
-      <button type="button" class="btn xs" id="proj-cols-prev">◀ Anterior líder</button>
-      <button type="button" class="btn xs" id="proj-cols-next">Siguiente líder ▶</button>
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+      ${liderOpts.length>1?`<div style="display:flex;gap:8px;align-items:center">
+        <label class="small muted" for="proj-lider-filter">Filtrar por líder:</label>
+        <select class="select-input" id="proj-lider-filter" style="width:auto;padding:7px 10px;font-size:13px">
+          <option value="">Todos los líderes</option>
+          ${liderOpts.map(u=>`<option value="${u.id}"${liderFilter===u.id?' selected':''}>${esc(u.name)}</option>`).join('')}
+        </select>
+      </div>`:''}
+      ${userOpts.length?`<div style="display:flex;gap:8px;align-items:center">
+        <label class="small muted" for="proj-user-filter">Filtrar por persona:</label>
+        <select class="select-input" id="proj-user-filter" style="width:auto;padding:7px 10px;font-size:13px">
+          <option value="">Todas las personas</option>
+          ${userOpts.map(u=>`<option value="${u.id}"${userFilter===u.id?' selected':''}>${esc(u.name)}</option>`).join('')}
+        </select>
+      </div>`:''}
     </div>
+    <div id="proj-resumen-individual"></div>
     <div id="proj-grid"></div>
   `;
   document.getElementById('proj-tabs').querySelectorAll('button').forEach(b=>{
@@ -1040,22 +1169,37 @@ function renderProyectos(root){
   if(canCreate) document.getElementById('btn-new-project').addEventListener('click',openNewProjectDlg);
   const liderSel=document.getElementById('proj-lider-filter');
   if(liderSel) liderSel.addEventListener('change',()=>{ root._liderFilter=liderSel.value; renderProyectos(root); });
+  const userSel=document.getElementById('proj-user-filter');
+  if(userSel) userSel.addEventListener('change',()=>{ root._userFilter=userSel.value; renderProyectos(root); });
+  const resumenCont=document.getElementById('proj-resumen-individual');
+  if(userFilter){
+    resumenCont.innerHTML=resumenIndividualHTML(userFilter);
+    document.getElementById('btn-aviso-individual')?.addEventListener('click',()=>{ enviarAvisoIndividual(userFilter); renderProyectos(root); });
+    resumenCont.querySelectorAll('[data-ir-proyecto]').forEach(el=>{
+      el.addEventListener('click',()=>irAProyectoEntregable(el.dataset.irProyecto,el.dataset.irEntregable));
+    });
+  }
+
+  // Proyectos con al menos un entregable de la persona filtrada (misma lógica
+  // de "el proyecto entero se ve" que ya usa el filtro por líder).
+  const enTabPorPersona=userFilter
+    ? enTab.filter(p=>(DB.deliverables||[]).some(d=>d.projectId===p.id&&d.assigneeId===userFilter))
+    : enTab;
 
   const grid=document.getElementById('proj-grid');
-  const nav=document.getElementById('proj-cols-nav');
   if(!projects.length){
     grid.innerHTML=emptyStateHTML('Sin proyectos todavía',
       canCreate?'Da clic en "Nuevo proyecto" para crear el primero.':'Cuando te asignen un entregable, el proyecto aparecerá aquí.');
     return;
   }
-  if(!enTab.length){
+  if(!enTabPorPersona.length){
     grid.innerHTML=emptyStateHTML(
       tab==='activos'?'Sin proyectos activos':'Sin proyectos cerrados todavía',
       tab==='activos'?'Todos los proyectos de tu alcance están cerrados por ahora.':'Aquí aparecerán los proyectos en cuanto se cierren (todos sus entregables en "Entregado").');
     return;
   }
   grid.className='';
-  grid.innerHTML=proyectosAgrupadosHTML(enTab,liderFilter);
+  grid.innerHTML=proyectosAgrupadosHTML(enTabPorPersona,liderFilter);
   if(!grid.innerHTML.trim()){
     const liderNombre=liderOpts.find(u=>u.id===liderFilter)?.name||'';
     grid.innerHTML=emptyStateHTML('Sin proyectos para este líder',
@@ -1070,14 +1214,6 @@ function renderProyectos(root){
   grid.querySelectorAll('[data-quick-ct]').forEach(btn=>{
     btn.addEventListener('click',ev=>{ ev.stopPropagation(); openEditProjectDlg(btn.dataset.quickCt); });
   });
-  // ◀▶ arriba: forma fácil de moverse entre líderes sin ir a cazar la barra
-  // de scroll hasta abajo de la columna más alta — mismo scroll, otro control.
-  const cols=grid.querySelector('.proj-cols');
-  if(cols && cols.scrollWidth>cols.clientWidth+4){
-    nav.style.display='flex';
-    document.getElementById('proj-cols-prev').addEventListener('click',()=>cols.scrollBy({left:-356,behavior:'smooth'}));
-    document.getElementById('proj-cols-next').addEventListener('click',()=>cols.scrollBy({left:356,behavior:'smooth'}));
-  }
 }
 // Agrupa una lista de proyectos (ya filtrada por pestaña Activos/Cerrados) en
 // 2 niveles: 1) Sección real (equipo del líder, DB.secciones), en el orden en
@@ -1088,6 +1224,27 @@ function renderProyectos(root){
 // liderFilter (opcional): id de usuario líder — si viene, solo se arma la(s)
 // columna(s) de Sección cuyo líder sea ese, y se oculta "Sin equipo asignado"
 // (esa gente no tiene líder, no puede pertenecerle a ninguno del filtro).
+// Panel compacto al lado de la lista de centros de cada equipo — el pulso del
+// equipo completo (no solo la pestaña Activos/Cerrados que estés viendo),
+// reusando los mismos helpers ya construidos para el Dashboard de líderes.
+function proyColResumenHTML(sec){
+  const scope=seccionScope(sec);
+  const {atrasados,porVencer}=vencidosListas(scope.deliverables);
+  const aTiempo=seccionATiempoPct(scope.people);
+  const proxima=scope.deliverables
+    .filter(d=>d.status!=='Entregado'&&d.dueDate&&d.dueDate>=todayISO())
+    .sort((a,b)=>a.dueDate.localeCompare(b.dueDate))[0];
+  return `<div class="card" style="background:var(--surface2)">
+    <div style="font-weight:700;font-size:12.5px;margin-bottom:10px">📌 Resumen del equipo</div>
+    ${progressBarHTML(scope.deliverables)}
+    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+      <span class="pill ${atrasados.length?'bad':'muted'}">${atrasados.length} atrasado${atrasados.length!==1?'s':''}</span>
+      <span class="pill ${porVencer.length?'warn':'muted'}">${porVencer.length} por vencer</span>
+      <span class="pill muted">${aTiempo!==null?aTiempo+'% a tiempo':'sin dato de a tiempo'}</span>
+    </div>
+    ${proxima?`<div class="small muted" style="margin-top:10px">📅 Próxima entrega: <b>${esc(proxima.name)}</b><br>${fmtDate(proxima.dueDate)}</div>`:''}
+  </div>`;
+}
 function proyectosAgrupadosHTML(projects,liderFilter){
   let cols='';
   (DB.secciones||[]).forEach(sec=>{
@@ -1095,10 +1252,13 @@ function proyectosAgrupadosHTML(projects,liderFilter){
     const enSec=projects.filter(p=>seccionesDeProyecto(p).some(s=>s.id===sec.id));
     if(!enSec.length) return;
     const lider=byId(DB.users,sec.liderId);
-    cols+=`<div class="proj-col" style="border:1px solid var(--border2);border-radius:var(--r-sm);padding:10px 12px;background:var(--surface)">
-      <div style="font-weight:700;font-size:14.5px">🧭 ${esc(sec.nombre)}${lider?` <span class="small muted" style="font-weight:400">(líder ${esc(lider.name)})</span>`:''} <span class="pill muted" style="margin-left:4px">${enSec.length}</span></div>
-      <div style="margin-top:10px">${ctSubgruposHTML(enSec, sec.centroIds||[])}</div>
-    </div>`;
+    cols+=`<details class="proj-col" open>
+      <summary>🧭 ${esc(sec.nombre)}${lider?` <span class="small muted" style="font-weight:400">(líder ${esc(lider.name)})</span>`:''} <span class="pill muted" style="margin-left:4px">${enSec.length}</span></summary>
+      <div class="proj-col-inner">
+        <div>${ctSubgruposHTML(enSec, sec.centroIds||[])}</div>
+        ${proyColResumenHTML(sec)}
+      </div>
+    </details>`;
   });
   let html=cols?`<div class="proj-cols">${cols}</div>`:'';
   const sinEquipo=liderFilter?[]:projects.filter(p=>seccionesDeProyecto(p).length===0);
@@ -1174,6 +1334,281 @@ function projectCardHTML(p){
     </div>
   </div>`;
 }
+/* ══════════════════════════════════════════════════════
+   NOTIFICACIONES — en la app son automáticas (se crean solas al pasar cada
+   evento real: nuevo proyecto, nuevo entregable, aprobación); por correo NO
+   hay backend de email en esta app estática, así que cada notificación trae
+   un botón ✉️ que abre un mailto: con el link directo ya adentro — quien la
+   ve decide si de verdad la manda. El link (#p=<proyecto>&d=<entregable>)
+   funciona incluso si a quien se lo mandas no había iniciado sesión: entra,
+   hace login, y cae directo ahí (ver abrirDesdeHash/enterApp).
+══════════════════════════════════════════════════════ */
+function crearNotificacion({tipo,texto,proyectoId,entregableId,paraUserIds}){
+  DB.notificaciones=DB.notificaciones||[];
+  const n={
+    id:uid('ntf'), tipo, texto,
+    proyectoId:proyectoId||null, entregableId:entregableId||null,
+    paraUserIds:[...new Set((paraUserIds||[]).filter(Boolean))],
+    leidoPor:[], createdAt:Date.now(), createdBy:SESSION?.userId||null,
+    emailEnviado:null, // {at,by} — se llena cuando alguien de verdad le da clic a ✉️
+    descartado:null, // {at,by} — "no hace falta avisar esto por correo", sin mandar nada
+  };
+  DB.notificaciones.unshift(n);
+  if(DB.notificaciones.length>200) DB.notificaciones.length=200; // no crece sin límite
+  return n;
+}
+// 🔔 Campana personal — SOLO lo que es para ti, nunca "porque eres admin".
+// Es tu bandeja de "me toca a mí", separada a propósito de la de envío.
+function notificacionesVisibles(){
+  return (DB.notificaciones||[]).filter(n=>n.paraUserIds.includes(SESSION?.userId));
+}
+function notifSinLeer(){
+  return notificacionesVisibles().filter(n=>!n.leidoPor.includes(SESSION?.userId));
+}
+// 📤 Ícono de envío — solo admin/líder. Es la bandeja de "avisar a mi gente
+// por correo", nunca se mezcla con la campana personal de cada quien. Admin
+// ve todas; un líder solo las de su propia gente (mismo alcance que ya usa
+// el resto de la app — getMyReports).
+function notificacionesParaEnviar(){
+  if(isAdmin()) return DB.notificaciones||[];
+  if(isLeader()){
+    const misIds=new Set(getMyReports().map(u=>u.id));
+    return (DB.notificaciones||[]).filter(n=>n.paraUserIds.some(uid=>misIds.has(uid)));
+  }
+  return [];
+}
+function notifPendientesDeEnviar(){
+  return notificacionesParaEnviar().filter(n=>!n.emailEnviado&&!n.descartado);
+}
+// "Descartar" = ya no hace falta avisarlo por correo (se resolvió de otra
+// forma, ya no aplica, etc.) — sale del pendiente sin mandar nada, así es
+// como se "limpia" la bandeja de envío sin forzar un correo por cada cosa.
+function descartarNotificacion(id){
+  const n=byId(DB.notificaciones,id); if(!n) return;
+  n.descartado={at:Date.now(),by:SESSION?.userId||null};
+  saveDB();
+}
+// Link "oficial" para los correos — MIENTRAS la app siga sirviéndose desde
+// localhost (tu servidor de desarrollo), este link SOLO funciona en TU
+// computadora — nadie más puede abrirlo. En cuanto la publiquemos en Firebase
+// Hosting (o el dominio real que decidas), cambia este único valor y todos
+// los correos —nuevos y ya mandados que alguien vuelva a abrir— apuntan bien.
+const PUBLIC_APP_URL=(location.hostname==='localhost'||location.hostname==='127.0.0.1')
+  ? location.origin+location.pathname // provisional — ver nota arriba
+  : location.origin+location.pathname;
+function linkNotificacion(n){
+  let h='#p='+encodeURIComponent(n.proyectoId||'');
+  if(n.entregableId) h+='&d='+encodeURIComponent(n.entregableId);
+  return PUBLIC_APP_URL+h;
+}
+// Días entre hoy (o entre la creación) y la fecha límite — para el "tienes
+// tantos días" del correo. Se usa createdAt (automático, nunca se captura a
+// mano) contra dueDate (lo único que sí se asigna a mano).
+function diasParaEntrega(createdAt,dueDate){
+  if(!dueDate) return null;
+  const inicio=createdAt?new Date(createdAt):new Date();
+  inicio.setHours(0,0,0,0);
+  const limite=new Date(dueDate+'T00:00:00');
+  return Math.round((limite-inicio)/86400000);
+}
+function marcarNotifLeida(id){
+  const n=byId(DB.notificaciones,id); if(!n) return;
+  if(!n.leidoPor.includes(SESSION?.userId)) n.leidoPor.push(SESSION.userId);
+  saveDB();
+}
+function irANotificacion(n){
+  marcarNotifLeida(n.id);
+  document.getElementById('dlg-notif').close();
+  if(!n.proyectoId||!byId(DB.projects,n.proyectoId)){ toast('Ese proyecto ya no existe','err'); return; }
+  location.hash='p='+encodeURIComponent(n.proyectoId)+(n.entregableId?'&d='+encodeURIComponent(n.entregableId):'');
+  abrirDesdeHash();
+}
+// Redacción del correo — enfocada en lo que a la persona le importa: cuánto
+// tiempo tiene, que la fecha es fija, y la puerta abierta a avisar si algo no
+// va a poder cumplirse. Cambia según el tipo de notificación; siempre lleva
+// el link oficial adentro.
+function emailBodyParaNotificacion(n){
+  const quienManda=SESSION?.name||'Tu líder';
+  const p=n.proyectoId?byId(DB.projects,n.proyectoId):null;
+  const d=n.entregableId?byId(DB.deliverables,n.entregableId):null;
+  const destino=byId(DB.users,n.paraUserIds[0]);
+  const nombrePersona=destino?destino.name.split(' ')[0]:'';
+  const saludo=nombrePersona?`Hola ${nombrePersona},`:'Hola,';
+  const link=linkNotificacion(n);
+  const firma=`\n\nCualquier duda, avísame para platicarlo.\n\n— ${quienManda}`;
+
+  if(n.tipo==='entregable_nuevo'&&d){
+    const dias=diasParaEntrega(d.createdAt,d.dueDate);
+    // Si la fecha límite quedó capturada antes que hoy (entregable atrasado
+    // desde que se creó, o un registro histórico), "-N días" no dice nada —
+    // se avisa como urgente en vez de un número negativo sin sentido.
+    const diasLinea = dias===null ? '' : dias>0 ? `Tienes ${dias} día${dias!==1?'s':''} para entregarlo — fecha límite: ${fmtDate(d.dueDate)}.\n`
+      : dias===0 ? `Fecha límite: hoy (${fmtDate(d.dueDate)}) — es urgente.\n`
+      : `Fecha límite: ${fmtDate(d.dueDate)} — ya venció, es urgente.\n`;
+    return {
+      subject:`Nuevo entregable: "${d.name}"`,
+      body:`${saludo} te acabo de asignar el entregable "${d.name}"${p?' en el proyecto "'+p.name+'"':''}.\n\n`
+        +diasLinea
+        +`Recuerda que las fechas son fijas: si ves que no vas a poder cumplirla, avísame antes para platicarlo, no hasta el último día.\n\n`
+        +`Ve el detalle aquí:\n${link}${firma}`,
+    };
+  }
+  if(n.tipo==='proyecto_nuevo'&&p){
+    return {
+      subject:`Nuevo proyecto: "${p.name}"`,
+      body:`${saludo} se abrió un nuevo proyecto en tu área: "${p.name}", con fecha límite ${fmtDate(p.dueDate)}.\n\n`
+        +`Ve el detalle y asigna los entregables que le correspondan a tu equipo aquí:\n${link}${firma}`,
+    };
+  }
+  if(n.tipo==='aprobacion'&&d){
+    return {
+      subject:`Se aprobó: "${d.name}"`,
+      body:`${saludo} se aprobó tu entregable "${d.name}"${p?' en "'+p.name+'"':''}. Bien hecho.\n\n`
+        +`Ve el detalle aquí:\n${link}${firma}`,
+    };
+  }
+  // Genérico — cualquier otro tipo (aviso_individual, etc.)
+  return { subject:'LI · Procesos — '+n.texto, body:`${saludo}\n\n${n.texto}\n\nVe el detalle aquí:\n${link}${firma}` };
+}
+function avisarNotifPorCorreo(n){
+  const destinatarios=[...new Set(n.paraUserIds.map(uid=>byId(DB.users,uid)?.email).filter(e=>e&&e.includes('@')))];
+  if(!destinatarios.length){ toast('Esa persona no tiene correo capturado (Administración → Usuarios)','err'); return; }
+  const {subject,body}=emailBodyParaNotificacion(n);
+  // Registra que SÍ se mandó (o al menos que se abrió el cliente de correo con
+  // todo listo) — es lo único que esta app puede saber con certeza, ya que no
+  // hay backend de email: no puede confirmar que de verdad le diste "Enviar"
+  // en Outlook, pero sí que tú abriste el link para hacerlo.
+  n.emailEnviado={at:Date.now(),by:SESSION?.userId||null};
+  saveDB();
+  window.location.href=`mailto:${destinatarios.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+const NOTIF_ICON={proyecto_nuevo:'📁',entregable_nuevo:'📋',aprobacion:'✅',aviso_individual:'✉️',pt_quincena:'📊',pt_mensual:'🏁'};
+let _notifVerLeidas=false; // mismo patrón que _enviarVerResueltas: por default solo lo pendiente
+function renderNotifPanel(){
+  const todas=notificacionesVisibles(); // solo lo tuyo, siempre
+  const noLeidas=todas.filter(n=>!n.leidoPor.includes(SESSION?.userId));
+  const leidas=todas.filter(n=>n.leidoPor.includes(SESSION?.userId));
+  refreshNotifBadge();
+  const list=_notifVerLeidas?todas:noLeidas;
+  const body=document.getElementById('dlg-notif-body');
+  const filaHTML=n=>{
+    const leida=n.leidoPor.includes(SESSION?.userId);
+    return `<div class="card" style="margin-bottom:8px;${leida?'opacity:.65':'border-color:var(--accent);background:var(--accent-bg)'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="cursor:pointer;flex:1;min-width:0" data-ir-notif="${n.id}">
+          <div style="font-size:13px">${NOTIF_ICON[n.tipo]||'🔔'} ${esc(n.texto)}</div>
+          <div class="small muted" style="margin-top:3px">${fmtWhen(n.createdAt)}</div>
+        </div>
+        ${leida?'':`<button class="btn xs" data-marcar-leida="${n.id}" title="Marcar como leída, sin ir al proyecto">✕</button>`}
+      </div>
+    </div>`;
+  };
+  body.innerHTML=`
+    ${leidas.length?`<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+      <button class="btn xs" id="btn-toggle-leidas">${_notifVerLeidas?'Ocultar':'Ver'} leídas (${leidas.length})</button>
+    </div>`:''}
+    ${list.length?list.slice(0,50).map(filaHTML).join(''):emptyStateHTML('Nada pendiente','Aquí aparecerán tus proyectos/entregables nuevos y aprobaciones.')}
+  `;
+  document.getElementById('btn-toggle-leidas')?.addEventListener('click',()=>{ _notifVerLeidas=!_notifVerLeidas; renderNotifPanel(); });
+  body.querySelectorAll('[data-ir-notif]').forEach(el=>{
+    el.addEventListener('click',()=>irANotificacion(byId(DB.notificaciones,el.dataset.irNotif)));
+  });
+  body.querySelectorAll('[data-marcar-leida]').forEach(btn=>{
+    btn.addEventListener('click',ev=>{ ev.stopPropagation(); marcarNotifLeida(btn.dataset.marcarLeida); renderNotifPanel(); });
+  });
+}
+function openNotifPanel(){ _notifVerLeidas=false; renderNotifPanel(); document.getElementById('dlg-notif').showModal(); }
+// 📤 Panel de envío — solo admin/líder. Todo lo que se puede avisar por
+// correo a su gente (nunca lo tuyo propio, eso vive en la campana). Cada fila
+// dice para quién es y trae el botón real de mandar el mailto.
+let _enviarVerResueltas=false; // toggle del panel 📤 — false = solo pendientes (se "limpia" sola)
+function renderEnviarPanel(){
+  const todas=notificacionesParaEnviar();
+  const pendientes=todas.filter(n=>!n.emailEnviado&&!n.descartado);
+  const resueltas=todas.filter(n=>n.emailEnviado||n.descartado);
+  refreshEnviarBadge();
+  const list=_enviarVerResueltas?todas:pendientes;
+  const body=document.getElementById('dlg-enviar-body');
+  const filaHTML=n=>{
+    const paraNombres=n.paraUserIds.map(uid=>byId(DB.users,uid)?.name).filter(Boolean);
+    const resuelto=n.emailEnviado||n.descartado;
+    return `<div class="card" style="margin-bottom:8px;${resuelto?'opacity:.65':''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="cursor:pointer;flex:1;min-width:0" data-ir-notif="${n.id}">
+          <div style="font-size:13px">${NOTIF_ICON[n.tipo]||'🔔'} ${esc(n.texto)}</div>
+          <div class="small muted" style="margin-top:3px">Para: <b>${paraNombres.length?esc(paraNombres.join(', ')):'—'}</b></div>
+          <div class="small muted" style="margin-top:2px">${fmtWhen(n.createdAt)}
+            ${n.emailEnviado?` · <span style="color:var(--ok)">✉️ enviado ${fmtWhen(n.emailEnviado.at)}</span>`:''}
+            ${n.descartado?` · <span style="color:var(--muted)">✕ descartado ${fmtWhen(n.descartado.at)}</span>`:''}
+          </div>
+        </div>
+        ${resuelto?'':`<div style="display:flex;gap:4px;flex-shrink:0">
+          <button class="btn xs" data-mail-notif="${n.id}" title="Enviar por correo">✉️ Enviar</button>
+          <button class="btn xs danger" data-descartar-notif="${n.id}" title="No hace falta avisarlo por correo — se quita de pendientes sin mandar nada">✕</button>
+        </div>`}
+      </div>
+    </div>`;
+  };
+  body.innerHTML=`
+    ${resueltas.length?`<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+      <button class="btn xs" id="btn-toggle-resueltas">${_enviarVerResueltas?'Ocultar':'Ver'} resueltas (${resueltas.length})</button>
+    </div>`:''}
+    ${list.length?list.slice(0,50).map(filaHTML).join(''):emptyStateHTML('Nada pendiente','Todo lo que había por avisar ya se envió o se descartó.')}
+  `;
+  document.getElementById('btn-toggle-resueltas')?.addEventListener('click',()=>{ _enviarVerResueltas=!_enviarVerResueltas; renderEnviarPanel(); });
+  body.querySelectorAll('[data-ir-notif]').forEach(el=>{
+    el.addEventListener('click',()=>irANotificacion(byId(DB.notificaciones,el.dataset.irNotif)));
+  });
+  body.querySelectorAll('[data-mail-notif]').forEach(btn=>{
+    btn.addEventListener('click',ev=>{ ev.stopPropagation(); avisarNotifPorCorreo(byId(DB.notificaciones,btn.dataset.mailNotif)); renderEnviarPanel(); });
+  });
+  body.querySelectorAll('[data-descartar-notif]').forEach(btn=>{
+    btn.addEventListener('click',ev=>{ ev.stopPropagation(); descartarNotificacion(btn.dataset.descartarNotif); renderEnviarPanel(); });
+  });
+}
+function openEnviarPanel(){ _enviarVerResueltas=false; renderEnviarPanel(); document.getElementById('dlg-enviar').showModal(); }
+function refreshEnviarBadge(){
+  if(!SESSION||!dataReady()||!isLeader()) return;
+  const n=notifPendientesDeEnviar().length;
+  const badge=document.getElementById('enviar-badge');
+  if(!badge) return;
+  badge.textContent=n>99?'99+':n;
+  badge.style.display=n?'flex':'none';
+}
+// Deep link — #p=<proyectoId>&d=<entregableId opcional>. Abre el proyecto y,
+// si viene un entregable, hace scroll y lo resalta un momento.
+// Abre un proyecto (y opcionalmente resalta un entregable dentro) — lo usan
+// el link de notificaciones (#p=&d=) Y cualquier lista en pantalla que
+// apunte a un entregable/proyecto concreto (ej. el resumen por persona).
+function irAProyectoEntregable(pid,did){
+  if(!pid||!byId(DB.projects,pid)) return;
+  _currentProjectId=pid;
+  showView('proyectos');
+  if(did){
+    setTimeout(()=>{
+      const row=document.getElementById('deliv-row-'+did);
+      if(!row) return;
+      row.scrollIntoView({behavior:'smooth',block:'center'});
+      row.style.transition='background .4s';
+      row.style.background='var(--accent-bg)';
+      setTimeout(()=>{ row.style.background=''; },2500);
+    },80);
+  }
+}
+function abrirDesdeHash(){
+  const h=location.hash.replace(/^#/,'');
+  if(!h||!dataReady()) return;
+  const params=new URLSearchParams(h);
+  irAProyectoEntregable(params.get('p'),params.get('d'));
+  // Se limpia el hash en cuanto se usa — si se queda pegado en la URL, la
+  // próxima vez que entres a la app (aunque sea horas después) cree que
+  // "vienes de un link" y se salta el Resumen de pendientes que sí debería
+  // salir siempre al hacer login normal. history.replaceState no dispara
+  // hashchange (a diferencia de location.hash=''), así que no hay rebote.
+  history.replaceState(null,'',location.pathname+location.search);
+}
+window.addEventListener('hashchange',abrirDesdeHash);
+
 function openNewProjectDlg(){
   const ctChecks=(DB.centros||[]).map(ct=>
     `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;padding:3px 0"><input type="checkbox" value="${ct.id}"> ${esc(ct.nombre)}</label>`).join('');
@@ -1191,7 +1626,12 @@ function openNewProjectDlg(){
       if(!name){ toast('Ingresa un nombre'); return false; }
       if(!centroIds.length){ toast('Selecciona al menos un centro de trabajo'); return false; }
       if(!dueDate){ toast('Ingresa la fecha límite'); return false; }
-      DB.projects.push({id:uid('p'),name,centroIds,dueDate,createdBy:SESSION.userId,createdAt:Date.now()});
+      const nuevoP={id:uid('p'),name,centroIds,dueDate,createdBy:SESSION.userId,createdAt:Date.now()};
+      DB.projects.push(nuevoP);
+      // Avisa a los líderes de las Secciones a las que cae este proyecto —
+      // ellos son quienes necesitan enterarse de que llegó algo a su área.
+      const lideresIds=[...new Set(seccionesDeProyecto(nuevoP).map(s=>s.liderId).filter(Boolean))];
+      if(lideresIds.length) crearNotificacion({tipo:'proyecto_nuevo',texto:`Nuevo proyecto: "${nuevoP.name}"`,proyectoId:nuevoP.id,paraUserIds:lideresIds});
       saveDB(); toast('Proyecto creado ✓');
     }
   });
@@ -1331,7 +1771,7 @@ function deliverableRowHTML(d){
     : (d.status==='Entregado' && canFull
         ? `<button class="btn xs primary" data-approve="${d.id}">Aprobar</button>`
         : `<span class="small muted">—</span>`);
-  return `<tr>
+  return `<tr id="deliv-row-${d.id}">
     <td>${esc(d.name)}${overdue?' <span class="pill bad" style="margin-left:4px">⏰ Atrasado</span>':''}</td>
     <td>${u?esc(u.name):'<span class="muted">—</span>'}</td>
     <td>${fmtDate(d.dueDate)}</td>
@@ -1358,7 +1798,11 @@ function openNewDeliverableDlg(projectId){
       if(!name){ toast('Ingresa un nombre'); return false; }
       if(!assigneeId){ toast('Selecciona un responsable'); return false; }
       if(!dueDate){ toast('Ingresa la fecha de entrega'); return false; }
-      DB.deliverables.push({id:uid('d'),name,projectId,assigneeId,dueDate,status:'Pendiente',approved:null,createdBy:SESSION.userId,createdAt:Date.now(),updatedAt:Date.now()});
+      const nuevoD={id:uid('d'),name,projectId,assigneeId,dueDate,dueDateOriginal:dueDate,cambiosFecha:[],status:'Pendiente',approved:null,createdBy:SESSION.userId,createdAt:Date.now(),updatedAt:Date.now()};
+      DB.deliverables.push(nuevoD);
+      if(assigneeId!==SESSION.userId){ // no te avisas a ti mismo si te lo autoasignas
+        crearNotificacion({tipo:'entregable_nuevo',texto:`Nuevo entregable: "${nuevoD.name}"${p?' en '+p.name:''}`,proyectoId:projectId,entregableId:nuevoD.id,paraUserIds:[assigneeId]});
+      }
       saveDB(); toast('Entregable creado ✓');
       renderProyectoDetail(document.getElementById('view-root'));
     }
@@ -1382,16 +1826,41 @@ function openEditDeliverableDlg(id){
       <label class="lbl" style="margin-top:10px">Responsable *</label>
       <select class="select-input" id="ed-assignee">${userOpts}</select>
       <label class="lbl" style="margin-top:10px">Fecha de entrega *</label>
-      <input class="input" type="date" id="ed-due" value="${esc(d.dueDate||'')}"/>`,
+      <input class="input" type="date" id="ed-due" value="${esc(d.dueDate||'')}"/>
+      <div id="ed-motivo-wrap" style="display:none;margin-top:10px">
+        <label class="lbl">Motivo del cambio de fecha *</label>
+        <select class="select-input" id="ed-motivo">
+          <option value="">— Selecciona —</option>
+          <option value="fuera_de_control">Fuera de sus posibilidades (no se penaliza)</option>
+          <option value="ineficiencia">Fue por ineficiencia (se penaliza en PT)</option>
+        </select>
+        <div class="small muted" style="margin-top:4px">Esto afecta su Plan de Trabajo (PT) — solo se pide cuando la fecha realmente cambia.</div>
+      </div>`,
     onSave:()=>{
       const name=document.getElementById('ed-name').value.trim();
       if(!name){ toast('Ingresa un nombre'); return false; }
+      const nuevaFecha=document.getElementById('ed-due').value;
+      const fechaCambio=nuevaFecha&&d.dueDate&&nuevaFecha!==d.dueDate;
+      let motivo=null;
+      if(fechaCambio){
+        motivo=document.getElementById('ed-motivo').value;
+        if(!motivo){ toast('La fecha cambió — selecciona el motivo (afecta el PT de esta persona)'); return false; }
+      }
       d.name=name;
       d.assigneeId=document.getElementById('ed-assignee').value;
-      d.dueDate=document.getElementById('ed-due').value;
+      if(fechaCambio){
+        d.cambiosFecha=d.cambiosFecha||[];
+        d.cambiosFecha.push({anterior:d.dueDate,nueva:nuevaFecha,motivo,at:Date.now(),by:SESSION.userId});
+      }
+      d.dueDate=nuevaFecha;
+      if(!d.dueDateOriginal) d.dueDateOriginal=d.dueDate; // entregables viejos, antes de este campo
       saveDB(); toast('Entregable actualizado ✓');
       renderProyectoDetail(document.getElementById('view-root'));
     }
+  });
+  document.getElementById('ed-due').addEventListener('input',e=>{
+    const cambio=e.target.value&&d.dueDate&&e.target.value!==d.dueDate;
+    document.getElementById('ed-motivo-wrap').style.display=cambio?'':'none';
   });
 }
 async function deleteDeliverablePrompt(id){
@@ -1418,6 +1887,10 @@ function approveDeliverable(id){
   const d=byId(DB.deliverables,id); if(!d) return;
   if(!canManageDeliverable(d)){ toast('No tienes permiso para aprobar esto','err'); return; }
   d.approved={by:SESSION.userId,byName:SESSION.name,at:Date.now()};
+  if(d.assigneeId&&d.assigneeId!==SESSION.userId){
+    const p=byId(DB.projects,d.projectId);
+    crearNotificacion({tipo:'aprobacion',texto:`Te aprobaron: "${d.name}"${p?' en '+p.name:''}`,proyectoId:d.projectId,entregableId:d.id,paraUserIds:[d.assigneeId]});
+  }
   saveDB();
   renderProyectoDetail(document.getElementById('view-root'));
   toast('Entregable aprobado ✓');
@@ -1439,19 +1912,55 @@ function stubView(nombre){
 ══════════════════════════════════════════════════════ */
 const PROX_DIAS=5; // ventana de "por vencer"
 function reportDeliverables(){
-  if(isLeader()) return DB.deliverables||[];
+  if(isAdmin()) return DB.deliverables||[];
+  if(isLeader()){
+    const secs=misSeccionesLider();
+    if(!secs.length) return [];
+    const vistos=new Set();
+    const out=[];
+    secs.forEach(sec=>seccionScope(sec).deliverables.forEach(d=>{ if(!vistos.has(d.id)){ vistos.add(d.id); out.push(d); } }));
+    return out;
+  }
   return (DB.deliverables||[]).filter(d=>d.assigneeId===SESSION?.userId);
 }
 function renderReportes(root){
   if(!dataReady()){ root.innerHTML=loadingHTML('Cargando reportes…'); return; }
+  // Filtrar por líder — solo tiene sentido si hay más de una Sección con
+  // líder asignado, y solo para quien puede ver más de la suya (admin ve
+  // todas; un líder ya está acotado a la suya por reportDeliverables, así
+  // que filtrar no le cambiaría nada).
+  const liderOpts=isAdmin()?[...new Map(
+    (DB.secciones||[]).filter(s=>s.liderId).map(s=>[s.liderId, byId(DB.users,s.liderId)])
+  ).values()].filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name)):[];
+  const liderFilter=root._repLiderFilter||'';
+  const secFiltrada=liderFilter?(DB.secciones||[]).find(s=>s.liderId===liderFilter):null;
+  const scope=secFiltrada?seccionScope(secFiltrada):null;
+  const delsScope=scope?scope.deliverables:reportDeliverables();
+  const peopleScope=scope?scope.people:(isLeader()?getMyReports():[myUser()].filter(Boolean));
+  const tituloAlcance=secFiltrada?secFiltrada.nombre:(isAdmin()?'toda la operación':'tu equipo');
+
   root.innerHTML=`<div class="view-head"><div><h1>Reportes</h1>
     <div class="view-sub">Dos vistas rápidas — nada de tableros interminables.</div></div></div>
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+      ${liderOpts.length>1?`<div style="display:flex;gap:8px;align-items:center">
+        <label class="small muted" for="rep-lider-filter">Filtrar por líder:</label>
+        <select class="select-input" id="rep-lider-filter" style="width:auto;padding:7px 10px;font-size:13px">
+          <option value="">Todos los líderes</option>
+          ${liderOpts.map(u=>`<option value="${u.id}"${liderFilter===u.id?' selected':''}>${esc(u.name)}</option>`).join('')}
+        </select>
+      </div>`:''}
+      <button class="btn sm" id="rep-btn-pdf">⬇ Descargar PDF</button>
+      <button class="btn sm" id="rep-btn-mail">✉️ Enviar por correo</button>
+    </div>
     <div style="font-weight:600;margin-bottom:8px">⏰ Atrasados y por vencer</div>
     <div id="rep-vencidos" style="margin-bottom:24px"></div>
     <div style="font-weight:600;margin-bottom:8px">📊 Carga por persona</div>
     <div id="rep-carga"></div>`;
-  renderReporteVencidos();
-  renderReporteCarga();
+  document.getElementById('rep-lider-filter')?.addEventListener('change',e=>{ root._repLiderFilter=e.target.value; renderReportes(root); });
+  document.getElementById('rep-btn-pdf').addEventListener('click',()=>descargarResumenPDF(delsScope,`Resumen de pendientes — ${tituloAlcance}`));
+  document.getElementById('rep-btn-mail').addEventListener('click',()=>enviarResumenPendientesCorreo(delsScope,tituloAlcance));
+  renderReporteVencidos(delsScope);
+  renderReporteCarga(peopleScope);
 }
 // Constructores puros de HTML (sin efectos, sin ids fijos) — los usa tanto la
 // vista Reportes (alcance global vía reportDeliverables/getMyReports) como el
@@ -1495,13 +2004,13 @@ function cargaListHTML(people){
       <div style="width:70px;text-align:right;font-size:12.5px" class="muted">${r.carga} abierto${r.carga!==1?'s':''}</div>
     </div>`).join('')}</div>`;
 }
-function renderReporteVencidos(){
+function renderReporteVencidos(dels){
   const el=document.getElementById('rep-vencidos'); if(!el) return;
-  el.innerHTML=vencidosTableHTML(reportDeliverables());
+  el.innerHTML=vencidosTableHTML(dels||reportDeliverables());
 }
-function renderReporteCarga(){
+function renderReporteCarga(people){
   const el=document.getElementById('rep-carga'); if(!el) return;
-  el.innerHTML=cargaListHTML(isLeader()?getMyReports():[myUser()].filter(Boolean));
+  el.innerHTML=cargaListHTML(people||(isLeader()?getMyReports():[myUser()].filter(Boolean)));
 }
 VIEW_RENDERERS['reportes']=renderReportes;
 
@@ -1511,9 +2020,9 @@ VIEW_RENDERERS['reportes']=renderReportes;
    pendiente. Mismo alcance que reportDeliverables() (todo para líder/admin,
    solo lo propio para integrante) — una sola fuente de "qué es mío".
 ══════════════════════════════════════════════════════ */
-function resumenPendientesRows(){
+function resumenPendientesRows(dels){
   const today=todayISO();
-  return reportDeliverables()
+  return (dels||reportDeliverables())
     .filter(d=>d.status!=='Entregado') // todo lo no entregado (incluye "En pausa")
     .map(d=>{
       const p=byId(DB.projects,d.projectId);
@@ -1537,8 +2046,8 @@ function resumenPendientesRows(){
 // Mismas filas de arriba, agrupadas por Sección/equipo (para el PDF) — un
 // renglón puede repetirse bajo 2 equipos si su proyecto pertenece a 2
 // Secciones, igual que ya pasa en Proyectos; "Sin equipo asignado" al final.
-function resumenPorEquipoGrupos(){
-  const rows=resumenPendientesRows();
+function resumenPorEquipoGrupos(dels){
+  const rows=resumenPendientesRows(dels);
   const grupos=[];
   (DB.secciones||[]).forEach(sec=>{
     const enSec=rows.filter(r=>r.secciones.some(s=>s.id===sec.id));
@@ -1548,8 +2057,8 @@ function resumenPorEquipoGrupos(){
   if(sinEquipo.length) grupos.push({nombre:'Sin equipo asignado',lider:'',rows:sinEquipo});
   return grupos;
 }
-function resumenPdfHTML(){
-  const grupos=resumenPorEquipoGrupos();
+function resumenPdfHTML(dels,titulo){
+  const grupos=resumenPorEquipoGrupos(dels);
   const fecha=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
   const gruposHTML=grupos.map(g=>`
     <h2>${esc(g.nombre)}${g.lider?` — líder ${esc(g.lider)}`:''} <span class="n">(${g.rows.length})</span></h2>
@@ -1560,7 +2069,8 @@ function resumenPdfHTML(){
         <td${r.overdue?' class="bad"':''}>${fmtDate(r.dueDate)}</td><td>${r.pct}%</td>
       </tr>`).join('')}</tbody>
     </table>`).join('');
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Resumen de pendientes por equipo</title>
+  const tituloReal=titulo||'Resumen de pendientes por equipo';
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(tituloReal)}</title>
 <style>
   body{font-family:Arial,Helvetica,sans-serif;padding:28px;color:#222}
   h1{font-size:19px;margin:0 0 2px}
@@ -1574,7 +2084,7 @@ function resumenPdfHTML(){
   @media print{ h2{page-break-after:avoid} tr{page-break-inside:avoid} }
 </style></head>
 <body>
-  <h1>📋 Resumen de pendientes por equipo</h1>
+  <h1>📋 ${esc(tituloReal)}</h1>
   <div class="fecha">Generado el ${fecha}</div>
   ${gruposHTML||'<p>Nada pendiente ahora mismo.</p>'}
 </body></html>`;
@@ -1582,13 +2092,64 @@ function resumenPdfHTML(){
 // Ventana nueva abierta de forma SÍNCRONA (antes de escribir el HTML) — así
 // no la bloquea el bloqueador de pop-ups, que solo permite window.open()
 // disparado directo desde el clic, no después de un await o un setTimeout.
-function descargarResumenPDF(){
+// dels/titulo opcionales — sin ellos usa tu alcance completo (como siempre);
+// con ellos (ej. desde el filtro por líder en Reportes) genera el PDF SOLO
+// de esa Sección.
+function descargarResumenPDF(dels,titulo){
   const w=window.open('','_blank');
   if(!w){ toast('Tu navegador bloqueó la ventana — permite pop-ups para este sitio e intenta de nuevo.','err'); return; }
-  w.document.write(resumenPdfHTML());
+  w.document.write(resumenPdfHTML(dels,titulo));
   w.document.close();
   w.focus();
   w.print();
+}
+// Mismo alcance que el diálogo (reportDeliverables): admin = todo, líder =
+// solo su(s) Sección(es), integrante = lo suyo. Un solo correo con todo lo
+// pendiente en ese alcance, a todos los responsables + líderes involucrados.
+// El cuerpo del correo ahora es el MISMO contenido que la hoja del PDF —
+// misma fuente (resumenPorEquipoGrupos), mismos grupos, mismas columnas
+// (Actividad/Proyecto/Responsable/Entrega/Avance), fila por fila completa
+// (no un resumen recortado). La única razón por la que no es literal el PDF
+// es que mailto: solo manda texto plano — ningún correo puede llevar HTML ni
+// adjuntos por este camino (limitación real del navegador, no de la app) —
+// así que se acomoda como texto ordenado que dice exactamente lo mismo.
+function enviarResumenPendientesCorreo(delsOverride,tituloAlcance){
+  const dels=(delsOverride||reportDeliverables()).filter(d=>d.status!=='Entregado');
+  if(!dels.length){ toast('No hay nada pendiente para avisar','err'); return; }
+  const emails=new Set();
+  dels.forEach(d=>{
+    const u=byId(DB.users,d.assigneeId); if(u?.email) emails.add(u.email);
+    const p=byId(DB.projects,d.projectId);
+    if(p) seccionesDeProyecto(p).forEach(sec=>{ const l=byId(DB.users,sec.liderId); if(l?.email) emails.add(l.email); });
+  });
+  const destinatarios=[...emails];
+  if(!destinatarios.length){ toast('Nadie en ese alcance tiene correo capturado (Administración → Usuarios)','err'); return; }
+  const fecha=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+  const titulo=tituloAlcance||(isAdmin()?'toda la operación':'tu equipo');
+  const grupos=resumenPorEquipoGrupos(dels); // misma fuente que usa el PDF
+  // Outlook (y la mayoría de webmails) recorta los espacios al inicio de línea
+  // en texto plano, así que la sangría no sirve para dar jerarquía visual — en
+  // vez de eso cada entregable va en su propio bloque de 2 líneas separado por
+  // una línea en blanco del siguiente, para que no se corran entre sí.
+  const cuerpoCompleto=grupos.map(g=>{
+    let s=`▌ ${g.nombre}${g.lider?' — líder '+g.lider:''} (${g.rows.length})\n`+'─'.repeat(44);
+    s+='\n\n'+g.rows.map((r,i)=>
+      `${i+1}. ${r.actividad}\n${r.proyecto} · ${r.responsable} · Entrega: ${fmtDate(r.dueDate)}${r.overdue?' — ATRASADO':''} · Avance: ${r.pct}%`
+    ).join('\n\n');
+    return s;
+  }).join('\n\n\n');
+  const subject=`Resumen de pendientes — ${titulo} — ${fecha}`;
+  const body=`Resumen de pendientes — ${titulo}\nGenerado el ${fecha}\n\n${cuerpoCompleto}\n\nEnviado desde LI · Procesos.`;
+  let mailto=`mailto:${destinatarios.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  // mailto: sí tiene un límite real, pero es más alto de lo que parece —
+  // solo se recorta si de verdad es enorme (equipos muy grandes), y aun así
+  // conserva los grupos y conteos, no solo un aviso genérico.
+  if(mailto.length>6000){
+    const cuerpoCorto=grupos.map(g=>`${g.nombre}${g.lider?' — líder '+g.lider:''}: ${g.rows.length} pendiente(s)`).join('\n');
+    const bodyCorto=`Resumen de pendientes — ${titulo}\nGenerado el ${fecha}\n\n${cuerpoCorto}\n\nEs una lista larga — revisa el detalle completo en LI · Procesos → Reportes.\n\nEnviado desde LI · Procesos.`;
+    mailto=`mailto:${destinatarios.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyCorto)}`;
+  }
+  window.location.href=mailto;
 }
 function openResumenPendientesDlg(){
   if(!dataReady()) return; // por si acaso — enterApp ya espera los pulls, esto es un candado extra
@@ -1615,6 +2176,11 @@ function openResumenPendientesDlg(){
 }
 document.getElementById('dlg-resumen-close').addEventListener('click',()=>document.getElementById('dlg-resumen').close());
 document.getElementById('dlg-resumen-pdf').addEventListener('click',descargarResumenPDF);
+document.getElementById('dlg-resumen-mail').addEventListener('click',enviarResumenPendientesCorreo);
+document.getElementById('dlg-notif-close').addEventListener('click',()=>document.getElementById('dlg-notif').close());
+document.getElementById('btn-notif').addEventListener('click',openNotifPanel);
+document.getElementById('dlg-enviar-close').addEventListener('click',()=>document.getElementById('dlg-enviar').close());
+document.getElementById('btn-enviar').addEventListener('click',openEnviarPanel);
 
 /* ══════════════════════════════════════════════════════
    3 MÓDULOS NUEVOS DEL DASHBOARD — barra de avance, proyectos
@@ -1714,31 +2280,243 @@ function seccionScope(sec){
   }
   const projectIds=new Set(projects.map(p=>p.id));
   const deliverables=(DB.deliverables||[]).filter(d=>projectIds.has(d.projectId));
-  return {projects,people,deliverables};
+  const centros=(sec?.centroIds||[]).map(id=>byId(DB.centros,id)).filter(Boolean);
+  return {projects,people,deliverables,centros};
 }
-// Un bloque completo: resumen + los 3 módulos nuevos + los 2 reportes reusados.
-function dashboardBlockHTML({icon,title,scope}){
-  const {projects,people,deliverables}=scope;
+// KPIs de líder agregados a nivel Sección (costo/hora real vs. ideal, capacidad
+// vs. producción real, ROI real de las máquinas de sus centros) — cada uno
+// reusa la MISMA fuente única ya construida para Centro de Trabajo/Máquinas
+// (ctCostoIdealCalc/ctCapacidadDia/gananciaPorPiezas/roiPorPiezas/acumuladoReal),
+// solo sumados entre los centros de esta Sección. Nunca se recalcula la fórmula.
+function seccionCostoResumen(centros){
+  let real=0, ideal=0, nValidos=0;
+  centros.forEach(c=>{
+    ctEnsureShape(c);
+    const ci=ctCostoIdealCalc(c);
+    real+=ci.costoRealMensual;
+    if(ci.valido){ ideal+=ci.costoIdealMensual; nValidos++; }
+  });
+  return {real,ideal,nValidos,totalCentros:centros.length};
+}
+function seccionCapacidadResumen(centros){
+  let cap=0, real=0;
+  centros.forEach(c=>{ ctEnsureShape(c); cap+=ctCapacidadDia(c); real+=(c.piezasPromedioDia||0); });
+  return {cap,real,pct:cap>0?(real/cap*100):null};
+}
+function seccionMaquinasResumen(centros){
+  let total=0, conDato=0, pagadas=0, paybackSum=0, paybackN=0;
+  centros.forEach(c=>{
+    (c.maquinas||[]).forEach(m=>{
+      total++;
+      const abReal=gananciaPorPiezas(m,c);
+      if(abReal!==null&&abReal>0){
+        conDato++;
+        const rr=roiPorPiezas(m,abReal);
+        const acum=acumuladoReal(m,c);
+        if(acum?.pagada) pagadas++;
+        if(isFinite(rr.pay)){ paybackSum+=rr.pay; paybackN++; }
+      }
+    });
+  });
+  return {total,conDato,pagadas,paybackAvg:paybackN?paybackSum/paybackN:null};
+}
+function seccionATiempoPct(people){
+  const vals=people.map(u=>statsATiempo(u.id)).filter(v=>v!==null);
+  return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):null;
+}
+// Reconocimiento — top 3 del equipo (nunca el líder: se reconoce a la gente,
+// no a quien ya lidera). Score = promedio de las 3 "barras" que ya existen
+// en el expediente (completados/a tiempo/efectivos) — nada nuevo que capturar.
+function personScore(u){
+  const vals=[statsCompletados(u.id),statsATiempo(u.id),statsEfectivos(u.id)].filter(v=>v!==null);
+  return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+}
+function seccionTop3HTML(liderId,people){
+  const ranking=people
+    .filter(u=>u.id!==liderId)
+    .map(u=>({u,score:personScore(u)}))
+    .filter(x=>x.score!==null)
+    .sort((a,b)=>b.score-a.score)
+    .slice(0,3);
+  if(!ranking.length) return '';
+  const medals=['🥇','🥈','🥉'];
+  return `<div class="card" style="margin-bottom:16px;background:var(--surface2)">
+    <div style="font-weight:700;font-size:12.5px;margin-bottom:8px">🏆 Top del equipo</div>
+    <div style="display:flex;gap:18px;flex-wrap:wrap">
+      ${ranking.map((r,i)=>`<div style="display:flex;align-items:center;gap:7px">
+        <span style="font-size:19px">${medals[i]}</span>
+        <div><div style="font-weight:600;font-size:12.5px">${esc(r.u.name)}</div><div class="small muted">${Math.round(r.score)}% desempeño</div></div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+// Listas crudas de atrasados/por vencer (mismo criterio que vencidosTableHTML,
+// reusado aquí para no duplicar el filtro y para poder mandarlas por correo).
+function vencidosListas(dels){
+  const today=todayISO();
+  const limite=todayISO(new Date(Date.now()+PROX_DIAS*86400000));
+  const pend=dels.filter(d=>isOpenOverdueStatus(d.status)&&d.dueDate);
+  return {
+    atrasados:pend.filter(d=>d.dueDate<today).sort((a,b)=>a.dueDate.localeCompare(b.dueDate)),
+    porVencer:pend.filter(d=>d.dueDate>=today&&d.dueDate<=limite).sort((a,b)=>a.dueDate.localeCompare(b.dueDate)),
+  };
+}
+// Compacto — mismo dato que cargaListHTML, menos espacio (fila más angosta,
+// barra más delgada) para que quepan varias personas sin empujar el resto
+// del bloque de líder hacia abajo.
+function cargaListCompactHTML(people){
+  if(!people.length) return emptyStateHTML('Sin datos todavía','No encontramos personas para mostrar aquí.');
+  const rows=people.map(u=>({u,carga:cargaAbierta(u.id)})).sort((a,b)=>b.carga-a.carga);
+  const max=Math.max(1,...rows.map(r=>r.carga));
+  return `<div class="card" style="padding:10px 14px">${rows.map(r=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+      <div style="width:110px;font-size:11.5px;flex:0 0 110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.u.name)}</div>
+      <div class="bar-track" style="flex:1;height:5px"><div class="bar-fill" style="width:${r.carga/max*100}%"></div></div>
+      <div style="width:46px;text-align:right;font-size:11px" class="muted">${r.carga}</div>
+    </div>`).join('')}</div>`;
+}
+// Un bloque completo: resumen + KPIs de líder + los módulos ya existentes,
+// ahora colapsables (Atrasados/por vencer, Carga, Estancados) para no llenar
+// la pantalla — y un botón para avisarle al equipo por correo. idx identifica
+// este bloque entre los que arma renderDashboardSecciones (para wire-up).
+function dashboardBlockHTML({icon,title,scope,liderId},idx){
+  const {projects,people,deliverables,centros}=scope;
   const activos=projects.filter(p=>computeProjectStatus(p)==='Activo').length;
   const pendientes=deliverables.filter(d=>d.status!=='Entregado').length;
+  const {atrasados,porVencer}=vencidosListas(deliverables);
+  const estancados=projects.filter(isProjectStalled);
+  const aTiempo=seccionATiempoPct(people);
+  const costoR=seccionCostoResumen(centros);
+  const capR=seccionCapacidadResumen(centros);
+  const maqR=seccionMaquinasResumen(centros);
+  const costoDiffPct=(costoR.nValidos>0&&costoR.ideal>0)?((costoR.real-costoR.ideal)/costoR.ideal*100):null;
+  const top3=liderId?seccionTop3HTML(liderId,people):'';
   return `
-    <div style="margin:26px 0 14px;padding-top:18px;border-top:1px solid var(--border2)">
+    <div style="margin:26px 0 14px;padding-top:18px;border-top:1px solid var(--border2);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
       <h2 style="font-size:16px">${icon} ${esc(title)}</h2>
+      <button class="btn sm" id="dash-email-${idx}">✉️ Enviar aviso a mi equipo</button>
     </div>
     <div class="grid-cards" style="margin-bottom:16px">
       <div class="card"><div class="small muted">Proyectos activos</div><div style="font-size:24px;font-weight:700;margin-top:2px">${activos}</div><div class="small muted">${projects.length} en total</div></div>
       <div class="card"><div class="small muted">Entregables pendientes</div><div style="font-size:24px;font-weight:700;margin-top:2px">${pendientes}</div></div>
+      <div class="card"><div class="small muted">Entregables a tiempo</div><div style="font-size:24px;font-weight:700;margin-top:2px">${aTiempo!==null?aTiempo+'%':'—'}</div><div class="small muted">promedio del equipo</div></div>
+      <div class="card"><div class="small muted">Costo real vs. ideal</div><div style="font-size:24px;font-weight:700;margin-top:2px;color:${costoDiffPct===null?'inherit':costoDiffPct>5?'var(--bad)':costoDiffPct<-5?'var(--ok)':'var(--warn)'}">${costoDiffPct!==null?(costoDiffPct>=0?'+':'')+costoDiffPct.toFixed(0)+'%':'—'}</div><div class="small muted">${costoR.nValidos?fmtMoney(costoR.real)+'/mes real':'sin demanda capturada'}</div></div>
+      <div class="card"><div class="small muted">Utilización de capacidad</div><div style="font-size:24px;font-weight:700;margin-top:2px">${capR.pct!==null?capR.pct.toFixed(0)+'%':'—'}</div><div class="small muted">${capR.cap>0?fmtNum(capR.real)+' de '+fmtNum(capR.cap)+' pz/día':'sin capacidad calculada'}</div></div>
+      <div class="card"><div class="small muted">ROI real de máquinas</div><div style="font-size:24px;font-weight:700;margin-top:2px">${maqR.total?maqR.pagadas+'/'+maqR.conDato:'—'}</div><div class="small muted">${maqR.paybackAvg!==null?'payback prom. '+maqR.paybackAvg.toFixed(1)+' años':(maqR.total?maqR.total+' máquina(s), sin dato real':'sin máquinas')}</div></div>
     </div>
+    ${top3}
     <div style="margin-bottom:16px">${progressBarHTML(deliverables)}</div>
-    <div style="font-weight:600;margin-bottom:8px">⏰ Atrasados y por vencer</div>
-    <div style="margin-bottom:16px">${vencidosTableHTML(deliverables)}</div>
-    <div style="font-weight:600;margin-bottom:8px">📊 Carga por persona</div>
-    <div style="margin-bottom:16px">${cargaListHTML(people)}</div>
-    <div style="font-weight:600;margin-bottom:8px">⏸ Proyectos estancados</div>
-    <div style="margin-bottom:16px">${stalledProjectsHTML(projects)}</div>
+    <details style="margin-bottom:12px">
+      <summary style="cursor:pointer;font-weight:600;list-style:none">⏰ Atrasados y por vencer <span class="pill ${atrasados.length?'bad':'muted'}" style="margin-left:4px">${atrasados.length} atrasado${atrasados.length!==1?'s':''}</span> <span class="pill ${porVencer.length?'warn':'muted'}">${porVencer.length} por vencer</span></summary>
+      <div style="margin-top:10px">${vencidosTableHTML(deliverables)}</div>
+    </details>
+    <details style="margin-bottom:12px">
+      <summary style="cursor:pointer;font-weight:600;list-style:none">📊 Carga por persona <span class="pill muted" style="margin-left:4px">${people.length}</span></summary>
+      <div style="margin-top:10px">${cargaListCompactHTML(people)}</div>
+    </details>
+    <details style="margin-bottom:16px">
+      <summary style="cursor:pointer;font-weight:600;list-style:none">⏸ Proyectos estancados <span class="pill ${estancados.length?'warn':'muted'}" style="margin-left:4px">${estancados.length}</span></summary>
+      <div style="margin-top:10px">${stalledProjectsHTML(projects)}</div>
+    </details>
     <div style="font-weight:600;margin-bottom:8px">🕘 Actividad reciente</div>
     <div>${recentActivityHTML(deliverables)}</div>
   `;
+}
+// Compone y abre un mailto: con un resumen real del equipo (atrasados/por
+// vencer/estancados) — el líder (o admin) solo revisa y le da Enviar en su
+// cliente de correo. No hay backend de correo en esta app: mailto es la
+// forma sin dependencias de darles "la opción de avisar a su equipo".
+const LIMITE_LISTA_AVISO=15;
+function listaTxt(items,map){
+  if(!items.length) return '(nada)';
+  const shown=items.slice(0,LIMITE_LISTA_AVISO).map(map).join('\n');
+  return items.length>LIMITE_LISTA_AVISO?shown+`\n… y ${items.length-LIMITE_LISTA_AVISO} más`:shown;
+}
+function dTxtLinea(d){
+  const p=byId(DB.projects,d.projectId), u=byId(DB.users,d.assigneeId);
+  return `- ${d.name} (${p?p.name:'—'}) — ${u?u.name:'—'} — ${fmtDate(d.dueDate)}`;
+}
+function enviarAvisoEquipo(titulo,scope){
+  const {projects,people,deliverables}=scope;
+  const {atrasados,porVencer}=vencidosListas(deliverables);
+  const estancados=projects.filter(isProjectStalled);
+  const destinatarios=[...new Set(people.map(u=>u.email).filter(e=>e&&e.includes('@')))];
+  if(!destinatarios.length){ toast('Nadie en este equipo tiene correo capturado (Administración → Usuarios)','err'); return; }
+  const fecha=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+  const dTxt=dTxtLinea;
+  let body=`Aviso de equipo — ${titulo}\nGenerado el ${fecha}\n\n`
+    +`⏰ ATRASADOS (${atrasados.length})\n${listaTxt(atrasados,dTxt)}\n\n`
+    +`📅 POR VENCER en los próximos ${PROX_DIAS} días (${porVencer.length})\n${listaTxt(porVencer,dTxt)}\n\n`
+    +`⏸ PROYECTOS ESTANCADOS (${estancados.length})\n${listaTxt(estancados,p=>`- ${p.name} — ${stalledLabel(p)}`)}\n\n`
+    +`Enviado desde LI · Procesos.`;
+  const subject=`Aviso de equipo — ${titulo}`;
+  let mailto=`mailto:${destinatarios.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  if(mailto.length>1800){
+    // Cuerpo corto de respaldo — algunos clientes truncan/rechazan mailto: muy largos.
+    const bodyCorto=`Aviso de equipo — ${titulo}\nGenerado el ${fecha}\n\n`
+      +`⏰ ${atrasados.length} atrasado(s) · 📅 ${porVencer.length} por vencer · ⏸ ${estancados.length} estancado(s)\n\n`
+      +`Revisa el detalle en LI · Procesos → Dashboard.`;
+    mailto=`mailto:${destinatarios.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyCorto)}`;
+  }
+  window.location.href=mailto;
+}
+// Vista previa en pantalla — EXACTAMENTE lo mismo que enviarAvisoIndividual
+// manda por correo (mismos atrasados/por vencer/al día), pero como HTML en
+// vez de texto plano, para que veas qué le va a llegar antes de mandarlo.
+function resumenIndividualHTML(userId){
+  const u=byId(DB.users,userId); if(!u) return '';
+  const dels=(DB.deliverables||[]).filter(d=>d.assigneeId===userId&&d.status!=='Entregado');
+  const {atrasados,porVencer}=vencidosListas(dels);
+  const idsFuera=new Set([...atrasados,...porVencer].map(d=>d.id));
+  const alDia=dels.filter(d=>!idsFuera.has(d.id));
+  const filaHTML=d=>{
+    const p=byId(DB.projects,d.projectId);
+    return `<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--border2);font-size:12.5px;cursor:pointer" data-ir-proyecto="${d.projectId}" data-ir-entregable="${d.id}" title="Ver este entregable">
+      <div><b>${esc(d.name)}</b> <span class="small muted">— ${p?esc(p.name):'—'}</span></div>
+      <div class="small muted" style="white-space:nowrap">${fmtDate(d.dueDate)} ↗</div>
+    </div>`;
+  };
+  const yaEnviado=(DB.notificaciones||[]).filter(n=>n.tipo==='aviso_individual'&&n.paraUserIds.includes(userId)&&n.emailEnviado).sort((a,b)=>b.emailEnviado.at-a.emailEnviado.at)[0];
+  return `<div class="card" style="margin-bottom:16px">
+    <div style="font-weight:700;font-size:13.5px;margin-bottom:2px">${esc(u.name)} — ${dels.length} entregable${dels.length!==1?'s':''} pendiente${dels.length!==1?'s':''}</div>
+    <div style="display:flex;gap:8px;margin:8px 0 12px;flex-wrap:wrap">
+      <span class="pill ${atrasados.length?'bad':'muted'}">${atrasados.length} atrasado${atrasados.length!==1?'s':''}</span>
+      <span class="pill ${porVencer.length?'warn':'muted'}">${porVencer.length} por vencer (próx. ${PROX_DIAS} días)</span>
+      <span class="pill ${alDia.length?'ok':'muted'}">${alDia.length} en tiempo</span>
+    </div>
+    ${atrasados.length?`<div style="font-weight:600;font-size:12px;color:var(--bad);margin-bottom:4px">⏰ Atrasados</div>${atrasados.map(filaHTML).join('')}`:''}
+    ${porVencer.length?`<div style="font-weight:600;font-size:12px;color:var(--warn);margin:10px 0 4px">📅 Por vencer</div>${porVencer.map(filaHTML).join('')}`:''}
+    ${alDia.length?`<div style="font-weight:600;font-size:12px;color:var(--ok);margin:10px 0 4px">✅ En tiempo</div>${alDia.map(filaHTML).join('')}`:''}
+    ${!dels.length?'<div class="small muted" style="padding:8px 0">Sin pendientes — todo entregado.</div>':''}
+    <div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <button class="btn sm primary" id="btn-aviso-individual" ${!u.email?'disabled title="Sin correo capturado"':''}>✉️ Enviar aviso a ${esc(u.name)}</button>
+      ${yaEnviado?`<span class="small muted">último enviado ${fmtWhen(yaEnviado.emailEnviado.at)}</span>`:''}
+    </div>
+  </div>`;
+}
+// Aviso a UNA sola persona (desde el filtro por usuario en Proyectos) — mismo
+// criterio que el aviso de equipo, pero acotado a lo suyo, y deja registro
+// como notificación in-app (con emailEnviado ya marcado, porque se manda ahí
+// mismo al confirmar).
+function enviarAvisoIndividual(userId){
+  const u=byId(DB.users,userId); if(!u){ toast('Usuario no encontrado','err'); return; }
+  if(!u.email||!u.email.includes('@')){ toast(`${u.name} no tiene correo capturado (Administración → Usuarios)`,'err'); return; }
+  const dels=(DB.deliverables||[]).filter(d=>d.assigneeId===userId&&d.status!=='Entregado');
+  const {atrasados,porVencer}=vencidosListas(dels);
+  const alDia=dels.length-atrasados.length-porVencer.length;
+  const fecha=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+  const nombrePersona=u.name.split(' ')[0];
+  const body=`Hola ${nombrePersona}, este es tu resumen de pendientes al ${fecha}.\n\n`
+    +`⏰ ATRASADOS (${atrasados.length})\n${listaTxt(atrasados,dTxtLinea)}\n\n`
+    +`📅 POR VENCER en los próximos ${PROX_DIAS} días (${porVencer.length})\n${listaTxt(porVencer,dTxtLinea)}\n\n`
+    +`Total pendiente: ${dels.length} (${alDia} al día)\n\n`
+    +`Recuerda que las fechas son fijas — si algo no va a poder cumplirse, avísame para platicarlo con tiempo.\n\n— ${SESSION?.name||'Tu líder'}`;
+  const subject=`Aviso individual — ${u.name}`;
+  const mailto=`mailto:${u.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const n=crearNotificacion({tipo:'aviso_individual',texto:`Aviso personal de pendientes (${dels.length})`,paraUserIds:[userId]});
+  n.emailEnviado={at:Date.now(),by:SESSION?.userId||null};
+  saveDB();
+  window.location.href=mailto;
 }
 function renderDashboard(root){
   if(!dataReady()){ root.innerHTML=loadingHTML('Cargando dashboard…'); return; }
@@ -1751,39 +2529,43 @@ function renderDashboard(root){
 // su equipo"). Un bloque por Sección visible, más "Sin sección asignada" al
 // final solo para admin (es información cross-equipo, no le toca a un líder).
 function renderDashboardSecciones(root){
-  const today=todayISO();
   const misSecciones=isAdmin()?(DB.secciones||[]):(DB.secciones||[]).filter(s=>s.liderId===SESSION.userId);
-  // KPIs de arriba: se arman con el MISMO alcance que los bloques de abajo (las
-  // Secciones que este rol puede ver) — así un líder ve números de su equipo,
-  // nunca de la operación completa, y admin sigue viendo todo (sus Secciones +
-  // "sin sección").
-  const scopes=misSecciones.map(seccionScope);
-  if(isAdmin()) scopes.push(seccionScope(null));
-  const dashProjects=[...new Map(scopes.flatMap(s=>s.projects).map(p=>[p.id,p])).values()];
-  const dashDeliverables=[...new Map(scopes.flatMap(s=>s.deliverables).map(d=>[d.id,d])).values()];
-  const activos=dashProjects.filter(p=>computeProjectStatus(p)==='Activo').length;
-  const totalProy=dashProjects.length;
-  const pendientes=dashDeliverables.filter(d=>d.status!=='Entregado').length;
-  const atrasados=dashDeliverables.filter(d=>isOpenOverdueStatus(d.status)&&d.dueDate&&d.dueDate<today).length;
-  root.innerHTML=`
-    <div class="view-head"><div><h1>Dashboard</h1>
-      <div class="view-sub">${isAdmin()?'Toda la operación, de un vistazo.':'Tu equipo, de un vistazo.'}</div></div></div>
-    <div class="grid-cards">
+  const bloques=misSecciones.map(sec=>({icon:'🧭',title:sec.nombre,liderId:sec.liderId,scope:seccionScope(sec)}));
+  if(isAdmin()){
+    const sinSeccion=seccionScope(null);
+    if(sinSeccion.projects.length) bloques.push({icon:'⚠️',title:'Sin sección asignada',scope:sinSeccion});
+  }
+  // El resumen de arriba (3 tarjetas) solo tiene sentido cuando hay MÁS de un
+  // bloque abajo — si solo ves tu propia Sección, ese resumen sería idéntico
+  // al bloque único de abajo (se repetía el mismo número dos veces).
+  let resumenHTML='';
+  if(bloques.length>1){
+    const today=todayISO();
+    const dashProjects=[...new Map(bloques.flatMap(b=>b.scope.projects).map(p=>[p.id,p])).values()];
+    const dashDeliverables=[...new Map(bloques.flatMap(b=>b.scope.deliverables).map(d=>[d.id,d])).values()];
+    const activos=dashProjects.filter(p=>computeProjectStatus(p)==='Activo').length;
+    const totalProy=dashProjects.length;
+    const pendientes=dashDeliverables.filter(d=>d.status!=='Entregado').length;
+    const atrasados=dashDeliverables.filter(d=>isOpenOverdueStatus(d.status)&&d.dueDate&&d.dueDate<today).length;
+    resumenHTML=`<div class="grid-cards">
       <div class="card"><div class="small muted">Proyectos activos</div><div style="font-size:30px;font-weight:700;margin-top:4px">${activos}</div><div class="small muted">${totalProy} en total</div></div>
       <div class="card"><div class="small muted">Entregables pendientes</div><div style="font-size:30px;font-weight:700;margin-top:4px">${pendientes}</div></div>
       <div class="card"><div class="small muted">Atrasados ahora mismo</div><div style="font-size:30px;font-weight:700;margin-top:4px${atrasados?';color:var(--bad)':''}">${atrasados}</div></div>
-    </div>
+    </div>`;
+  }
+  root.innerHTML=`
+    <div class="view-head"><div><h1>Dashboard</h1>
+      <div class="view-sub">${isAdmin()?'Toda la operación, de un vistazo.':'Tu equipo, de un vistazo.'}</div></div></div>
+    ${resumenHTML}
     <div id="dash-secciones"></div>
   `;
   const cont=document.getElementById('dash-secciones');
-  let html=misSecciones.map(sec=>dashboardBlockHTML({icon:'🧭',title:sec.nombre,scope:seccionScope(sec)})).join('');
-  if(isAdmin()){
-    const sinSeccion=seccionScope(null);
-    if(sinSeccion.projects.length){
-      html+=dashboardBlockHTML({icon:'⚠️',title:'Sin sección asignada',scope:sinSeccion});
-    }
-  }
-  cont.innerHTML=html||emptyStateHTML('Sin secciones todavía','Ve a Administración → Secciones para crear la primera.');
+  cont.innerHTML=bloques.length
+    ? bloques.map((b,i)=>dashboardBlockHTML(b,i)).join('')
+    : emptyStateHTML('Sin secciones todavía','Ve a Administración → Secciones para crear la primera.');
+  bloques.forEach((b,i)=>{
+    document.getElementById(`dash-email-${i}`)?.addEventListener('click',()=>enviarAvisoEquipo(b.title,b.scope));
+  });
 }
 // integrante normal: el Dashboard no cambia de alcance (sigue siendo solo lo
 // suyo), solo se le agregan los 3 módulos nuevos adaptados a su alcance.
@@ -1859,6 +2641,73 @@ function statsCumplidosCount(userId){
 function statsProyectosNoTerminados(userId){
   const ids=new Set((DB.deliverables||[]).filter(d=>d.assigneeId===userId).map(d=>d.projectId));
   return [...ids].map(id=>byId(DB.projects,id)).filter(Boolean).filter(p=>computeProjectStatus(p)!=='Cerrado').length;
+}
+
+/* ══════════════════════════════════════════════════════
+   PT — PLAN DE TRABAJO. Cumplimiento mensual real por persona: cada
+   entregable cuenta para el mes de su FECHA ORIGINAL (dueDateOriginal —
+   nunca cambia, aunque la fecha de entrega sí se mueva después). Un cambio
+   de fecha por algo fuera de las posibilidades de la persona NO se
+   penaliza (se excluye del cálculo); un cambio por ineficiencia SÍ se
+   penaliza, aunque termine cumpliendo la nueva fecha — mover la fecha fue
+   lo que costó, no el resultado final.
+══════════════════════════════════════════════════════ */
+// 1 = cumplió completo, 0 = no cumplió, un número entre 0-1 = penalización
+// parcial (ineficiencia), null = excluido del cálculo (fuera de su control).
+function ptScoreEntregable(d){
+  const cambios=d.cambiosFecha||[];
+  const huboIneficiencia=cambios.some(c=>c.motivo==='ineficiencia');
+  const entregadoATiempo=d.status==='Entregado'&&(!d.dueDate||!d.updatedAt||new Date(d.updatedAt)<=new Date(d.dueDate+'T23:59:59'));
+  if(huboIneficiencia) return 1-(getGP().ptPenalizacion??0.5); // se penaliza aunque cumpla la fecha nueva
+  if(entregadoATiempo) return 1;
+  const huboFueraControl=cambios.some(c=>c.motivo==='fuera_de_control');
+  if(huboFueraControl) return null; // no se le cuenta ni a favor ni en contra
+  const vencidoSinEntregar=d.dueDate&&d.dueDate<todayISO()&&d.status!=='Entregado';
+  if(vencidoSinEntregar) return 0; // no cumplió, sin ninguna justificación registrada
+  return null; // todavía activo y dentro de fecha — no se evalúa hasta que venza o se entregue
+}
+// Cumplimiento de UNA persona en UN mes calendario (year, month 0-based).
+function ptDelPeriodo(userId,year,month){
+  const dels=(DB.deliverables||[]).filter(d=>{
+    if(d.assigneeId!==userId) return false;
+    const orig=d.dueDateOriginal||d.dueDate; if(!orig) return false;
+    const dt=new Date(orig+'T00:00:00');
+    return dt.getFullYear()===year&&dt.getMonth()===month;
+  });
+  const scores=dels.map(ptScoreEntregable).filter(s=>s!==null);
+  const pct=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*100):null;
+  return {total:dels.length,evaluados:scores.length,excluidos:dels.length-scores.length,pct,deliverables:dels};
+}
+function ptMesActual(userId){ const hoy=new Date(); return ptDelPeriodo(userId,hoy.getFullYear(),hoy.getMonth()); }
+function ultimoDiaDelMes(d){ return new Date(d.getFullYear(),d.getMonth()+1,0).getDate(); }
+function esUltimoDiaDelMes(d){ return d.getDate()===ultimoDiaDelMes(d); }
+const NOMBRES_MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+// Sin servidor no hay cron real — esto corre cada vez que alguien con
+// visibilidad de equipo (admin/líder) entra a la app, y solo genera algo el
+// día 15 o el último día del mes, una sola vez por persona y periodo (revisa
+// si ya existe antes de crear otra). Si nadie entra ese día exacto, se genera
+// en cuanto alguien vuelva a entrar — se queda pendiente, no se pierde.
+function checkYGenerarNotificacionesPT(){
+  if(!isLeader()||!dataReady()) return;
+  const hoy=new Date();
+  const esDia15=hoy.getDate()===15, esUltimo=esUltimoDiaDelMes(hoy);
+  if(!esDia15&&!esUltimo) return;
+  const periodo=hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0');
+  const tipo=esUltimo?'pt_mensual':'pt_quincena';
+  let creoAlguna=false;
+  (DB.users||[]).forEach(u=>{
+    const yaExiste=(DB.notificaciones||[]).some(n=>n.tipo===tipo&&n.periodo===periodo&&n.paraUserIds.includes(u.id));
+    if(yaExiste) return;
+    const pt=ptMesActual(u.id);
+    if(pt.evaluados===0) return; // nada evaluable todavía este mes
+    const texto=esUltimo
+      ? `Tu cumplimiento PT de ${NOMBRES_MES[hoy.getMonth()]}: ${pt.pct}% (${pt.evaluados} entregable${pt.evaluados!==1?'s':''} evaluado${pt.evaluados!==1?'s':''})`
+      : `Tu PT acumulado hasta hoy en ${NOMBRES_MES[hoy.getMonth()]}: ${pt.pct}%`;
+    const n=crearNotificacion({tipo,texto,paraUserIds:[u.id]});
+    n.periodo=periodo;
+    creoAlguna=true;
+  });
+  if(creoAlguna) saveDB();
 }
 function puestoDeUsuario(u){ return u.puestoId?byId(DB.puestos,u.puestoId):null; }
 function personCardHTML(u){
@@ -2007,6 +2856,7 @@ function renderMiPuesto(root){
   const sEfectivos=statsEfectivos(u.id);
   const sCumplidosN=statsCumplidosCount(u.id);
   const sProyectosNoTerm=statsProyectosNoTerminados(u.id);
+  const pt=ptMesActual(u.id);
 
   root.innerHTML=`
     <div class="view-head">
@@ -2035,6 +2885,22 @@ function renderMiPuesto(root){
         <div class="card" style="background:var(--surface2)"><div class="small muted">Proyectos no terminados</div><div style="font-size:26px;font-weight:700;margin-top:2px">${sProyectosNoTerm}</div></div>
         <div class="card" style="background:var(--surface2)"><div class="small muted">Entregables cumplidos</div><div style="font-size:26px;font-weight:700;margin-top:2px">${sCumplidosN}</div></div>
       </div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div style="font-weight:700;font-size:13.5px;margin-bottom:4px">📊 PT — Plan de Trabajo (${NOMBRES_MES[new Date().getMonth()]})</div>
+      <div class="small muted" style="margin-bottom:10px">Cumplir tus entregables en fecha y forma — define el bono del mes. Un cambio de fecha por algo fuera de tus posibilidades no penaliza; por ineficiencia, sí.</div>
+      ${fifaBarHTML('Cumplimiento PT del mes',pt.pct)}
+      <div class="small muted" style="margin-top:2px">${pt.evaluados} evaluado${pt.evaluados!==1?'s':''}${pt.excluidos?` · ${pt.excluidos} excluido${pt.excluidos!==1?'s':''} (fuera de tus posibilidades)`:''} de ${pt.total} entregable${pt.total!==1?'s':''} con fecha original este mes</div>
+      ${pt.deliverables.length?`<details style="margin-top:10px">
+        <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--accent)">Ver detalle</summary>
+        <table class="tbl" style="margin-top:8px"><thead><tr><th>Entregable</th><th>Fecha original</th><th>Resultado</th></tr></thead><tbody>
+          ${pt.deliverables.map(d=>{
+            const s=ptScoreEntregable(d);
+            const label=s===null?'<span class="pill muted">pendiente/excluido</span>':s>=1?'<span class="pill ok">✓ cumplió</span>':s>0?`<span class="pill warn">${Math.round(s*100)}% (ineficiencia)</span>`:'<span class="pill bad">✕ no cumplió</span>';
+            return `<tr><td>${esc(d.name)}</td><td>${fmtDate(d.dueDateOriginal)}</td><td>${label}</td></tr>`;
+          }).join('')}
+        </tbody></table>
+      </details>`:''}
     </div>
     <div id="mp-dgp"></div>
   `;
@@ -2189,6 +3055,27 @@ function ctCifPorConcepto(c,patrones){
   return c.cif.filter(x=>patrones.some(p=>norm(x.concepto).includes(norm(p)))).reduce((a,x)=>a+(x.monto||0),0);
 }
 function ctCifTotal(c){ ctEnsureShape(c); return c.cif.reduce((a,x)=>a+(x.monto||0),0); }
+// Costo real vs. costo ideal (Takt Time) de un centro — única fuente, la misma
+// que usa Resumen del centro, para que el dashboard de líderes agregue exactamente
+// lo mismo que ya ves ahí adentro, nunca una fórmula recalculada aparte.
+// costoRealMensual/costoIdealMensual son $/mes (sumables entre centros); costoRealHr/
+// costoIdealHr son $/hr (NO sumables entre centros con distintas horas/mes).
+function ctCostoIdealCalc(c){
+  const r=ctCalcularResultados(c);
+  const modMensual=c.personal.reduce((a,m)=>a+(m.costo||0),0);
+  const cifMensual=c.cif.reduce((a,x)=>a+(x.monto||0),0);
+  const opTot=Math.max(1,c.personal.length);
+  const horasMes=(r.tiempoReal/60)*r.dias;
+  const costoRealMensual=modMensual+cifMensual;
+  const costoRealHr=ctCostoHora(c);
+  if(!(r.demanda&&r.taktTime)) return {valido:false, costoRealHr, costoRealMensual};
+  const opsTeoricos=Math.ceil(r.totalOps/r.taktTime);
+  const costoPorOp=modMensual/opTot;
+  const modIdealMensual=costoPorOp*opsTeoricos;
+  const costoIdealMensual=modIdealMensual+cifMensual;
+  const costoIdealHr=horasMes>0?costoIdealMensual/horasMes:0;
+  return {valido:true, costoRealHr, costoRealMensual, costoIdealHr, costoIdealMensual, opTot, opsTeoricos};
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    PLAN DE INVERSION — motor de ROI (portado de LineaItalia.html, Fase 4).
@@ -2617,12 +3504,45 @@ function compressImg(file,maxW,maxH,quality,callback){
   reader.readAsDataURL(file);
 }
 
+// Dashboard informativo antes de entrar a un centro — cuánto representa cada
+// uno del costo total de la planta (MOD+CIF de todos los centros juntos), para
+// ver de un vistazo dónde se concentra el gasto antes de dar clic en ninguno.
+function centrosResumenHTML(centros){
+  const filas=centros.map(c=>{
+    ctEnsureShape(c);
+    const mod=c.personal.reduce((a,p)=>a+(p.costo||0),0);
+    const cif=c.cif.reduce((a,x)=>a+(x.monto||0),0);
+    return {nombre:c.nombre, costo:mod+cif};
+  }).filter(f=>f.costo>0).sort((a,b)=>b.costo-a.costo);
+  if(!filas.length) return '';
+  const total=filas.reduce((a,f)=>a+f.costo,0);
+  const top=filas.slice(0,8);
+  const resto=filas.slice(8);
+  const barras=top.map(f=>{
+    const pct=total>0?(f.costo/total*100):0;
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;margin-bottom:4px">
+        <span style="font-weight:600">${esc(f.nombre)}</span>
+        <span style="font-weight:700">${fmtMoney(f.costo)} <span class="small muted" style="font-weight:400">(${pct.toFixed(1)}%)</span></span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+  return `<div class="card" style="margin-bottom:18px">
+    <div style="font-weight:700;font-size:13.5px;margin-bottom:2px">📊 ¿Cuánto representa cada centro?</div>
+    <div class="small muted" style="margin-bottom:12px">Costo mensual (MOD + CIF) de cada centro vs. el total de ${fmtMoney(total)}/mes entre los ${filas.length} centros con datos capturados.</div>
+    ${barras}
+    ${resto.length?`<div class="small muted" style="margin-top:4px">+ ${resto.length} centro${resto.length!==1?'s':''} más, ${fmtMoney(resto.reduce((a,f)=>a+f.costo,0))}/mes en total (${(resto.reduce((a,f)=>a+f.costo,0)/total*100).toFixed(1)}%)</div>`:''}
+  </div>`;
+}
 function renderCentroTrabajo(root){
   if(!dataReady()){ root.innerHTML=loadingHTML('Cargando centros de trabajo…'); return; }
   if(_currentCentroId){ renderCentroDetail(root); return; }
   root.innerHTML=`<div class="view-head"><div><h1>Centro de Trabajo</h1>
     <div class="view-sub">Balanceo de líneas, CIF, costos y equipos por centro.</div></div></div>
+    <div id="ct-resumen"></div>
     <div id="ct-groups"></div>`;
+  document.getElementById('ct-resumen').innerHTML=centrosResumenHTML(DB.centros||[]);
   const wrap=document.getElementById('ct-groups');
   if(!(DB.centros||[]).length){ wrap.innerHTML=emptyStateHTML('Sin centros todavía','Un admin puede crearlos en Administración → Centros de trabajo.'); return; }
   function ctCardHTML(c){
@@ -2630,11 +3550,26 @@ function renderCentroTrabajo(root){
     const nIng=(c.ingenieroIds||[]).length;
     const costoHr=ctCostoHora(c);
     const capDia=ctCapacidadDia(c);
+    const mod=c.personal.reduce((a,p)=>a+(p.costo||0),0);
+    const cif=c.cif.reduce((a,x)=>a+(x.monto||0),0);
+    const totalMensual=mod+cif;
+    const modPct=totalMensual>0?mod/totalMensual*100:0;
+    const cifPct=totalMensual>0?cif/totalMensual*100:0;
     return `<div class="card" style="cursor:pointer" data-open-centro="${c.id}">
       <div style="font-weight:600;font-size:14.5px">${esc(c.nombre)}</div>
       <div class="small muted" style="margin-top:4px">${nIng} ingeniero${nIng!==1?'s':''} asignado${nIng!==1?'s':''}</div>
       <div class="small muted" style="margin-top:2px">${costoHr>0?'$'+costoHr.toFixed(2)+'/hr':'Sin costo capturado aún'}</div>
       <div class="small muted" style="margin-top:2px">${capDia>0?'⚙️ '+capDia+' pzas/día (capacidad)':'Sin capacidad calculada aún'}</div>
+      ${totalMensual>0?`<div style="margin-top:10px">
+        <div style="display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--surface2)" title="MOD ${modPct.toFixed(0)}% · CIF ${cifPct.toFixed(0)}%">
+          ${modPct>0?`<div style="width:${modPct}%;background:var(--accent)"></div>`:''}
+          ${cifPct>0?`<div style="width:${cifPct}%;background:var(--warn)"></div>`:''}
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:11px;flex-wrap:wrap">
+          <span style="color:var(--accent);font-weight:600">● MOD ${fmtMoney(mod)} <span class="small muted" style="font-weight:400">(${modPct.toFixed(0)}%)</span></span>
+          <span style="color:var(--warn);font-weight:600">● CIF ${fmtMoney(cif)} <span class="small muted" style="font-weight:400">(${cifPct.toFixed(0)}%)</span></span>
+        </div>
+      </div>`:''}
     </div>`;
   }
   // Agrupado por Sección (mismo patrón que Proyectos/Equipo) — así se ve de un
@@ -3771,7 +4706,17 @@ function renderEquipo(root){
   if(!dataReady()){ root.innerHTML=loadingHTML('Cargando equipo…'); return; }
   root.innerHTML=`<div class="view-head"><div><h1>Equipo</h1>
     <div class="view-sub">Quién es quién y cuánto tiene abierto ahora mismo.</div></div></div>
+    <details class="proj-col" open style="margin-bottom:16px">
+      <summary>🪪 Mi puesto</summary>
+      <div class="proj-col-inner" id="equipo-mipuesto"></div>
+    </details>
     <div id="equipo-body"></div>`;
+  // "Mi puesto" vive aquí adentro, siempre tu propio expediente — nunca el de
+  // quien hayas visto la última vez desde una tarjeta de Equipo.
+  const prevProfileId=_profileUserId;
+  _profileUserId=null;
+  renderMiPuesto(document.getElementById('equipo-mipuesto'));
+  _profileUserId=prevProfileId;
   const body=document.getElementById('equipo-body');
 
   if(!isLeader()){
@@ -4613,8 +5558,21 @@ async function deleteUserPrompt(id){
   }catch(e){ console.error('[init] error cargando datos:',e); }
   const saved=sessionStorage.getItem('li_sess');
   if(saved){
-    try{ SESSION=JSON.parse(saved); enterApp(); }
-    catch{ SESSION=null; }
+    // Separado a propósito: si el JSON guardado está corrupto, SÍ hay que
+    // desloguear (no hay con qué armar una sesión). Pero si enterApp() truena
+    // YA con la sesión bien leída (un bug de renderizado, no de sesión), NO
+    // se debe borrar SESSION — eso deja a la persona viendo la app "logueada"
+    // pero en realidad deslogueada por dentro, sin ningún error visible (así
+    // se vio "no hay proyectos" sin explicación). Mejor: se ve el error real
+    // en consola y la sesión se queda viva para que un F5 alcance a arreglarlo.
+    let parsed=null;
+    try{ parsed=JSON.parse(saved); }
+    catch(e){ console.error('[init] li_sess guardado está corrupto, se descarta:',e); sessionStorage.removeItem('li_sess'); }
+    if(parsed){
+      SESSION=parsed;
+      try{ enterApp(); }
+      catch(e){ console.error('[init] enterApp() falló después de restaurar la sesión — la sesión SIGUE activa, esto es un bug de renderizado:',e); }
+    }
   }
 })();
 </script>

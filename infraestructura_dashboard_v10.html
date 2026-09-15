@@ -362,7 +362,68 @@ input[type="file"]{display:none;}
 .zone-add-btn{padding:8px 16px;border-radius:8px;background:var(--a2);color:#fff;border:none;font-family:'Inter',sans-serif;font-weight:700;font-size:12px;cursor:pointer;}
 </style>
 </head>
-<body>
+<body class="li-locked">
+<!-- ══════════════════════════════════════════════════════
+     CANDADO DE ACCESO — usa el mismo usuario/contraseña que
+     la app principal (index.html), leyendo DB.users de Firebase.
+     Si ya iniciaste sesión ahí en esta misma pestaña/sesión,
+     entras directo sin volver a escribir nada.
+     ══════════════════════════════════════════════════════ -->
+<style>body.li-locked>*:not(#li-gate){display:none!important}</style>
+<div id="li-gate" style="position:fixed;inset:0;z-index:999999;background:#0f1623;display:flex;align-items:center;justify-content:center;font-family:'Inter',system-ui,sans-serif">
+  <div style="background:#fff;border-radius:14px;padding:32px 28px;width:min(320px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.35)">
+    <div style="font-size:18px;font-weight:800;color:#0f1623;margin-bottom:4px">Ingeniería de Procesos</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:18px">Línea Italia — inicia sesión para continuar</div>
+    <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Usuario</label>
+    <input id="li-gate-user" style="width:100%;padding:9px 10px;margin:6px 0 12px;border:1px solid #e4e7ed;border-radius:8px;font-size:13px;box-sizing:border-box" placeholder="ej: ramon, francisco…" autocomplete="username"/>
+    <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Contraseña</label>
+    <input id="li-gate-pass" type="password" style="width:100%;padding:9px 10px;margin:6px 0 12px;border:1px solid #e4e7ed;border-radius:8px;font-size:13px;box-sizing:border-box" autocomplete="current-password"/>
+    <div id="li-gate-err" style="display:none;color:#ef4444;font-size:12px;margin-bottom:10px">Usuario o contraseña incorrectos.</div>
+    <button id="li-gate-btn" style="width:100%;padding:11px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;font-size:13px;cursor:pointer">Iniciar sesión</button>
+  </div>
+</div>
+<script>
+(function(){
+  var FB_URL='https://ingenieria-de-procesos-24ba4-default-rtdb.firebaseio.com/li_procesos.json';
+  var ADMIN_USER='amartinez', ADMIN_PASS='Lineaitalia.1', DEFAULT_PASS='LI2025';
+  function unlock(){ document.body.classList.remove('li-locked'); var g=document.getElementById('li-gate'); if(g) g.remove(); }
+  try{
+    var saved=sessionStorage.getItem('li_sess');
+    if(saved){ var s=JSON.parse(saved); if(s&&s.role){ unlock(); return; } }
+  }catch(e){}
+  function norm(name){ return name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'.'); }
+  document.getElementById('li-gate-btn').addEventListener('click', doLogin);
+  document.getElementById('li-gate-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+  async function doLogin(){
+    var u=(document.getElementById('li-gate-user').value||'').trim().toLowerCase();
+    var p=document.getElementById('li-gate-pass').value||'';
+    var btn=document.getElementById('li-gate-btn'); btn.disabled=true; btn.textContent='Verificando…';
+    try{
+      var res=await fetch(FB_URL); var data=await res.json();
+      var users=(data&&data.users)||[];
+      var list=users.map(function(x){
+        var username=x.customUsername||norm(x.name);
+        return {username:username, password:x.loginPassword||DEFAULT_PASS, role:x.loginRole||'user', name:x.name, userId:x.id};
+      });
+      list.push({username:ADMIN_USER,password:ADMIN_PASS,role:'admin',name:'Admin',userId:null});
+      var found=list.find(function(x){ return x.username===u && x.password===p; });
+      if(!found){
+        document.getElementById('li-gate-err').textContent='Usuario o contraseña incorrectos.';
+        document.getElementById('li-gate-err').style.display='block';
+        btn.disabled=false; btn.textContent='Iniciar sesión';
+        return;
+      }
+      var sess={userId:found.userId,name:found.name,role:found.role};
+      try{ sessionStorage.setItem('li_sess', JSON.stringify(sess)); }catch(e2){ /* almacenamiento bloqueado — la sesión no se recuerda, pero el login sí es válido */ }
+      unlock();
+    }catch(e){
+      document.getElementById('li-gate-err').textContent='Error de conexión. Intenta de nuevo.';
+      document.getElementById('li-gate-err').style.display='block';
+      btn.disabled=false; btn.textContent='Iniciar sesión';
+    }
+  }
+})();
+</script>
 <div class="topbar">
   <div><div class="brand-name">🏢 INFRAESTRUCTURA COMERCIAL</div><div class="brand-sub">Plan de Expansión 2025</div></div>
   <div class="top-actions">
