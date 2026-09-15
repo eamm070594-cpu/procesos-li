@@ -280,18 +280,10 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
       <button class="nav-btn" data-view="reportemaquinas"><span class="ic">📋</span> ROI Máquinas</button>
       <button class="nav-btn" data-view="reportes"><span class="ic">📊</span> Reportes</button>
       <button class="nav-btn admin-only" data-view="admin" style="display:none"><span class="ic">⚙️</span> Administración</button>
-      <!-- Apps aparte, no fusionadas todavía (Fases 3/4 del plan) — enlaces
-           directos a los archivos .html vecinos, en pestaña nueva porque son
-           otra app completa (con su propia sesión), no una vista del SPA.
-           admin-only: solo el admin las ve — el resto del equipo usa nada más
-           las vistas nativas de arriba. -->
-      <div class="admin-only" style="display:none">
-      <div style="margin:14px 12px 4px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em">Otras apps</div>
-      <a class="nav-btn" href="Control_CT_v7.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic">🏭</span> Centro de Trabajo <span class="small muted" style="margin-left:auto">↗</span></a>
-      <a class="nav-btn" href="infraestructura_dashboard_v10.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic">🏗️</span> Infraestructura <span class="small muted" style="margin-left:auto">↗</span></a>
-      <a class="nav-btn" href="CT_MH_v8.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic">🔧</span> Máquinas y Herr. <span class="small muted" style="margin-left:auto">↗</span></a>
-      <a class="nav-btn" href="LineaItalia.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic">💰</span> Plan de Inversión <span class="small muted" style="margin-left:auto">↗</span></a>
-      </div>
+      <!-- Sección "Otras apps" (enlaces a Control_CT_v7.html, infraestructura_dashboard_v10.html,
+           CT_MH_v8.html, LineaItalia.html) retirada del menú a pedido del usuario (2026-09-15,
+           "me confunden") — los 4 archivos siguen en el repo, movidos a apps-archivadas/,
+           no se borró nada. Ver memoria procesos-li-remaster para el detalle. -->
       <div class="sidebar-foot">
         <div class="user-chip">
           <div class="av" id="sb-av">--</div>
