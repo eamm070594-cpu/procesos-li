@@ -984,6 +984,7 @@ let _proyectosScrollY=0; // dónde estabas desplazado en la lista de Proyectos a
 let _profileUserId=null; // a quién muestra "Mi puesto" — null = el propio usuario en sesión
 let _currentCentroId=null; // qué centro muestra Centro de Trabajo — null = la lista
 let _ctTab='distribucion'; // qué pestaña del detalle de centro está activa
+let _adminTab='equipo'; // qué pestaña de Administración está activa
 let _ctCifChart=null; // instancia Chart.js de la dona de CIF — se destruye/recrea en cada render
 let _currentMaquinaId=null; // qué maquina muestra el tab "Máquinas" — null = la lista
 let _maqTab='id'; // sub-tab del detalle de maquina: id | vars | roi
@@ -1063,6 +1064,11 @@ function renderProyectos(root){
   }
   grid.querySelectorAll('[data-open-project]').forEach(el=>{
     el.addEventListener('click',()=>{ _proyectosScrollY=window.scrollY; openProjectDetail(el.dataset.openProject); });
+  });
+  // Botón "＋ Asignar centro" de la tarjeta — stopPropagation para que no
+  // dispare también el clic de la tarjeta completa (que abriría el detalle).
+  grid.querySelectorAll('[data-quick-ct]').forEach(btn=>{
+    btn.addEventListener('click',ev=>{ ev.stopPropagation(); openEditProjectDlg(btn.dataset.quickCt); });
   });
   // ◀▶ arriba: forma fácil de moverse entre líderes sin ir a cazar la barra
   // de scroll hasta abajo de la columna más alta — mismo scroll, otro control.
@@ -1146,12 +1152,20 @@ function projectCardHTML(p){
   const {done,total}=projectProgress(p);
   const pct=total?Math.round(done/total*100):0;
   const overdue=p.dueDate && p.dueDate<todayISO() && status==='Activo';
+  // Sin ningún Centro de Trabajo válido (nunca se le puso uno, o el que tenía
+  // ya no existe — ver seccionOfUser/Sección) — se ofrece un botón directo
+  // aquí mismo para asignarle uno, en vez de que quien administra tenga que
+  // ir a buscar "Editar proyecto" desde otro lado.
+  const sinCentro=!(p.centroIds||[]).some(id=>byId(DB.centros,id));
   return `<div class="card" style="cursor:pointer" data-open-project="${p.id}">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
       <div style="font-weight:600;font-size:14.5px">${esc(p.name)}</div>
       ${status==='Cerrado'?statusPillHTML([{key:'Cerrado',icon:'✅',pill:'ok'}],'Cerrado'):(overdue?'<span class="pill bad">⏰ Atrasado</span>':'<span class="pill accent">🟢 Activo</span>')}
     </div>
-    <div class="small muted" style="margin-top:6px">🏭 ${projectCentrosBadge(p)}</div>
+    <div class="small muted" style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>🏭 ${projectCentrosBadge(p)}</span>
+      ${sinCentro&&canManageProject(p)?`<button class="btn xs" data-quick-ct="${p.id}">＋ Asignar centro</button>`:''}
+    </div>
     ${projectSeccionesInfo(p)?`<div class="small muted" style="margin-top:2px">🧭 ${projectSeccionesInfo(p)}</div>`:''}
     <div class="small muted" style="margin-top:2px">📅 Entrega: ${fmtDate(p.dueDate)}</div>
     <div style="margin-top:10px">
@@ -2679,6 +2693,7 @@ function renderReporteMaquinas(root){
   root.innerHTML=`<div class="view-head"><div><h1>Reporte Simple de Maquinaria</h1>
     <div class="view-sub">Costo, ganancia real (con base en piezas fabricadas) y tiempo real de recuperación — todas las máquinas, todos los centros.</div></div>
     <button class="btn primary" id="rm-pdf-btn">🖨 Generar PDF (${nSel})</button></div>
+    ${isAdmin()?'<div id="rm-global-params" style="margin-bottom:18px"></div>':''}
     <div class="card" style="padding:0;overflow-x:auto">
     <table class="tbl"><thead><tr>
       <th style="width:34px"><input type="checkbox" id="rm-check-all" ${nSel===filas.length&&filas.length?'checked':''}></th>
@@ -2706,6 +2721,7 @@ function renderReporteMaquinas(root){
         <td style="text-align:right">${acumHTML}</td>
       </tr>`;
     }).join(''):'<tr><td colspan="6" class="small muted" style="padding:14px">Sin máquinas capturadas todavía.</td></tr>'}</tbody></table></div>`;
+  if(isAdmin()) renderAdminGlobalParams();
   root.querySelectorAll('[data-open-rm-maquina]').forEach(td=>{
     td.addEventListener('click',()=>{
       _currentCentroId=td.dataset.openRmCentro; _ctTab='maquinas'; _currentMaquinaId=td.dataset.openRmMaquina; _maqTab='dash';
@@ -3796,27 +3812,47 @@ VIEW_RENDERERS['equipo']=renderEquipo;
    Todo admin-only. Secciones/Centros se reutilizan tal cual el
    esquema ya construido y probado (no se rediseñan).
 ══════════════════════════════════════════════════════ */
+// Administración estaba todo apilado en una sola pantalla larguísima (Secciones,
+// Centros, Puestos, importaciones, tabulador, usuarios, uno tras otro) — se
+// reorganiza en pestañas por tema, mismo patrón ya usado en Centro de Trabajo
+// (CT_TABS/_ctTab) y Máquina (MAQ_TABS/_maqTab).
+const ADMIN_TABS=[
+  {key:'equipo',label:'👥 Equipo y Secciones'},
+  {key:'tabulador',label:'💵 Tabulador salarial'},
+  {key:'importar',label:'📥 Importación de datos'},
+];
 function renderAdmin(root){
   if(!isAdmin()){ root.innerHTML=noPermissionHTML(); return; }
   if(!dataReady()){ root.innerHTML=loadingHTML('Cargando administración…'); return; }
   root.innerHTML=`<div class="view-head"><div><h1>Administración</h1>
     <div class="view-sub">Usuarios, secciones y centros de trabajo.</div></div></div>
-    <div id="adm-secciones" style="margin-bottom:18px"></div>
-    <div id="adm-centros" style="margin-bottom:18px"></div>
-    <div id="adm-puestos" style="margin-bottom:18px"></div>
-    <div id="adm-ct-import" style="margin-bottom:18px"></div>
-    <div id="adm-maquinas-import" style="margin-bottom:18px"></div>
-    <div id="adm-global-params" style="margin-bottom:18px"></div>
-    <div id="adm-tabulador" style="margin-bottom:18px"></div>
-    <div id="adm-usuarios"></div>`;
-  renderAdminSecciones();
-  renderAdminCentros();
-  renderAdminPuestos();
-  renderAdminCTImport();
-  renderAdminMaquinasImport();
-  renderAdminGlobalParams();
-  renderAdminTabulador();
-  renderAdminUsuarios();
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" id="adm-tabs">
+      ${ADMIN_TABS.map(t=>`<button class="btn sm ${_adminTab===t.key?'primary':''}" data-adm-tab="${t.key}">${t.label}</button>`).join('')}
+    </div>
+    <div id="adm-tab-body"></div>`;
+  document.getElementById('adm-tabs').querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click',()=>{ _adminTab=b.dataset.admTab; render(); });
+  });
+  const body=document.getElementById('adm-tab-body');
+  if(_adminTab==='equipo'){
+    body.innerHTML=`<div id="adm-secciones" style="margin-bottom:18px"></div>
+      <div id="adm-centros" style="margin-bottom:18px"></div>
+      <div id="adm-puestos" style="margin-bottom:18px"></div>
+      <div id="adm-usuarios"></div>`;
+    renderAdminSecciones();
+    renderAdminCentros();
+    renderAdminPuestos();
+    renderAdminUsuarios();
+  } else if(_adminTab==='tabulador'){
+    body.innerHTML=`<div id="adm-tabulador"></div>`;
+    renderAdminTabulador();
+  } else if(_adminTab==='importar'){
+    body.innerHTML=`<div class="small muted" style="margin-bottom:14px">Trae datos reales ya capturados en las apps viejas (Control_CT_v7.html, LineaItalia.html) hacia este catálogo unificado. Se puede correr varias veces sin duplicar — solo hace falta si sigues capturando algo nuevo allá; si ya no las usas, no necesitas volver a tocar esto.</div>
+      <div id="adm-ct-import" style="margin-bottom:18px"></div>
+      <div id="adm-maquinas-import" style="margin-bottom:18px"></div>`;
+    renderAdminCTImport();
+    renderAdminMaquinasImport();
+  }
 }
 VIEW_RENDERERS['admin']=renderAdmin;
 
@@ -4325,9 +4361,11 @@ function renderAdminMaquinasImport(){
   document.getElementById('btn-migrar-maquinas').addEventListener('click',openMigrarMaquinasDlg);
 }
 
-/* ── Parametros globales (equivalente al "GP" de LineaItalia, pero persistido) ── */
+/* ── Parametros globales (equivalente al "GP" de LineaItalia, pero persistido).
+   Vive en la vista "ROI Máquinas" (renderReporteMaquinas) — son parámetros que
+   solo alimentan el cálculo de ROI de máquinas, no pintan en Administración. ── */
 function renderAdminGlobalParams(){
-  const c=document.getElementById('adm-global-params'); if(!c) return;
+  const c=document.getElementById('rm-global-params'); if(!c) return;
   const gp=DB.globalParams||DEFAULT_GLOBAL_PARAMS;
   c.innerHTML=`<div class="card">
     <div style="font-weight:600;margin-bottom:8px">⚙️ Parámetros globales — usados en el cálculo de ROI de Máquinas</div>
