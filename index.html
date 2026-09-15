@@ -913,7 +913,19 @@ function seccionOfUser(userId){
       return ct && (ct.encargadoId===userId||(ct.ingenieros||[]).includes(userId));
     })
   );
-  if(!candidatas.length) return null;
+  if(!candidatas.length){
+    // Nadie la puso como encargada/ingeniera de ningún Centro de Trabajo —
+    // en vez de dejarla "sin equipo", se usa su "Reporta a" (Equipo → tarjeta
+    // → Editar) como forma simple y directa de agregarla a un líder, sin
+    // tener que tocar Centro de Trabajo para nada. Así queda ligada a las
+    // actividades/proyectos de ese líder de inmediato.
+    const user=byId(DB.users,userId);
+    if(user?.reportsTo){
+      const porReportsTo=(DB.secciones||[]).find(sec=>sec.liderId===user.reportsTo);
+      if(porReportsTo) return porReportsTo;
+    }
+    return null;
+  }
   if(candidatas.length===1) return candidatas[0];
   // FIX: si la persona es encargada/ingeniera de Centros repartidos entre más de una
   // Sección (ambiguo — no hay una sola respuesta correcta por Centro de Trabajo),
@@ -4736,12 +4748,40 @@ function renderEquipo(root){
     if(sec){ if(!bySec.has(sec.id)) bySec.set(sec.id,[]); bySec.get(sec.id).push(u); }
     else sinSeccion.push(u);
   });
+  // El líder de una Sección le pertenece a ella siempre, sea o no también
+  // encargado/ingeniero de algún Centro (seccionOfUser puede no encontrarlo
+  // por ese camino) — si no cayó solo, se agrega a la fuerza en vez de
+  // dejarlo perdido en "Sin sección asignada".
+  DB.secciones.forEach(sec=>{
+    if(!sec.liderId) return;
+    const arr=bySec.get(sec.id)||[];
+    if(!arr.some(u=>u.id===sec.liderId)){
+      const lider=byId(DB.users,sec.liderId);
+      if(lider){
+        arr.unshift(lider);
+        bySec.set(sec.id,arr);
+        const i=sinSeccion.findIndex(u=>u.id===sec.liderId);
+        if(i>=0) sinSeccion.splice(i,1);
+      }
+    }
+  });
   let html='';
   DB.secciones.forEach(sec=>{
     const people=bySec.get(sec.id)||[];
-    if(!people.length) return;
-    html+=`<div style="margin:18px 0 8px;font-weight:600;font-size:13px">🧭 ${esc(sec.nombre)}</div>
-      <div class="grid-cards">${people.map(personCardHTML).join('')}</div>`;
+    // El líder aparecía mezclado como una tarjeta más dentro de su propio
+    // equipo (pasa cuando también es encargado/ingeniero de algún Centro de
+    // su Sección) — se veía como si "se reportara a sí mismo". Se separa
+    // aquí: su tarjeta va aparte, arriba, nunca dentro de "Reportes directos".
+    const lider=people.find(u=>u.id===sec.liderId);
+    const reportes=people.filter(u=>u.id!==sec.liderId);
+    if(!lider && !reportes.length) return;
+    const puedeAgregar=isAdmin()||SESSION?.userId===sec.liderId;
+    html+=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:18px 0 8px;flex-wrap:wrap">
+        <div style="font-weight:600;font-size:13px">🧭 ${esc(sec.nombre)}</div>
+        ${puedeAgregar?`<button class="btn xs" data-add-reporte="${sec.id}">＋ Agregar reporte directo</button>`:''}
+      </div>
+      ${lider?`<div class="grid-cards" style="margin-bottom:${reportes.length?'10px':'0'}">${personCardHTML(lider)}</div>`:''}
+      ${reportes.length?`${lider?'<div class="small muted" style="margin-bottom:6px">Reportes directos</div>':''}<div class="grid-cards">${reportes.map(personCardHTML).join('')}</div>`:''}`;
   });
   if(sinSeccion.length){
     html+=`<div style="margin:18px 0 8px;font-weight:600;font-size:13px">Sin sección asignada</div>
@@ -4749,8 +4789,37 @@ function renderEquipo(root){
   }
   body.innerHTML=html||emptyStateHTML('Nadie agrupado todavía','Ve a Administración → Secciones para agrupar a la gente por Centro de Trabajo.');
   wirePersonCards(body);
+  body.querySelectorAll('[data-add-reporte]').forEach(b=>{
+    b.addEventListener('click',()=>openAgregarReporteDlg(byId(DB.secciones,b.dataset.addReporte)));
+  });
 }
 VIEW_RENDERERS['equipo']=renderEquipo;
+// Forma simple y directa de sumar a alguien al equipo de un líder — nada más
+// "reporta a X" (mismo campo que ya usaba canManageX como respaldo). No hace
+// falta tocar Centro de Trabajo para nada: apenas se guarda, esa persona ya
+// cae bajo el Dashboard/Proyectos/Equipo de su líder (ver seccionOfUser).
+function openAgregarReporteDlg(sec){
+  if(!sec) return;
+  const lider=byId(DB.users,sec.liderId);
+  const candidatos=(DB.users||[]).filter(u=>u.id!==sec.liderId).sort((a,b)=>a.name.localeCompare(b.name));
+  openDlg({
+    title:'＋ Agregar reporte directo', sub:lider?'a '+esc(lider.name)+' · '+esc(sec.nombre):esc(sec.nombre),
+    body:`<label class="lbl">Persona *</label>
+      <select class="select-input" id="ar-user"><option value="">— Selecciona —</option>${candidatos.map(u=>{
+        const secActual=seccionOfUser(u.id);
+        const nota=secActual&&secActual.id!==sec.id?' (hoy en '+esc(secActual.nombre)+')':'';
+        return `<option value="${u.id}">${esc(u.name)}${nota}</option>`;
+      }).join('')}</select>
+      <div class="small muted" style="margin-top:10px">Queda ligada de inmediato a este equipo — proyectos, entregables y Dashboard — sin tocar Centro de Trabajo.</div>`,
+    onSave:()=>{
+      const userId=document.getElementById('ar-user').value;
+      if(!userId){ toast('Selecciona una persona'); return false; }
+      const u=byId(DB.users,userId);
+      u.reportsTo=sec.liderId;
+      saveDB(); toast(u.name+' ya reporta a '+(lider?.name||sec.nombre)+' ✓');
+    }
+  });
+}
 
 /* ══════════════════════════════════════════════════════
    ADMINISTRACIÓN — Usuarios, Secciones, Centros de trabajo.
