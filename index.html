@@ -338,6 +338,7 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
   <div class="dlg-foot">
     <button class="btn" id="dlg-resumen-pdf">⬇ Descargar PDF por equipo</button>
     <button class="btn" id="dlg-resumen-mail">✉️ Enviar por correo</button>
+    <button class="btn" id="dlg-resumen-copiar" title="Por si el correo no abre solo — pégalo tú en un mensaje nuevo">📋 Copiar</button>
     <button class="btn primary" id="dlg-resumen-close">Cerrar</button>
   </div>
 </dialog>
@@ -1468,7 +1469,17 @@ function avisarNotifPorCorreo(n){
   // en Outlook, pero sí que tú abriste el link para hacerlo.
   n.emailEnviado={at:Date.now(),by:SESSION?.userId||null};
   saveDB();
-  window.location.href=`mailto:${destinatarios.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  abrirMailto(`mailto:${destinatarios.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+}
+// Respaldo cuando mailto: no abre nada — copia al portapapeles en vez de
+// abrir el cliente de correo. No marca emailEnviado (no hay forma de saber
+// si de verdad se llegó a pegar/mandar; ese estatus queda solo para cuando
+// sí se disparó el mailto: real).
+function copiarNotifPorCorreo(n){
+  const destinatarios=[...new Set(n.paraUserIds.map(uid=>byId(DB.users,uid)?.email).filter(e=>e&&e.includes('@')))];
+  const {subject,body}=emailBodyParaNotificacion(n);
+  const paraLinea=destinatarios.length?destinatarios.join(', '):'(sin correo capturado — Administración → Usuarios)';
+  copiarAlPortapapeles(`Para: ${paraLinea}\nAsunto: ${subject}\n\n${body}`);
 }
 const NOTIF_ICON={proyecto_nuevo:'📁',entregable_nuevo:'📋',aprobacion:'✅',aviso_individual:'✉️',pt_quincena:'📊',pt_mensual:'🏁'};
 let _notifVerLeidas=false; // mismo patrón que _enviarVerResueltas: por default solo lo pendiente
@@ -1532,6 +1543,7 @@ function renderEnviarPanel(){
         </div>
         ${resuelto?'':`<div style="display:flex;gap:4px;flex-shrink:0">
           <button class="btn xs" data-mail-notif="${n.id}" title="Enviar por correo">✉️ Enviar</button>
+          <button class="btn xs" data-copy-notif="${n.id}" title="Por si el correo no abre solo — copia el texto para pegarlo tú">📋</button>
           <button class="btn xs danger" data-descartar-notif="${n.id}" title="No hace falta avisarlo por correo — se quita de pendientes sin mandar nada">✕</button>
         </div>`}
       </div>
@@ -1549,6 +1561,9 @@ function renderEnviarPanel(){
   });
   body.querySelectorAll('[data-mail-notif]').forEach(btn=>{
     btn.addEventListener('click',ev=>{ ev.stopPropagation(); avisarNotifPorCorreo(byId(DB.notificaciones,btn.dataset.mailNotif)); renderEnviarPanel(); });
+  });
+  body.querySelectorAll('[data-copy-notif]').forEach(btn=>{
+    btn.addEventListener('click',ev=>{ ev.stopPropagation(); copiarNotifPorCorreo(byId(DB.notificaciones,btn.dataset.copyNotif)); });
   });
   body.querySelectorAll('[data-descartar-notif]').forEach(btn=>{
     btn.addEventListener('click',ev=>{ ev.stopPropagation(); descartarNotificacion(btn.dataset.descartarNotif); renderEnviarPanel(); });
@@ -1939,6 +1954,7 @@ function renderReportes(root){
       </div>`:''}
       <button class="btn sm" id="rep-btn-pdf">⬇ Descargar PDF</button>
       <button class="btn sm" id="rep-btn-mail">✉️ Enviar por correo</button>
+      <button class="btn sm" id="rep-btn-copiar" title="Por si el correo no abre solo — pégalo tú en un mensaje nuevo">📋 Copiar</button>
     </div>
     <div style="font-weight:600;margin-bottom:8px">⏰ Atrasados y por vencer</div>
     <div id="rep-vencidos" style="margin-bottom:24px"></div>
@@ -1947,6 +1963,7 @@ function renderReportes(root){
   document.getElementById('rep-lider-filter')?.addEventListener('change',e=>{ root._repLiderFilter=e.target.value; renderReportes(root); });
   document.getElementById('rep-btn-pdf').addEventListener('click',()=>descargarResumenPDF(delsScope,`Resumen de pendientes — ${tituloAlcance}`));
   document.getElementById('rep-btn-mail').addEventListener('click',()=>enviarResumenPendientesCorreo(delsScope,tituloAlcance));
+  document.getElementById('rep-btn-copiar').addEventListener('click',()=>copiarResumenPendientesCorreo(delsScope,tituloAlcance));
   renderReporteVencidos(delsScope);
   renderReporteCarga(peopleScope);
 }
@@ -2101,9 +2118,14 @@ function descargarResumenPDF(dels,titulo){
 // es que mailto: solo manda texto plano — ningún correo puede llevar HTML ni
 // adjuntos por este camino (limitación real del navegador, no de la app) —
 // así que se acomoda como texto ordenado que dice exactamente lo mismo.
-function enviarResumenPendientesCorreo(delsOverride,tituloAlcance){
+// Arma destinatarios/asunto/cuerpo — lo comparten enviarResumenPendientesCorreo
+// (mailto:) y copiarResumenPendientesCorreo (portapapeles, respaldo para
+// cuando mailto: no abre nada — depende de que Windows/el navegador tengan
+// bien enganchado un programa de correo, y eso a veces falla o se cuelga
+// sin avisar). null si no hay nada pendiente.
+function resumenPendientesEmailPartes(delsOverride,tituloAlcance){
   const dels=(delsOverride||reportDeliverables()).filter(d=>d.status!=='Entregado');
-  if(!dels.length){ toast('No hay nada pendiente para avisar','err'); return; }
+  if(!dels.length) return null;
   const emails=new Set();
   dels.forEach(d=>{
     const u=byId(DB.users,d.assigneeId); if(u?.email) emails.add(u.email);
@@ -2111,7 +2133,6 @@ function enviarResumenPendientesCorreo(delsOverride,tituloAlcance){
     if(p) seccionesDeProyecto(p).forEach(sec=>{ const l=byId(DB.users,sec.liderId); if(l?.email) emails.add(l.email); });
   });
   const destinatarios=[...emails];
-  if(!destinatarios.length){ toast('Nadie en ese alcance tiene correo capturado (Administración → Usuarios)','err'); return; }
   const fecha=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
   const titulo=tituloAlcance||(isAdmin()?'toda la operación':'tu equipo');
   const grupos=resumenPorEquipoGrupos(dels); // misma fuente que usa el PDF
@@ -2128,6 +2149,14 @@ function enviarResumenPendientesCorreo(delsOverride,tituloAlcance){
   }).join('\n\n\n');
   const subject=`Resumen de pendientes — ${titulo} — ${fecha}`;
   const body=`Resumen de pendientes — ${titulo}\nGenerado el ${fecha}\n\n${cuerpoCompleto}\n\nEnviado desde LI · Procesos.`;
+  return {destinatarios,subject,body,grupos,titulo,fecha};
+}
+function enviarResumenPendientesCorreo(delsOverride,tituloAlcance){
+  const partes=resumenPendientesEmailPartes(delsOverride,tituloAlcance);
+  if(!partes){ toast('No hay nada pendiente para avisar','err'); return; }
+  if(!partes.destinatarios.length){ toast('Nadie en ese alcance tiene correo capturado (Administración → Usuarios)','err'); return; }
+  const {destinatarios,subject,grupos,titulo,fecha}=partes;
+  let {body}=partes;
   let mailto=`mailto:${destinatarios.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   // mailto: sí tiene un límite real, pero es más alto de lo que parece —
   // solo se recorta si de verdad es enorme (equipos muy grandes), y aun así
@@ -2137,7 +2166,57 @@ function enviarResumenPendientesCorreo(delsOverride,tituloAlcance){
     const bodyCorto=`Resumen de pendientes — ${titulo}\nGenerado el ${fecha}\n\n${cuerpoCorto}\n\nEs una lista larga — revisa el detalle completo en LI · Procesos → Reportes.\n\nEnviado desde LI · Procesos.`;
     mailto=`mailto:${destinatarios.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyCorto)}`;
   }
-  window.location.href=mailto;
+  abrirMailto(mailto);
+}
+// Respaldo cuando mailto: no abre nada (Outlook nuevo, colgado, sin programa
+// de correo configurado, etc.) — copia TODO al portapapeles, sin recorte de
+// tamaño (el límite de 6000 solo aplica a la URL de mailto:, el portapapeles
+// no tiene ese problema), para pegarlo tal cual en un correo nuevo.
+function copiarResumenPendientesCorreo(delsOverride,tituloAlcance){
+  const partes=resumenPendientesEmailPartes(delsOverride,tituloAlcance);
+  if(!partes){ toast('No hay nada pendiente para avisar','err'); return; }
+  const paraLinea=partes.destinatarios.length?partes.destinatarios.join(', '):'(nadie en ese alcance tiene correo capturado — Administración → Usuarios)';
+  copiarAlPortapapeles(`Para: ${paraLinea}\nAsunto: ${partes.subject}\n\n${partes.body}`);
+}
+// Copia texto al portapapeles con aviso — respaldo genérico para cualquier
+// "enviar por correo" de la app cuando mailto: no abre nada (depende de que
+// el navegador/Windows tengan bien enganchado un programa de correo, y eso a
+// veces falla sin avisar). document.execCommand como respaldo del respaldo,
+// por si el navegador no tiene la API moderna de Clipboard disponible.
+// Dispara un mailto: — usa un <a> temporal + .click() en vez de
+// window.location.href=... porque Chrome (confirmado por el usuario: "le di
+// ctrl+r y funcionó 1 vez") deja de abrir el programa externo después del
+// primer mailto: disparado así en la misma carga de página — lo trata como
+// posible spam de redirecciones. Un clic real sobre un <a href="mailto:...">
+// no tiene ese límite, cada uno cuenta como su propio gesto.
+function abrirMailto(url){
+  const a=document.createElement('a');
+  a.href=url; a.style.display='none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+function copiarAlPortapapeles(texto){
+  const ok=()=>toast('Copiado al portapapeles ✓ — pégalo en un correo nuevo');
+  // Respaldo del respaldo: si la API moderna no existe O existe pero el
+  // permiso se niega en tiempo de ejecución (pasa en algunos entornos
+  // corporativos con políticas de portapapeles restringidas), se intenta
+  // igual con el truco viejo del textarea antes de darse por vencido.
+  const conExecCommand=()=>{
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=texto; ta.style.position='fixed'; ta.style.left='-9999px';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      const copiado=document.execCommand('copy');
+      document.body.removeChild(ta);
+      if(copiado) ok(); else toast('No se pudo copiar automático — selecciona el texto a mano','err');
+    }catch(e){ toast('No se pudo copiar automático — selecciona el texto a mano','err'); }
+  };
+  if(navigator.clipboard?.writeText){
+    navigator.clipboard.writeText(texto).then(ok).catch(conExecCommand);
+  } else {
+    conExecCommand();
+  }
 }
 function openResumenPendientesDlg(){
   if(!dataReady()) return; // por si acaso — enterApp ya espera los pulls, esto es un candado extra
@@ -2165,6 +2244,7 @@ function openResumenPendientesDlg(){
 document.getElementById('dlg-resumen-close').addEventListener('click',()=>document.getElementById('dlg-resumen').close());
 document.getElementById('dlg-resumen-pdf').addEventListener('click',()=>descargarResumenPDF());
 document.getElementById('dlg-resumen-mail').addEventListener('click',()=>enviarResumenPendientesCorreo());
+document.getElementById('dlg-resumen-copiar').addEventListener('click',()=>copiarResumenPendientesCorreo());
 document.getElementById('dlg-notif-close').addEventListener('click',()=>document.getElementById('dlg-notif').close());
 document.getElementById('btn-notif').addEventListener('click',openNotifPanel);
 document.getElementById('dlg-enviar-close').addEventListener('click',()=>document.getElementById('dlg-enviar').close());
@@ -2446,7 +2526,7 @@ function enviarAvisoEquipo(titulo,scope){
       +`Revisa el detalle en LI · Procesos → Dashboard.`;
     mailto=`mailto:${destinatarios.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyCorto)}`;
   }
-  window.location.href=mailto;
+  abrirMailto(mailto);
 }
 // Vista previa en pantalla — EXACTAMENTE lo mismo que enviarAvisoIndividual
 // manda por correo (mismos atrasados/por vencer/al día), pero como HTML en
@@ -2504,7 +2584,7 @@ function enviarAvisoIndividual(userId){
   const n=crearNotificacion({tipo:'aviso_individual',texto:`Aviso personal de pendientes (${dels.length})`,paraUserIds:[userId]});
   n.emailEnviado={at:Date.now(),by:SESSION?.userId||null};
   saveDB();
-  window.location.href=mailto;
+  abrirMailto(mailto);
 }
 function renderDashboard(root){
   if(!dataReady()){ root.innerHTML=loadingHTML('Cargando dashboard…'); return; }
