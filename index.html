@@ -889,52 +889,28 @@ function mySeccion(){
 function misSeccionesLider(){
   return (DB.secciones||[]).filter(s=>s.liderId===SESSION?.userId);
 }
+// Jerarquía de gente — UN SOLO campo la define: users[].reportsTo ("Reporta
+// a", editable desde el botón "＋ Agregar reporte directo" en Equipo, o desde
+// Editar usuario). Antes también se inferían jefes/equipos a partir de quién
+// era "encargado"/"ingeniero" de qué Centro de Trabajo — dos caminos al mismo
+// destino que podían contradecirse entre sí (ej. un líder que también es
+// encargado de un Centro de su propia Sección aparecía como si "se reportara
+// a sí mismo"). Centro de Trabajo se queda para lo que es: el catálogo de
+// ingeniería (balanceo, CIF, tabulador) — ya no decide de quién es reporte
+// nadie. Los proyectos SÍ se siguen ligando a Centros de Trabajo
+// (seccionesDeProyecto/canManageProject) — eso es "de qué área es este
+// proyecto", un eje distinto de "quién le reporta a quién".
 function getMyReports(){
   if(isAdmin()) return DB.users;
-  const ids=new Set();
-  (DB.secciones||[]).forEach(sec=>{
-    if(sec.liderId===SESSION?.userId){
-      (sec.centroIds||[]).forEach(ctId=>{
-        const ct=byId(DB.centros,ctId); if(!ct) return;
-        if(ct.encargadoId) ids.add(ct.encargadoId);
-        (ct.ingenieros||[]).forEach(uid=>ids.add(uid));
-      });
-    }
-  });
-  // Respaldo: reportsTo directo, por si alguien no quedó agrupado en ninguna Sección.
-  (DB.users||[]).forEach(u=>{ if(u.reportsTo===SESSION?.userId||u.id===SESSION?.userId) ids.add(u.id); });
+  const ids=new Set([SESSION?.userId]);
+  (DB.users||[]).forEach(u=>{ if(u.reportsTo===SESSION?.userId) ids.add(u.id); });
   return (DB.users||[]).filter(u=>ids.has(u.id));
 }
 function myScopeUserIds(){ return new Set(getMyReports().map(u=>u.id)); }
 function seccionOfUser(userId){
-  const candidatas=(DB.secciones||[]).filter(sec=>
-    (sec.centroIds||[]).some(ctId=>{
-      const ct=byId(DB.centros,ctId);
-      return ct && (ct.encargadoId===userId||(ct.ingenieros||[]).includes(userId));
-    })
-  );
-  if(!candidatas.length){
-    // Nadie la puso como encargada/ingeniera de ningún Centro de Trabajo —
-    // en vez de dejarla "sin equipo", se usa su "Reporta a" (Equipo → tarjeta
-    // → Editar) como forma simple y directa de agregarla a un líder, sin
-    // tener que tocar Centro de Trabajo para nada. Así queda ligada a las
-    // actividades/proyectos de ese líder de inmediato.
-    const user=byId(DB.users,userId);
-    if(user?.reportsTo){
-      const porReportsTo=(DB.secciones||[]).find(sec=>sec.liderId===user.reportsTo);
-      if(porReportsTo) return porReportsTo;
-    }
-    return null;
-  }
-  if(candidatas.length===1) return candidatas[0];
-  // FIX: si la persona es encargada/ingeniera de Centros repartidos entre más de una
-  // Sección (ambiguo — no hay una sola respuesta correcta por Centro de Trabajo),
-  // se desempata con su "Reporta a": si coincide con el líder de alguna de las
-  // Secciones candidatas, esa gana. Si no hay coincidencia, se queda el
-  // comportamiento anterior (la primera candidata) como respaldo.
   const user=byId(DB.users,userId);
-  const porReportsTo=candidatas.find(sec=>sec.liderId===user?.reportsTo);
-  return porReportsTo||candidatas[0];
+  if(!user?.reportsTo) return null;
+  return (DB.secciones||[]).find(sec=>sec.liderId===user.reportsTo)||null;
 }
 // Puesto/DGP/Funciones de una persona: solo el admin o el líder de la Sección
 // a la que pertenece esa persona puede editarlo. Un integrante normal (o un
@@ -4765,27 +4741,38 @@ function renderEquipo(root){
       }
     }
   });
+  // Tipo organigrama: cada Sección es UN bloque con una barra de color a la
+  // izquierda — el líder arriba, sus reportes abajo, sangrados y con línea
+  // punteada de por medio, para que se vea de un vistazo "esto le reporta a
+  // esto" (nunca una cuadrícula plana donde el líder se confunde con su
+  // propia gente). El único lugar donde se arma este árbol es reportsTo —
+  // ver seccionOfUser/getMyReports — así que lo que se ve aquí es siempre
+  // exactamente lo mismo que ya rige permisos en el resto de la app.
   let html='';
   DB.secciones.forEach(sec=>{
     const people=bySec.get(sec.id)||[];
-    // El líder aparecía mezclado como una tarjeta más dentro de su propio
-    // equipo (pasa cuando también es encargado/ingeniero de algún Centro de
-    // su Sección) — se veía como si "se reportara a sí mismo". Se separa
-    // aquí: su tarjeta va aparte, arriba, nunca dentro de "Reportes directos".
     const lider=people.find(u=>u.id===sec.liderId);
     const reportes=people.filter(u=>u.id!==sec.liderId);
     if(!lider && !reportes.length) return;
     const puedeAgregar=isAdmin()||SESSION?.userId===sec.liderId;
-    html+=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:18px 0 8px;flex-wrap:wrap">
-        <div style="font-weight:600;font-size:13px">🧭 ${esc(sec.nombre)}</div>
+    html+=`<div class="card" style="border-left:3px solid var(--accent);margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="font-weight:700;font-size:14px">🧭 ${esc(sec.nombre)}</div>
         ${puedeAgregar?`<button class="btn xs" data-add-reporte="${sec.id}">＋ Agregar reporte directo</button>`:''}
       </div>
-      ${lider?`<div class="grid-cards" style="margin-bottom:${reportes.length?'10px':'0'}">${personCardHTML(lider)}</div>`:''}
-      ${reportes.length?`${lider?'<div class="small muted" style="margin-bottom:6px">Reportes directos</div>':''}<div class="grid-cards">${reportes.map(personCardHTML).join('')}</div>`:''}`;
+      ${lider?`<div class="small muted" style="font-weight:600;margin-bottom:6px">👑 Líder</div><div class="grid-cards">${personCardHTML(lider)}</div>`:''}
+      ${reportes.length?`<div style="margin-top:14px;padding-left:14px;border-left:2px dashed var(--border2)">
+          <div class="small muted" style="font-weight:600;margin-bottom:8px">↳ Reportan a ${lider?esc(lider.name):esc(sec.nombre)} <span class="pill muted" style="margin-left:4px">${reportes.length}</span></div>
+          <div class="grid-cards">${reportes.map(personCardHTML).join('')}</div>
+        </div>`:''}
+      </div>`;
   });
   if(sinSeccion.length){
-    html+=`<div style="margin:18px 0 8px;font-weight:600;font-size:13px">Sin sección asignada</div>
-      <div class="grid-cards">${sinSeccion.map(personCardHTML).join('')}</div>`;
+    html+=`<div class="card" style="border-left:3px solid var(--border2);margin-bottom:16px">
+      <div style="font-weight:700;font-size:14px;margin-bottom:12px">⚠️ Sin sección asignada</div>
+      <div class="small muted" style="margin-bottom:8px">Nadie los puso a reportarle a un líder todavía — usa "＋ Agregar reporte directo" en la sección que corresponda.</div>
+      <div class="grid-cards">${sinSeccion.map(personCardHTML).join('')}</div>
+      </div>`;
   }
   body.innerHTML=html||emptyStateHTML('Nadie agrupado todavía','Ve a Administración → Secciones para agrupar a la gente por Centro de Trabajo.');
   wirePersonCards(body);
