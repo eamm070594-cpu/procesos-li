@@ -195,6 +195,17 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
 
 .grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
 
+/* Tarjetas de máquina reordenables (Resumen de Centro de Trabajo → Costo por
+   hora por máquina): drag-and-drop nativo, sin librerías. La tarjeta que se
+   arrastra baja de opacidad; la tarjeta sobre la que pasa muestra una línea
+   verde arriba o abajo para indicar dónde caerá al soltar. */
+.ct-maquina-card{cursor:grab;transition:opacity .15s,box-shadow .15s;position:relative}
+.ct-maquina-card.dragging{opacity:.4;cursor:grabbing}
+/* Línea de 4px FUERA de la tarjeta (no inset) — mucho más visible que una
+   sombra interna, cae justo en el espacio entre tarjetas donde va a soltarse. */
+.ct-maquina-card.drag-over-top{box-shadow:0 -4px 0 0 var(--accent)}
+.ct-maquina-card.drag-over-bottom{box-shadow:0 4px 0 0 var(--accent)}
+
 /* Todos los líderes en UNA sola fila horizontal, alineados arriba (no uno
    debajo del otro, no en columnas de alto disparejo tipo masonry): cada
    líder es una columna de ancho fijo. Si no caben todos en la pantalla, la
@@ -279,7 +290,10 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
       <button class="nav-btn" data-view="proyectos"><span class="ic">📁</span> Proyectos</button>
       <button class="nav-btn" data-view="equipo"><span class="ic">👥</span> Equipo</button>
       <button class="nav-btn" data-view="centrotrabajo"><span class="ic">🏭</span> Centro de Trabajo</button>
-      <button class="nav-btn" data-view="reportemaquinas"><span class="ic">📋</span> ROI Máquinas</button>
+      <!-- "ROI Proyectado"/"ROI Real" dejaron de ser botones del menú principal
+           (2026-09-19, "quedó revuelto") — ahora es una sola pantalla con selector
+           Proyectado/Real, accesible desde dentro de Centro de Trabajo (ver
+           renderRoiMaquinas / botón "📊 ROI de todas las máquinas" en renderCentroTrabajo). -->
       <button class="nav-btn" data-view="reportes"><span class="ic">📊</span> Reportes</button>
       <button class="nav-btn admin-only" data-view="pedidosventa" style="display:none"><span class="ic">🧾</span> Pedidos venta</button>
       <button class="nav-btn admin-only" data-view="leadtime" style="display:none"><span class="ic">⏱️</span> Lead Time</button>
@@ -1011,7 +1025,7 @@ function render(){ showView(currentView); }
 document.querySelectorAll('.nav-btn[data-view]').forEach(b=>{
   b.addEventListener('click',()=>{
     if(b.dataset.view==='proyectos') _currentProjectId=null; // el nav siempre regresa a la lista
-    if(b.dataset.view==='centrotrabajo') _currentCentroId=null; // el nav siempre regresa a la lista
+    if(b.dataset.view==='centrotrabajo'){ _currentCentroId=null; _maqOrigen=null; } // el nav siempre regresa a la lista
     showView(b.dataset.view);
   });
 });
@@ -1085,10 +1099,16 @@ let _currentCentroId=null; // qué centro muestra Centro de Trabajo — null = l
 let _ctTab='distribucion'; // qué pestaña del detalle de centro está activa
 let _adminTab='equipo'; // qué pestaña de Administración está activa
 let _ctCifChart=null; // instancia Chart.js de la dona de CIF — se destruye/recrea en cada render
+let _maqRoiChart=null; // instancia Chart.js de "Proyectado vs Real por concepto" — mismo patrón
+let _maqRoiRealCharts={}; // instancias Chart.js de evolución por periodo, una por concepto (Captura Real)
+let _maqRoiGeneralChart=null; // instancia Chart.js del registro general de ahorro (Captura Real)
 let _currentMaquinaId=null; // qué maquina muestra el tab "Máquinas" — null = la lista
-let _maqTab='id'; // sub-tab del detalle de maquina: id | vars | roi
+let _maqTab='id'; // sub-tab del detalle de maquina: dash (Proyectado) | id | vars | roi (Real)
+let _maqOrigen=null; // 'roimaquinas' cuando se entró a la máquina desde la tabla combinada
+                      // "ROI de Máquinas" — el botón "Volver" del detalle de máquina regresa
+                      // ahí en vez de a Centro de Trabajo → Máquinas. null = entrada normal.
 let _openVarId=null; // que variable esta expandida en el tab Variables
-let _reporteMaqSel=null; // Set de ids de maquina marcados en "ROI Máquinas" para el PDF — null = aun no inicializado (se marcan todas)
+let _reporteMaqSel=null; // Set de ids de maquina marcados en "ROI Proyectado"/"ROI Real" para el PDF — null = aun no inicializado (se marcan todas)
 
 function renderProyectos(root){
   // Si hay un proyecto abierto (detalle), un re-render (p.ej. tras guardar) debe
@@ -2350,7 +2370,7 @@ function seccionScope(sec){
 // KPIs de líder agregados a nivel Sección (costo/hora real vs. ideal, capacidad
 // vs. producción real, ROI real de las máquinas de sus centros) — cada uno
 // reusa la MISMA fuente única ya construida para Centro de Trabajo/Máquinas
-// (ctCostoIdealCalc/ctCapacidadDia/gananciaPorPiezas/roiPorPiezas/acumuladoReal),
+// (ctCostoIdealCalc/ctCapacidadDia/calcROIRealPorConceptos/acumuladoReal),
 // solo sumados entre los centros de esta Sección. Nunca se recalcula la fórmula.
 function seccionCostoResumen(centros){
   let real=0, ideal=0, nValidos=0;
@@ -2372,10 +2392,9 @@ function seccionMaquinasResumen(centros){
   centros.forEach(c=>{
     (c.maquinas||[]).forEach(m=>{
       total++;
-      const abReal=gananciaPorPiezas(m,c);
-      if(abReal!==null&&abReal>0){
+      if(tieneRoiRealDatos(m)){
         conDato++;
-        const rr=roiPorPiezas(m,abReal);
+        const rr=calcROIRealPorConceptos(m,c);
         const acum=acumuladoReal(m,c);
         if(acum?.pagada) pagadas++;
         if(isFinite(rr.pay)){ paybackSum+=rr.pay; paybackN++; }
@@ -2805,6 +2824,7 @@ function personCardHTML(u){
     </details>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button type="button" class="btn xs" data-ver-expediente="${u.id}">🪪 Ver expediente</button>
+      ${u.dgpPdfUrl?`<a class="btn xs" href="${esc(u.dgpPdfUrl)}" target="_blank" rel="noopener">📄 Ver DGP (PDF)</a>`:''}
       ${canEdit?`<button type="button" class="btn xs" data-edit-perfil="${u.id}">✎ Editar puesto/DGP/funciones</button>`:''}
     </div>
   </div>`;
@@ -2849,6 +2869,9 @@ function editPerfilDlg(userId){
       <input class="input" id="pf-puesto" value="${esc(u.puesto||'')}" placeholder="Ej. Ingeniero de procesos"/>
       <label class="lbl" style="margin-top:10px">Notas adicionales</label>
       <textarea class="input" id="pf-dgp" style="min-height:80px" placeholder="Un párrafo breve…">${esc(u.dgpDescripcion||'')}</textarea>
+      <label class="lbl" style="margin-top:10px">Link al PDF de su DGP</label>
+      <input class="input" id="pf-dgp-pdf" value="${esc(u.dgpPdfUrl||'')}" placeholder="Ej. link de OneDrive/SharePoint al PDF"/>
+      <div class="small muted" style="margin-top:4px">Sube el PDF a OneDrive/SharePoint y pega aquí el link — no se guarda el archivo dentro de la app.</div>
       <label class="lbl" style="margin-top:10px">Funciones</label>
       <div id="pf-fn-list">${funcionesListHTML()}</div>
       <div style="display:flex;gap:6px;margin-top:6px">
@@ -2859,6 +2882,7 @@ function editPerfilDlg(userId){
       u.puestoId=document.getElementById('pf-puesto-id').value||null;
       u.puesto=document.getElementById('pf-puesto').value.trim();
       u.dgpDescripcion=document.getElementById('pf-dgp').value.trim();
+      u.dgpPdfUrl=document.getElementById('pf-dgp-pdf').value.trim();
       u.funciones=funciones;
       saveDB(); toast('Perfil actualizado ✓');
       render();
@@ -3094,6 +3118,10 @@ function ctEnsureShape(c){
   c.maquinas=c.maquinas||[];
   c.piezasPromedioDia=c.piezasPromedioDia||0;
   c.piezasPromedioMeta=c.piezasPromedioMeta||'';
+  // Capacidad vs. programado (Lead Time → Capacidad, 17-sep-2026): piezas de
+  // cada familia (Archiveros/Libreros/Mamparas/Muebles/Sillas/Sillones) que
+  // corresponden a 1 PT en ESTE centro — ver ctFactorPrograma().
+  c.factoresPrograma=c.factoresPrograma||{};
 }
 function ctCostoHora(c){
   ctEnsureShape(c);
@@ -3103,6 +3131,37 @@ function ctCostoHora(c){
   const mod=c.personal.reduce((a,m)=>a+(m.costo||0),0);
   const cif=c.cif.reduce((a,x)=>a+(x.monto||0),0);
   return horasMes>0?(mod+cif)/horasMes:0;
+}
+// Costo/hora de UNA máquina dentro del Centro — ctCostoHora(c) es el costo del
+// Centro COMPLETO (todas sus máquinas + personal + CIF juntos); para el costo de
+// paros/reproceso/etc. de una sola máquina se reparte según el % capturable de
+// cada máquina (decisión 19-sep-2026, extendiendo el reparto parejo original):
+// - Si la máquina tiene m.costoHoraPct capturado (0-100), carga ese % exacto del
+//   costo del Centro.
+// - Las máquinas SIN capturar se reparten en partes iguales lo que sobra hasta
+//   llegar a 100% entre ellas: (100 - suma de % ya capturados en el Centro) /
+//   número de máquinas sin capturar.
+// - Si NINGUNA máquina del Centro tiene % capturado, el resultado es exactamente
+//   el reparto parejo de siempre (100%/N máquinas) — no cambia el comportamiento
+//   de los Centros donde nadie ha capturado nada todavía (ej. Enchapado: 3
+//   máquinas, si una enchapadora para, las otras 2 siguen trabajando, por eso el
+//   costo se reparte y no se carga completo a la que para).
+function ctTieneCostoHoraPct(m){
+  return !!(m && m.costoHoraPct!==null && m.costoHoraPct!==undefined && m.costoHoraPct!=='');
+}
+function ctSumaCostoHoraPctCentro(c){
+  return (c.maquinas||[]).filter(ctTieneCostoHoraPct).reduce((a,x)=>a+(parseNum(x.costoHoraPct)||0),0);
+}
+function ctCostoHoraPorMaquina(c,m){
+  const maquinas=c.maquinas||[];
+  const n=Math.max(1,maquinas.length);
+  const costoCentro=ctCostoHora(c);
+  if(!m) return costoCentro/n; // fallback defensivo si no se pasa la máquina
+  if(ctTieneCostoHoraPct(m)) return costoCentro*(parseNum(m.costoHoraPct)/100);
+  const sumaPct=ctSumaCostoHoraPctCentro(c);
+  const sinCapturar=Math.max(1,maquinas.filter(x=>!ctTieneCostoHoraPct(x)).length);
+  const pctRestante=Math.max(0,100-sumaPct)/sinCapturar;
+  return costoCentro*(pctRestante/100);
 }
 // Capacidad real del centro (piezas/día) — única fuente, igual que ctCostoHora: sale
 // del balanceo (operaciones+personal+asignaciones, vía ctCalcularResultados) en vez de
@@ -3383,9 +3442,29 @@ var CAT_NAMES = {
   opex:"OPEX — Costos operativos anuales"
 };
 
+// Variables cuya fila de detalle "Costo hora CT ($)" YA NO se teclea a mano:
+// siempre se resuelve en vivo con ctCostoHoraPorMaquina(c,m) — el costo real del
+// Centro completo (Centro de Trabajo → Resumen: ctCostoHora(c)) repartido según
+// el % capturable de cada maquina (o en partes iguales si nadie ha capturado
+// nada), porque esa fila es el costo de UNA sola maquina (paros/reproceso/etc.
+// de esa maquina), no del Centro completo — usar ctCostoHora(c) tal cual
+// sobrecargaba el costo real en centros con varias maquinas independientes
+// entre si (ej. Enchapado: 3 maquinas, si una
+// para las otras 2 siguen trabajando). Antes era un numero suelto que arrancaba
+// en $0 y quedaba desconectado del costo real del centro (nunca se actualizaba
+// si cambiaba el personal o el CIF). Se identifica por varId Y por el label
+// exacto de la fila (no por posicion) para no tocar ninguna otra variable.
+var COSTO_HORA_CT_VAR_IDS = {paros:1, reproceso:1, ciclo:1, tiempos_muertos:1, setup:1, cuello:1};
+var COSTO_HORA_CT_LABEL = "Costo hora CT ($)";
+function esFilaCostoHoraCT(varId, row) {
+  return !!(COSTO_HORA_CT_VAR_IDS[varId] && row && row.label === COSTO_HORA_CT_LABEL);
+}
+
 // calcVar/calcVarRaw reciben la MAQUINA directo (m), no un id + arreglo global —
 // aqui no hay un unico MACHINES plano, cada centro tiene su propio c.maquinas[].
-function calcVar(m, varId) {
+// c = Centro de Trabajo dueño de la maquina — se necesita para resolver en vivo
+// la fila "Costo hora CT ($)" de las 6 variables de COSTO_HORA_CT_VAR_IDS.
+function calcVar(m, varId, c) {
   if (!m || !m.vars) return 0;
   var mv = m.vars[varId];
   if (!mv || !mv.on) return 0;
@@ -3396,7 +3475,9 @@ function calcVar(m, varId) {
   var acc = null;
   for (var i = 0; i < rows.length; i++) {
     var row = rows[i];
-    var val = row.type === "global" ? resolveGlobal(row.val, gp) : parseNum(row.val);
+    var val = esFilaCostoHoraCT(varId, row) ? ctCostoHoraPorMaquina(c, m)
+      : row.type === "global" ? resolveGlobal(row.val, gp)
+      : row.type === "pct" ? parseNum(row.val) / 100 : parseNum(row.val);
     if (acc === null) acc = val;
     else {
       var op = row.op;
@@ -3408,7 +3489,7 @@ function calcVar(m, varId) {
   }
   return acc || 0;
 }
-function calcVarRaw(m, varId) {
+function calcVarRaw(m, varId, c) {
   if (!m || !m.vars) return 0;
   var mv = m.vars[varId];
   if (!mv) return 0;
@@ -3419,7 +3500,9 @@ function calcVarRaw(m, varId) {
   var acc = null;
   for (var i = 0; i < rows.length; i++) {
     var row = rows[i];
-    var val = row.type === "global" ? resolveGlobal(row.val, gp) : parseNum(row.val);
+    var val = esFilaCostoHoraCT(varId, row) ? ctCostoHoraPorMaquina(c, m)
+      : row.type === "global" ? resolveGlobal(row.val, gp)
+      : row.type === "pct" ? parseNum(row.val) / 100 : parseNum(row.val);
     if (acc === null) acc = val;
     else {
       var op = row.op;
@@ -3431,28 +3514,29 @@ function calcVarRaw(m, varId) {
   }
   return acc || 0;
 }
-function calcOpex(m) {
+function calcOpex(m, c) {
   var total = 0;
   if (!m.vars || typeof m.vars !== 'object' || Array.isArray(m.vars)) return 0;
   Object.keys(m.vars).forEach(function(vid) {
     var vdef = VAR_LIB.find(function(v){ return v.id === vid; });
-    if (vdef && vdef.cat === "opex") total += calcVar(m, vid);
+    if (vdef && vdef.cat === "opex") total += calcVar(m, vid, c);
   });
   return total;
 }
-function calcBenefits(m) {
+function calcBenefits(m, c) {
   var total = 0;
   if (!m.vars || typeof m.vars !== 'object' || Array.isArray(m.vars)) return 0;
   Object.keys(m.vars).forEach(function(vid) {
     var vdef = VAR_LIB.find(function(v){ return v.id === vid; });
-    if (vdef && vdef.cat !== "opex") total += calcVar(m, vid);
+    if (vdef && vdef.cat !== "opex") total += calcVar(m, vid, c);
   });
   return total;
 }
 // "ROI Proyectado" — basado en supuestos capturados al planear la compra.
-function calcROI(m) {
-  var ab = calcBenefits(m);
-  var opx = calcOpex(m) + (parseNum(m.opx)||0);
+// c = Centro de Trabajo dueño de la maquina (ver calcVar).
+function calcROI(m, c) {
+  var ab = calcBenefits(m, c);
+  var opx = calcOpex(m, c) + (parseNum(m.opx)||0);
   var fl = ab - opx;
   var netInv = (m.inv||0) - (m.replaceVal||0);
   var tot = fl * (m.yr||1) + (m.res||0);
@@ -3462,9 +3546,289 @@ function calcROI(m) {
   return { ab:ab, opx:opx, fl:fl, ng:ng, roi:roi, pay:pay, netInv:netInv };
 }
 
-// "ROI Real" — con base en lo que de verdad se produce, no en supuestos. m = maquina,
-// c = su Centro de Trabajo (para repartir c.piezasPromedioDia entre las maquinas que
-// no tengan su propia captura manual).
+// ── "ROI Real" (2026-09-19, bitácora semanal desde 2026-09-19) — captura real
+// por concepto de Beneficios Anuales. Real captura, concepto por concepto, los
+// MISMOS renglones que ya están activos (`on`) en Proyectado (m.vars) — "los
+// mismos datos de la fórmula, con números reales" — y solo para esos; no se
+// pueden activar conceptos nuevos solo en Real.
+//
+// m.varsReal[varId] = { fijos:{ROWIDX:val}, semanas:[{fecha,valores:{ROWIDX:val}}] }
+// donde ROWIDX es el índice del renglón dentro de detail[] (mismo orden que
+// calcVar). Los renglones "money" (ej. "Costo por unidad defectuosa ($)") se
+// capturan UNA sola vez y viven en `fijos` — no cambian semana a semana. Los
+// renglones "num"/"pct" (ej. "Unidades producidas", "% defecto actual") SÍ
+// cambian semana a semana — cada entrada de `semanas` es una captura real de
+// una semana concreta (fecha + esos valores). Los renglones "global" (Meses/
+// año, [SALARIO], etc.) NUNCA se recapturan y NUNCA se anualizan dentro del
+// cálculo de una semana (una semana ya es un periodo real concreto) — se
+// saltan por completo en calcVarRealSemana. El renglón especial "Costo hora
+// CT ($)" (ver esFilaCostoHoraCT) tampoco se recaptura: ya es un dato real en
+// vivo del Centro de Trabajo, no un supuesto — se resuelve igual que siempre.
+//
+// Si se encuentra el shape viejo (un arreglo plano de un solo valor por
+// renglón, de antes de la bitácora semanal) se ignora de forma segura — no
+// hay manera fiable de convertir "un valor fijo de siempre" en "una semana",
+// así que se trata como si Real no tuviera captura todavía para ese concepto
+// (nunca truena, nunca inventa una semana falsa).
+function ensureVarRealShape(m, varId) {
+  if (!m.varsReal || typeof m.varsReal !== 'object' || Array.isArray(m.varsReal)) m.varsReal = {};
+  var vr = m.varsReal[varId];
+  if (!vr || typeof vr !== 'object' || Array.isArray(vr)) {
+    vr = { fijos: {}, semanas: [] };
+    m.varsReal[varId] = vr;
+  } else {
+    if (!vr.fijos || typeof vr.fijos !== 'object' || Array.isArray(vr.fijos)) vr.fijos = {};
+    if (!Array.isArray(vr.semanas)) vr.semanas = [];
+  }
+  return vr;
+}
+// Lectura segura de m.varsReal[varId] con el shape nuevo — null si no existe
+// o si trae el shape viejo (arreglo plano), sin mutar la máquina.
+function getVarRealShape(m, varId) {
+  var vr = m.varsReal && m.varsReal[varId];
+  if (!vr || typeof vr !== 'object' || Array.isArray(vr)) return null;
+  // Firebase no persiste arreglos/objetos vacíos: si "semanas" o "fijos" se
+  // quedaron vacíos al guardar, la llave desaparece del todo al releer — sin
+  // esto, cualquier consumidor que asuma vr.semanas.length truena la app
+  // entera (bug real encontrado 21-sep-2026, tronaba enterApp() para todos).
+  if (!Array.isArray(vr.semanas)) vr.semanas = [];
+  if (!vr.fijos || typeof vr.fijos !== 'object' || Array.isArray(vr.fijos)) vr.fijos = {};
+  return vr;
+}
+// Beneficio real de UNA semana capturada de un concepto. Recorre detail[] en
+// el mismo orden que calcVar, pero: renglones num/pct usan el valor
+// capturado ESA semana, renglones money usan el valor fijo (mismo para todas
+// las semanas), y los renglones "global" se SALTAN por completo (ni se
+// multiplican ni se suman) — el resultado ya es el monto real de ESA semana.
+function calcVarRealSemana(m, varId, c, semanaIdx) {
+  if (!m || !m.vars) return 0;
+  var mv = m.vars[varId];
+  if (!mv || !mv.on) return 0;
+  var vdef = VAR_LIB.find(function(v){ return v.id === varId; });
+  var rows = mv.detail || (vdef ? vdef.detail : []);
+  var vr = getVarRealShape(m, varId);
+  var semana = vr ? vr.semanas[semanaIdx] : null;
+  if (!semana) return 0;
+  // Captura directa en $ (vr.capturaSimple): el usuario ya sabe cuánto ahorró
+  // ese periodo y lo teclea de una vez — sin pasar por la fórmula de piezas/
+  // horas/% (pedido del usuario 21-sep-2026: "mes 1 - 1000 de ahorro, mes 2 -
+  // 1500 de ahorro"). Se ignoran rows/fijos por completo en este modo.
+  if (vr && vr.capturaSimple) return parseNum(semana.montoSimple);
+  var fijos = vr.fijos || {};
+  var valores = semana.valores || {};
+  var acc = null;
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    if (row.type === "global") continue; // no aplica al cálculo de una semana individual
+    var val;
+    if (esFilaCostoHoraCT(varId, row)) val = ctCostoHoraPorMaquina(c, m);
+    else if (row.type === "money") val = parseNum(fijos[i]);
+    else if (row.type === "pct") val = parseNum(valores[i]) / 100;
+    else val = parseNum(valores[i]);
+    if (acc === null) acc = val;
+    else {
+      var op = row.op;
+      if (op === "+") acc = acc + val;
+      else if (op === "-") acc = acc - val;
+      else if (op === "*") acc = acc * val;
+      else if (op === "/") acc = val !== 0 ? acc / val : 0;
+    }
+  }
+  return acc || 0;
+}
+// true si el concepto NO tiene ningún renglón num/pct (nada que varíe semana
+// a semana o mes a mes) — son conceptos ya anuales/mensuales de por sí (ej.
+// "Mantenimiento correctivo": gasto actual/año - gasto esperado/año, ambos
+// $ fijos). Forzarlos a la bitácora obligaba a crear una "semana" vacía sin
+// nada que capturar para que el resultado dejara de ser $0 — bug real
+// reportado por el usuario 21-sep-2026 ("meto información y no aparece
+// nada"). Estos se calculan directo de los fijos, sin bitácora.
+function conceptoEsFijoDirecto(mv, vdef) {
+  var rows = (mv && mv.detail) || (vdef ? vdef.detail : []);
+  return !rows.some(function(r){ return r.type === 'num' || r.type === 'pct'; });
+}
+// Calcula un concepto 100% fijo (ver conceptoEsFijoDirecto) directo de sus
+// renglones — misma fórmula que Proyectado (calcVarRaw) pero los renglones
+// "money" toman su valor real capturado (vr.fijos) en vez del supuesto
+// (row.val). Los "global" SÍ se resuelven aquí (a diferencia de una semana
+// individual) porque no hay periodo que anualizar: la fórmula ya da el
+// resultado anual/mensual completo en una sola pasada.
+function calcVarRealFijoDirecto(m, varId, c) {
+  var mv = m.vars[varId];
+  var vdef = VAR_LIB.find(function(v){ return v.id === varId; });
+  var rows = mv.detail || (vdef ? vdef.detail : []);
+  var vr = getVarRealShape(m, varId);
+  var fijos = (vr && vr.fijos) || {};
+  var gp = getGP();
+  var acc = null;
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var val;
+    if (esFilaCostoHoraCT(varId, row)) val = ctCostoHoraPorMaquina(c, m);
+    else if (row.type === 'global') val = resolveGlobal(row.val, gp);
+    else val = parseNum(fijos[i]);
+    if (acc === null) acc = val;
+    else {
+      var op = row.op;
+      if (op === '+') acc = acc + val;
+      else if (op === '-') acc = acc - val;
+      else if (op === '*') acc = acc * val;
+      else if (op === '/') acc = val !== 0 ? acc / val : 0;
+    }
+  }
+  return acc || 0;
+}
+// Beneficio anual real de un concepto: promedio de todas las semanas/meses
+// capturados (calcVarRealSemana) × 52 (semanal) o ×12 (mensual, vr.periodo).
+// Sin ningún periodo capturado todavía cuenta como $0 (no bloquea el total,
+// simplemente ese concepto no aporta nada hasta la primera captura). Los
+// conceptos fijos-directos (ver conceptoEsFijoDirecto) no pasan por aquí.
+function calcVarRealAnual(m, varId, c) {
+  var mv = m.vars && m.vars[varId];
+  var vdef = VAR_LIB.find(function(v){ return v.id === varId; });
+  if (mv && conceptoEsFijoDirecto(mv, vdef)) return calcVarRealFijoDirecto(m, varId, c);
+  var vr = getVarRealShape(m, varId);
+  var semanas = vr ? vr.semanas : [];
+  if (!semanas.length) return 0;
+  var suma = 0;
+  for (var i = 0; i < semanas.length; i++) suma += calcVarRealSemana(m, varId, c, i);
+  var factor = (vr && vr.periodo === 'mensual') ? 12 : 52;
+  return (suma / semanas.length) * factor;
+}
+// Alias — mantiene el nombre histórico usado en calcBenefitsReal y en el
+// resumen "Proyectado: $X · Real: $Y" de la pestaña ROI Real.
+function calcVarReal(m, varId, c) {
+  return calcVarRealAnual(m, varId, c);
+}
+// Fija (una sola vez, editable) el valor de un renglón tipo "money" de un
+// concepto en Real — no lleva bitácora, se sobreescribe.
+function setVarRealFijo(c, m, varId, rowIdx, value) {
+  var vr = ensureVarRealShape(m, varId);
+  vr.fijos[rowIdx] = value;
+  c.updatedAt = Date.now();
+  saveDB();
+}
+// Agrega una semana nueva a la bitácora de un concepto en Real — valores =
+// {ROWIDX:val} solo para los renglones num/pct de ese concepto. Se ordena
+// por fecha para que la tabla se vea cronológica.
+function addVarRealSemana(c, m, varId, fecha, valores, montoSimple) {
+  var vr = ensureVarRealShape(m, varId);
+  var entry = { fecha: fecha, valores: valores };
+  if (montoSimple !== undefined) entry.montoSimple = montoSimple;
+  vr.semanas.push(entry);
+  vr.semanas.sort(function(a, b){ return (a.fecha||'').localeCompare(b.fecha||''); });
+  c.updatedAt = Date.now();
+  saveDB();
+}
+function delVarRealSemana(c, m, varId, semanaIdx) {
+  var vr = ensureVarRealShape(m, varId);
+  vr.semanas.splice(semanaIdx, 1);
+  c.updatedAt = Date.now();
+  saveDB();
+}
+// Registro general de ahorro real — un solo total por máquina, capturado
+// semana/mes a semana/mes, SIN pasar por ningún concepto de Variables (pedido
+// del usuario 21-sep-2026: "quiero ir capturando mes a mes ese ahorro
+// independientemente de la variable" — para máquinas donde no tiene caso
+// desglosar por concepto, ej. una flotilla de montacargas). Vive aparte de
+// m.vars/m.varsReal a propósito, para no contaminar la iteración por concepto
+// que usan Dashboard/gráfica comparativa/PDF (todas asumen ids reales de
+// VAR_LIB). Cuando está activo, REEMPLAZA la suma por concepto — no se suman
+// los dos, para que quede claro cuál es la fuente de verdad de esa máquina.
+function ensureRoiRealGeneral(m) {
+  if (!m.roiRealGeneral || typeof m.roiRealGeneral !== 'object' || Array.isArray(m.roiRealGeneral)) {
+    m.roiRealGeneral = { activo: false, periodo: 'mensual', entradas: [] };
+  } else if (!Array.isArray(m.roiRealGeneral.entradas)) {
+    m.roiRealGeneral.entradas = [];
+  }
+  return m.roiRealGeneral;
+}
+function getRoiRealGeneral(m) {
+  var g = m.roiRealGeneral;
+  if (!g || typeof g !== 'object' || Array.isArray(g)) return null;
+  if (!Array.isArray(g.entradas)) g.entradas = [];
+  return g;
+}
+function addRoiRealGeneralEntrada(m, c, fecha, monto) {
+  var g = ensureRoiRealGeneral(m);
+  g.entradas.push({ fecha: fecha, monto: monto });
+  g.entradas.sort(function(a, b){ return (a.fecha||'').localeCompare(b.fecha||''); });
+  c.updatedAt = Date.now();
+  saveDB();
+}
+function delRoiRealGeneralEntrada(m, c, idx) {
+  var g = ensureRoiRealGeneral(m);
+  g.entradas.splice(idx, 1);
+  c.updatedAt = Date.now();
+  saveDB();
+}
+function calcRoiRealGeneralAnual(m) {
+  var g = getRoiRealGeneral(m);
+  if (!g || !g.activo || !g.entradas.length) return 0;
+  var suma = g.entradas.reduce(function(a, e){ return a + parseNum(e.monto); }, 0);
+  var factor = g.periodo === 'semanal' ? 52 : 12;
+  return (suma / g.entradas.length) * factor;
+}
+function calcBenefitsReal(m, c) {
+  var g = getRoiRealGeneral(m);
+  if (g && g.activo) return calcRoiRealGeneralAnual(m);
+  var total = 0;
+  if (!m.vars || typeof m.vars !== 'object' || Array.isArray(m.vars)) return 0;
+  Object.keys(m.vars).forEach(function(vid) {
+    var mv = m.vars[vid];
+    if (!mv || !mv.on) return;
+    var vdef = VAR_LIB.find(function(v){ return v.id === vid; });
+    if (vdef && vdef.cat !== "opex") total += calcVarReal(m, vid, c);
+  });
+  return total;
+}
+// true si ya se capturó al menos un dato real (al menos una semana con algún
+// valor num/pct distinto de 0) — evita mostrar "0%"/"$0" como si fuera un
+// resultado real cuando en verdad nadie ha tecleado nada todavia. El shape
+// viejo (arreglo plano) se ignora de forma segura vía getVarRealShape.
+function tieneRoiRealDatos(m) {
+  var g = getRoiRealGeneral(m);
+  if (g && g.activo) return g.entradas.some(function(e){ return parseNum(e.monto) !== 0; });
+  if (!m.varsReal || typeof m.varsReal !== 'object') return false;
+  return Object.keys(m.varsReal).some(function(vid){
+    var mv = m.vars && m.vars[vid];
+    if (!mv || !mv.on) return false;
+    var vr = getVarRealShape(m, vid);
+    if (!vr) return false;
+    var vdef = VAR_LIB.find(function(v){ return v.id === vid; });
+    if (conceptoEsFijoDirecto(mv, vdef)) {
+      return Object.keys(vr.fijos||{}).some(function(k){ return parseNum(vr.fijos[k]) !== 0; });
+    }
+    if (!vr.semanas.length) return false;
+    if (vr.capturaSimple) return vr.semanas.some(function(s){ return parseNum(s.montoSimple) !== 0; });
+    return vr.semanas.some(function(s){
+      var valores = s.valores || {};
+      return Object.keys(valores).some(function(k){ return parseNum(valores[k]) !== 0; });
+    });
+  });
+}
+// Misma formula que calcROI (ver arriba) pero con el beneficio REAL capturado
+// por concepto. El OPEX sigue siendo el proyectado (calcOpex) — no se recaptura.
+function calcROIRealPorConceptos(m, c) {
+  var ab = calcBenefitsReal(m, c);
+  var opx = calcOpex(m, c) + (parseNum(m.opx)||0);
+  var fl = ab - opx;
+  var netInv = (m.inv||0) - (m.replaceVal||0);
+  var tot = fl * (m.yr||1) + (m.res||0);
+  var ng = tot - netInv;
+  var roi = netInv > 0 ? (ng / netInv) * 100 : 0;
+  var pay = fl > 0 ? netInv / fl : Infinity;
+  return { ab:ab, opx:opx, fl:fl, ng:ng, roi:roi, pay:pay, netInv:netInv };
+}
+
+// ── LEGADO (ya no es la fuente activa del ROI Real que se muestra al usuario) ──
+// "ROI Real" con base en piezas producidas x valor por pieza (valorPorPieza/
+// unidadManualDia/costoAnteriorPorPieza/ctPiezasKey). Reemplazado por
+// calcROIRealPorConceptos/calcBenefitsReal (arriba). Los campos de datos siguen
+// vivos en "Identificación" (no se borraron), solo dejaron de alimentar el ROI
+// Real principal. Se deja el código por si se vuelve a necesitar de referencia.
+// m = maquina, c = su Centro de Trabajo (para repartir c.piezasPromedioDia entre
+// las maquinas que no tengan su propia captura manual).
 function cantidadDiaReal(m, c) {
   var manual = parseNum(m.unidadManualDia);
   if (manual > 0) return manual;
@@ -3500,9 +3864,9 @@ function gananciaPorPiezas(m, c) {
   }
   return ctP * vpp * diasHabilesAno;
 }
-function roiPorPiezas(m, abReal) {
+function roiPorPiezas(m, abReal, c) {
   var yaEsNeto = parseNum(m.costoAnteriorPorPieza) > 0;
-  var opx = yaEsNeto ? 0 : (calcOpex(m) + (parseNum(m.opx)||0));
+  var opx = yaEsNeto ? 0 : (calcOpex(m, c) + (parseNum(m.opx)||0));
   var fl = abReal - opx;
   var netInv = (m.inv||0) - (m.replaceVal||0);
   var tot = fl * (m.yr||1) + (m.res||0);
@@ -3512,13 +3876,15 @@ function roiPorPiezas(m, abReal) {
   return { roi: roi, pay: pay, fl: fl, netInv: netInv };
 }
 function acumuladoReal(m, c) {
-  var abReal = gananciaPorPiezas(m, c);
-  if (abReal === null || !m.fechaInicioOperacion) return null;
+  // Fuente del flujo real: calcROIRealPorConceptos (captura por concepto de
+  // Beneficios Anuales) — ya no gananciaPorPiezas/roiPorPiezas (legado, arriba).
+  // La logica de "cuanto lleva acumulado desde que arranco" no cambia.
+  if (!tieneRoiRealDatos(m) || !m.fechaInicioOperacion) return null;
   var inicio = new Date(m.fechaInicioOperacion + 'T00:00:00');
   if (isNaN(inicio.getTime())) return null;
   var diasCal = Math.round((new Date() - inicio) / 86400000);
   if (diasCal < 0) return null;
-  var rr = roiPorPiezas(m, abReal);
+  var rr = calcROIRealPorConceptos(m, c);
   var meses = diasCal / 30.44;
   var acumulado = (rr.fl / 12) * meses;
   return {
@@ -3544,8 +3910,8 @@ function mEstatus(m,hd){
             : {key:'cotizacion',label:'En cotización',icon:'🚚',sub:'Aún no se compra',color:'#6B7280'};
 }
 const STATUS_SORT_PRIORITY={operando:0,transito:1,recien_instalada:2,tramite:3,cotizacion:4,en_venta:5};
-function statusSortPriority(m){
-  const r=calcROI(m), est=mEstatus(m,r.ab>0);
+function statusSortPriority(m,c){
+  const r=calcROI(m,c), est=mEstatus(m,r.ab>0);
   const p=STATUS_SORT_PRIORITY[est.key];
   return p===undefined?99:p;
 }
@@ -3603,9 +3969,11 @@ function renderCentroTrabajo(root){
   if(!dataReady()){ root.innerHTML=loadingHTML('Cargando centros de trabajo…'); return; }
   if(_currentCentroId){ renderCentroDetail(root); return; }
   root.innerHTML=`<div class="view-head"><div><h1>Centro de Trabajo</h1>
-    <div class="view-sub">Balanceo de líneas, CIF, costos y equipos por centro.</div></div></div>
+    <div class="view-sub">Balanceo de líneas, CIF, costos y equipos por centro.</div></div>
+    ${isAdmin()?'<button class="btn" id="btn-roi-maquinas">📊 ROI de todas las máquinas</button>':''}</div>
     <div id="ct-resumen"></div>
     <div id="ct-groups"></div>`;
+  if(isAdmin()) document.getElementById('btn-roi-maquinas').addEventListener('click',()=>showView('roimaquinas'));
   document.getElementById('ct-resumen').innerHTML=centrosResumenHTML(DB.centros||[]);
   const wrap=document.getElementById('ct-groups');
   if(!(DB.centros||[]).length){ wrap.innerHTML=emptyStateHTML('Sin centros todavía','Un admin puede crearlos en Administración → Centros de trabajo.'); return; }
@@ -3664,66 +4032,75 @@ function renderCentroTrabajo(root){
 }
 VIEW_RENDERERS['centrotrabajo']=renderCentroTrabajo;
 
-// ── Reporte Simple de Maquinaria — todas las máquinas de todos los centros,
-// ordenadas por estatus, con costo/ganancia real/payback real/¿ya se pagó?
-// (portado de LineaItalia.html renderReporteSimple) ──
+// ── ROI Proyectado / ROI Real — todas las máquinas de todos los centros,
+// ordenadas por estatus. Antes vivían juntos en un solo "ROI Máquinas"; a
+// pedido del usuario se separaron en 2 dashboards independientes (uno solo
+// de supuestos, otro solo de producción real) para dejar de mezclarlos —
+// ambos reusan la misma lista de filas y el mismo wiring de tabla/checkboxes/PDF.
+// (lista de filas portada de LineaItalia.html renderReporteSimple) ──
 function reporteMaquinasFilas(){
   const filas=[];
   (DB.centros||[]).forEach(c=>{
     ctEnsureShape(c);
     (c.maquinas||[]).forEach(m=>filas.push({m,c}));
   });
-  filas.sort((a,b)=>statusSortPriority(a.m)-statusSortPriority(b.m));
+  // Orden por defecto (estatus), a menos que el usuario ya haya reordenado a
+  // mano en "ROI de Máquinas" — ahí cada máquina guarda su propio roiOrder,
+  // independiente del arreglo c.maquinas de su Centro (esta tabla junta
+  // máquinas de Centros distintos, así que necesita su propio orden).
+  filas.sort((a,b)=>statusSortPriority(a.m,a.c)-statusSortPriority(b.m,b.c));
+  // Ojo: asignar roiOrder=i (posición en esta lista) chocaba con el roiOrder ya
+  // guardado de otras máquinas — cualquier máquina nueva (ej. las migradas de
+  // LineaItalia) terminaba con el MISMO número que una ya existente, y ▲/▼ dejaba
+  // de moverlas de verdad porque el empate se resolvía siempre igual (bug real,
+  // reportado por el usuario 21-sep-2026 justo tras migrar 5 máquinas nuevas).
+  // Ahora las que no tienen roiOrder reciben siempre un número más alto que
+  // cualquiera ya usado, así nunca empatan con una máquina existente.
+  const yaAsignados=filas.map(f=>f.m.roiOrder).filter(v=>v!=null);
+  let siguiente=yaAsignados.length?Math.max(...yaAsignados)+1:0;
+  filas.forEach(f=>{ if(f.m.roiOrder===undefined||f.m.roiOrder===null) f.m.roiOrder=siguiente++; });
+  filas.sort((a,b)=>(a.m.roiOrder??0)-(b.m.roiOrder??0));
   return filas;
 }
-function reporteMaquinasCalc(m,c){
-  const abReal=gananciaPorPiezas(m,c);
-  const hd=abReal!==null&&abReal>0;
-  const r=hd?roiPorPiezas(m,abReal):{roi:0,pay:Infinity};
+// Intercambia el roiOrder de una máquina con el de su vecina (arriba/abajo)
+// en la tabla "ROI de Máquinas" — funciona aunque estén en Centros distintos,
+// porque roiOrder es un campo propio de la máquina, no del arreglo del Centro.
+function roiMoverMaquina(maquinaId,direccion){
+  const filas=reporteMaquinasFilas();
+  const idx=filas.findIndex(f=>f.m.id===maquinaId);
+  const j=idx+direccion;
+  if(idx<0||j<0||j>=filas.length) return;
+  const a=filas[idx].m, b=filas[j].m;
+  const tmp=a.roiOrder; a.roiOrder=b.roiOrder; b.roiOrder=tmp;
+  filas[idx].c.updatedAt=Date.now();
+  filas[j].c.updatedAt=Date.now();
+  saveDB();
+  render();
+}
+// "ROI Proyectado" — basado en supuestos capturados al planear la compra (calcROI).
+function roiProyectadoCalc(m,c){
+  const r=calcROI(m,c);
+  const hd=r.ab>0;
+  const est=mEstatus(m,hd);
+  return {r,hd,est};
+}
+// "ROI Real" — con base en captura real por concepto de Beneficios Anuales
+// (calcROIRealPorConceptos/calcBenefitsReal). hd=false ("Pendiente") mientras
+// nadie haya capturado ningun dato real todavia (tieneRoiRealDatos).
+function roiRealCalc(m,c){
+  const hd=tieneRoiRealDatos(m);
+  const r=calcROIRealPorConceptos(m,c);
+  const abReal=r.ab;
   const est=mEstatus(m,hd);
   const acum=hd?acumuladoReal(m,c):null;
   return {abReal,hd,r,est,acum};
 }
-function renderReporteMaquinas(root){
-  if(!dataReady()){ root.innerHTML=loadingHTML('Cargando…'); return; }
-  const filas=reporteMaquinasFilas();
-  if(_reporteMaqSel===null) _reporteMaqSel=new Set(filas.map(f=>f.m.id)); // por default, todas marcadas
-  const nSel=filas.filter(f=>_reporteMaqSel.has(f.m.id)).length;
-  root.innerHTML=`<div class="view-head"><div><h1>Reporte Simple de Maquinaria</h1>
-    <div class="view-sub">Costo, ganancia real (con base en piezas fabricadas) y tiempo real de recuperación — todas las máquinas, todos los centros.</div></div>
-    <button class="btn primary" id="rm-pdf-btn">🖨 Generar PDF (${nSel})</button></div>
-    ${isAdmin()?'<div id="rm-global-params" style="margin-bottom:18px"></div>':''}
-    <div class="card" style="padding:0;overflow-x:auto">
-    <table class="tbl"><thead><tr>
-      <th style="width:34px"><input type="checkbox" id="rm-check-all" ${nSel===filas.length&&filas.length?'checked':''}></th>
-      <th>Descripción de la máquina</th><th style="text-align:right">Costo de la máquina</th><th style="text-align:right">Ganancia Real anual</th><th style="text-align:right">Payback Real</th><th style="text-align:right">¿Ya se pagó?</th></tr></thead>
-    <tbody>${filas.length?filas.map(({m,c})=>{
-      const {abReal,hd,r,est,acum}=reporteMaquinasCalc(m,c);
-      const payColor=!hd||!isFinite(r.pay)?'#9CA3AF':(r.pay<=2?'#16A34A':r.pay<=5?'#D97706':'#DC2626');
-      const payTxt=(hd&&isFinite(r.pay))?(r.pay<1?(r.pay*12).toFixed(1)+' meses':r.pay.toFixed(1)+' años'):'Pendiente';
-      let acumHTML;
-      if(!acum) acumHTML=`<span class="small muted">${hd?'Falta fecha de arranque':'Pendiente'}</span>`;
-      else if(acum.pagada) acumHTML=`<div style="font-weight:700;color:#16A34A">✅ Ya se pagó</div><div class="small muted">excedente ${fmtMoney(acum.excedente)}</div>`;
-      else acumHTML=`<div style="font-weight:700;color:#D97706">⏳ ${acum.pctRecuperado.toFixed(0)}% recuperado</div><div class="small muted">faltan ${fmtMoney(acum.faltante)}</div>`;
-      return `<tr>
-        <td><input type="checkbox" class="rm-check" data-rm-maquina="${m.id}" ${_reporteMaqSel.has(m.id)?'checked':''}></td>
-        <td style="cursor:pointer" data-open-rm-maquina="${m.id}" data-open-rm-centro="${c.id}" title="Clic para editar esta máquina"><div style="display:flex;align-items:center;gap:12px">
-          ${m.heroPhoto?`<img src="${m.heroPhoto}" style="width:64px;height:64px;border-radius:8px;object-fit:cover;border:1px solid var(--border2);flex-shrink:0">`:`<div style="width:64px;height:64px;border-radius:8px;background:var(--surface2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0"><div style="width:12px;height:12px;border-radius:50%;background:${m.color||'#94a3b8'}"></div></div>`}
-          <div><div style="font-weight:600">${esc(m.name||'Sin nombre')}</div>
-          ${m.model?`<div class="small muted">${esc(m.model)}</div>`:''}
-          <div class="small" style="color:${est.color};font-weight:700;margin-top:2px">${est.icon} ${est.label}</div>
-          <div class="small muted">${esc(c.nombre)}</div></div>
-        </div></td>
-        <td style="text-align:right;font-weight:600">${fmtMoney(m.inv||0)}</td>
-        <td style="text-align:right;font-weight:600;color:${hd?'#16A34A':'#9CA3AF'}">${hd?fmtMoney(abReal):'Pendiente'}</td>
-        <td style="text-align:right;font-weight:700;color:${payColor}">${payTxt}</td>
-        <td style="text-align:right">${acumHTML}</td>
-      </tr>`;
-    }).join(''):'<tr><td colspan="6" class="small muted" style="padding:14px">Sin máquinas capturadas todavía.</td></tr>'}</tbody></table></div>`;
-  if(isAdmin()) renderAdminGlobalParams();
+// Wiring compartido por las 2 tablas: abrir máquina, checkboxes, "marcar todas", botón PDF.
+function wireRoiMaquinasTable(root,filas,onPdf){
   root.querySelectorAll('[data-open-rm-maquina]').forEach(td=>{
     td.addEventListener('click',()=>{
       _currentCentroId=td.dataset.openRmCentro; _ctTab='maquinas'; _currentMaquinaId=td.dataset.openRmMaquina; _maqTab='dash';
+      _maqOrigen='roimaquinas';
       showView('centrotrabajo');
     });
   });
@@ -3739,31 +4116,126 @@ function renderReporteMaquinas(root){
     else _reporteMaqSel.clear();
     render();
   });
-  document.getElementById('rm-pdf-btn').addEventListener('click',()=>descargarReporteMaquinasPDF(filas.filter(f=>_reporteMaqSel.has(f.m.id))));
+  document.getElementById('rm-pdf-btn').addEventListener('click',onPdf);
+  root.querySelectorAll('[data-roi-mover-arriba]').forEach(btn=>{
+    btn.addEventListener('click',ev=>{ ev.stopPropagation(); roiMoverMaquina(btn.dataset.roiMoverArriba,-1); });
+  });
+  root.querySelectorAll('[data-roi-mover-abajo]').forEach(btn=>{
+    btn.addEventListener('click',ev=>{ ev.stopPropagation(); roiMoverMaquina(btn.dataset.roiMoverAbajo,1); });
+  });
 }
-VIEW_RENDERERS['reportemaquinas']=renderReporteMaquinas;
+// Fila de la tabla en modo "Proyectado" (antes vivía dentro de renderRoiProyectado).
+function filaRoiProyectadoHTML(m,c){
+  const {r,hd,est}=roiProyectadoCalc(m,c);
+  const roiColor=!hd?'#9CA3AF':(r.roi>=100?'#16A34A':r.roi>=50?'#D97706':'#DC2626');
+  const payTxt=(hd&&isFinite(r.pay))?(r.pay<1?(r.pay*12).toFixed(1)+' meses':r.pay.toFixed(1)+' años'):'—';
+  return `<tr>
+    <td><input type="checkbox" class="rm-check" data-rm-maquina="${m.id}" ${_reporteMaqSel.has(m.id)?'checked':''}>
+      <div style="display:flex;flex-direction:column;gap:1px;margin-top:4px">
+        <button class="btn xs" data-roi-mover-arriba="${m.id}" title="Subir" style="padding:1px 6px;line-height:1">▲</button>
+        <button class="btn xs" data-roi-mover-abajo="${m.id}" title="Bajar" style="padding:1px 6px;line-height:1">▼</button>
+      </div>
+    </td>
+    <td style="cursor:pointer" data-open-rm-maquina="${m.id}" data-open-rm-centro="${c.id}" title="Clic para editar esta máquina"><div style="display:flex;align-items:center;gap:12px">
+      ${m.heroPhoto?`<img src="${m.heroPhoto}" style="width:64px;height:64px;border-radius:8px;object-fit:cover;border:1px solid var(--border2);flex-shrink:0">`:`<div style="width:64px;height:64px;border-radius:8px;background:var(--surface2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0"><div style="width:12px;height:12px;border-radius:50%;background:${m.color||'#94a3b8'}"></div></div>`}
+      <div><div style="font-weight:600">${esc(m.name||'Sin nombre')}</div>
+      ${m.model?`<div class="small muted">${esc(m.model)}</div>`:''}
+      <div class="small" style="color:${est.color};font-weight:700;margin-top:2px">${est.icon} ${est.label}</div>
+      <div class="small muted">${esc(c.nombre)}</div></div>
+    </div></td>
+    <td style="text-align:right;font-weight:600">${fmtMoney(r.netInv)}</td>
+    <td style="text-align:right;font-weight:600;color:${hd?'#16A34A':'#9CA3AF'}">${hd?fmtMoney(r.fl):'—'}</td>
+    <td style="text-align:right;font-weight:700;color:${roiColor}">${hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'—'}</td>
+    <td style="text-align:right;font-weight:700;color:${roiColor}">${payTxt}</td>
+  </tr>`;
+}
+// Fila de la tabla en modo "Real" (antes vivía dentro de renderRoiReal).
+function filaRoiRealHTML(m,c){
+  const {abReal,hd,r,est,acum}=roiRealCalc(m,c);
+  const payColor=!hd||!isFinite(r.pay)?'#9CA3AF':(r.pay<=2?'#16A34A':r.pay<=5?'#D97706':'#DC2626');
+  const payTxt=(hd&&isFinite(r.pay))?(r.pay<1?(r.pay*12).toFixed(1)+' meses':r.pay.toFixed(1)+' años'):'Pendiente';
+  let acumHTML;
+  if(!acum) acumHTML=`<span class="small muted">${hd?'Falta fecha de arranque':'Pendiente'}</span>`;
+  else if(acum.pagada) acumHTML=`<div style="font-weight:700;color:#16A34A">✅ Ya se pagó</div><div class="small muted">excedente ${fmtMoney(acum.excedente)}</div>`;
+  else acumHTML=`<div style="font-weight:700;color:#D97706">⏳ ${acum.pctRecuperado.toFixed(0)}% recuperado</div><div class="small muted">faltan ${fmtMoney(acum.faltante)}</div>`;
+  return `<tr>
+    <td><input type="checkbox" class="rm-check" data-rm-maquina="${m.id}" ${_reporteMaqSel.has(m.id)?'checked':''}>
+      <div style="display:flex;flex-direction:column;gap:1px;margin-top:4px">
+        <button class="btn xs" data-roi-mover-arriba="${m.id}" title="Subir" style="padding:1px 6px;line-height:1">▲</button>
+        <button class="btn xs" data-roi-mover-abajo="${m.id}" title="Bajar" style="padding:1px 6px;line-height:1">▼</button>
+      </div>
+    </td>
+    <td style="cursor:pointer" data-open-rm-maquina="${m.id}" data-open-rm-centro="${c.id}" title="Clic para editar esta máquina"><div style="display:flex;align-items:center;gap:12px">
+      ${m.heroPhoto?`<img src="${m.heroPhoto}" style="width:64px;height:64px;border-radius:8px;object-fit:cover;border:1px solid var(--border2);flex-shrink:0">`:`<div style="width:64px;height:64px;border-radius:8px;background:var(--surface2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0"><div style="width:12px;height:12px;border-radius:50%;background:${m.color||'#94a3b8'}"></div></div>`}
+      <div><div style="font-weight:600">${esc(m.name||'Sin nombre')}</div>
+      ${m.model?`<div class="small muted">${esc(m.model)}</div>`:''}
+      <div class="small" style="color:${est.color};font-weight:700;margin-top:2px">${est.icon} ${est.label}</div>
+      <div class="small muted">${esc(c.nombre)}</div></div>
+    </div></td>
+    <td style="text-align:right;font-weight:600">${fmtMoney(m.inv||0)}</td>
+    <td style="text-align:right;font-weight:600;color:${hd?'#16A34A':'#9CA3AF'}">${hd?fmtMoney(abReal):'Pendiente'}</td>
+    <td style="text-align:right;font-weight:700;color:${payColor}">${payTxt}</td>
+    <td style="text-align:right">${acumHTML}</td>
+  </tr>`;
+}
+// "ROI de todas las máquinas" — pantalla única con selector Proyectado/Real (antes eran
+// 2 vistas separadas del menú principal; a pedido del usuario, 2026-09-19 "quedó revuelto",
+// se fusionaron en una sola tabla que cambia de columnas, accesible solo desde dentro de
+// Centro de Trabajo, sin la caja de "Parámetros globales" arriba.
+let _roiMaqModo='proyectado'; // 'proyectado' | 'real'
+function renderRoiMaquinas(root){
+  if(!isAdmin()){ root.innerHTML=noPermissionHTML(); return; }
+  if(!dataReady()){ root.innerHTML=loadingHTML('Cargando…'); return; }
+  const filas=reporteMaquinasFilas();
+  if(_reporteMaqSel===null) _reporteMaqSel=new Set(filas.map(f=>f.m.id)); // por default, todas marcadas
+  const nSel=filas.filter(f=>_reporteMaqSel.has(f.m.id)).length;
+  const esReal=_roiMaqModo==='real';
+  root.innerHTML=`<div class="view-head"><div><h1>ROI de Máquinas</h1>
+    <div class="view-sub">${esReal?'Costo, ganancia real (con base en piezas fabricadas) y tiempo real de recuperación':'ROI, flujo anual y payback con base en los supuestos capturados al planear la compra'} — todas las máquinas, todos los centros.</div></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn sm" id="rm-back">← Centro de Trabajo</button>
+      <button class="btn primary" id="rm-pdf-btn">🖨 Generar PDF (${nSel})</button>
+    </div></div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn sm ${!esReal?'primary':''}" id="rm-modo-proyectado">🎯 Proyectado</button>
+      <button class="btn sm ${esReal?'primary':''}" id="rm-modo-real">✅ Real</button>
+    </div>
+    <div class="card" style="padding:0;overflow-x:auto">
+    <table class="tbl"><thead><tr>
+      <th style="width:34px"><input type="checkbox" id="rm-check-all" ${nSel===filas.length&&filas.length?'checked':''}></th>
+      <th>Descripción de la máquina</th>
+      ${esReal
+        ?'<th style="text-align:right">Costo de la máquina</th><th style="text-align:right">Ganancia Real anual</th><th style="text-align:right">Payback Real</th><th style="text-align:right">¿Ya se pagó?</th>'
+        :'<th style="text-align:right">Inversión neta</th><th style="text-align:right">Flujo anual proyectado</th><th style="text-align:right">ROI Proyectado</th><th style="text-align:right">Payback proyectado</th>'}
+    </tr></thead>
+    <tbody>${filas.length?filas.map(({m,c})=>esReal?filaRoiRealHTML(m,c):filaRoiProyectadoHTML(m,c)).join(''):'<tr><td colspan="6" class="small muted" style="padding:14px">Sin máquinas capturadas todavía.</td></tr>'}</tbody></table></div>`;
+  document.getElementById('rm-back').addEventListener('click',()=>showView('centrotrabajo'));
+  document.getElementById('rm-modo-proyectado').addEventListener('click',()=>{ _roiMaqModo='proyectado'; render(); });
+  document.getElementById('rm-modo-real').addEventListener('click',()=>{ _roiMaqModo='real'; render(); });
+  wireRoiMaquinasTable(root,filas,()=>esReal
+    ?descargarRoiRealPDF(filas.filter(f=>_reporteMaqSel.has(f.m.id)))
+    :descargarRoiProyectadoPDF(filas.filter(f=>_reporteMaqSel.has(f.m.id))));
+}
+VIEW_RENDERERS['roimaquinas']=renderRoiMaquinas;
 
-function reporteMaquinasPdfHTML(filas){
+function roiProyectadoPdfHTML(filas){
   const fecha=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
   const rows=filas.map(({m,c})=>{
-    const {abReal,hd,r,est,acum}=reporteMaquinasCalc(m,c);
-    const payTxt=(hd&&isFinite(r.pay))?(r.pay<1?(r.pay*12).toFixed(1)+' meses':r.pay.toFixed(1)+' años'):'Pendiente';
-    let acumTxt;
-    if(!acum) acumTxt=hd?'Falta fecha de arranque':'Pendiente';
-    else if(acum.pagada) acumTxt=`✅ Ya se pagó (excedente ${fmtMoney(acum.excedente)})`;
-    else acumTxt=`⏳ ${acum.pctRecuperado.toFixed(0)}% recuperado (faltan ${fmtMoney(acum.faltante)})`;
+    const {r,hd,est}=roiProyectadoCalc(m,c);
+    const roiTxt=hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'—';
+    const payTxt=(hd&&isFinite(r.pay))?(r.pay<1?(r.pay*12).toFixed(1)+' meses':r.pay.toFixed(1)+' años'):'—';
     return `<tr>
       <td class="ph">${m.heroPhoto?`<img src="${m.heroPhoto}">`:`<div class="ph-ph" style="background:${m.color||'#94a3b8'}"></div>`}</td>
       <td><div class="nm">${esc(m.name||'Sin nombre')}</div><div class="mo">${esc(m.model||'')}</div><div class="mo">${esc(c.nombre)} · ${est.icon} ${esc(est.label)}</div></td>
-      <td class="r">${fmtMoney(m.inv||0)}</td>
-      <td class="r${hd?' g':''}">${hd?fmtMoney(abReal):'Pendiente'}</td>
+      <td class="r">${fmtMoney(r.netInv)}</td>
+      <td class="r${hd?' g':''}">${hd?fmtMoney(r.fl):'—'}</td>
+      <td class="r">${roiTxt}</td>
       <td class="r">${payTxt}</td>
-      <td class="r">${acumTxt}</td>
     </tr>`;
   }).join('');
-  const totInv=filas.reduce((s,{m})=>s+(m.inv||0),0);
-  const totGan=filas.reduce((s,{m,c})=>{ const {abReal,hd}=reporteMaquinasCalc(m,c); return s+(hd?abReal:0); },0);
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Reporte ROI de Maquinaria</title>
+  const totInv=filas.reduce((s,{m,c})=>s+roiProyectadoCalc(m,c).r.netInv,0);
+  const totFl=filas.reduce((s,{m,c})=>{ const {r,hd}=roiProyectadoCalc(m,c); return s+(hd?r.fl:0); },0);
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Reporte ROI Proyectado de Maquinaria</title>
 <style>
   body{font-family:Arial,Helvetica,sans-serif;padding:28px;color:#222}
   h1{font-size:19px;margin:0 0 2px}
@@ -3783,7 +4255,56 @@ function reporteMaquinasPdfHTML(filas){
   @media print{ tr{page-break-inside:avoid} }
 </style></head>
 <body>
-  <h1>📋 Reporte ROI de Maquinaria — Línea Italia</h1>
+  <h1>🎯 Reporte ROI Proyectado de Maquinaria — Línea Italia</h1>
+  <div class="fecha">Generado el ${fecha} · ${filas.length} máquina${filas.length!==1?'s':''} seleccionada${filas.length!==1?'s':''}</div>
+  <div class="tot">Inversión neta total: <b>${fmtMoney(totInv)}</b> &nbsp;·&nbsp; Flujo anual proyectado (máquinas con dato): <b>${fmtMoney(totFl)}</b></div>
+  <table>
+    <thead><tr><th></th><th>Descripción de la máquina</th><th>Inversión neta</th><th>Flujo anual proyectado</th><th>ROI Proyectado</th><th>Payback proyectado</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="6">Sin máquinas seleccionadas.</td></tr>'}</tbody>
+  </table>
+</body></html>`;
+}
+function roiRealPdfHTML(filas){
+  const fecha=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+  const rows=filas.map(({m,c})=>{
+    const {abReal,hd,r,est,acum}=roiRealCalc(m,c);
+    const payTxt=(hd&&isFinite(r.pay))?(r.pay<1?(r.pay*12).toFixed(1)+' meses':r.pay.toFixed(1)+' años'):'Pendiente';
+    let acumTxt;
+    if(!acum) acumTxt=hd?'Falta fecha de arranque':'Pendiente';
+    else if(acum.pagada) acumTxt=`✅ Ya se pagó (excedente ${fmtMoney(acum.excedente)})`;
+    else acumTxt=`⏳ ${acum.pctRecuperado.toFixed(0)}% recuperado (faltan ${fmtMoney(acum.faltante)})`;
+    return `<tr>
+      <td class="ph">${m.heroPhoto?`<img src="${m.heroPhoto}">`:`<div class="ph-ph" style="background:${m.color||'#94a3b8'}"></div>`}</td>
+      <td><div class="nm">${esc(m.name||'Sin nombre')}</div><div class="mo">${esc(m.model||'')}</div><div class="mo">${esc(c.nombre)} · ${est.icon} ${esc(est.label)}</div></td>
+      <td class="r">${fmtMoney(m.inv||0)}</td>
+      <td class="r${hd?' g':''}">${hd?fmtMoney(abReal):'Pendiente'}</td>
+      <td class="r">${payTxt}</td>
+      <td class="r">${acumTxt}</td>
+    </tr>`;
+  }).join('');
+  const totInv=filas.reduce((s,{m})=>s+(m.inv||0),0);
+  const totGan=filas.reduce((s,{m,c})=>{ const {abReal,hd}=roiRealCalc(m,c); return s+(hd?abReal:0); },0);
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Reporte ROI Real de Maquinaria</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;padding:28px;color:#222}
+  h1{font-size:19px;margin:0 0 2px}
+  .fecha{color:#666;font-size:11.5px;margin-bottom:6px}
+  .tot{font-size:12px;color:#333;margin-bottom:18px}
+  .tot b{color:#111}
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  th,td{border:1px solid #ccc;padding:7px 8px;text-align:left;vertical-align:top}
+  th{background:#f0f0f0}
+  td.r{text-align:right;white-space:nowrap}
+  td.r.g{color:#16A34A;font-weight:700}
+  td.ph{width:64px;padding:6px}
+  td.ph img{width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid #ccc;display:block}
+  .ph-ph{width:56px;height:56px;border-radius:6px;border:1px solid #ccc}
+  .nm{font-weight:700}
+  .mo{color:#666;font-size:10px}
+  @media print{ tr{page-break-inside:avoid} }
+</style></head>
+<body>
+  <h1>✅ Reporte ROI Real de Maquinaria — Línea Italia</h1>
   <div class="fecha">Generado el ${fecha} · ${filas.length} máquina${filas.length!==1?'s':''} seleccionada${filas.length!==1?'s':''}</div>
   <div class="tot">Inversión total: <b>${fmtMoney(totInv)}</b> &nbsp;·&nbsp; Ganancia real anual (máquinas con dato): <b>${fmtMoney(totGan)}</b></div>
   <table>
@@ -3794,11 +4315,20 @@ function reporteMaquinasPdfHTML(filas){
 }
 // Ventana nueva abierta de forma SÍNCRONA (antes de escribir el HTML) — mismo patrón
 // que descargarResumenPDF, así no la bloquea el bloqueador de pop-ups.
-function descargarReporteMaquinasPDF(filas){
+function descargarRoiProyectadoPDF(filas){
   if(!filas.length){ toast('Marca al menos una máquina para incluir en el PDF','err'); return; }
   const w=window.open('','_blank');
   if(!w){ toast('Tu navegador bloqueó la ventana — permite pop-ups para este sitio e intenta de nuevo.','err'); return; }
-  w.document.write(reporteMaquinasPdfHTML(filas));
+  w.document.write(roiProyectadoPdfHTML(filas));
+  w.document.close();
+  w.focus();
+  w.print();
+}
+function descargarRoiRealPDF(filas){
+  if(!filas.length){ toast('Marca al menos una máquina para incluir en el PDF','err'); return; }
+  const w=window.open('','_blank');
+  if(!w){ toast('Tu navegador bloqueó la ventana — permite pop-ups para este sitio e intenta de nuevo.','err'); return; }
+  w.document.write(roiRealPdfHTML(filas));
   w.document.close();
   w.focus();
   w.print();
@@ -3818,7 +4348,13 @@ function renderCentroDetail(root){
       ${CT_TABS.map(t=>`<button class="btn sm ${_ctTab===t.key?'primary':''}" data-ct-tab="${t.key}">${t.label}</button>`).join('')}
     </div>
     <div id="ct-tab-body"></div>`;
-  document.getElementById('ct-back').addEventListener('click',()=>{ _currentCentroId=null; render(); });
+  document.getElementById('ct-back').addEventListener('click',()=>{
+    // Limpia también la máquina abierta: si no, la próxima vez que entraras a
+    // este mismo Centro y dieras clic en "Máquinas" te reabría esa máquina de
+    // golpe en vez de mostrar la lista — origen real de los saltos de pantalla
+    // que reportó el usuario 21-sep-2026.
+    _currentCentroId=null; _currentMaquinaId=null; _maqOrigen=null; render();
+  });
   document.getElementById('ct-tabs').querySelectorAll('button').forEach(b=>{
     b.addEventListener('click',()=>{ _ctTab=b.dataset.ctTab; render(); });
   });
@@ -4107,6 +4643,61 @@ async function ctDeleteCif(c,idx){
   c.cif.splice(idx,1); c.updatedAt=Date.now(); saveDB(); toast('Eliminado'); render();
 }
 
+// Costo/hora por máquina (Resumen) — misma fuente (ctCostoHoraPorMaquina) que ya
+// usa la pastilla 🔗 de "Variables y cálculo": una tarjeta por máquina con foto,
+// nombre, el % capturable (editable aquí mismo) y el desglose de dónde sale el
+// número, para no contar la misma cifra con dos historias distintas. Si nadie ha
+// capturado % en el Centro, sigue siendo el reparto parejo de siempre.
+function ctResumenCostoMaquinasHTML(c){
+  const maquinas=c.maquinas||[];
+  if(!maquinas.length) return '<div class="small muted">Este Centro no tiene máquinas registradas todavía.</div>';
+  const costoCentro=ctCostoHora(c);
+  const sumaPct=ctSumaCostoHoraPctCentro(c);
+  const sinCapturarCount=maquinas.filter(x=>!ctTieneCostoHoraPct(x)).length;
+  const avisoOver=sumaPct>100?`<div class="small" style="color:var(--bad);font-weight:700;margin-bottom:10px">⚠ Los % capturados en este Centro suman ${sumaPct.toFixed(1)}% — más de 100%. Ajusta los porcentajes de las máquinas para que la suma no rebase el 100%.</div>`:'';
+  return avisoOver+`<div class="small muted" style="margin-bottom:8px">Arrastra una tarjeta, o usa ▲/▼, para cambiar el orden — se guarda como el orden real de las máquinas del Centro.</div><div class="grid-cards">${maquinas.map((m,idx)=>{
+    const tienePct=ctTieneCostoHoraPct(m);
+    const porMaquina=ctCostoHoraPorMaquina(c,m);
+    const pctRestante=sinCapturarCount>0?Math.max(0,100-sumaPct)/sinCapturarCount:0;
+    const desglose=tienePct
+      ?`${parseNum(m.costoHoraPct)}% del Centro capturado → $${costoCentro.toFixed(2)}/hr × ${parseNum(m.costoHoraPct)}% = $${porMaquina.toFixed(2)}/hr`
+      :`Sin % capturado — reparto automático del resto (${pctRestante.toFixed(1)}% entre ${sinCapturarCount} máquina${sinCapturarCount!==1?'s':''} sin capturar) → $${porMaquina.toFixed(2)}/hr`;
+    return `
+    <div class="card ct-maquina-card" style="background:var(--surface2)" draggable="true" data-ct-maquina-idx="${idx}" title="Arrastra para reordenar">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="small muted" style="flex-shrink:0" aria-hidden="true">⠿</span>
+        ${m.heroPhoto?`<img src="${m.heroPhoto}" draggable="false" style="width:56px;height:56px;border-radius:8px;object-fit:cover;border:1px solid var(--border2);flex-shrink:0;pointer-events:none">`:`<div style="width:56px;height:56px;border-radius:8px;background:var(--surface);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0"><div style="width:12px;height:12px;border-radius:50%;background:${m.color||'#94a3b8'}"></div></div>`}
+        <div style="font-weight:600;font-size:13.5px;flex:1">${esc(m.name||'Sin nombre')}</div>
+        <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
+          <button class="btn xs" data-ct-mover-arriba="${idx}" title="Subir" ${idx===0?'disabled':''} style="padding:2px 8px;line-height:1">▲</button>
+          <button class="btn xs" data-ct-mover-abajo="${idx}" title="Bajar" ${idx===maquinas.length-1?'disabled':''} style="padding:2px 8px;line-height:1">▼</button>
+        </div>
+      </div>
+      <div style="font-size:18px;font-weight:700;color:var(--accent);margin-top:10px">$${porMaquina.toFixed(2)}/hr</div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:6px">
+        <span class="small muted">% del Centro capturable:</span>
+        <input class="input" style="width:70px" type="number" min="0" max="100" step="0.1" placeholder="auto" value="${tienePct?parseNum(m.costoHoraPct):''}" data-ct-pct-maquina="${idx}">
+        <span class="small muted">%</span>
+      </div>
+      <div class="small muted" style="margin-top:6px;font-family:monospace;line-height:1.5">${desglose}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// Reordena c.maquinas moviendo el elemento en fromIdx a la posición toIdx
+// (índice final ya deseado en el arreglo resultante). Es el MISMO arreglo que
+// usa "🏗️ Máquinas — Plan de Inversión", así que el nuevo orden se refleja ahí
+// también — es intencional, no se duplica el arreglo para aislarlo.
+function ctReordenarMaquina(c,fromIdx,toIdx){
+  const arr=c.maquinas||[];
+  if(fromIdx===toIdx||fromIdx<0||toIdx<0||fromIdx>=arr.length||toIdx>=arr.length) return;
+  const [item]=arr.splice(fromIdx,1);
+  arr.splice(toIdx,0,item);
+  c.updatedAt=Date.now();
+  saveDB();
+  render();
+}
+
 /* ── Resumen: costo/hora real vs. ideal (Takt Time) ── */
 function renderCTResumen(el,c){
   const r=ctCalcularResultados(c);
@@ -4161,6 +4752,10 @@ function renderCTResumen(el,c){
       </div>
     </div>
     <div class="card" style="margin-bottom:16px">
+      <div style="font-weight:700;font-size:13.5px;margin-bottom:10px">🔧 Costo por hora por máquina</div>
+      ${ctResumenCostoMaquinasHTML(c)}
+    </div>
+    <div class="card" style="margin-bottom:16px">
       <div style="font-weight:700;font-size:13.5px;margin-bottom:10px">⚙️ Capacidad del centro</div>
       <div class="grid-cards">
         <div class="card" style="background:var(--surface2)"><div class="small muted">Capacidad (balanceo)</div><div style="font-size:18px;font-weight:700;color:var(--accent)">${capDia} pzas/día</div></div>
@@ -4173,6 +4768,63 @@ function renderCTResumen(el,c){
       <div style="font-weight:700;font-size:13.5px;margin-bottom:10px">🎯 Costo ideal (Takt Time)</div>
       ${idealHTML}
     </div>`;
+  el.querySelectorAll('[data-ct-mover-arriba]').forEach(btn=>btn.addEventListener('click',()=>{
+    ctReordenarMaquina(c, Number(btn.dataset.ctMoverArriba), Number(btn.dataset.ctMoverArriba)-1);
+  }));
+  el.querySelectorAll('[data-ct-mover-abajo]').forEach(btn=>btn.addEventListener('click',()=>{
+    ctReordenarMaquina(c, Number(btn.dataset.ctMoverAbajo), Number(btn.dataset.ctMoverAbajo)+1);
+  }));
+  el.querySelectorAll('[data-ct-pct-maquina]').forEach(inp=>inp.addEventListener('change',e=>{
+    const idx=Number(e.target.dataset.ctPctMaquina);
+    const maquina=(c.maquinas||[])[idx];
+    if(!maquina) return;
+    const raw=e.target.value.trim();
+    if(raw===''){ maquina.costoHoraPct=null; }
+    else {
+      let pct=parseNum(raw);
+      pct=Math.max(0,Math.min(100,pct));
+      maquina.costoHoraPct=pct;
+    }
+    c.updatedAt=Date.now(); saveDB(); render();
+  }));
+  // Drag and drop nativo (sin librerías) para reordenar las tarjetas de
+  // "Costo por hora por máquina" — reordena c.maquinas de verdad (ver
+  // ctReordenarMaquina), no solo el orden visual.
+  const maquinaCards=el.querySelectorAll('[data-ct-maquina-idx]');
+  let ctDragFromIdx=null;
+  maquinaCards.forEach(card=>{
+    card.addEventListener('dragstart',e=>{
+      ctDragFromIdx=Number(card.dataset.ctMaquinaIdx);
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed='move';
+      try{ e.dataTransfer.setData('text/plain',String(ctDragFromIdx)); }catch(err){}
+    });
+    card.addEventListener('dragend',()=>{
+      card.classList.remove('dragging');
+      maquinaCards.forEach(x=>x.classList.remove('drag-over-top','drag-over-bottom'));
+      ctDragFromIdx=null;
+    });
+    card.addEventListener('dragover',e=>{
+      if(ctDragFromIdx===null) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect='move';
+      const rect=card.getBoundingClientRect();
+      const before=(e.clientY-rect.top)<rect.height/2;
+      maquinaCards.forEach(x=>x.classList.remove('drag-over-top','drag-over-bottom'));
+      card.classList.add(before?'drag-over-top':'drag-over-bottom');
+    });
+    card.addEventListener('drop',e=>{
+      e.preventDefault();
+      if(ctDragFromIdx===null) return;
+      const rect=card.getBoundingClientRect();
+      const before=(e.clientY-rect.top)<rect.height/2;
+      const targetIdx=Number(card.dataset.ctMaquinaIdx);
+      let toIdx=before?targetIdx:targetIdx+1;
+      const fromIdx=ctDragFromIdx;
+      if(fromIdx<toIdx) toIdx-=1;
+      ctReordenarMaquina(c,fromIdx,toIdx);
+    });
+  });
 }
 
 /* ── Equipos: inventario + semáforo de mantenimiento (mismos umbrales que
@@ -4254,17 +4906,16 @@ function renderCTMaquinas(el,c){
   document.getElementById('ct-piezasdia').addEventListener('change',e=>{ c.piezasPromedioDia=parseNum(e.target.value); c.updatedAt=Date.now(); saveDB(); render(); });
   document.getElementById('ct-piezasmeta').addEventListener('change',e=>{ c.piezasPromedioMeta=e.target.value.trim(); c.updatedAt=Date.now(); saveDB(); });
   el.querySelectorAll('[data-open-maquina]').forEach(d=>{
-    d.addEventListener('click',()=>{ _currentMaquinaId=d.dataset.openMaquina; _maqTab='dash'; render(); });
+    d.addEventListener('click',()=>{ _currentMaquinaId=d.dataset.openMaquina; _maqTab='dash'; _maqOrigen=null; render(); });
   });
   el.querySelectorAll('[data-del-maquina]').forEach(b=>{
     b.addEventListener('click',ev=>{ ev.stopPropagation(); ctDeleteMaquina(c,b.dataset.delMaquina); });
   });
 }
 function renderMaquinaCardHTML(c,m){
-  const rProy=calcROI(m);
-  const abReal=gananciaPorPiezas(m,c);
-  const hd=abReal!==null&&abReal>0;
-  const rReal=hd?roiPorPiezas(m,abReal):null;
+  const rProy=calcROI(m,c);
+  const hd=tieneRoiRealDatos(m);
+  const rReal=hd?calcROIRealPorConceptos(m,c):null;
   return `<div class="card" style="cursor:pointer;position:relative" data-open-maquina="${m.id}">
     <button class="btn xs danger" data-del-maquina="${m.id}" style="position:absolute;top:8px;right:8px">✕</button>
     <div style="display:flex;align-items:center;gap:10px">
@@ -4320,16 +4971,31 @@ function ctEditMaquinaDlg(c,mid){
 function renderMaquinaDetail(el,c){
   const m=curMaquina(c);
   if(!m){ _currentMaquinaId=null; renderCTMaquinas(el,c); return; }
-  const MAQ_TABS=[{key:'dash',label:'📊 Dashboard'},{key:'id',label:'Identificación'},{key:'vars',label:'Variables y cálculo'},{key:'roi',label:'🔍 Auditoría ROI'}];
+  // Dashboard = foto/impactos/especificaciones (una sola vez, no cambian) + 2
+  // secciones de RESULTADOS: 🎯 Proyectado y ✅ Real, una junto a la otra para
+  // comparar sin cambiar de pestaña (ver renderMaqTabDashboard). "Captura Real"
+  // (antes "ROI Real") se quedó solo con la CAPTURA semana a semana por concepto,
+  // sin resultados — esos ya se ven en Dashboard (ver renderMaqTabRoiReal).
+  // "Variables" es donde se activan/editan los conceptos y sus supuestos.
+  const MAQ_TABS=[{key:'dash',label:'📊 Dashboard'},{key:'id',label:'Identificación'},{key:'vars',label:'Variables'},{key:'roi',label:'📝 Captura Real'}];
+  // Si se entró desde la tabla combinada "ROI de Máquinas", el botón de volver
+  // regresa ahí — antes siempre regresaba a Centro de Trabajo → Máquinas, sin
+  // importar de dónde venías, lo que hacía que "regresar" te mandara a una
+  // pantalla que no reconocías (reportado por el usuario 21-sep-2026).
+  const volverARoiTabla=_maqOrigen==='roimaquinas';
   el.innerHTML=`<div class="view-head">
       <div><h1 style="font-size:18px">${esc(m.name)}</h1><div class="view-sub">${esc(m.model||'')}</div></div>
-      <button class="btn sm" id="maq-back">← Máquinas</button>
+      <button class="btn sm" id="maq-back">${volverARoiTabla?'← ROI de Máquinas':'← Máquinas'}</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" id="maq-tabs">
       ${MAQ_TABS.map(t=>`<button class="btn sm ${_maqTab===t.key?'primary':''}" data-maq-tab="${t.key}">${t.label}</button>`).join('')}
     </div>
     <div id="maq-tab-body"></div>`;
-  document.getElementById('maq-back').addEventListener('click',()=>{ _currentMaquinaId=null; render(); });
+  document.getElementById('maq-back').addEventListener('click',()=>{
+    _currentMaquinaId=null;
+    if(volverARoiTabla){ _maqOrigen=null; _currentCentroId=null; showView('roimaquinas'); }
+    else render();
+  });
   document.getElementById('maq-tabs').querySelectorAll('button').forEach(b=>{
     b.addEventListener('click',()=>{ _maqTab=b.dataset.maqTab; render(); });
   });
@@ -4337,7 +5003,7 @@ function renderMaquinaDetail(el,c){
   if(_maqTab==='dash') renderMaqTabDashboard(body,c,m);
   else if(_maqTab==='id') renderMaqTabId(body,c,m);
   else if(_maqTab==='vars') renderMaqTabVars(body,c,m);
-  else if(_maqTab==='roi') renderMaqTabRoi(body,c,m);
+  else if(_maqTab==='roi') renderMaqTabRoiReal(body,c,m);
 }
 function maqUpd(c,m,key,val){ m[key]=val; c.updatedAt=Date.now(); saveDB(); }
 
@@ -4345,12 +5011,40 @@ function maqUpd(c,m,key,val){ m[key]=val; c.updatedAt=Date.now(); saveDB(); }
 // puntos de impacto, análisis financiero, beneficios anuales, especificaciones) ──
 function renderMaqTabDashboard(el,c,m){
   m.impactos=m.impactos||[]; m.specs=m.specs||[];
-  const r=calcROI(m);
+  const r=calcROI(m,c);
   const hd=r.ab>0;
   const roiColor=hd?(r.roi>=100?'#16A34A':r.roi>=50?'#D97706':'#DC2626'):'#9A9890';
-  const abReal=gananciaPorPiezas(m,c);
-  const hdReal=abReal!==null&&abReal>0;
-  const rReal=hdReal?roiPorPiezas(m,abReal):null;
+  // Dashboard fusionado (21-sep-2026, pedido del usuario "unas dashboard proyectado
+  // con ROI real"): la foto/estatus/Puntos de Impacto/Especificaciones son datos DE
+  // LA MÁQUINA — no cambian entre Proyectado y Real, así que viven una sola vez.
+  // Debajo van 2 secciones separadas con lo que sí difiere: 🎯 Proyectado (igual que
+  // antes) y ✅ Real (antes vivía en la pestaña "ROI Real", que ahora es "Captura
+  // Real" y solo tiene las tablas de captura semanal, ver renderMaqTabRoiReal).
+  const hdReal=tieneRoiRealDatos(m);
+  const rr=hdReal?calcROIRealPorConceptos(m,c):null;
+  const roiColorReal=hdReal?(rr.roi>=100?'#16A34A':rr.roi>=50?'#D97706':'#DC2626'):'#9A9890';
+  const acumReal=hdReal?acumuladoReal(m,c):null;
+  let acumHTML;
+  if(!hdReal) acumHTML=`<span class="small muted">Captura al menos una semana en "Captura Real" para ver ROI Real y "¿ya se pagó?".</span>`;
+  else if(!acumReal) acumHTML=`<span class="small muted">Captura la fecha real de inicio de operación en "Identificación" para ver cuánto lleva acumulado.</span>`;
+  else if(acumReal.pagada) acumHTML=`<div class="pill ok" style="display:inline-block">✅ Ya se pagó — excedente ${fmtMoney(acumReal.excedente)}</div>`;
+  else acumHTML=`<div class="pill warn" style="display:inline-block">⏳ ${acumReal.pctRecuperado.toFixed(0)}% recuperado — faltan ${fmtMoney(acumReal.faltante)}</div>`;
+  // Botones rápidos de estatus (mismo STATUS_OPTIONS de siempre, ver Identificación)
+  // — solo tienen sentido mientras ROI Real sigue pendiente.
+  const QUICK_STATUS_ROI=['recien_instalada','transito','tramite'];
+  const botonesEstatus=(!hdReal?QUICK_STATUS_ROI.filter(k=>k!==m.status):[])
+    .map(k=>STATUS_OPTIONS.find(s=>s.key===k))
+    .filter(Boolean)
+    .map(opt=>`<button class="btn xs" data-rr-marcar-estatus="${opt.key}">${opt.icon} Marcar "${opt.label}"</button>`)
+    .join(' ');
+  // Gráfica Proyectado vs Real por concepto (pedido del usuario 21-sep-2026) —
+  // solo conceptos de beneficio activos (igual criterio que "Beneficios Anuales"
+  // y "Captura Real": se excluye OPEX, que no es beneficio).
+  const conceptosChart=Object.keys(m.vars||{}).filter(vid=>{
+    const mv=m.vars[vid]; if(!mv||!mv.on) return false;
+    const vdef=VAR_LIB.find(v=>v.id===vid);
+    return vdef&&vdef.cat!=='opex';
+  }).map(vid=>({vdef:VAR_LIB.find(v=>v.id===vid),proy:calcVar(m,vid,c),real:calcVarReal(m,vid,c)}));
   const est=mEstatus(m,hd);
 
   el.innerHTML=`
@@ -4367,7 +5061,7 @@ function renderMaqTabDashboard(el,c,m){
         <div><div class="small muted">Inv. neta</div><div style="font-weight:700;color:#2563EB">${fmtMoney(r.netInv)}</div></div>
         <div><div class="small muted">ROI Proyectado (${m.yr||8} años)</div><div style="font-weight:700;color:${roiColor}">${hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'—'}</div></div>
         <div><div class="small muted">Payback proyectado</div><div style="font-weight:700;color:#D97706">${isFinite(r.pay)?r.pay.toFixed(1)+' años':'—'}</div></div>
-        ${hdReal?`<div><div class="small muted">ROI Real</div><div style="font-weight:700;color:${rReal.roi>=100?'#16A34A':rReal.roi>=50?'#D97706':'#DC2626'}">${rReal.roi>=0?'+':''}${rReal.roi.toFixed(0)}%</div></div>`:''}
+        ${hdReal?`<div><div class="small muted">ROI Real</div><div style="font-weight:700;color:${roiColorReal}">${rr.roi>=0?'+':''}${rr.roi.toFixed(0)}%</div></div>`:''}
         <div><div class="small muted">💡 Costo/hora de ${esc(c.nombre)}</div><div style="font-weight:700">$${ctCostoHora(c).toFixed(2)}/hr</div></div>
         <div><div class="small muted">⚙️ Capacidad de ${esc(c.nombre)}</div><div style="font-weight:700">${ctCapacidadDia(c)} pzas/día</div></div>
       </div>
@@ -4399,6 +5093,10 @@ function renderMaqTabDashboard(el,c,m){
     </div>
   </div>
 
+  <div style="margin:22px 0 12px;padding-top:16px;border-top:2px solid var(--border2);display:flex;align-items:center;gap:8px">
+    <div style="font-weight:800;font-size:14px">🎯 Proyectado</div>
+    <div class="small muted">— supuestos capturados al planear la compra (pestaña "Variables")</div>
+  </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
     <div class="card">
       <div style="font-weight:700;font-size:13px;margin-bottom:8px">💵 Análisis Financiero</div>
@@ -4422,7 +5120,7 @@ function renderMaqTabDashboard(el,c,m){
           Object.keys(m.vars).forEach(vid=>{
             const mv=m.vars[vid]; if(!mv||!mv.on) return;
             const vdef=VAR_LIB.find(v=>v.id===vid); if(!vdef||vdef.cat==='opex') return;
-            const val=calcVar(m,vid); any=true;
+            const val=calcVar(m,vid,c); any=true;
             rows+=`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border2)"><span>${vdef.name}</span><span style="font-weight:600;color:#16A34A">${fmtMoney(val)}</span></div>`;
           });
         }
@@ -4430,11 +5128,51 @@ function renderMaqTabDashboard(el,c,m){
         return rows+(hd?`<div style="display:flex;justify-content:space-between;font-weight:700;padding-top:8px;margin-top:4px"><span>Total / año</span><span style="color:#16A34A">${fmtMoney(r.ab)}</span></div>`:'');
       })()}
     </div>
+  </div>
+
+  <div style="margin:22px 0 12px;padding-top:16px;border-top:2px solid var(--border2);display:flex;align-items:center;gap:8px">
+    <div style="font-weight:800;font-size:14px">✅ Real</div>
+    <div class="small muted">— con base en lo capturado semana a semana (pestaña "Captura Real")</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-weight:700;font-size:13px">⚙️ Especificaciones Técnicas</div>
-        <button class="btn xs" id="maq-add-spec">＋</button>
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px">📋 Resumen</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+        <div><div class="small muted">Beneficio anual real</div><div style="font-weight:700">${hdReal?fmtMoney(rr.ab):'—'}</div></div>
+        <div><div class="small muted">Flujo neto real</div><div style="font-weight:700">${hdReal?fmtMoney(rr.fl):'—'}</div></div>
+        <div><div class="small muted">ROI Real</div><div style="font-weight:700;color:${roiColorReal}">${hdReal?(rr.roi>=0?'+':'')+rr.roi.toFixed(0)+'%':'—'}</div></div>
+        <div><div class="small muted">Payback real</div><div style="font-weight:700">${hdReal&&isFinite(rr.pay)?(rr.pay<1?(rr.pay*12).toFixed(1)+' meses':rr.pay.toFixed(1)+' años'):'—'}</div></div>
       </div>
+      <div style="margin-top:10px">${acumHTML}</div>
+      ${botonesEstatus?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${botonesEstatus}</div>`:''}
+    </div>
+    <div class="card">
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px">💵 Análisis Financiero — Real</div>
+      <div style="text-align:center;padding:10px 0;border-bottom:1px solid var(--border2);margin-bottom:8px">
+        <div style="font-size:28px;font-weight:800;color:${roiColorReal}">${hdReal?(rr.roi>=0?'+':'')+rr.roi.toFixed(0)+'%':'—'}</div>
+        <div class="small muted">ROI Simple real · ${m.yr||8} años</div>
+        <div class="small" style="margin-top:2px">${hdReal?'Ganancia neta '+fmtMoney(rr.ng):'Captura al menos una semana en "Captura Real"'}</div>
+      </div>
+      ${[['Inversión bruta (CAPEX)',fmtMoney(m.inv||0)],
+        ...(m.replaceVal>0?[['Venta máquina reemplazada','− '+fmtMoney(m.replaceVal)],['Inversión neta',fmtMoney(hdReal?rr.netInv:0)]]:[]),
+        ['OPEX anual',fmtMoney(hdReal?rr.opx:0)],['Vida útil',(m.yr||8)+' años'],['Valor de rescate',fmtMoney(m.res||0)],
+        ['Beneficio anual',hdReal?fmtMoney(rr.ab):'—'],['Flujo neto anual',hdReal?fmtMoney(rr.fl):'—'],
+        ['Payback',hdReal&&isFinite(rr.pay)?rr.pay.toFixed(1)+' años':'—']
+      ].map(row=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span class="muted">${row[0]}</span><span style="font-weight:600">${row[1]}</span></div>`).join('')}
+    </div>
+  </div>
+
+  ${conceptosChart.length?`<div class="card" style="margin-top:14px">
+    <div style="font-weight:700;font-size:13px;margin-bottom:10px">📊 Proyectado vs Real, por concepto</div>
+    <div style="height:${Math.max(160,conceptosChart.length*46)}px"><canvas id="maq-roi-chart"></canvas></div>
+  </div>`:''}
+
+  <div class="card" style="margin-top:22px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-weight:700;font-size:13px">⚙️ Especificaciones Técnicas</div>
+      <button class="btn xs" id="maq-add-spec">＋</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:4px 24px">
       ${m.specs.length?m.specs.map((s,i)=>`
         <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border2)">
           <div style="font-size:15px">${esc(s.icon||'⚙')}</div>
@@ -4456,6 +5194,41 @@ function renderMaqTabDashboard(el,c,m){
   document.getElementById('maq-add-spec').addEventListener('click',()=>maqSpecDlg(c,m,null));
   el.querySelectorAll('[data-edit-spec]').forEach(b=>b.addEventListener('click',()=>maqSpecDlg(c,m,Number(b.dataset.editSpec))));
   el.querySelectorAll('[data-del-spec]').forEach(b=>b.addEventListener('click',()=>{ m.specs.splice(Number(b.dataset.delSpec),1); c.updatedAt=Date.now(); saveDB(); render(); }));
+  el.querySelectorAll('[data-rr-marcar-estatus]').forEach(b=>b.addEventListener('click',()=>{
+    const key=b.dataset.rrMarcarEstatus;
+    const opt=STATUS_OPTIONS.find(s=>s.key===key);
+    maqUpd(c,m,'status',key);
+    toast(`Marcada como "${opt.label}" ${opt.icon}`);
+    render();
+  }));
+  if(_maqRoiChart){ _maqRoiChart.destroy(); _maqRoiChart=null; }
+  const roiChartCanvas=document.getElementById('maq-roi-chart');
+  if(roiChartCanvas&&conceptosChart.length){
+    const dark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
+    const inkSec=dark?'#c3c2b7':'#52514e';
+    const grid=dark?'#2c2c2a':'#e1e0d9';
+    _maqRoiChart=new Chart(roiChartCanvas,{
+      type:'bar',
+      data:{
+        labels:conceptosChart.map(x=>x.vdef.name),
+        datasets:[
+          {label:'Proyectado',data:conceptosChart.map(x=>x.proy),backgroundColor:'#2a78d6',borderRadius:4,barPercentage:0.7,categoryPercentage:0.7},
+          {label:'Real',data:conceptosChart.map(x=>x.real),backgroundColor:'#eb6834',borderRadius:4,barPercentage:0.7,categoryPercentage:0.7}
+        ]
+      },
+      options:{
+        indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        scales:{
+          x:{beginAtZero:true,grid:{color:grid},ticks:{color:inkSec,callback:v=>'$'+Number(v).toLocaleString('es-MX')}},
+          y:{grid:{display:false},ticks:{color:inkSec}}
+        },
+        plugins:{
+          legend:{position:'top',align:'end',labels:{color:inkSec,boxWidth:10,font:{size:11}}},
+          tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+fmtMoney(ctx.parsed.x)}}
+        }
+      }
+    });
+  }
 }
 function maqImpactoDlg(c,m,idx){
   const b=idx!=null?m.impactos[idx]:null;
@@ -4530,6 +5303,7 @@ function renderMaqTabId(el,c,m){
       <div><label class="lbl">Valor máquina a reemplazar ($)</label><input class="input" type="number" step="0.01" id="mi-replaceVal" value="${m.replaceVal||0}"></div>
       <div><label class="lbl">Vida útil (años)</label><input class="input" type="number" id="mi-yr" value="${m.yr||8}"></div>
       <div><label class="lbl">Valor de rescate ($)</label><input class="input" type="number" step="0.01" id="mi-res" value="${m.res||0}"></div>
+      <div><label class="lbl">Fecha real de inicio de operación</label><input class="input" type="date" id="mi-fecha" value="${m.fechaInicioOperacion||''}"></div>
     </div>
     <div style="margin-top:10px"><label class="lbl">Frase / nota de impacto</label><input class="input" id="mi-frase" value="${esc(m.frase||'')}" placeholder="Ej. Rapidez en enchapado recto, 3 nuevos tipos de enchapados"></div>
     <div class="small muted" style="margin-top:8px">Inversión neta: <b>${fmtMoney(netInv)}</b></div>
@@ -4560,69 +5334,20 @@ function renderMaqTabId(el,c,m){
     </table></div>
   </div>
   <div class="card" style="margin-top:12px">
-    <div style="font-weight:700;font-size:13px;margin-bottom:8px">Ganancia real (con base en piezas fabricadas)</div>
-    <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <div><div class="small muted">💡 Costo/hora de ${esc(c.nombre)}</div><div style="font-weight:700;font-size:15px">$${ctCostoHora(c).toFixed(2)}/hr</div></div>
-      <div><div class="small muted">⚙️ Capacidad de ${esc(c.nombre)}</div><div style="font-weight:700;font-size:15px">${ctCapacidadDia(c)} pzas/día${c.piezasPromedioDia?` <span class="small muted" style="font-weight:400">(real: ${fmtNum(c.piezasPromedioDia)})</span>`:''}</div></div>
-      <div class="small muted" style="flex:1;min-width:160px">Costo/hora sale de MOD + CIF; capacidad sale del balanceo (pestaña Distribución) — son los únicos valores, no se vuelven a capturar aquí.</div>
-      <div style="display:flex;align-items:end;gap:6px">
-        <div><label class="lbl">Min/pieza en esta máquina</label><input class="input" type="number" step="0.01" id="mi-minpz" style="width:110px" placeholder="Ej. 2.5"></div>
-        <button class="btn xs primary" id="mi-usar-costohora">Usar → $/unidad</button>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
-      <div><label class="lbl">Valor/costo actual por unidad ($)</label><input class="input" type="number" step="0.01" id="mi-vpp" value="${m.valorPorPieza||0}"></div>
-      <div><label class="lbl">Costo anterior por unidad ($) — opcional</label><input class="input" type="number" step="0.01" id="mi-ant" value="${m.costoAnteriorPorPieza||0}"></div>
-      <div><label class="lbl">Cantidad manual (si el CT no aplica)</label><input class="input" type="number" step="0.01" id="mi-manual" value="${m.unidadManualDia||''}" placeholder="Ej. 105"></div>
-      <div><label class="lbl">Periodo de esa cantidad</label>
-        <select class="select-input" id="mi-periodo">
-          ${['dia','semana','mes'].map(p=>`<option value="${p}" ${(m.unidadManualPeriodo||'dia')===p?'selected':''}>${p==='dia'?'Por día':p==='semana'?'Por semana':'Por mes'}</option>`).join('')}
-        </select>
-      </div>
-      <div><label class="lbl">Nombre de la unidad</label><input class="input" id="mi-etiqueta" value="${esc(m.unidadManualEtiqueta||'')}" placeholder="Ej. hojas, piezas"></div>
-      <div><label class="lbl">Fecha real de inicio de operación</label><input class="input" type="date" id="mi-fecha" value="${m.fechaInicioOperacion||''}"></div>
-    </div>
-    <div class="small muted" style="margin-top:6px">Si dejas "Cantidad manual" en blanco, se reparte <b>${fmtNum(c.piezasPromedioDia||0)} pz/día</b> del centro entre las máquinas que no tengan su propia captura.</div>
-    <div id="mi-preview" style="margin-top:10px"></div>
-  </div>
-  <div class="card" style="margin-top:12px">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
       <div><label class="lbl">Link a cotización</label><input class="input" id="mi-cotlink" value="${esc(m.cotLink||'')}"></div>
       <div><label class="lbl">Link a respaldo (Excel/Drive)</label><input class="input" id="mi-xlsxlink" value="${esc(m.xlsxLink||'')}"></div>
     </div>
   </div>`;
-  function refreshPreview(){
-    const abReal=gananciaPorPiezas(m,c);
-    const prev=document.getElementById('mi-preview');
-    if(abReal!==null){
-      prev.innerHTML=`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:12px;color:#92400e">
-        <b>Ganancia real anual estimada:</b> ${fmtMoney(abReal)}</div>`;
-    } else {
-      prev.innerHTML=`<div class="small muted">Falta cantidad (CT o manual) o valor por unidad para estimar la ganancia.</div>`;
-    }
-  }
-  refreshPreview();
-  [['mi-inv','inv'],['mi-replaceVal','replaceVal'],['mi-yr','yr'],['mi-res','res'],
-   ['mi-vpp','valorPorPieza'],['mi-ant','costoAnteriorPorPieza'],['mi-manual','unidadManualDia']].forEach(([elId,key])=>{
-    document.getElementById(elId).addEventListener('change',e=>{ maqUpd(c,m,key,parseNum(e.target.value)); refreshPreview(); });
+  [['mi-inv','inv'],['mi-replaceVal','replaceVal'],['mi-yr','yr'],['mi-res','res']].forEach(([elId,key])=>{
+    document.getElementById(elId).addEventListener('change',e=>{ maqUpd(c,m,key,parseNum(e.target.value)); });
   });
-  document.getElementById('mi-periodo').addEventListener('change',e=>{ maqUpd(c,m,'unidadManualPeriodo',e.target.value); refreshPreview(); });
-  document.getElementById('mi-etiqueta').addEventListener('change',e=>maqUpd(c,m,'unidadManualEtiqueta',e.target.value.trim()));
   document.getElementById('mi-fecha').addEventListener('change',e=>{ maqUpd(c,m,'fechaInicioOperacion',e.target.value); render(); });
   document.getElementById('mi-cotlink').addEventListener('change',e=>maqUpd(c,m,'cotLink',e.target.value.trim()));
   document.getElementById('mi-xlsxlink').addEventListener('change',e=>maqUpd(c,m,'xlsxLink',e.target.value.trim()));
   document.getElementById('mi-model').addEventListener('change',e=>maqUpd(c,m,'model',e.target.value.trim()));
   document.getElementById('mi-frase').addEventListener('change',e=>maqUpd(c,m,'frase',e.target.value.trim()));
   document.getElementById('mi-status').addEventListener('change',e=>{ maqUpd(c,m,'status',e.target.value); render(); });
-  document.getElementById('mi-usar-costohora').addEventListener('click',()=>{
-    const minPz=parseNum(document.getElementById('mi-minpz').value);
-    if(!(minPz>0)){ toast('Ingresa los minutos por pieza en esta máquina'); return; }
-    const valor=ctCostoHora(c)/60*minPz;
-    document.getElementById('mi-vpp').value=valor.toFixed(2);
-    maqUpd(c,m,'valorPorPieza',valor);
-    refreshPreview();
-    toast(`Valor/unidad = ${fmtMoney(valor)} (costo/hora del CT × minutos)`);
-  });
   document.getElementById('mca-add').addEventListener('click',()=>maqCostosCTDlg(c,m,null));
   el.querySelectorAll('[data-cct-edit]').forEach(b=>b.addEventListener('click',()=>maqCostosCTDlg(c,m,Number(b.dataset.cctEdit))));
   el.querySelectorAll('[data-cct-del]').forEach(b=>b.addEventListener('click',()=>{ m.costosCT.splice(Number(b.dataset.cctDel),1); c.updatedAt=Date.now(); saveDB(); render(); }));
@@ -4689,17 +5414,22 @@ function renderMaqTabVars(el,c,m){
     catVars.forEach(vdef=>{
       const mv=m.vars[vdef.id]||{on:false,mode:'detail',detail:JSON.parse(JSON.stringify(vdef.detail))};
       const isOn=mv.on; const isOpen=_openVarId===vdef.id&&isOn;
-      const result=calcVar(m,vdef.id);
+      const result=calcVar(m,vdef.id,c);
       h+=`<div style="border-bottom:1px solid var(--border2);padding:6px 0">
         <div style="display:flex;align-items:center;gap:8px">
           <button class="btn xs ${isOn?'primary':''}" data-tog-var="${vdef.id}">${isOn?'ON':'OFF'}</button>
           <div style="flex:1;font-size:12.5px;${isOn?'':'color:var(--muted)'}">${vdef.name}</div>
           ${isOn?`<div class="small" style="font-weight:700">${fmtMoney(result)}/año</div><button class="btn xs" data-exp-var="${vdef.id}">${isOpen?'▲':'▼'}</button>`:''}
         </div>
-        ${isOpen?`<table class="tbl" style="margin-top:8px"><tbody>${mv.detail.map((row,ri)=>`
-          <tr><td style="width:60%">${esc(row.label)}</td>
-          <td>${row.type==='global'?`<span class="pill muted">${row.val}</span>`:`<input class="input" style="width:110px" data-var-row="${vdef.id}|${ri}" value="${row.val}">`}</td>
-          <td class="small muted">${row.op}</td></tr>`).join('')}</tbody></table>`:''}
+        ${isOpen?`<table class="tbl" style="margin-top:8px"><tbody>${mv.detail.map((row,ri)=>{
+          const esCostoHoraCT=esFilaCostoHoraCT(vdef.id,row);
+          const celda=esCostoHoraCT
+            ? `<span class="pill muted" title="Costo/hora real de ${esc(c.nombre)} (Centro de Trabajo → Resumen: $${ctCostoHora(c).toFixed(2)}/hr) repartido según el % capturable de esta máquina en Resumen → Costo por hora por máquina${ctTieneCostoHoraPct(m)?` (${parseNum(m.costoHoraPct)}% capturado)`:' (sin capturar, reparto automático del resto)'}">$${ctCostoHoraPorMaquina(c,m).toFixed(2)} 🔗</span>`
+            : row.type==='global'?`<span class="pill muted">${row.val}</span>`:`<input class="input" style="width:110px" data-var-row="${vdef.id}|${ri}" value="${row.val}">${row.type==='pct'?' <span class="small muted">% (100 = 100%)</span>':''}`;
+          return `<tr><td style="width:60%">${esc(row.label)}${esCostoHoraCT?' <span class="small muted">(automático)</span>':''}</td>
+          <td>${celda}</td>
+          <td class="small muted">${row.op}</td></tr>`;
+        }).join('')}</tbody></table>`:''}
       </div>`;
     });
     h+='</div>';
@@ -4722,48 +5452,285 @@ function renderMaqTabVars(el,c,m){
   }));
 }
 
-function renderMaqTabRoi(el,c,m){
-  const netInv=(m.inv||0)-(m.replaceVal||0);
-  const rp=calcROI(m);
-  let h=`<div class="card"><div style="font-weight:700;font-size:13px;margin-bottom:8px">📊 ROI Proyectado <span class="small muted">— supuestos capturados al planear la compra</span></div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
-      <div><div class="small muted">Inversión neta</div><div style="font-weight:700">${fmtMoney(netInv)}</div></div>
-      <div><div class="small muted">Beneficio anual proyectado</div><div style="font-weight:700">${fmtMoney(rp.ab)}</div></div>
-      <div><div class="small muted">OPEX anual</div><div style="font-weight:700">${fmtMoney(rp.opx)}</div></div>
-      <div><div class="small muted">ROI Proyectado</div><div style="font-weight:700">${rp.ab>0?(rp.roi>=0?'+':'')+rp.roi.toFixed(0)+'%':'—'}</div></div>
-      <div><div class="small muted">Payback proyectado</div><div style="font-weight:700">${isFinite(rp.pay)?rp.pay.toFixed(1)+' años':'Pendiente'}</div></div>
-    </div></div>`;
-
-  const abReal=gananciaPorPiezas(m,c);
-  h+=`<div class="card" style="margin-top:12px"><div style="font-weight:700;font-size:13px;margin-bottom:8px">✅ ROI Real <span class="small muted">— con base en piezas que de verdad se fabrican</span></div>`;
-  if(abReal!==null){
-    const rr=roiPorPiezas(m,abReal);
-    const acum=acumuladoReal(m,c);
-    h+=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
-      <div><div class="small muted">Beneficio anual real</div><div style="font-weight:700">${fmtMoney(abReal)}</div></div>
-      <div><div class="small muted">ROI Real</div><div style="font-weight:700">${abReal>0?(rr.roi>=0?'+':'')+rr.roi.toFixed(0)+'%':'—'}</div></div>
-      <div><div class="small muted">Payback real</div><div style="font-weight:700">${isFinite(rr.pay)?(rr.pay<1?(rr.pay*12).toFixed(1)+' meses':rr.pay.toFixed(1)+' años'):'Pendiente'}</div></div>
-    </div>`;
-    if(acum){
-      h+=`<div class="${acum.pagada?'pill ok':'pill warn'}" style="margin-top:10px;display:inline-block">
-        ${acum.pagada?'✅ Ya se pagó — excedente '+fmtMoney(acum.excedente):'⏳ '+acum.pctRecuperado.toFixed(0)+'% recuperado — faltan '+fmtMoney(acum.faltante)}
+// Pestaña "ROI" del detalle de máquina = ROI Real (2026-09-19). El Proyectado
+// ya vive completo en el Dashboard (ROI %, Payback, "Beneficios Anuales") y en
+// "Variables" (donde se activan/editan los conceptos y sus supuestos) — aquí
+// SOLO se captura y se muestra lo real, concepto por concepto, para los mismos
+// conceptos que ya están activos (`on`) en Proyectado. No hay conceptos nuevos
+// aquí: si falta uno, se activa primero en "Variables".
+function renderMaqTabRoiReal(el,c,m){
+  // Antes esta pestaña también mostraba el resumen/Análisis Financiero Real —
+  // eso se movió al Dashboard fusionado (ver renderMaqTabDashboard, sección
+  // "✅ Real"), porque son RESULTADOS, no captura. Esta pestaña se queda
+  // exclusivamente para teclear datos: fijos + bitácora semanal por concepto.
+  let h='';
+  const gral=ensureRoiRealGeneral(m);
+  h+=`<div class="card" style="margin-bottom:14px">
+    <label class="small" style="display:flex;align-items:center;gap:8px;font-weight:700">
+      <input type="checkbox" id="rr-gral-activo" ${gral.activo?'checked':''}> 📆 Registro general de ahorro (independiente de las Variables)
+    </label>
+    <div class="small muted" style="margin-top:4px">Para máquinas donde no tiene caso desglosar por concepto (ej. una flotilla) — capturas un solo monto de ahorro por periodo, desde que la máquina arrancó. Mientras esté activo, este total REEMPLAZA la suma por concepto de abajo.</div>
+    ${gral.activo?(()=>{
+      const periodo=gral.periodo==='semanal'?'semanal':'mensual';
+      const factor=periodo==='semanal'?52:12;
+      const entradas=gral.entradas||[];
+      const promedio=entradas.length?entradas.reduce((a,e)=>a+parseNum(e.monto),0)/entradas.length:0;
+      return `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border2)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <label class="small muted">Se captura:</label>
+            <select class="select-input" style="padding:2px 6px;font-size:12px" id="rr-gral-periodo">
+              <option value="mensual" ${periodo==='mensual'?'selected':''}>Cada mes (×12)</option>
+              <option value="semanal" ${periodo==='semanal'?'selected':''}>Cada semana (×52)</option>
+            </select>
+          </div>
+          <button class="btn xs primary" id="rr-gral-add">＋ Agregar ${periodo==='mensual'?'mes':'semana'}</button>
+        </div>
+        ${!entradas.length?`<div class="small muted" style="padding:8px 0">Sin ${periodo==='mensual'?'meses':'semanas'} capturados todavía.</div>`:`
+        <table class="tbl"><thead><tr><th>Fecha</th><th>Monto ahorrado ($)</th><th></th></tr></thead>
+        <tbody>${entradas.map((en,i)=>`<tr>
+          <td>${esc(en.fecha||'')}</td>
+          <td style="font-weight:600">${fmtMoney(en.monto)}</td>
+          <td><button class="btn xs danger" data-del-gral="${i}">✕</button></td>
+        </tr>`).join('')}</tbody></table>
+        <div class="small" style="margin-top:6px"><span class="muted">Promedio ${periodo}:</span> <span style="font-weight:700">${fmtMoney(promedio)}</span> <span class="muted">× ${factor} =</span> <span style="font-weight:700;color:#16A34A">${fmtMoney(promedio*factor)}</span> <span class="muted">beneficio anual real</span></div>
+        <div style="height:140px;margin-top:10px"><canvas id="rr-gral-chart"></canvas></div>
+        `}
       </div>`;
-    } else {
-      h+=`<div class="small muted" style="margin-top:8px">Captura la fecha real de inicio de operación en "Identificación" para ver cuánto lleva acumulado.</div>`;
-    }
-  } else {
-    h+=`<div class="small muted">Captura piezas/día del CT (o cantidad manual) y valor por unidad en "Identificación" para calcular el ROI Real.</div>`;
-  }
-  h+='</div>';
+    })():''}
+  </div>`;
+  const activos=gral.activo?[]:Object.keys(m.vars||{}).filter(vid=>{
+    const mv=m.vars[vid]; if(!mv||!mv.on) return false;
+    const vdef=VAR_LIB.find(v=>v.id===vid);
+    return vdef&&vdef.cat!=='opex';
+  });
 
-  h+=`<div class="card" style="margin-top:12px"><div style="font-weight:700;font-size:12.5px;margin-bottom:8px">Qué se está considerando (variables del ROI Proyectado)</div>
-    <table class="tbl"><thead><tr><th></th><th>Variable</th><th>Categoría</th><th>Valor/año si se activa</th></tr></thead><tbody>
-    ${VAR_LIB.filter(vdef=>{ const mv=m.vars&&m.vars[vdef.id]; return mv||calcVarRaw(m,vdef.id)!==0; }).map(vdef=>{
-      const mv=m.vars&&m.vars[vdef.id]; const isOn=!!(mv&&mv.on); const raw=calcVarRaw(m,vdef.id);
-      return `<tr><td>${isOn?'🟢':'⚪'}</td><td class="${isOn?'':'muted'}">${vdef.name}</td><td class="small muted">${CAT_NAMES[vdef.cat]}</td><td class="${isOn?'':'muted'}">${fmtMoney(raw)}${isOn?'':' (apagada)'}</td></tr>`;
-    }).join('')||'<tr><td colspan="4" class="small muted">Sin variables capturadas.</td></tr>'}
-    </tbody></table></div>`;
+  if(gral.activo){
+    // Con el registro general activo, los conceptos por variable no cuentan
+    // para el total (ver calcBenefitsReal) — no se muestran para no confundir.
+  } else if(!activos.length){
+    h+=`<div class="card"><div class="small muted" style="padding:10px 0;text-align:center">No hay conceptos de beneficio activos todavía — actívalos en la pestaña "Variables"; Real solo captura los que ya están activos ahí.</div></div>`;
+  } else {
+    activos.forEach(vid=>{
+      const mv=m.vars[vid];
+      const vdef=VAR_LIB.find(v=>v.id===vid);
+      const rows=mv.detail||vdef.detail;
+      const proy=calcVar(m,vid,c);
+      const real=calcVarReal(m,vid,c); // calcVarRealAnual: fijo directo, o promedio x52/x12
+      const vr=getVarRealShape(m,vid);
+      const fijos=(vr&&vr.fijos)||{};
+      const semanas=(vr&&vr.semanas)||[];
+      const esFijoDirecto=conceptoEsFijoDirecto(mv,vdef);
+      const capturaSimple=!!(vr&&vr.capturaSimple);
+      const camposSemana=rows.map((row,ri)=>({row,ri})).filter(x=>x.row.type==='num'||x.row.type==='pct');
+      const periodo=(vr&&vr.periodo==='mensual')?'mensual':'semanal';
+      const factor=periodo==='mensual'?12:52;
+      const promedioPeriodo=semanas.length?(semanas.reduce((a,_s,si)=>a+calcVarRealSemana(m,vid,c,si),0)/semanas.length):0;
+      const fijosTableHTML=`<div class="small muted" style="font-weight:600;margin-bottom:6px">${esFijoDirecto?'Datos (ya es un valor anual/mensual — no necesita bitácora)':'Datos fijos (se capturan una sola vez)'}</div>
+        <table class="tbl" style="margin-bottom:${esFijoDirecto?'4':'12'}px"><tbody>${rows.map((row,ri)=>{
+          const esCostoHoraCT=esFilaCostoHoraCT(vid,row);
+          let celda;
+          if(esCostoHoraCT){
+            celda=`<span class="pill muted" title="Costo/hora real de ${esc(c.nombre)} — mismo dato en vivo que en Proyectado, no se vuelve a capturar">$${ctCostoHoraPorMaquina(c,m).toFixed(2)} 🔗</span>`;
+          } else if(row.type==='global'){
+            celda=`<span class="pill muted">${row.val}${esFijoDirecto?'':' · no aplica a una semana'}</span>`;
+          } else if(row.type==='money'){
+            celda=`<input class="input" style="width:110px" data-varreal-fijo="${vid}|${ri}" value="${fijos[ri]!=null?fijos[ri]:0}">`;
+          } else {
+            celda=`<span class="small muted">Se captura semana a semana ↓</span>`;
+          }
+          return `<tr><td style="width:60%">${esc(row.label)}${(esCostoHoraCT||row.type==='global')?' <span class="small muted">(automático)</span>':''}</td>
+          <td>${celda}</td>
+          <td class="small muted">${row.op}</td></tr>`;
+        }).join('')}</tbody></table>`;
+      h+=`<div class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+          <div style="font-weight:700;font-size:12.5px">${esc(vdef.name)}</div>
+          <div class="small"><span class="muted">Proyectado: ${fmtMoney(proy)}</span> · <span style="font-weight:700;color:#16A34A">Real: ${fmtMoney(real)}</span></div>
+        </div>
+        ${fijosTableHTML}
+        ${esFijoDirecto?`<div class="small" style="color:#16A34A;font-weight:700">= ${fmtMoney(real)} / año</div>`:`
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px">
+          <div class="small muted" style="font-weight:600">Bitácora ${periodo}${capturaSimple?'':` (${camposSemana.map(x=>esc(x.row.label)).join(' · ')})`}</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <label class="small muted" style="display:flex;align-items:center;gap:4px"><input type="checkbox" data-varreal-simple="${vid}" ${capturaSimple?'checked':''}> Captura directa en $</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <label class="small muted">Se captura:</label>
+              <select class="select-input" style="padding:2px 6px;font-size:12px" data-varreal-periodo="${vid}">
+                <option value="semanal" ${periodo==='semanal'?'selected':''}>Cada semana (×52)</option>
+                <option value="mensual" ${periodo==='mensual'?'selected':''}>Cada mes (×12)</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn xs primary" data-add-semana="${vid}">＋ Agregar ${periodo==='mensual'?'mes':'semana'}</button>
+        </div>
+        ${!semanas.length?`<div class="small muted" style="padding:8px 0">Sin ${periodo==='mensual'?'meses':'semanas'} capturados todavía.</div>`:`
+        <table class="tbl"><thead><tr><th>Fecha</th>${capturaSimple?'<th>Monto ahorrado ($)</th>':camposSemana.map(x=>`<th>${esc(x.row.label)}</th>`).join('')}${capturaSimple?'':'<th>$ ese periodo</th>'}<th></th></tr></thead>
+        <tbody>${semanas.map((s,si)=>`<tr>
+          <td>${esc(s.fecha||'')}</td>
+          ${capturaSimple?`<td style="font-weight:600">${fmtMoney(calcVarRealSemana(m,vid,c,si))}</td>`:camposSemana.map(x=>`<td>${x.row.type==='pct'?parseNum((s.valores||{})[x.ri])+'%':parseNum((s.valores||{})[x.ri])}</td>`).join('')}
+          ${capturaSimple?'':`<td style="font-weight:600">${fmtMoney(calcVarRealSemana(m,vid,c,si))}</td>`}
+          <td><button class="btn xs danger" data-del-semana="${vid}|${si}">✕</button></td>
+        </tr>`).join('')}</tbody></table>
+        <div class="small" style="margin-top:6px"><span class="muted">Promedio ${periodo}:</span> <span style="font-weight:700">${fmtMoney(promedioPeriodo)}</span> <span class="muted">× ${factor} =</span> <span style="font-weight:700;color:#16A34A">${fmtMoney(promedioPeriodo*factor)}</span> <span class="muted">beneficio anual real</span></div>
+        <div style="height:140px;margin-top:10px"><canvas id="maq-roireal-chart-${vid}"></canvas></div>
+        `}`}
+      </div>`;
+    });
+  }
   el.innerHTML=h;
+  document.getElementById('rr-gral-activo').addEventListener('change',e=>{
+    const g=ensureRoiRealGeneral(m);
+    g.activo=e.target.checked;
+    c.updatedAt=Date.now(); saveDB(); render();
+  });
+  document.getElementById('rr-gral-periodo')?.addEventListener('change',e=>{
+    const g=ensureRoiRealGeneral(m);
+    g.periodo=e.target.value;
+    c.updatedAt=Date.now(); saveDB(); render();
+  });
+  document.getElementById('rr-gral-add')?.addEventListener('click',()=>maqAddRoiRealGeneralDlg(c,m));
+  el.querySelectorAll('[data-del-gral]').forEach(b=>b.addEventListener('click',async()=>{
+    if(!await appConfirm('¿Borrar este registro?','Esto no se puede deshacer.')) return;
+    delRoiRealGeneralEntrada(m,c,Number(b.dataset.delGral));
+    render();
+  }));
+  el.querySelectorAll('[data-varreal-fijo]').forEach(inp=>inp.addEventListener('change',e=>{
+    const [vid,riStr]=e.target.dataset.varrealFijo.split('|');
+    setVarRealFijo(c,m,vid,Number(riStr),parseNum(e.target.value));
+    render();
+  }));
+  el.querySelectorAll('[data-varreal-periodo]').forEach(sel=>sel.addEventListener('change',e=>{
+    const vid=e.target.dataset.varrealPeriodo;
+    const vr=ensureVarRealShape(m,vid);
+    vr.periodo=e.target.value;
+    c.updatedAt=Date.now(); saveDB(); render();
+  }));
+  el.querySelectorAll('[data-varreal-simple]').forEach(chk=>chk.addEventListener('change',e=>{
+    const vid=e.target.dataset.varrealSimple;
+    const vr=ensureVarRealShape(m,vid);
+    vr.capturaSimple=e.target.checked;
+    c.updatedAt=Date.now(); saveDB(); render();
+  }));
+  el.querySelectorAll('[data-add-semana]').forEach(b=>b.addEventListener('click',()=>maqAddSemanaDlg(c,m,b.dataset.addSemana)));
+  el.querySelectorAll('[data-del-semana]').forEach(b=>b.addEventListener('click',async()=>{
+    const [vid,siStr]=b.dataset.delSemana.split('|');
+    if(!await appConfirm('¿Borrar esta semana capturada?','Esto no se puede deshacer.')) return;
+    delVarRealSemana(c,m,vid,Number(siStr));
+    render();
+  }));
+  // Gráfica de evolución por periodo, una por concepto con bitácora (pedido
+  // del usuario 21-sep-2026: "quiero ver mensual... cómo se comportó cada
+  // mes"). Se destruyen las instancias previas antes de crear las nuevas,
+  // mismo patrón que _ctCifChart/_maqRoiChart.
+  Object.keys(_maqRoiRealCharts).forEach(k=>{ _maqRoiRealCharts[k].destroy(); });
+  _maqRoiRealCharts={};
+  activos.forEach(vid=>{
+    const canvas=document.getElementById('maq-roireal-chart-'+vid);
+    if(!canvas) return;
+    const vr=getVarRealShape(m,vid);
+    const semanas=(vr&&vr.semanas)||[];
+    if(!semanas.length) return;
+    const dark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
+    const inkSec=dark?'#c3c2b7':'#52514e';
+    const grid=dark?'#2c2c2a':'#e1e0d9';
+    _maqRoiRealCharts[vid]=new Chart(canvas,{
+      type:'line',
+      data:{
+        labels:semanas.map(s=>s.fecha),
+        datasets:[{label:'$ ese periodo',data:semanas.map((s,si)=>calcVarRealSemana(m,vid,c,si)),borderColor:'#eb6834',backgroundColor:'#eb683433',fill:true,tension:0.25,pointRadius:4,pointBackgroundColor:'#eb6834',borderWidth:2}]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        scales:{
+          x:{grid:{display:false},ticks:{color:inkSec,font:{size:10}}},
+          y:{beginAtZero:true,grid:{color:grid},ticks:{color:inkSec,font:{size:10},callback:v=>'$'+Number(v).toLocaleString('es-MX')}}
+        },
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{label:ctx=>' '+fmtMoney(ctx.parsed.y)}}
+        }
+      }
+    });
+  });
+  if(_maqRoiGeneralChart){ _maqRoiGeneralChart.destroy(); _maqRoiGeneralChart=null; }
+  const gralCanvas=document.getElementById('rr-gral-chart');
+  if(gralCanvas){
+    const entradas=(getRoiRealGeneral(m)||{}).entradas||[];
+    if(entradas.length){
+      const dark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
+      const inkSec=dark?'#c3c2b7':'#52514e';
+      const grid=dark?'#2c2c2a':'#e1e0d9';
+      _maqRoiGeneralChart=new Chart(gralCanvas,{
+        type:'line',
+        data:{labels:entradas.map(e=>e.fecha),datasets:[{label:'$ ese periodo',data:entradas.map(e=>parseNum(e.monto)),borderColor:'#eb6834',backgroundColor:'#eb683433',fill:true,tension:0.25,pointRadius:4,pointBackgroundColor:'#eb6834',borderWidth:2}]},
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          scales:{
+            x:{grid:{display:false},ticks:{color:inkSec,font:{size:10}}},
+            y:{beginAtZero:true,grid:{color:grid},ticks:{color:inkSec,font:{size:10},callback:v=>'$'+Number(v).toLocaleString('es-MX')}}
+          },
+          plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtMoney(ctx.parsed.y)}}}
+        }
+      });
+    }
+  }
+}
+// Diálogo "+ Agregar" del registro general (fecha + monto ahorrado — ver
+// ensureRoiRealGeneral/renderMaqTabRoiReal).
+function maqAddRoiRealGeneralDlg(c,m){
+  const g=ensureRoiRealGeneral(m);
+  const periodo=g.periodo==='semanal'?'semanal':'mensual';
+  const etiqueta=periodo==='mensual'?'mes':'semana';
+  const hoy=new Date().toISOString().slice(0,10);
+  openDlg({
+    title:`Agregar ${etiqueta} — Registro general de ahorro`, sub:esc(m.name),
+    body:`<label class="lbl">Fecha de${periodo==='mensual'?'l':' la'} ${etiqueta} *</label><input class="input" type="date" id="gral-fecha" value="${hoy}"/>
+      <label class="lbl" style="margin-top:10px">Monto ahorrado ese ${etiqueta} ($) *</label><input class="input" type="number" step="any" id="gral-monto" value="0"/>`,
+    onSave:()=>{
+      const fecha=document.getElementById('gral-fecha').value;
+      if(!fecha){ toast(`Ingresa la fecha de${periodo==='mensual'?'l':' la'} ${etiqueta}`); return false; }
+      const monto=parseNum(document.getElementById('gral-monto').value);
+      addRoiRealGeneralEntrada(m,c,fecha,monto);
+      toast(`${etiqueta.charAt(0).toUpperCase()+etiqueta.slice(1)} agregad${periodo==='mensual'?'o':'a'} ✓`);
+      render();
+    }
+  });
+}
+// Diálogo "+ Agregar semana" — fecha + un input por cada renglón num/pct del
+// concepto (los renglones money/global/costoHoraCT no aparecen aquí, esos ya
+// se capturan/resuelven aparte, ver renderMaqTabRoiReal).
+function maqAddSemanaDlg(c,m,vid){
+  const vdef=VAR_LIB.find(v=>v.id===vid);
+  const mv=m.vars[vid];
+  const rows=mv.detail||vdef.detail;
+  const campos=rows.map((row,ri)=>({row,ri})).filter(x=>x.row.type==='num'||x.row.type==='pct');
+  const vr=getVarRealShape(m,vid);
+  const periodo=(vr&&vr.periodo==='mensual')?'mensual':'semanal';
+  const etiqueta=periodo==='mensual'?'mes':'semana';
+  const capturaSimple=!!(vr&&vr.capturaSimple);
+  const hoy=new Date().toISOString().slice(0,10);
+  openDlg({
+    title:`Agregar ${etiqueta} — `+vdef.name, sub:esc(m.name),
+    body:`<label class="lbl">Fecha de${periodo==='mensual'?'l':' la'} ${etiqueta} *</label><input class="input" type="date" id="sem-fecha" value="${hoy}"/>
+      ${capturaSimple
+        ?`<label class="lbl" style="margin-top:10px">Monto ahorrado ese ${etiqueta} ($) *</label><input class="input" type="number" step="any" id="sem-monto" value="0"/>`
+        :campos.map(x=>`<label class="lbl" style="margin-top:10px">${esc(x.row.label)}${x.row.type==='pct'?' <span class="small muted">(100 = 100%)</span>':''}</label><input class="input" type="number" step="any" id="sem-val-${x.ri}" value="0"/>`).join('')}`,
+    onSave:()=>{
+      const fecha=document.getElementById('sem-fecha').value;
+      if(!fecha){ toast(`Ingresa la fecha de${periodo==='mensual'?'l':' la'} ${etiqueta}`); return false; }
+      if(capturaSimple){
+        const monto=parseNum(document.getElementById('sem-monto').value);
+        addVarRealSemana(c,m,vid,fecha,{},monto);
+      } else {
+        const valores={};
+        campos.forEach(x=>{ valores[x.ri]=parseNum(document.getElementById('sem-val-'+x.ri).value); });
+        addVarRealSemana(c,m,vid,fecha,valores);
+      }
+      toast(`${etiqueta.charAt(0).toUpperCase()+etiqueta.slice(1)} agregad${periodo==='mensual'?'o':'a'} ✓`);
+      render();
+    }
+  });
 }
 
 function renderEquipo(root){
@@ -5439,8 +6406,11 @@ function renderAdminMaquinasImport(){
 }
 
 /* ── Parametros globales (equivalente al "GP" de LineaItalia, pero persistido).
-   Vive en la vista "ROI Máquinas" (renderReporteMaquinas) — son parámetros que
-   solo alimentan el cálculo de ROI de máquinas, no pintan en Administración. ── */
+   DB.globalParams se sigue usando en el cálculo de ROI de máquinas (getGP/calcROI).
+   Esta función de captura vivía arriba de "ROI Proyectado"/"ROI Real"; a pedido del
+   usuario (2026-09-19) se quitó de esa pantalla y por ahora no tiene otro punto de
+   captura en la UI — queda aquí sin llamar, lista para engancharse en Administración
+   el día que se necesite editar estos valores de nuevo. ── */
 function renderAdminGlobalParams(){
   const c=document.getElementById('rm-global-params'); if(!c) return;
   const gp=DB.globalParams||DEFAULT_GLOBAL_PARAMS;
@@ -11300,6 +12270,20 @@ const LT_CSS = `
   .cap-item.warn .cap-item-badge{ background: var(--amber-bg,#fdf3e0); color: var(--amber); }
   .cap-item.bad .cap-item-badge{ background: var(--red-soft); color: var(--red); }
   .cap-nota{ font-size: 12px; color: var(--text-mute); line-height: 1.6; }
+  /* 17-sep-2026 — Capacidad pasó de ser por fase (F1/F2/F5-F7) a ser por
+     Centro de Trabajo real (Carpintería, Enchapado, Troqueles...), a pedido
+     de Adrian: "esperaba algo mas complejo, ver cada centro con su capacidad
+     limite y si lo programado esta rebasando, grafica por CT". El botón ⚙️
+     abre, por tarjeta, cuántas piezas de cada familia equivalen a 1 PT en
+     ESE centro — se guarda en el propio Centro de Trabajo (Firebase, con
+     saveDB()), no en localStorage de esta app. */
+  .cap-item-badge-wrap{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .cap-cfg-toggle{ border:1px solid var(--border); background:var(--bg); color: var(--text-soft); border-radius:8px; padding:5px 9px; font-size:13px; cursor:pointer; }
+  .cap-cfg-toggle:hover{ background: var(--card); color: var(--text); }
+  .cap-cfg-panel{ background: var(--bg); border: 1px dashed var(--border); border-radius: 10px; padding: 12px 14px; margin: -4px 0 2px; }
+  .cap-cfg-title{ font-size: 12.5px; font-weight: 700; margin-bottom: 10px; }
+  .cap-cfg-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 10px; }
+  .cap-cfg-nota{ font-size: 11px; color: var(--text-mute); line-height: 1.5; margin-top: 10px; }
 
 `;
 const LT_HTML = `
@@ -11434,17 +12418,11 @@ const LT_HTML = `
 
   <div class="view" id="view-capacidad">
     <div class="cap-intro">
-      <b>¿Qué tan saturada está cada fase?</b> Compara la carga actual contra la capacidad que tú capturas. Reusa datos que ya existen en esta sección: <b>F4 Fabricación</b> se calcula solo con lo que ya subes en "Capturar datos" (PT pendientes a lanzar ÷ capacidad de las familias) — no se captura aparte. <b>F1, F2, F5, F6 y F7</b> no tienen todavía un conteo de pedidos por fase en esta app (son duraciones fijas, no una cola con datos por pedido), así que la "carga" que se usa para ellas es el total de <b>pedidos activos en seguimiento</b> (los mismos de la pestaña "Alertas CS") contra la capacidad semanal que captures para cada una — así ves si el volumen actual de pedidos rebasaría lo que esa fase puede procesar en una semana.
-    </div>
-
-    <div class="cap-form">
-      <div class="cap-form-title">Capacidad por fase (captúrala una vez, edítala cuando cambie)</div>
-      <div class="cap-grid" id="capForm"></div>
-      <div class="cap-nota" style="margin-top:12px;">F4 no aparece aquí porque ya se captura en la pestaña "Capturar datos" (Capacidad, PT/día, por familia) — esta vista solo la suma y la muestra.</div>
+      <b>¿Qué tan cargado está cada Centro de Trabajo?</b> Compara lo <b>programado</b> (el "PT pendientes a lanzar" que ya subes en "Capturar datos", convertido a piezas de cada centro) contra la <b>capacidad real</b> de ese centro (la que ya calculaste en Centro de Trabajo → Distribución, con el balanceo de línea) — así ves de un vistazo cuáles están rebasados y cuáles muy bajos, con su gráfica. Los centros de armado/empaque final de una sola familia (Archiveros, Libreros, Mamparas, Sillas/Sillones, Muebles) ya vienen con 1 pieza = 1 PT sin capturar nada; un centro compartido entre varias familias (Carpintería, Enchapado, Habilitado, Corte láser, Troqueles, Pintura, Corte de telas, Cajas, Multitaladro, Estructuras…) necesita que captures cuántas piezas de cada familia salen de 1 PT — usa el ⚙️ de su tarjeta (se guarda en el propio Centro de Trabajo, no aquí).
     </div>
 
     <div class="cap-chart-card">
-      <div class="chart-card-title">Saturación por fase</div>
+      <div class="chart-card-title">Saturación por Centro de Trabajo</div>
       <div class="cap-chart-wrap"><canvas id="chartCapacidad"></canvas></div>
     </div>
 
@@ -12846,43 +13824,55 @@ function loadState(){
   }
 }
 
-/* ---------- CAPACIDAD DE PLANTA (saturación por fase) — 17-sep-2026 ----------
-   Pedido de Adrian: ver qué tan saturada está cada fase (F1/F2/F4-F7, F3 no
-   existe desde el 08-sep y F8 nunca existió pese a un comentario viejo que lo
-   mencionaba) comparando carga actual contra una capacidad capturada a mano.
-   Investigación antes de construir (ver conversación): esta app SOLO calcula
-   una carga real y variable para F4 (Fabricación) — `pendiente` (PT con OP
-   sin fecha de lanzamiento, real de BC) ÷ `capacity` (PT/día) por familia, ya
-   usado arriba en "Capturar datos" como "Fila de producción (F4)". F1, F2,
-   F5, F6 y F7 son duraciones FIJAS (STAGES/POST_STAGES, mismos días para
-   cualquier pedido) — el modelo de esta app nunca guarda en qué fase exacta
-   está cada pedido individual, así que no existe un conteo real por fase para
-   esas 5. En vez de inventar un cálculo nuevo, se reusa el único dato real de
-   volumen de pedidos que sí existe en esta sección: el total de "pedidos
-   activos en seguimiento" de la pestaña Alertas CS (mismo arreglo `pedidos`)
-   — se compara contra la capacidad semanal que el admin capture para cada una
-   de esas 5 fases. F4 no se captura aquí (se derivaría un dato duplicado y
-   desincronizable frente a "Capacidad" por familia) — se sigue leyendo tal
-   cual de `families`. */
-const CAP_STORAGE_KEY = 'leadtime_capacidad_fases_v1';
-const CAP_FASES_CAPTURABLES = ['f1','f2','f5','f6','f7']; // f4 se deriva, no se captura aquí
-let capacidadFases = { f1: null, f2: null, f5: null, f6: null, f7: null };
+/* ---------- CAPACIDAD POR CENTRO DE TRABAJO — 17-sep-2026 ----------
+   Reemplaza la versión anterior (por fase F1/F2/F4-F7 con capacidad
+   capturada a mano) — Adrian: "esperaba algo mas complejo, como ver cada
+   centro de trabajo con su capacidad limite y si lo programado esta
+   rebasando o esta muy bajo, grafica por CT". Decisión tomada con Adrian:
+   "programado" sale automático del Excel (mismo `pendiente` por familia que
+   ya se importa en "Capturar datos" — PT con OP planificada/planif. firme
+   en BC, sin fecha de lanzamiento todavía), y esta pestaña VIVE aquí dentro
+   de Lead Time (reemplaza la de fases, no es una vista nueva aparte).
 
-function loadCapacidadFases(){
-  try{
-    const raw = localStorage.getItem(CAP_STORAGE_KEY);
-    if(!raw) return;
-    const data = JSON.parse(raw);
-    CAP_FASES_CAPTURABLES.forEach(k=>{
-      if(data && typeof data[k] === 'number' && isFinite(data[k])) capacidadFases[k] = data[k];
-    });
-  }catch(e){
-    console.warn('No se pudo leer la capacidad de fases guardada:', e);
+   El punto fino: un Centro de Trabajo real (DB.centros, Firebase) no
+   produce "PT" (producto terminado) sino PIEZAS — un Archivero completo
+   pasa por Carpintería, Enchapado, Habilitado... antes de llegar a su
+   centro de armado/empaque final. Convertir "PT pendientes" en "piezas de
+   este centro" necesita un factor piezas-por-PT que solo Adrian conoce
+   (el BOM real). Para no adivinar mal: los centros de armado/empaque final
+   de UNA sola familia (su nombre ya la nombra, ej. "Armado y Empaque de
+   Archiveros") usan 1 pieza = 1 PT por default (es su última estación, ahí
+   sí es exacto). Los centros compartidos entre varias familias (Carpintería,
+   Enchapado, Habilitado, Corte láser, Troqueles, Pintura, Corte de Telas,
+   Cajas, Multitaladro, Estructuras...) quedan "sin datos" hasta que Adrian
+   capture el factor real con el ⚙️ de su tarjeta — ver ctFactorPrograma(). */
+
+// Piezas de una familia que corresponden a 1 PT en el centro `c`. Explícito
+// (c.factoresPrograma, capturado con el ⚙️) siempre gana; sin captura, se
+// infiere 1 SOLO si el nombre del centro ya es privativo de esa familia
+// (ej. "Empaque de Libreros" ⊇ "Libreros") — los centros compartidos entre
+// varias familias no tienen forma de adivinarse bien, quedan en null.
+function ctFactorPrograma(c, familiaName){
+  ctEnsureShape(c);
+  const explicito = c.factoresPrograma[familiaName];
+  if(explicito !== undefined && explicito !== null && explicito !== ''){
+    const n = Number(explicito);
+    return isNaN(n) ? null : n;
   }
+  const norm = s => quitarAcentos((s||'').toLowerCase());
+  if(norm(c.nombre).includes(norm(familiaName))) return 1;
+  return null;
 }
-function saveCapacidadFases(){
-  try{ localStorage.setItem(CAP_STORAGE_KEY, JSON.stringify(capacidadFases)); }
-  catch(e){ console.warn('No se pudo guardar la capacidad de fases:', e); }
+// true si al menos una familia tiene factor (capturado o inferido) para este centro.
+function ctProgramadoConfigurado(c){
+  return families.some(f => ctFactorPrograma(c, f.name) !== null);
+}
+// Piezas equivalentes de TODO lo pendiente (todas las familias), para este centro.
+function ctProgramadoPzas(c){
+  return families.reduce((sum,f)=>{
+    const factor = ctFactorPrograma(c, f.name);
+    return factor===null ? sum : sum + (Number(f.pendiente)||0)*factor;
+  }, 0);
 }
 
 /* Umbral: mismo esquema ok/warn/bad (verde/ámbar/rojo) que ya usa el resto de
@@ -12893,71 +13883,26 @@ function nivelSaturacion(pct){
   if(pct >= 70) return 'warn';
   return 'ok';
 }
-const SATURACION_LABEL = { ok: 'normal', warn: 'ajustado', bad: 'sobrecargado', 'sin-dato': 'sin capacidad capturada' };
+const SATURACION_LABEL = { ok: 'normal', warn: 'ajustado', bad: 'sobrecargado', 'sin-dato': 'sin datos de programa' };
 const SATURACION_ICONO = { ok: '✅', warn: '⚠️', bad: '🔴', 'sin-dato': '➖' };
 
-/* Carga y capacidad real de F4, agregando TODAS las familias — mismos campos
-   que ya usa computeCard()/renderCapture(), nada nuevo. */
-function cargaCapacidadF4(){
-  const cargaPiezas = families.reduce((s,f)=> s + (Number(f.pendiente)||0), 0);
-  const capacidadSemana = families.reduce((s,f)=> s + (Number(f.capacity)||0), 0) * 5; // PT/día * 5 días hábiles
-  return { carga: cargaPiezas, capacidad: capacidadSemana, unidad: 'PT' };
-}
-
-function datosSaturacionPorFase(){
-  const pedidosActivos = pedidos.length;
-  const orden = [
-    { key:'f1', label: FASES_INFO.f1 ? 'F1 Por capturar' : 'F1' },
-    { key:'f2', label: 'F2 Programado' },
-    { key:'f4', label: 'F4 Fabricación' },
-    { key:'f5', label: 'F5 Embarque' },
-    { key:'f6', label: 'F6 Tránsito' },
-    { key:'f7', label: 'F7 Instalación' },
-  ];
-  return orden.map(({key,label})=>{
-    let carga, capacidad, unidad;
-    if(key === 'f4'){
-      const d = cargaCapacidadF4();
-      carga = d.carga; capacidad = d.capacidad; unidad = d.unidad;
-    } else {
-      carga = pedidosActivos; capacidad = capacidadFases[key]; unidad = 'pedidos';
-    }
-    const pct = (capacidad !== null && capacidad !== undefined && capacidad > 0) ? (carga/capacidad*100) : null;
+// Un centro solo aparece aquí si ya tiene capacidad real calculada (balanceo
+// capturado en Distribución) — si no, no hay nada que comparar todavía.
+function datosSaturacionPorCT(){
+  const centros = (DB.centros||[]).filter(c=>ctCapacidadDia(c)>0).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  return centros.map(c=>{
+    const capDia = ctCapacidadDia(c);
+    const capSemana = capDia*5; // mismo criterio que ya usaba F4: pzas/día * 5 días hábiles
+    const configurado = ctProgramadoConfigurado(c);
+    const programado = ctProgramadoPzas(c);
+    const pct = (configurado && capSemana>0) ? (programado/capSemana*100) : null;
     const nivel = nivelSaturacion(pct);
-    return { key, label, carga, capacidad, unidad, pct, nivel };
-  });
-}
-
-function renderCapForm(){
-  const wrap = ltRoot.getElementById('capForm');
-  if(!wrap) return;
-  const labels = { f1:'F1 Por capturar', f2:'F2 Programado', f5:'F5 Embarque', f6:'F6 Tránsito', f7:'F7 Instalación' };
-  wrap.innerHTML = CAP_FASES_CAPTURABLES.map(key => `
-    <div class="cap-field">
-      <label>${labels[key]}</label>
-      <span class="hint">pedidos / semana que puede procesar</span>
-      <input type="number" step="1" min="0" data-fase="${key}" value="${capacidadFases[key] ?? ''}" placeholder="Sin capturar">
-    </div>
-  `).join('') + `
-    <div class="cap-field">
-      <label>F4 Fabricación</label>
-      <span class="hint">PT / semana — suma de "Capturar datos"</span>
-      <input type="text" value="${fmt(cargaCapacidadF4().capacidad,0)} PT" disabled>
-    </div>
-  `;
-  wrap.querySelectorAll('input[data-fase]').forEach(inp=>{
-    inp.addEventListener('input', e=>{
-      const key = e.target.dataset.fase;
-      const v = e.target.value === '' ? null : parseFloat(e.target.value);
-      capacidadFases[key] = (v===null || isNaN(v)) ? null : v;
-      saveCapacidadFases();
-      renderCapChartYResumen();
-    });
+    return { id:c.id, nombre:c.nombre, capDia, capSemana, programado, pct, nivel, configurado };
   });
 }
 
 function renderCapChartYResumen(){
-  const datos = datosSaturacionPorFase();
+  const datos = datosSaturacionPorCT();
   const canvas = ltRoot.getElementById('chartCapacidad');
   const COLOR_NIVEL = { ok: '#4C7A3F', warn: '#A87A22', bad: '#A6402F', 'sin-dato': '#B3B8C1' };
   if(canvas && typeof Chart !== 'undefined'){
@@ -12965,7 +13910,7 @@ function renderCapChartYResumen(){
     charts.capacidad = new Chart(canvas, {
       type: 'bar',
       data: {
-        labels: datos.map(d=>d.label),
+        labels: datos.map(d=>d.nombre),
         datasets: [{
           label: '% de saturación',
           data: datos.map(d=> d.pct===null ? 0 : Number(d.pct.toFixed(0))),
@@ -12979,44 +13924,86 @@ function renderCapChartYResumen(){
           legend: { display: false },
           tooltip: { callbacks: { label: (ctx)=>{
             const d = datos[ctx.dataIndex];
-            if(d.capacidad === null || d.capacidad === undefined || d.capacidad <= 0) return 'Sin capacidad capturada';
-            return `Carga: ${fmt(d.carga,0)} ${d.unidad} · Capacidad: ${fmt(d.capacidad,0)} ${d.unidad}/semana · ${fmt(d.pct,0)}%`;
+            if(!d.configurado) return 'Sin datos de programa (falta capturar piezas por PT)';
+            return `Programado: ${fmt(d.programado,0)} pzas · Capacidad: ${fmt(d.capSemana,0)} pzas/semana · ${fmt(d.pct,0)}%`;
           } } },
         },
-        scales: { y: { beginAtZero: true, ticks: { font:{size:10}, callback:(v)=>v+'%' } }, x: { ticks: { font:{size:10} } } },
+        scales: { y: { beginAtZero: true, ticks: { font:{size:10}, callback:(v)=>v+'%' } }, x: { ticks: { font:{size:9}, maxRotation:60, minRotation:30 } } },
       },
     });
   }
 
   const list = ltRoot.getElementById('capResumen');
-  if(list){
-    list.innerHTML = datos.map(d=>{
-      if(d.nivel === 'sin-dato'){
-        return `<div class="cap-item sin-dato">
-          <div><div class="cap-item-fase">${d.label}</div><div class="cap-item-detalle">Captura la capacidad arriba para ver su saturación.</div></div>
-          <div class="cap-item-badge">${SATURACION_ICONO['sin-dato']} sin dato</div>
-        </div>`;
-      }
-      const cuello = d.pct > 100 ? ' — esta fase es tu cuello de botella' : '';
-      return `<div class="cap-item ${d.nivel}">
-        <div>
-          <div class="cap-item-fase">${d.label}</div>
-          <div class="cap-item-detalle">${fmt(d.carga,0)} ${d.unidad} de carga sobre ${fmt(d.capacidad,0)} ${d.unidad}/semana de capacidad${cuello}</div>
-        </div>
-        <div class="cap-item-badge">${SATURACION_ICONO[d.nivel]} ${fmt(d.pct,0)}% · ${SATURACION_LABEL[d.nivel]}</div>
-      </div>`;
-    }).join('');
+  if(!list) return;
+  if(!datos.length){
+    list.innerHTML = `<div class="cap-item sin-dato">
+      <div><div class="cap-item-fase">Sin centros con capacidad calculada todavía</div><div class="cap-item-detalle">Captura el balanceo de al menos un Centro de Trabajo (Centro de Trabajo → Distribución) para ver esto.</div></div>
+    </div>`;
+    return;
   }
+  list.innerHTML = datos.map(d=>{
+    const cuello = (d.pct!==null && d.pct>100) ? ' — este centro es tu cuello de botella' : '';
+    const detalle = d.configurado
+      ? `${fmt(d.programado,0)} pzas programadas sobre ${fmt(d.capSemana,0)} pzas/semana de capacidad${cuello}`
+      : `${fmt(d.capSemana,0)} pzas/semana de capacidad — falta capturar piezas por PT (⚙️) para ver la carga`;
+    return `<div class="cap-item ${d.nivel}">
+      <div>
+        <div class="cap-item-fase">${esc(d.nombre)}</div>
+        <div class="cap-item-detalle">${detalle}</div>
+      </div>
+      <div class="cap-item-badge-wrap">
+        <div class="cap-item-badge">${SATURACION_ICONO[d.nivel]} ${d.pct!==null?fmt(d.pct,0)+'% · ':''}${SATURACION_LABEL[d.nivel]}</div>
+        <button type="button" class="cap-cfg-toggle" data-cap-cfg="${d.id}" title="Ajustar piezas por PT en este centro">⚙️</button>
+      </div>
+    </div>
+    <div class="cap-cfg-panel" id="cap-cfg-${d.id}" hidden></div>`;
+  }).join('');
+  list.querySelectorAll('[data-cap-cfg]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.capCfg;
+      const panel = ltRoot.getElementById('cap-cfg-'+id);
+      if(!panel) return;
+      const yaAbierto = !panel.hidden;
+      list.querySelectorAll('.cap-cfg-panel').forEach(p=>{ p.hidden=true; p.innerHTML=''; });
+      if(!yaAbierto) renderCapCfgPanel(panel, id);
+    });
+  });
+}
+
+function renderCapCfgPanel(panel, centroId){
+  const c = byId(DB.centros, centroId);
+  if(!c) return;
+  ctEnsureShape(c);
+  panel.hidden = false;
+  panel.innerHTML = `<div class="cap-cfg-title">Piezas de cada familia por 1 PT en "${esc(c.nombre)}"</div>
+    <div class="cap-cfg-grid">${families.map(f=>{
+      const explicito = c.factoresPrograma[f.name];
+      const val = (explicito!==undefined && explicito!==null && explicito!=='') ? explicito : '';
+      const inferido = ctFactorPrograma(c, f.name);
+      const placeholder = inferido!==null ? `auto: ${inferido}` : '0 (no aplica)';
+      return `<div class="cap-field"><label>${esc(f.name)}</label>
+        <input type="number" step="0.01" min="0" data-cap-factor="${esc(f.name)}" value="${val}" placeholder="${placeholder}">
+      </div>`;
+    }).join('')}</div>
+    <div class="cap-cfg-nota">Vacío = usa el default automático (1 si el centro ya es de esa familia; si no, no cuenta). Pon 0 si de verdad no aplica, o las piezas reales por PT. Se guarda junto con el resto del Centro de Trabajo.</div>`;
+  panel.querySelectorAll('[data-cap-factor]').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const fam = inp.dataset.capFactor;
+      const v = inp.value.trim();
+      if(v===''){ delete c.factoresPrograma[fam]; }
+      else{ const n=parseFloat(v); c.factoresPrograma[fam] = isNaN(n)?0:n; }
+      saveDB();
+      renderCapChartYResumen();
+    });
+  });
 }
 
 function renderCapacidadTab(){
-  renderCapForm();
   renderCapChartYResumen();
 }
 
 /* ---------- INIT ---------- */
 const seRestauroDesdeNavegador = loadState();
-loadCapacidadFases();
 /* Días sin captura quedan en 0 (no en "capacidad completa") — así "días de cola" solo refleja lo que
    de verdad se ha metido, y no se infla artificialmente con una suposición de producción a tope. */
 families.forEach(f => seedMonth(f, viewMonth, 0));
