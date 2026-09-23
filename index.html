@@ -1975,13 +1975,16 @@ function renderReportes(root){
     <div style="font-weight:600;margin-bottom:8px">⏰ Atrasados y por vencer</div>
     <div id="rep-vencidos" style="margin-bottom:24px"></div>
     <div style="font-weight:600;margin-bottom:8px">📊 Carga por persona</div>
-    <div id="rep-carga"></div>`;
+    <div id="rep-carga" style="margin-bottom:24px"></div>
+    <div style="font-weight:600;margin-bottom:8px">📋 Resumen de pendientes</div>
+    <div id="rep-resumen"></div>`;
   document.getElementById('rep-lider-filter')?.addEventListener('change',e=>{ root._repLiderFilter=e.target.value; renderReportes(root); });
   document.getElementById('rep-btn-pdf').addEventListener('click',()=>descargarResumenPDF(delsScope,`Resumen de pendientes — ${tituloAlcance}`));
   document.getElementById('rep-btn-mail').addEventListener('click',()=>enviarResumenPendientesCorreo(delsScope,tituloAlcance));
   document.getElementById('rep-btn-copiar').addEventListener('click',()=>copiarResumenPendientesCorreo(delsScope,tituloAlcance));
   renderReporteVencidos(delsScope);
   renderReporteCarga(peopleScope);
+  renderReporteResumen(delsScope);
 }
 // Constructores puros de HTML (sin efectos, sin ids fijos) — los usa tanto la
 // vista Reportes (alcance global vía reportDeliverables/getMyReports) como el
@@ -2028,6 +2031,12 @@ function cargaListHTML(people){
 function renderReporteVencidos(dels){
   const el=document.getElementById('rep-vencidos'); if(!el) return;
   el.innerHTML=vencidosTableHTML(dels||reportDeliverables());
+}
+function renderReporteResumen(dels){
+  const el=document.getElementById('rep-resumen'); if(!el) return;
+  const rows=resumenPendientesRows(dels);
+  el.innerHTML=resumenPendientesTableHTML(rows);
+  wireResumenPendientesTable(el);
 }
 function renderReporteCarga(people){
   const el=document.getElementById('rep-carga'); if(!el) return;
@@ -2246,37 +2255,49 @@ function copiarAlPortapapeles(texto){
     conExecCommand();
   }
 }
+// Constructor puro (sin efectos, sin ids fijos) — lo usa tanto el diálogo que
+// aparece al entrar (openResumenPendientesDlg) como la vista Reportes
+// (renderReporteResumen), mismo patrón que vencidosTableHTML/rowsHTML arriba.
+function resumenPendientesTableHTML(rows){
+  if(!rows.length) return emptyStateHTML('Nada pendiente','Todo tu alcance está al día ahora mismo.');
+  return `<div style="overflow-x:auto"><table class="tbl">
+      <thead><tr><th>Actividad</th><th>Proyecto</th><th>Responsable</th><th>Líder</th><th>Estatus</th><th>Entrega</th><th>Avance</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr class="row-clickable" data-resumen-pid="${esc(r.projectId||'')}" data-resumen-did="${esc(r.deliverableId||'')}" title="Clic para abrir">
+        <td>${esc(r.actividad)}</td>
+        <td class="small muted">${esc(r.proyecto)}</td>
+        <td>${esc(r.responsable)}</td>
+        <td>${esc(r.lider)}</td>
+        <td>${statusPillHTML(DELIVERABLE_STATUS,r.estatus)}</td>
+        <td>${r.overdue?`<span class="pill bad">${fmtDate(r.dueDate)}</span>`:`<span class="pill muted">${fmtDate(r.dueDate)}</span>`}</td>
+        <td><div style="display:flex;align-items:center;gap:6px">
+          <div class="bar-track" style="width:60px"><div class="bar-fill" style="width:${r.pct}%"></div></div>
+          <span class="small muted">${r.pct}%</span>
+        </div></td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+}
+// Engancha el clic de cualquier tabla pintada con resumenPendientesTableHTML —
+// mismo comportamiento sin importar si vive en el diálogo o en Reportes.
+// `onNavigate` cierra lo que haya que cerrar antes de ir al proyecto (el
+// diálogo no existe dentro de la vista Reportes, así que ahí no hace nada).
+function wireResumenPendientesTable(root,onNavigate){
+  root.querySelectorAll('[data-resumen-pid]').forEach(tr=>{
+    tr.style.cursor='pointer';
+    tr.addEventListener('click',()=>{
+      const pid=tr.dataset.resumenPid, did=tr.dataset.resumenDid;
+      if(!pid) return;
+      onNavigate?.();
+      irAProyectoEntregable(pid,did);
+    });
+  });
+}
 function openResumenPendientesDlg(){
   if(!dataReady()) return; // por si acaso — enterApp ya espera los pulls, esto es un candado extra
   const rows=resumenPendientesRows();
   document.getElementById('dlg-resumen-sub').textContent=
     `${rows.length} entregable${rows.length!==1?'s':''} pendiente${rows.length!==1?'s':''}${isLeader()?' en tu alcance':' tuyos'}`;
-  document.getElementById('dlg-resumen-body').innerHTML=rows.length
-    ? `<div style="overflow-x:auto"><table class="tbl">
-        <thead><tr><th>Actividad</th><th>Proyecto</th><th>Responsable</th><th>Líder</th><th>Estatus</th><th>Entrega</th><th>Avance</th></tr></thead>
-        <tbody>${rows.map(r=>`<tr class="row-clickable" data-resumen-pid="${esc(r.projectId||'')}" data-resumen-did="${esc(r.deliverableId||'')}" title="Clic para abrir">
-          <td>${esc(r.actividad)}</td>
-          <td class="small muted">${esc(r.proyecto)}</td>
-          <td>${esc(r.responsable)}</td>
-          <td>${esc(r.lider)}</td>
-          <td>${statusPillHTML(DELIVERABLE_STATUS,r.estatus)}</td>
-          <td>${r.overdue?`<span class="pill bad">${fmtDate(r.dueDate)}</span>`:`<span class="pill muted">${fmtDate(r.dueDate)}</span>`}</td>
-          <td><div style="display:flex;align-items:center;gap:6px">
-            <div class="bar-track" style="width:60px"><div class="bar-fill" style="width:${r.pct}%"></div></div>
-            <span class="small muted">${r.pct}%</span>
-          </div></td>
-        </tr>`).join('')}</tbody>
-      </table></div>`
-    : emptyStateHTML('Nada pendiente','Todo tu alcance está al día ahora mismo.');
-  document.getElementById('dlg-resumen-body').querySelectorAll('[data-resumen-pid]').forEach(tr=>{
-    tr.style.cursor='pointer';
-    tr.addEventListener('click',()=>{
-      const pid=tr.dataset.resumenPid, did=tr.dataset.resumenDid;
-      if(!pid) return;
-      document.getElementById('dlg-resumen').close();
-      irAProyectoEntregable(pid,did);
-    });
-  });
+  document.getElementById('dlg-resumen-body').innerHTML=resumenPendientesTableHTML(rows);
+  wireResumenPendientesTable(document.getElementById('dlg-resumen-body'),()=>document.getElementById('dlg-resumen').close());
   document.getElementById('dlg-resumen').showModal();
 }
 document.getElementById('dlg-resumen-close').addEventListener('click',()=>document.getElementById('dlg-resumen').close());
