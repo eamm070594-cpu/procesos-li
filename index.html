@@ -1143,9 +1143,31 @@ function renderProyectos(root){
     if(canCreate) document.getElementById('btn-new-project').addEventListener('click',openNewProjectDlg);
     const cont=document.getElementById('proj-entregables');
     if(isLeader()){
-      const rows=resumenPendientesRows();
-      cont.innerHTML=`<div class="small muted" style="margin-bottom:10px">${rows.length} entregable${rows.length!==1?'s':''} pendiente${rows.length!==1?'s':''} en tu alcance</div>${resumenPendientesTableHTML(rows)}`;
-      wireResumenPendientesTable(cont);
+      // Agrupado por persona, cada una colapsada con botón de "desplegar" —
+      // al abrirla se ve su detalle completo (resumenIndividualHTML, mismo
+      // que ya usaba "Filtrar por persona") CON el botón de enviarle correo
+      // ahí mismo (pedido del usuario 23-sep-2026: "que sea con botón para
+      // después desplegar sus pendientes y... enviarle correo").
+      const dels=reportDeliverables().filter(d=>d.status!=='Entregado');
+      const personIds=[...new Set(dels.map(d=>d.assigneeId).filter(Boolean))];
+      const personas=personIds.map(id=>byId(DB.users,id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+      const sinAsignar=dels.filter(d=>!d.assigneeId).length;
+      cont.innerHTML=`<div class="small muted" style="margin-bottom:10px">${dels.length} entregable${dels.length!==1?'s':''} pendiente${dels.length!==1?'s':''} en tu alcance — ${personas.length} persona${personas.length!==1?'s':''}</div>`
+        +personas.map(u=>{
+          const count=dels.filter(d=>d.assigneeId===u.id).length;
+          return `<details style="margin-bottom:8px;border:1px solid var(--border2);border-radius:var(--r-sm);overflow:hidden">
+            <summary style="cursor:pointer;font-weight:700;font-size:13px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;background:var(--surface2)">
+              <span>${esc(u.name)}</span>
+              <span class="pill muted">${count} pendiente${count!==1?'s':''} — desplegar ▾</span>
+            </summary>
+            <div style="padding:12px 14px">${resumenIndividualHTML(u.id,true)}</div>
+          </details>`;
+        }).join('')
+        +(sinAsignar?`<div class="small muted" style="margin-top:10px">${sinAsignar} entregable${sinAsignar!==1?'s':''} sin responsable asignado.</div>`:'');
+      cont.querySelectorAll('[data-aviso-individual]').forEach(b=>b.addEventListener('click',()=>{ enviarAvisoIndividual(b.dataset.avisoIndividual); renderProyectos(root); }));
+      cont.querySelectorAll('[data-ir-proyecto]').forEach(el=>{
+        el.addEventListener('click',()=>irAProyectoEntregable(el.dataset.irProyecto,el.dataset.irEntregable));
+      });
     } else {
       cont.innerHTML=resumenIndividualHTML(SESSION.userId,false);
       cont.querySelectorAll('[data-ir-proyecto]').forEach(el=>{
@@ -1214,7 +1236,7 @@ function renderProyectos(root){
   const resumenCont=document.getElementById('proj-resumen-individual');
   if(userFilter){
     resumenCont.innerHTML=resumenIndividualHTML(userFilter);
-    document.getElementById('btn-aviso-individual')?.addEventListener('click',()=>{ enviarAvisoIndividual(userFilter); renderProyectos(root); });
+    resumenCont.querySelectorAll('[data-aviso-individual]').forEach(b=>b.addEventListener('click',()=>{ enviarAvisoIndividual(b.dataset.avisoIndividual); renderProyectos(root); }));
     resumenCont.querySelectorAll('[data-ir-proyecto]').forEach(el=>{
       el.addEventListener('click',()=>irAProyectoEntregable(el.dataset.irProyecto,el.dataset.irEntregable));
     });
@@ -2666,7 +2688,7 @@ function resumenIndividualHTML(userId,mostrarAviso=true){
     ${alDia.length?`<div style="font-weight:600;font-size:12px;color:var(--ok);margin:10px 0 4px">✅ En tiempo</div>${alDia.map(filaHTML).join('')}`:''}
     ${!dels.length?'<div class="small muted" style="padding:8px 0">Sin pendientes — todo entregado.</div>':''}
     ${mostrarAviso?`<div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <button class="btn sm primary" id="btn-aviso-individual" ${!u.email?'disabled title="Sin correo capturado"':''}>✉️ Enviar aviso a ${esc(u.name)}</button>
+      <button class="btn sm primary" data-aviso-individual="${userId}" ${!u.email?'disabled title="Sin correo capturado"':''}>✉️ Enviar aviso a ${esc(u.name)}</button>
       ${yaEnviado?`<span class="small muted">último enviado ${fmtWhen(yaEnviado.emailEnviado.at)}</span>`:''}
     </div>`:''}
   </div>`;
