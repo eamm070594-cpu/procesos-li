@@ -1120,6 +1120,40 @@ function renderProyectos(root){
   const tab=root._tab||'activos'; // 'activos' es el default al entrar — nunca se mezclan con 'cerrados'
   const countActivos=projects.filter(p=>computeProjectStatus(p)==='Activo').length;
   const countCerrados=projects.filter(p=>computeProjectStatus(p)==='Cerrado').length;
+
+  // Pestaña "Entregables" (pedido del usuario 23-sep-2026): desglose plano,
+  // sin agrupar por proyecto — un integrante ve solo lo suyo (resumenIndividualHTML,
+  // ya existía para el filtro por persona); líder/admin ve TODO su alcance con
+  // estatus/orden/clic (resumenPendientesRows — mismo motor que Reportes y el
+  // resumen al entrar). Nunca se mezclan los dos: cada quien ve el que le toca.
+  if(tab==='entregables'){
+    root.innerHTML=`<div class="view-head">
+        <div><h1>Proyectos</h1><div class="view-sub">Entregables y fechas de tu área, en un solo lugar.</div></div>
+        ${canCreate?'<button class="btn primary" id="btn-new-project">＋ Nuevo proyecto</button>':''}
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center" id="proj-tabs">
+        <button class="btn sm" data-t="activos">Activos <span class="pill muted" style="margin-left:6px">${countActivos}</span></button>
+        <button class="btn sm" data-t="cerrados">Cerrados <span class="pill muted" style="margin-left:6px">${countCerrados}</span></button>
+        <button class="btn sm primary" data-t="entregables">📄 Entregables</button>
+      </div>
+      <div id="proj-entregables"></div>`;
+    document.getElementById('proj-tabs').querySelectorAll('button').forEach(b=>{
+      b.addEventListener('click',()=>{ root._tab=b.dataset.t; renderProyectos(root); });
+    });
+    if(canCreate) document.getElementById('btn-new-project').addEventListener('click',openNewProjectDlg);
+    const cont=document.getElementById('proj-entregables');
+    if(isLeader()){
+      const rows=resumenPendientesRows();
+      cont.innerHTML=`<div class="small muted" style="margin-bottom:10px">${rows.length} entregable${rows.length!==1?'s':''} pendiente${rows.length!==1?'s':''} en tu alcance</div>${resumenPendientesTableHTML(rows)}`;
+      wireResumenPendientesTable(cont);
+    } else {
+      cont.innerHTML=resumenIndividualHTML(SESSION.userId,false);
+      cont.querySelectorAll('[data-ir-proyecto]').forEach(el=>{
+        el.addEventListener('click',()=>irAProyectoEntregable(el.dataset.irProyecto,el.dataset.irEntregable));
+      });
+    }
+    return;
+  }
   const enTab=projects
     .filter(p=>computeProjectStatus(p)===(tab==='activos'?'Activo':'Cerrado'))
     .sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));
@@ -1148,6 +1182,7 @@ function renderProyectos(root){
     <div style="display:flex;gap:8px;margin-bottom:${liderOpts.length>1||userOpts.length?'10px':'16px'};flex-wrap:wrap;align-items:center" id="proj-tabs">
       <button class="btn sm ${tab==='activos'?'primary':''}" data-t="activos">Activos <span class="pill ${tab==='activos'?'ok':'muted'}" style="margin-left:6px">${countActivos}</span></button>
       <button class="btn sm ${tab==='cerrados'?'primary':''}" data-t="cerrados">Cerrados <span class="pill ${tab==='cerrados'?'ok':'muted'}" style="margin-left:6px">${countCerrados}</span></button>
+      <button class="btn sm" data-t="entregables">📄 Entregables</button>
     </div>
     <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
       ${liderOpts.length>1?`<div style="display:flex;gap:8px;align-items:center">
@@ -2605,7 +2640,7 @@ function enviarAvisoEquipo(titulo,scope){
 // Vista previa en pantalla — EXACTAMENTE lo mismo que enviarAvisoIndividual
 // manda por correo (mismos atrasados/por vencer/al día), pero como HTML en
 // vez de texto plano, para que veas qué le va a llegar antes de mandarlo.
-function resumenIndividualHTML(userId){
+function resumenIndividualHTML(userId,mostrarAviso=true){
   const u=byId(DB.users,userId); if(!u) return '';
   const dels=(DB.deliverables||[]).filter(d=>d.assigneeId===userId&&d.status!=='Entregado');
   const {atrasados,porVencer}=vencidosListas(dels);
@@ -2630,10 +2665,10 @@ function resumenIndividualHTML(userId){
     ${porVencer.length?`<div style="font-weight:600;font-size:12px;color:var(--warn);margin:10px 0 4px">📅 Por vencer</div>${porVencer.map(filaHTML).join('')}`:''}
     ${alDia.length?`<div style="font-weight:600;font-size:12px;color:var(--ok);margin:10px 0 4px">✅ En tiempo</div>${alDia.map(filaHTML).join('')}`:''}
     ${!dels.length?'<div class="small muted" style="padding:8px 0">Sin pendientes — todo entregado.</div>':''}
-    <div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    ${mostrarAviso?`<div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <button class="btn sm primary" id="btn-aviso-individual" ${!u.email?'disabled title="Sin correo capturado"':''}>✉️ Enviar aviso a ${esc(u.name)}</button>
       ${yaEnviado?`<span class="small muted">último enviado ${fmtWhen(yaEnviado.emailEnviado.at)}</span>`:''}
-    </div>
+    </div>`:''}
   </div>`;
 }
 // Aviso a UNA sola persona (desde el filtro por usuario en Proyectos) — mismo
