@@ -2041,6 +2041,11 @@ VIEW_RENDERERS['reportes']=renderReportes;
    pendiente. Mismo alcance que reportDeliverables() (todo para líder/admin,
    solo lo propio para integrante) — una sola fuente de "qué es mío".
 ══════════════════════════════════════════════════════ */
+// Orden de "actividad" para el Resumen de pendientes: los que de verdad se
+// están trabajando primero, luego los que ni se han tocado, y al final los
+// bloqueados a propósito — pedido del usuario 22-sep-2026 ("primero los
+// activos"). Dentro de cada grupo, sigue el orden por fecha de entrega.
+const RESUMEN_ESTATUS_PRIORIDAD={'En proceso':0,'Pendiente':1,'En pausa':2};
 function resumenPendientesRows(dels){
   const today=todayISO();
   return (dels||reportDeliverables())
@@ -2052,17 +2057,24 @@ function resumenPendientesRows(dels){
       const liderNombres=secs.map(s=>byId(DB.users,s.liderId)).filter(Boolean).map(l=>l.name);
       const {done,total}=p?projectProgress(p):{done:0,total:0};
       return {
+        deliverableId:d.id,
+        projectId:d.projectId,
         actividad:d.name,
         proyecto:p?p.name:'—',
         responsable:u?u.name:'—',
         lider:liderNombres.length?[...new Set(liderNombres)].join(', '):'—',
+        estatus:d.status,
         dueDate:d.dueDate,
         overdue:d.dueDate&&d.dueDate<today&&isOpenOverdueStatus(d.status),
         pct:total?Math.round(done/total*100):0,
         secciones:secs, // solo para agrupar el PDF por equipo — no se pinta tal cual
       };
     })
-    .sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));
+    .sort((a,b)=>{
+      const pa=RESUMEN_ESTATUS_PRIORIDAD[a.estatus]??1, pb=RESUMEN_ESTATUS_PRIORIDAD[b.estatus]??1;
+      if(pa!==pb) return pa-pb;
+      return (a.dueDate||'9999').localeCompare(b.dueDate||'9999');
+    });
 }
 // Mismas filas de arriba, agrupadas por Sección/equipo (para el PDF) — un
 // renglón puede repetirse bajo 2 equipos si su proyecto pertenece a 2
@@ -2241,12 +2253,13 @@ function openResumenPendientesDlg(){
     `${rows.length} entregable${rows.length!==1?'s':''} pendiente${rows.length!==1?'s':''}${isLeader()?' en tu alcance':' tuyos'}`;
   document.getElementById('dlg-resumen-body').innerHTML=rows.length
     ? `<div style="overflow-x:auto"><table class="tbl">
-        <thead><tr><th>Actividad</th><th>Proyecto</th><th>Responsable</th><th>Líder</th><th>Entrega</th><th>Avance</th></tr></thead>
-        <tbody>${rows.map(r=>`<tr>
+        <thead><tr><th>Actividad</th><th>Proyecto</th><th>Responsable</th><th>Líder</th><th>Estatus</th><th>Entrega</th><th>Avance</th></tr></thead>
+        <tbody>${rows.map(r=>`<tr class="row-clickable" data-resumen-pid="${esc(r.projectId||'')}" data-resumen-did="${esc(r.deliverableId||'')}" title="Clic para abrir">
           <td>${esc(r.actividad)}</td>
           <td class="small muted">${esc(r.proyecto)}</td>
           <td>${esc(r.responsable)}</td>
           <td>${esc(r.lider)}</td>
+          <td>${statusPillHTML(DELIVERABLE_STATUS,r.estatus)}</td>
           <td>${r.overdue?`<span class="pill bad">${fmtDate(r.dueDate)}</span>`:`<span class="pill muted">${fmtDate(r.dueDate)}</span>`}</td>
           <td><div style="display:flex;align-items:center;gap:6px">
             <div class="bar-track" style="width:60px"><div class="bar-fill" style="width:${r.pct}%"></div></div>
@@ -2255,6 +2268,15 @@ function openResumenPendientesDlg(){
         </tr>`).join('')}</tbody>
       </table></div>`
     : emptyStateHTML('Nada pendiente','Todo tu alcance está al día ahora mismo.');
+  document.getElementById('dlg-resumen-body').querySelectorAll('[data-resumen-pid]').forEach(tr=>{
+    tr.style.cursor='pointer';
+    tr.addEventListener('click',()=>{
+      const pid=tr.dataset.resumenPid, did=tr.dataset.resumenDid;
+      if(!pid) return;
+      document.getElementById('dlg-resumen').close();
+      irAProyectoEntregable(pid,did);
+    });
+  });
   document.getElementById('dlg-resumen').showModal();
 }
 document.getElementById('dlg-resumen-close').addEventListener('click',()=>document.getElementById('dlg-resumen').close());
