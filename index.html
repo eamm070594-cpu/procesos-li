@@ -1957,6 +1957,14 @@ function renderReportes(root){
   const delsScope=scope?scope.deliverables:reportDeliverables();
   const peopleScope=scope?scope.people:(isLeader()?getMyReports():[myUser()].filter(Boolean));
   const tituloAlcance=secFiltrada?secFiltrada.nombre:(isAdmin()?'toda la operación':'tu equipo');
+  // Filtrar por persona — acota SOLO el "Resumen de pendientes" (el detalle
+  // renglón por renglón); "Carga por persona" y "Atrasados y por vencer"
+  // siguen mostrando a todo el alcance porque son comparativos, no el detalle
+  // de una sola persona (pedido del usuario 23-sep-2026: "ver pendientes por
+  // cada persona... a detalle, no solo el proyecto").
+  const personaOpts=[...peopleScope].sort((a,b)=>a.name.localeCompare(b.name));
+  const personaFilter=root._repPersonaFilter||'';
+  const delsResumen=personaFilter?delsScope.filter(d=>d.assigneeId===personaFilter):delsScope;
 
   root.innerHTML=`<div class="view-head"><div><h1>Reportes</h1>
     <div class="view-sub">Dos vistas rápidas — nada de tableros interminables.</div></div></div>
@@ -1968,6 +1976,13 @@ function renderReportes(root){
           ${liderOpts.map(u=>`<option value="${u.id}"${liderFilter===u.id?' selected':''}>${esc(u.name)}</option>`).join('')}
         </select>
       </div>`:''}
+      ${personaOpts.length>1?`<div style="display:flex;gap:8px;align-items:center">
+        <label class="small muted" for="rep-persona-filter">Filtrar por persona:</label>
+        <select class="select-input" id="rep-persona-filter" style="width:auto;padding:7px 10px;font-size:13px">
+          <option value="">Todas las personas</option>
+          ${personaOpts.map(u=>`<option value="${u.id}"${personaFilter===u.id?' selected':''}>${esc(u.name)}</option>`).join('')}
+        </select>
+      </div>`:''}
       <button class="btn sm" id="rep-btn-pdf">⬇ Descargar PDF</button>
       <button class="btn sm" id="rep-btn-mail">✉️ Enviar por correo</button>
       <button class="btn sm" id="rep-btn-copiar" title="Por si el correo no abre solo — pégalo tú en un mensaje nuevo">📋 Copiar</button>
@@ -1976,15 +1991,16 @@ function renderReportes(root){
     <div id="rep-vencidos" style="margin-bottom:24px"></div>
     <div style="font-weight:600;margin-bottom:8px">📊 Carga por persona</div>
     <div id="rep-carga" style="margin-bottom:24px"></div>
-    <div style="font-weight:600;margin-bottom:8px">📋 Resumen de pendientes</div>
+    <div style="font-weight:600;margin-bottom:8px">📋 Resumen de pendientes${personaFilter?' — '+esc(byId(DB.users,personaFilter)?.name||''):''}</div>
     <div id="rep-resumen"></div>`;
-  document.getElementById('rep-lider-filter')?.addEventListener('change',e=>{ root._repLiderFilter=e.target.value; renderReportes(root); });
+  document.getElementById('rep-lider-filter')?.addEventListener('change',e=>{ root._repLiderFilter=e.target.value; root._repPersonaFilter=''; renderReportes(root); });
+  document.getElementById('rep-persona-filter')?.addEventListener('change',e=>{ root._repPersonaFilter=e.target.value; renderReportes(root); });
   document.getElementById('rep-btn-pdf').addEventListener('click',()=>descargarResumenPDF(delsScope,`Resumen de pendientes — ${tituloAlcance}`));
   document.getElementById('rep-btn-mail').addEventListener('click',()=>enviarResumenPendientesCorreo(delsScope,tituloAlcance));
   document.getElementById('rep-btn-copiar').addEventListener('click',()=>copiarResumenPendientesCorreo(delsScope,tituloAlcance));
   renderReporteVencidos(delsScope);
   renderReporteCarga(peopleScope);
-  renderReporteResumen(delsScope);
+  renderReporteResumen(delsResumen);
 }
 // Constructores puros de HTML (sin efectos, sin ids fijos) — los usa tanto la
 // vista Reportes (alcance global vía reportDeliverables/getMyReports) como el
