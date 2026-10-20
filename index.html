@@ -481,6 +481,13 @@ tr.ea-pend td{background:var(--warn-bg)!important}tr.ea-pend td:first-child{box-
 .ctl-step.hecho .chk{background:var(--ok);border-color:var(--ok)}
 .ctl-chip{display:inline-block;border-radius:10px;padding:2px 9px;font-size:11.5px;font-weight:800;margin-left:8px;vertical-align:middle}
 .ctl-chip.bad{background:var(--bad-bg);color:var(--bad)}.ctl-chip.warn{background:var(--warn-bg);color:var(--warn)}.ctl-chip.ok{background:var(--ok-bg);color:var(--ok)}.ctl-chip.mut{background:var(--surface2);color:var(--muted)}
+.ap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+.ap-card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:16px 18px;border-top:5px solid var(--border2)}
+.ap-card.verde{border-top-color:var(--ok)}.ap-card.ambar{border-top-color:#D9A93A}.ap-card.rojo{border-top-color:var(--bad)}.ap-card.sin{opacity:.8}
+.ap-h{display:flex;gap:10px;align-items:flex-start}.ap-h .ic{font-size:22px;line-height:1}.ap-h h4{font-size:14.5px}.ap-t{font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.35}
+.ap-l{margin:10px 0 0;padding-left:18px;font-size:13px;line-height:1.45}.ap-l li{margin-bottom:3px}
+.ap-p{background:var(--surface2);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13px}.ap-pl{display:flex;gap:8px;margin-top:6px;line-height:1.4}.ap-pl>span:first-child{color:var(--accent);font-weight:800}
+.ap-f{margin-top:10px}
 .ctl-two{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
 @media(max-width:1100px){.ctl-two{grid-template-columns:1fr}}
 .ctl-form{display:grid;grid-template-columns:130px 1fr 150px 110px;gap:8px;margin-bottom:12px}.ctl-form .full{grid-column:1/-1}
@@ -2790,51 +2797,42 @@ function ctlIniciar(){
   if(_ctlOn) return; _ctlOn=true;
   _fbDB.ref('li_control').on('value',snap=>{ DB.control=snap.val()||{}; DB._ctlOk=true; if(SESSION&&currentView==='control') render(); },e=>console.warn('[control]',e.message));
 }
-const CTL_SISTEMAS=[
-  {id:'garantias',n:'Garantías',dueno:'David Trujillo',info:'Monto de la semana · inventario en cuarentena · garantías sin dictaminar',auto:false},
-  {id:'mantenimiento',n:'Mantenimiento: preventivo, correctivo y predictivo',dueno:'Omar Andraca',info:'Preventivos vencidos · paros repetidos · gasto contra presupuesto',auto:false},
-  {id:'produccion',n:'Producción: avance diario',dueno:'Rodrigo Castañeda / Producción',info:'Cumplimiento de programa · atrasos por familia · horas extra',auto:false},
-  {id:'consumos',n:'Consumos',dueno:'Leonardo Ortiz / Sebastián',info:'Diferencia semanal contra transferencias',auto:false},
-  {id:'bc',n:'Business Central (ERP)',dueno:'Sistemas',info:'OP, pedidos y consumos: descarga diaria de los Excel de Andon',auto:false},
-  {id:'andon',n:'Andon y Lead Time',dueno:'Rodrigo Castañeda',info:'Reporte diario automático: OP alineadas, atrasos y riesgo por cliente',auto:false,url:''},
-  {id:'costos',n:'Costos y tasas por centro',dueno:'Finanzas (Brenda Yáñez)',info:'Mapa de planta en Centros de trabajo; falta layout 2026',auto:true,go:'centrotrabajo'},
-  {id:'roi',n:'ROI de maquinaria',dueno:'Daniel Esparza',info:'ROI real contra proyectado en Centros de trabajo',auto:true,go:'roimaquinas'},
+/* Aplicativos que Jarvis lee cada mañana y resume (li_control/parte/<fecha>/aplicativos/<id>) */
+const CTL_APPS=[
+  {id:'garantias',n:'Garantías',ic:'🛡️',falta:'Sale de los reportes de PCP; aún no hay lectura de hoy.'},
+  {id:'mantenimiento',n:'Mantenimiento preventivo',ic:'🔧',falta:'Jarvis aún no tiene la liga del aplicativo de mantenimiento.'},
+  {id:'produccion',n:'Avance de producción',ic:'🏭',falta:'Sale de los reportes de PCP; aún no hay lectura de hoy.'},
+  {id:'eos',n:'EOS: seguimiento y tareas',ic:'🎯',falta:'Jarvis lo lee con tu sesión de EOS en Chrome; hoy no se pudo.'},
+  {id:'compras',n:'Compras por autorizar',ic:'🛒',falta:'Jarvis aún no tiene la liga del aplicativo de compras.'},
 ];
 const CTL_PASOS=[
   {k:'correos',h:'07:30',t:'Correos y reporte matutino',d:'Revisa tu correo con los borradores de Jarvis. Meta: bandeja de pendientes en cero; lo urgente contestado o delegado.',acc:[{txt:'Abrir Outlook',url:'https://outlook.office.com/mail/'}]},
+  {k:'resumen',h:'07:45',t:'Qué pasa en los aplicativos',d:'Lee el resumen de Jarvis: garantías, mantenimiento, producción, EOS y compras. Cada uno trae su plan de acción: decide quién lo hace y para cuándo.',acc:[{txt:'Ver resumen',ancla:'ctl-apl'}]},
   {k:'apps',h:'07:55',t:'Aplicativos: aprobar y revisar vencidas',d:'Aprueba o devuelve lo que piden cerrar. Revisa vencidas por persona y que nada quede sin responsable ni fecha.',acc:[{txt:'Por aprobar',go:'aprobar'},{txt:'Ver vencidas',go:'abiertas'}]},
-  {k:'autorizar',h:'08:10',t:'Autorizaciones: compras, presupuestos, bonos y personal',d:'Resuelve lo que está esperando tu decisión. Nada debe pasar de 48 horas sin respuesta.',acc:[{txt:'Ir a por autorizar',ancla:'ctl-aut'}]},
-  {k:'eos',h:'08:20',t:'EOS: tareas, KPIs y rocas',d:'Tareas del día al corriente, KPIs de la semana capturados (lunes) y % de rocas actualizado.',acc:[{txt:'Abrir EOS',url:'https://subdireccion.lineaitalia.net'},{txt:'Rocas',go:'rocas'}]},
-  {k:'sistemas',h:'08:30',t:'Sistemas: garantías, mantenimiento, producción y consumos',d:'Mira los tres números de cada sistema y márcalos como revisados. Rojo = se habla con su dueño hoy.',acc:[{txt:'Ver sistemas',ancla:'ctl-sis'}]},
+  {k:'eos',h:'08:20',t:'EOS: lo que me toca',d:'Jarvis te resume arriba cómo vas y qué te asignó Jesé. Aquí cierras tus tareas, capturas los KPIs de la semana (lunes) y actualizas el % de rocas.',acc:[{txt:'Abrir EOS',url:'https://subdireccion.lineaitalia.net'},{txt:'Rocas',go:'rocas'}]},
   {k:'arranque',h:'08:40',t:'Arranque con líderes',d:'10 minutos por equipo: qué cierra cada quien hoy y qué se le atora. Lo dicho queda en la minuta.',acc:[{txt:'Ver equipo',go:'equipo'}]},
   {k:'cierre',h:'16:30',t:'Cierre del día',d:'Minutas capturadas, lo que se movió y lo que se promete para mañana. Lo que vence hoy sin avance se pregunta antes de irte.',acc:[{txt:'Mis actividades',go:'abiertas'}]},
 ];
 const CTL_SEMANA={1:{k:'pulso',h:'Lun',t:'Junta de Pulso: captura de KPIs de la semana pasada',d:'KPIs, avance de rocas, problemas y tareas. Revisa el correo completo de cada líder.'},3:{k:'rocas',h:'Mié',t:'Revisión de rocas contra hitos',d:'Con cada dueño: ¿el % de EOS coincide con lo comprobado?'},5:{k:'semanal',h:'Vie',t:'Cierre semanal',d:'Calificación por área, qué se cerró, qué se atoró y compromisos de la siguiente semana.'}};
-const CTL_TIPOS={compra:{i:'🛒',n:'Compra'},presupuesto:{i:'💰',n:'Presupuesto'},bono:{i:'🎖️',n:'Bono'},personal:{i:'👤',n:'Personal'},otro:{i:'📌',n:'Otro'}};
 const ctlHoy=()=>isoDate(new Date());
-const ctlAuts=()=>Object.values(DB.control?.autorizaciones||{});
 const ctlHecho=k=>!!DB.control?.dias?.[ctlHoy()]?.[k];
 function ctlRitmo(){ const h=rocaTrimestreActual(); return Math.round(Math.max(0,Math.min(100,((new Date()-new Date(h.year,(h.quarter-1)*3,1))/864e5)/91*100))); }
 function ctlAtencion(){
   const out=[], ahora=Date.now(), hoyK=todayISO();
   const apr=eaPorAprobar().filter(d=>canManageDeliverable(d));
   if(apr.length){ const v=Math.max(...apr.map(d=>ahora-(d.entregadoAt||d.updatedAt||ahora))); out.push({sev:v>864e5?'bad':'warn',ic:'📝',t:`${apr.length} actividad${apr.length!==1?'es piden':' pide'} cerrarse`,s:v>864e5?'La más antigua lleva más de 24 h esperando':'Aprueba o devuelve',go:()=>{_eaModo='aprobar';showView('actividades');}}); }
-  const au=ctlAuts().filter(a=>a.estado==='pendiente');
-  if(au.length){ const v=Math.max(...au.map(a=>ahora-(a.creado||ahora))); out.push({sev:v>1728e5?'bad':'warn',ic:'✍️',t:`${au.length} por autorizar`,s:v>1728e5?'Hay una con más de 48 h sin respuesta':'Compras, presupuestos, bonos o personal',go:()=>document.getElementById('ctl-aut')?.scrollIntoView({behavior:'smooth'})}); }
   const alta=(DB.deliverables||[]).filter(d=>d.status!=='Entregado'&&d.status!=='En pausa'&&d.dueDate&&d.dueDate<hoyK&&eaPrioridad(d)==='Alta');
   if(alta.length) out.push({sev:'bad',ic:'🔥',t:`${alta.length} vencida${alta.length!==1?'s':''} de prioridad Alta`,s:'Pregunta hoy a su responsable',go:()=>{_eaModo='abiertas';_eaQ='';showView('actividades');}});
   const h=rocaTrimestreActual(), rit=ctlRitmo(); let atras=0;
   (DB.secciones||[]).forEach(sec=>{ const rs=mcRocas(sec,h.year,h.quarter); if(rs.length&&rs.reduce((a,r)=>a+(+r.avance||0),0)/rs.length<rit-10) atras++; });
   if(atras) out.push({sev:'warn',ic:'☆',t:`${atras} equipo${atras!==1?'s':''} con rocas debajo del ritmo`,s:`Ritmo esperado del trimestre: ${rit}%`,go:()=>showView('rocas')});
-  const sinRev=CTL_SISTEMAS.filter(x=>!x.auto&&!sisRevHoy(x.id)).length;
-  if(sinRev) out.push({sev:'warn',ic:'🧭',t:`${sinRev} sistema${sinRev!==1?'s':''} sin revisar hoy`,s:'Garantías, mantenimiento, producción, consumos…',go:()=>document.getElementById('ctl-sis')?.scrollIntoView({behavior:'smooth'})});
+  const aps=Object.values(ctlParteActual()?.p.aplicativos||{}).filter(a=>a&&a.estado==='rojo');
+  if(aps.length) out.push({sev:'bad',ic:'🚨',t:`${aps.length} aplicativo${aps.length!==1?'s':''} en rojo`,s:aps.map(a=>a.nombre).join(' · '),go:()=>document.getElementById('ctl-apl')?.scrollIntoView({behavior:'smooth'})});
   const rojas=(DB.secciones||[]).filter(sec=>{ const g=mcScores(sec,h.year,h.quarter).global; return g!=null&&g<5; });
   if(rojas.length) out.push({sev:'bad',ic:'🔴',t:`${rojas.length} área${rojas.length!==1?'s':''} con calificación menor a 5`,s:rojas.map(x=>x.nombre).join(' · '),go:()=>showView('micumplimiento')});
   if(!out.length) out.push({sev:'ok',ic:'✅',t:'Todo al corriente',s:'Nada requiere tu atención inmediata'});
   return out.sort((a,b)=>({bad:0,warn:1,ok:2}[a.sev]-{bad:0,warn:1,ok:2}[b.sev]));
 }
-const sisDato=id=>DB.control?.sistemas?.[id]||{};
-const sisRevHoy=id=>{ const r=sisDato(id).revisado; return !!r&&isoDate(new Date(r))===ctlHoy(); };
 function ctlMarcar(k){ const ref=_fbDB.ref('li_control/dias/'+ctlHoy()+'/'+k); ctlHecho(k)?ref.remove():ref.set({at:Date.now(),por:SESSION?.name||''}); }
 function renderControl(root){
   if(!isAdmin()){ root.innerHTML=noPermissionHTML(); return; }
@@ -2844,10 +2842,10 @@ function renderControl(root){
   const pasos=CTL_PASOS.slice(); if(CTL_SEMANA[dow]) pasos.splice(4,0,CTL_SEMANA[dow]);
   const hechos=pasos.filter(x=>ctlHecho(x.k)).length, pct=Math.round(100*hechos/pasos.length);
   const att=ctlAtencion(), hoyK=todayISO();
-  const nPorApr=eaPorAprobar().filter(d=>canManageDeliverable(d)).length, nVenc=eaTodos().filter(d=>d.dueDate&&d.dueDate<hoyK&&d.status!=='En pausa').length, nAut=ctlAuts().filter(a=>a.estado==='pendiente').length;
-  const chipsPaso={apps:`<span class="ctl-chip ${nPorApr?'warn':'ok'}">${nPorApr} por aprobar</span><span class="ctl-chip ${nVenc?'bad':'ok'}">${nVenc} vencidas</span>`,autorizar:`<span class="ctl-chip ${nAut?'warn':'ok'}">${nAut} pendiente${nAut!==1?'s':''}</span>`,sistemas:`<span class="ctl-chip mut">${CTL_SISTEMAS.filter(x=>!x.auto&&sisRevHoy(x.id)).length}/${CTL_SISTEMAS.filter(x=>!x.auto).length} revisados</span>`};
+  const nPorApr=eaPorAprobar().filter(d=>canManageDeliverable(d)).length, nVenc=eaTodos().filter(d=>d.dueDate&&d.dueDate<hoyK&&d.status!=='En pausa').length;
+  const nRojos=Object.values(ctlParteActual()?.p.aplicativos||{}).filter(a=>a&&a.estado==='rojo').length;
+  const chipsPaso={apps:`<span class="ctl-chip ${nPorApr?'warn':'ok'}">${nPorApr} por aprobar</span><span class="ctl-chip ${nVenc?'bad':'ok'}">${nVenc} vencidas</span>`,resumen:nRojos?`<span class="ctl-chip bad">${nRojos} en rojo</span>`:''};
   const c=2*Math.PI*36;
-  const auts=ctlAuts(), pend=auts.filter(a=>a.estado==='pendiente').sort((a,b)=>(a.creado||0)-(b.creado||0)), res=auts.filter(a=>a.estado!=='pendiente').sort((a,b)=>(b.resuelto||0)-(a.resuelto||0)).slice(0,8);
   const h=rocaTrimestreActual();
   const semaforo=(DB.secciones||[]).filter(x=>byId(DB.users,x.liderId)).map(sec=>{ const sc=mcScores(sec,h.year,h.quarter), g=sc.global, col=g==null?'#9a9992':g>=8?'var(--ok)':g>=5?'#D9A93A':'var(--bad)', apr=eaPorAprobar().filter(d=>mcGente(sec).has(d.assigneeId)&&canManageDeliverable(d)).length;
     return `<div class="ctl-sem"><span class="ctl-dot" style="background:${col}"></span><div style="flex:1"><b>${esc(sec.nombre)}</b><div class="ea-sm">Líder: ${esc(byId(DB.users,sec.liderId)?.name||'—')}</div></div><span class="ctl-chip ${sc.vencidas?'bad':'ok'}">${sc.vencidas} vencidas</span>${apr?`<span class="ctl-chip warn">${apr} por aprobar</span>`:''}<b style="min-width:34px;text-align:right;color:${col}">${g==null?'—':g.toFixed(1)}</b></div>`; }).join('');
@@ -2857,44 +2855,40 @@ function renderControl(root){
       <div class="sub" style="max-width:300px">Meta: <b>$5,000,000 MXN/año</b> en ahorros de mejora continua. Toda mejora con impacto se registra en el F-MC-01.</div></div>
     <div class="ctl-sec"><h3>PARTE DE JARVIS · DECIDE PRIMERO</h3><span class="line"></span></div>
     ${ctlParteHTML()}
+    <div class="ctl-sec" id="ctl-apl"><h3>QUÉ PASA EN LOS APLICATIVOS</h3><span class="line"></span><span class="ea-sm">Jarvis entra a cada uno y te deja el resumen con su plan de acción.</span></div>
+    ${ctlAppsHTML()}
     <div class="ctl-sec"><h3>LO QUE REQUIERE TU ATENCIÓN AHORA</h3><span class="line"></span></div>
     <div class="ctl-att">${att.map((x,i)=>`<button class="${x.sev}" data-ctl-att="${i}"><span class="ic">${x.ic}</span><span><b>${esc(x.t)}</b><span class="s">${esc(x.s)}</span></span></button>`).join('')}</div>
     <div class="ctl-sec"><h3>TU RUTINA DE HOY, EN ORDEN</h3><span class="line"></span></div>
     ${pasos.map(x=>`<div class="ctl-step ${ctlHecho(x.k)?'hecho':''}"><div class="chk" data-ctl-chk="${x.k}" title="Marcar como hecho">${ctlHecho(x.k)?'✓':''}</div><div class="hr">${x.h}</div><div style="flex:1"><div class="tt">${esc(x.t)}${chipsPaso[x.k]||''}</div><div class="ds">${esc(x.d)}</div>${x.acc?`<div class="acc">${x.acc.map((a,i)=>a.url?`<a class="ea-btn" href="${esc(a.url)}" target="_blank" rel="noopener" style="text-decoration:none">${esc(a.txt)} ↗</a>`:`<button class="ea-btn" data-ctl-go="${x.k}:${i}">${esc(a.txt)}</button>`).join('')}</div>`:''}</div></div>`).join('')}
-    <div class="ctl-two"><div>
-      <div class="ctl-sec" id="ctl-aut"><h3>POR AUTORIZAR · COMPRAS, PRESUPUESTOS, BONOS Y PERSONAL</h3><span class="line"></span></div>
-      <div class="ea-card" style="padding:14px;overflow:visible"><div class="ctl-form"><select class="ea-sel" id="au-tipo" style="min-width:0">${Object.entries(CTL_TIPOS).map(([k,v])=>`<option value="${k}">${v.i} ${v.n}</option>`).join('')}</select><input class="ea-inp" id="au-con" placeholder="¿Qué hay que autorizar? (ej. Compra de refacciones láser)"><select class="ea-sel" id="au-sol" style="min-width:0"><option value="">Solicita…</option>${(DB.users||[]).slice().sort((a,b)=>a.name.localeCompare(b.name)).map(u=>`<option value="${esc(u.name)}">${esc(u.name)}</option>`).join('')}</select><input class="ea-inp" id="au-monto" type="number" min="0" placeholder="Monto $" style="min-width:0"><button class="ea-btn dark full" id="au-add">＋ Agregar a por autorizar</button></div></div>
-      <div style="margin-top:12px">${pend.length?pend.map(a=>{const dias=Math.floor((Date.now()-(a.creado||Date.now()))/864e5);const t=CTL_TIPOS[a.tipo]||CTL_TIPOS.otro;return `<div class="ctl-aut ${dias>=2?'viejo':''}"><div class="t">${t.i} ${esc(a.concepto)}</div><div class="m">${t.n}${a.solicitante?' · pide '+esc(a.solicitante):''}${a.monto?' · '+plMxn(a.monto):''} · ${dias===0?'llegó hoy':'espera '+dias+' día'+(dias!==1?'s':'')}${dias>=2?' ⚠️':''}</div>${a.nota?`<div class="m"><i>${esc(a.nota)}</i></div>`:''}<div class="b"><button class="ea-btn dark" data-au="${a.id}:autorizado">✔ Autorizar</button><button class="ea-btn" data-au="${a.id}:rechazado">✖ Rechazar</button><button class="ea-btn" data-au="${a.id}:info">❓ Pedir información</button></div></div>`;}).join(''):'<div class="ea-card"><div class="ea-empty">Nada por autorizar. Cuando llegue una solicitud, agrégala arriba para que no se pierda.</div></div>'}
-      ${res.length?`<details style="margin-top:8px"><summary class="ea-sm" style="cursor:pointer;font-weight:700">Resueltas recientemente (${res.length})</summary>${res.map(a=>`<div class="ea-sm" style="padding:6px 0;border-top:1px solid var(--border2)">${a.estado==='autorizado'?'✔':'✖'} ${esc(a.concepto)} · ${esc(a.estado)} ${a.resuelto?eaHace(a.resuelto):''}${a.nota?' · '+esc(a.nota):''}</div>`).join('')}</details>`:''}</div>
-    </div><div>
-      <div class="ctl-sec"><h3>SEMÁFORO DE ÁREAS</h3><span class="line"></span></div>
-      <div class="ea-card" style="padding:6px 16px;overflow:visible">${semaforo||'<div class="ea-empty">Sin secciones con líder.</div>'}</div>
-      <div class="ea-sm" style="margin-top:8px">Calificación de 0 a 10 por área (tareas, KPIs y rocas). Verde ≥ 8 · ámbar ≥ 5 · rojo &lt; 5.</div>
-    </div></div>
-    <div class="ctl-sec" id="ctl-sis"><h3>SISTEMAS BAJO CONTROL</h3><span class="line"></span><span class="ea-sm">Para cada uno: dueño, liga, tres números que lo resumen y su estado de hoy.</span></div>
-    <div class="ctl-sis">${CTL_SISTEMAS.map(x=>{const d=sisDato(x.id), est=d.estado||'', url=d.url||x.url||'', rev=sisRevHoy(x.id);
-      return `<div class="ctl-sc ${est}"><h4>${esc(x.n)}</h4><div class="d">Dueño: ${esc(x.dueno)}<br>${esc(x.info)}</div>
-      ${x.auto?`<span class="ctl-chip ok">Automático</span> <button class="ea-btn" data-ctl-go="sis:${x.go}">Abrir</button>`:`<div>${rev?'<span class="ctl-chip ok">Revisado hoy ✓</span>':'<span class="ctl-chip warn">Sin revisar hoy</span>'}${url?'':'<span class="ctl-chip mut">Falta la liga</span>'}</div>
-      <div class="f">${url?`<a class="ea-btn" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none">Abrir ↗</a>`:''}<button class="ea-btn" data-sis-edit="${x.id}">✎ Liga / nota</button><button class="ea-btn ${rev?'':'dark'}" data-sis-rev="${x.id}">${rev?'Quitar revisado':'Marcar revisado'}</button></div>
-      <div class="f">${['verde','ambar','rojo'].map(e=>`<button class="ea-btn" style="${est===e?'background:'+(e==='verde'?'var(--ok)':e==='ambar'?'#D9A93A':'var(--bad)')+';color:#fff':''}" data-sis-est="${x.id}:${e}">${e==='verde'?'🟢 Bien':e==='ambar'?'🟠 Atención':'🔴 Mal'}</button>`).join('')}</div>${d.nota?`<div class="ea-sm" style="margin-top:8px"><i>${esc(d.nota)}</i></div>`:''}`}</div>`;}).join('')}</div>
+    <div class="ctl-sec"><h3>SEMÁFORO DE ÁREAS</h3><span class="line"></span></div>
+    <div class="ea-card" style="padding:6px 16px;overflow:visible">${semaforo||'<div class="ea-empty">Sin secciones con líder.</div>'}</div>
+    <div class="ea-sm" style="margin-top:8px">Calificación de 0 a 10 por área (tareas, KPIs y rocas). Verde ≥ 8 · ámbar ≥ 5 · rojo &lt; 5.</div>
     <div class="ctl-sec"><h3>JARVIS</h3><span class="line"></span></div>
-    <div class="ea-card" style="padding:16px"><b>Cómo trabaja contigo:</b> prepara el parte cada día hábil a las 6:45 (lo ves arriba), redacta borradores de tus correos (nunca los envía solo), te avisa de lo que se atora y propone cada solicitud nueva para esta lista de autorizaciones. <span class="ea-sm">También puedes pedírmelo en cualquier momento aquí en Claude: «parte de la mañana».</span></div>`;
+    <div class="ea-card" style="padding:16px"><b>Cómo trabaja contigo:</b> prepara el parte cada día hábil a las 6:45 (lo ves arriba), redacta borradores de tus correos (nunca los envía solo), te avisa de lo que se atora y entra por ti a garantías, mantenimiento, producción, EOS y compras para dejarte el resumen y el plan de acción. <span class="ea-sm">También puedes pedírmelo en cualquier momento aquí en Claude: «parte de la mañana».</span></div>`;
   root.querySelectorAll('[data-pa]').forEach(b=>b.onclick=()=>{ const [k,id]=b.dataset.pa.split(':'); ctlPAccion(k,id); });
   root.querySelectorAll('[data-ctl-att]').forEach(b=>b.onclick=()=>{ const f=att[+b.dataset.ctlAtt].go; if(f) f(); });
   root.querySelectorAll('[data-ctl-chk]').forEach(b=>b.onclick=()=>ctlMarcar(b.dataset.ctlChk));
   root.querySelectorAll('[data-ctl-go]').forEach(b=>b.onclick=()=>{ const [k,i]=b.dataset.ctlGo.split(':'); if(k==='sis'){ showView(i); return; } const a=pasos.find(x=>x.k===k).acc[+i];
     if(a.ancla){ document.getElementById(a.ancla)?.scrollIntoView({behavior:'smooth'}); return; }
     if(a.go==='aprobar'){ _eaModo='aprobar'; showView('actividades'); } else if(a.go==='abiertas'){ _eaModo='abiertas'; showView('actividades'); } else showView(a.go); });
-  root.querySelector('#au-add').onclick=()=>{ const con=root.querySelector('#au-con').value.trim(); if(!con){ toast('Escribe qué hay que autorizar'); return; }
-    const id=uid('au'); _fbDB.ref('li_control/autorizaciones/'+id).set({id,tipo:root.querySelector('#au-tipo').value,concepto:con,solicitante:root.querySelector('#au-sol').value,monto:+root.querySelector('#au-monto').value||0,estado:'pendiente',creado:Date.now()}); toast('Agregada a por autorizar ✓'); };
-  root.querySelectorAll('[data-au]').forEach(b=>b.onclick=()=>{ const [id,acc]=b.dataset.au.split(':'), a=DB.control.autorizaciones[id];
-    const guardar=nota=>{ _fbDB.ref('li_control/autorizaciones/'+id).update(acc==='info'?{nota:(nota||'').trim()||'Se pidió más información'}:{estado:acc,resuelto:Date.now(),nota:(nota||'').trim()||a.nota||null}); toast(acc==='autorizado'?'Autorizada ✓':acc==='rechazado'?'Rechazada':'Anotado ✓'); };
-    if(acc==='autorizado') guardar(''); else openDlg({title:acc==='rechazado'?'Rechazar':'Pedir información',sub:a.concepto,saveLabel:'Guardar',body:`<label class="lbl">${acc==='rechazado'?'Motivo':'¿Qué necesitas saber?'}</label><textarea class="input" id="au-nota" rows="3"></textarea>`,onSave:()=>{ guardar(document.getElementById('au-nota').value); }}); });
-  root.querySelectorAll('[data-sis-rev]').forEach(b=>b.onclick=()=>{ const id=b.dataset.sisRev; _fbDB.ref('li_control/sistemas/'+id+'/revisado').set(sisRevHoy(id)?null:Date.now()); });
-  root.querySelectorAll('[data-sis-est]').forEach(b=>b.onclick=()=>{ const [id,e]=b.dataset.sisEst.split(':'); _fbDB.ref('li_control/sistemas/'+id+'/estado').set(sisDato(id).estado===e?null:e); });
-  root.querySelectorAll('[data-sis-edit]').forEach(b=>b.onclick=()=>{ const id=b.dataset.sisEdit, x=CTL_SISTEMAS.find(s=>s.id===id), d=sisDato(id);
-    openDlg({title:x.n,sub:'Liga y nota',saveLabel:'Guardar',body:`<label class="lbl">Liga del aplicativo o archivo</label><input class="input" id="sis-url" value="${esc(d.url||'')}" placeholder="https://…"><label class="lbl" style="margin-top:10px">Nota (qué mirar, quién lo captura, qué umbral)</label><textarea class="input" id="sis-nota" rows="3">${esc(d.nota||'')}</textarea>`,
-      onSave:()=>{ _fbDB.ref('li_control/sistemas/'+id).update({url:document.getElementById('sis-url').value.trim()||null,nota:document.getElementById('sis-nota').value.trim()||null}); toast('Guardado ✓'); }}); });
+
+}
+
+
+const _arr=x=>Array.isArray(x)?x.filter(Boolean):Object.values(x||{});
+function ctlAppsHTML(){
+  const r=ctlParteActual(), ap=(r&&r.p.aplicativos)||{};
+  const E={verde:['🟢','En orden'],ambar:['🟠','Atención'],rojo:['🔴','Requiere acción'],sin_acceso:['⚪','Sin lectura']};
+  const ids=[...CTL_APPS.map(x=>x.id),...Object.keys(ap).filter(k=>!CTL_APPS.some(x=>x.id===k))];
+  return `<div class="ap-grid">${ids.map(id=>{
+    const base=CTL_APPS.find(x=>x.id===id)||{id,n:ap[id]?.nombre||id,ic:ap[id]?.icono||'📌',falta:''}, a=ap[id];
+    if(!a) return `<div class="ap-card sin"><div class="ap-h"><span class="ic">${base.ic}</span><div><h4>${esc(base.n)}</h4><div class="ap-t">Sin lectura hoy</div></div><span class="ctl-chip mut">⚪ Sin lectura</span></div><div class="ea-sm" style="margin-top:10px">${esc(base.falta)}</div></div>`;
+    const e=E[a.estado]||E.sin_acceso, hall=_arr(a.hallazgos), planes=_arr(a.planes);
+    return `<div class="ap-card ${esc(a.estado||'')}"><div class="ap-h"><span class="ic">${a.icono||base.ic}</span><div style="flex:1"><h4>${esc(a.nombre||base.n)}</h4><div class="ap-t">${esc(a.titular||'')}</div></div><span class="ctl-chip ${a.estado==='rojo'?'bad':a.estado==='ambar'?'warn':a.estado==='verde'?'ok':'mut'}">${e[0]} ${e[1]}</span></div>
+      ${hall.length?`<ul class="ap-l">${hall.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:''}
+      ${planes.length?`<div class="ap-p"><b>Plan de acción</b>${planes.map(x=>`<div class="ap-pl"><span>➜</span><div>${esc(x.texto||'')}${x.quien?` <span class="ea-sm">· ${esc(x.quien)}${x.cuando?' · '+esc(x.cuando):''}</span>`:''}</div></div>`).join('')}</div>`:''}
+      <div class="ea-sm ap-f">${esc(a.fuente||'')}${a.liga?` · <a href="${esc(a.liga)}" target="_blank" rel="noopener">Abrir ↗</a>`:''}</div></div>`; }).join('')}</div>`;
 }
 
 /* ── Parte matutino: lo publica la rutina de las 6:45 en li_control/parte/<fecha> ── */
@@ -2913,7 +2907,7 @@ function ctlParteHTML(){
   const tarj=(p.decisiones||[]).map((x,i)=>{
     const acts=(x.actividades||[]).map(a=>{ const ok=ctlActResuelta(a); const d=byId(DB.deliverables,a.id);
       return `<div class="pt-act ${ok?'listo':''}"><div class="t"><b>${esc(a.nombre)}</b><span>👤 <b style="display:inline;color:var(--text)">${esc((byId(DB.deliverables,a.id)&&byId(DB.users,byId(DB.deliverables,a.id).assigneeId)?.name)||a.quien)}</b> · ${esc(a.proyecto)}${a.dias?` · <b style="display:inline;color:var(--bad)">${a.dias} días vencida</b>`:''}</span></div>${ok?'<span class="ctl-chip ok">✔ Resuelta</span>':(x.acciones||[]).filter(k=>['cerrar','replantear','ver'].includes(k)).map(k=>btn(k,a.id)).join('')}</div>`; }).join('');
-    const glob=(x.acciones||[]).includes('ir_aprobar')?'<button class="ea-btn dark" data-pa="ir_aprobar:">Revisar y aprobar</button>':(x.acciones||[]).includes('ir_autorizar')?'<button class="ea-btn dark" data-pa="ir_autorizar:">Ir a autorizaciones</button>':(x.acciones||[]).includes('ver_rocas')?'<button class="ea-btn" data-pa="ver_rocas:">Ver rocas</button>':'';
+    const glob=(x.acciones||[]).includes('ir_aprobar')?'<button class="ea-btn dark" data-pa="ir_aprobar:">Revisar y aprobar</button>':(x.acciones||[]).includes('ver_rocas')?'<button class="ea-btn" data-pa="ver_rocas:">Ver rocas</button>':'';
     return `<div class="pt-card ${esc(x.tipo)}"><div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><span style="font-size:20px">${x.icono||'•'}</span><div style="flex:1;min-width:220px"><h4>${i+1}. ${esc(x.titulo)}</h4>${x.detalle?`<div class="dt">${esc(x.detalle)}</div>`:''}</div>${glob}</div>${acts}</div>`; }).join('');
   const nv=(p.noVisible||[]).length?`<details style="margin-top:6px"><summary class="ea-sm" style="cursor:pointer;font-weight:700">Lo que Jarvis todavía no puede ver (${p.noVisible.length})</summary>${p.noVisible.map(x=>`<div class="ea-sm" style="padding:3px 0">• ${esc(x)}</div>`).join('')}</details>`:'';
   return cab+(tarj||'<div class="ea-card"><div class="ea-empty">Nada urgente que decidir hoy. ✅</div></div>')+nv;
@@ -2990,7 +2984,6 @@ function ctlPAccion(k,id){
   if(k==='cerrar') ctlCerrarAct(id); else if(k==='replantear') ctlReplantearAct(id); else if(k==='reasignar') ctlReasignarAct(id);
   else if(k==='ver'){ const d=byId(DB.deliverables,id); _eaModo='abiertas'; _eaQ=d?d.name:''; showView('actividades'); }
   else if(k==='ir_aprobar'){ _eaModo='aprobar'; showView('actividades'); }
-  else if(k==='ir_autorizar') document.getElementById('ctl-aut')?.scrollIntoView({behavior:'smooth'});
   else if(k==='ver_rocas') showView('rocas');
 }
 
