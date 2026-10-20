@@ -284,6 +284,7 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
 .topbar .tb-burger{color:var(--muted);font-size:19px}
 .topbar .tb-burger:hover{background:var(--surface2);color:var(--text)}
 .top-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+#btn-tareas{display:inline-flex;gap:8px;align-items:center}.ea-tbadge{background:#2A2A2C;color:#fff;border-radius:10px;font-size:11px;font-weight:800;padding:1px 7px}
 .shell.menu-off .sidebar{display:none}
 .nav-count{margin-left:auto;font-size:11px;font-weight:800;border-radius:12px;padding:1px 8px;background:var(--bad);color:#fff;display:none}
 .nav-count.on{display:inline-block}
@@ -446,21 +447,19 @@ tr.ea-child td{background:var(--surface2)}tr.ea-child .ea-name{padding-left:30px
         </div>
       </div>
       <button class="nav-btn" data-view="actividades"><span class="ic">☑</span> Mis actividades <span class="nav-count" id="nav-act-count"></span></button>
-      <button class="nav-btn" data-view="dashboard"><span class="ic">🏠</span> Dashboard</button>
+      <button class="nav-btn" data-view="micumplimiento"><span class="ic">◔</span> Mi cumplimiento</button>
       <button class="nav-btn leader-only" id="btn-junta" style="display:none"><span class="ic">▦</span> Junta semanal <span class="nav-caret" id="junta-caret">▸</span></button>
       <div class="nav-sub leader-only" id="sub-junta" style="display:none">
-        <button class="nav-btn nav-subbtn" data-view="scorecard"><span class="ic">📈</span> Scorecard (KPIs)</button>
+        <button class="nav-btn nav-subbtn" data-view="scorecard"><span class="ic">⌁</span> Scorecard (KPIs)</button>
         <button class="nav-btn nav-subbtn" data-view="rocas"><span class="ic">☆</span> Rocas</button>
       </div>
-      <button class="nav-btn" data-view="proyectos"><span class="ic">📁</span> Proyectos</button>
-      <button class="nav-btn" data-view="centrotrabajo"><span class="ic">🏭</span> Centros de trabajo</button>
-      <button class="nav-btn" data-view="equipo"><span class="ic">👥</span> Equipo</button>
-      <button class="nav-btn" data-view="reportes"><span class="ic">📊</span> Reportes</button>
-      <button class="nav-btn admin-only" data-view="pedidosventa" style="display:none"><span class="ic">🧾</span> Pedidos venta</button>
-      <button class="nav-btn admin-only" data-view="leadtime" style="display:none"><span class="ic">⏱️</span> Lead Time</button>
+      <button class="nav-btn" data-view="proyectos"><span class="ic">▤</span> Proyectos</button>
+      <button class="nav-btn" data-view="centrotrabajo"><span class="ic">⚙</span> Centros de trabajo</button>
+      <button class="nav-btn" data-view="equipo"><span class="ic">☺</span> Equipo</button>
+      <button class="nav-btn" data-view="reportes"><span class="ic">▥</span> Reportes</button>
       <div class="nav-spacer"></div>
       <a class="nav-btn" href="https://subdireccion.lineaitalia.net" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic">▣</span> EOS <span class="nav-caret">↗</span></a>
-      <button class="nav-btn admin-only" data-view="admin" style="display:none"><span class="ic">⚙️</span> Administración</button>
+      <button class="nav-btn admin-only" data-view="admin" style="display:none"><span class="ic">⚑</span> Administración</button>
       <div class="sidebar-foot">
         <div class="user-chip">
           <div class="av" id="sb-av">--</div>
@@ -477,6 +476,7 @@ tr.ea-child td{background:var(--surface2)}tr.ea-child .ea-name{padding-left:30px
         <button class="icon-btn tb-burger" id="btn-collapse" title="Mostrar u ocultar el menú">☰</button>
         <h1 id="top-title">Dashboard</h1>
         <div class="top-right" id="top-right"></div>
+        <button class="ea-btn" id="btn-tareas" title="Ir a mis actividades">☑ Tareas <span class="ea-tbadge" id="tareas-badge">0</span></button>
       </div>
       <div class="main" id="view-root"><!-- la vista activa se dibuja aquí --></div>
     </div>
@@ -1229,8 +1229,9 @@ function refreshNotifBadge(){
 ══════════════════════════════════════════════════════ */
 let currentView='actividades';
 const VIEW_RENDERERS={}; // cada vista registra aquí su función de render
-const VIEW_TITLES={rocas:'Rocas trimestrales',actividades:'Mis actividades',dashboard:'Dashboard',proyectos:'Proyectos',equipo:'Equipo',centrotrabajo:'Centros de trabajo',reportes:'Reportes',scorecard:'Scorecard',pedidosventa:'Pedidos venta',leadtime:'Lead Time',admin:'Administración',mipuesto:'Mi puesto',roimaquinas:'ROI de máquinas'};
+const VIEW_TITLES={micumplimiento:'Mi cumplimiento',rocas:'Rocas trimestrales',actividades:'Mis actividades',dashboard:'Dashboard',proyectos:'Proyectos',equipo:'Equipo',centrotrabajo:'Centros de trabajo',reportes:'Reportes',scorecard:'Scorecard',pedidosventa:'Pedidos venta',leadtime:'Lead Time',admin:'Administración',mipuesto:'Mi puesto',roimaquinas:'ROI de máquinas'};
 function showView(name){
+  if(name==='dashboard'||name==='pedidosventa'||name==='leadtime') name='actividades';   // vistas ocultas por ahora
   currentView=name;
   const _tt=document.getElementById('top-title'); if(_tt) _tt.textContent=VIEW_TITLES[name]||name;
   const _tr=document.getElementById('top-right'); if(_tr) _tr.innerHTML='';
@@ -2271,6 +2272,7 @@ function renderActividades(root){
     r.onchange=()=>eaGuardarAvance(r.dataset.eaAv,+r.value);
   });
   root.querySelectorAll('[data-ea-min]').forEach(b=>b.onclick=()=>eaAbrirMinuta(b.dataset.eaMin));
+  const tb=document.getElementById('tareas-badge'); if(tb) tb.textContent=todos.filter(d=>(eaDias(d.dueDate)??1)<0).length;
   const nc=document.getElementById('nav-act-count');
   if(nc){ const v=todos.filter(d=>(eaDias(d.dueDate)??1)<0).length; nc.textContent=v; nc.classList.toggle('on',v>0); }
 }
@@ -2507,6 +2509,8 @@ function renderRocas(root){
   root.querySelectorAll('[data-roc-new]').forEach(i=>i.onkeydown=e=>{ if(e.key==='Enter') add(i.dataset.rocNew); });
 }
 VIEW_RENDERERS['rocas']=renderRocas;
+// Mi cumplimiento = tu ficha (PT del mes, puesto, indicadores). El Dashboard general queda oculto por ahora (código intacto).
+VIEW_RENDERERS['micumplimiento']=function(root){ _profileUserId=null; renderMiPuesto(root); };
 (function(){
   const b=document.getElementById('btn-junta'), sub=document.getElementById('sub-junta');
   if(b) b.addEventListener('click',()=>{ sub.classList.toggle('open'); document.getElementById('junta-caret').textContent=sub.classList.contains('open')?'▾':'▸'; });
@@ -2545,6 +2549,7 @@ function eaPintarMinuta(){
   document.getElementById('ea-min-close').addEventListener('click',cerrar);
   dlg.addEventListener('click',e=>{ if(e.target===dlg) cerrar(); });
   dlg.addEventListener('cancel',e=>{ e.preventDefault(); cerrar(); });
+  document.getElementById('btn-tareas').addEventListener('click',()=>showView('actividades'));
   document.getElementById('btn-collapse').addEventListener('click',()=>document.querySelector('.shell').classList.toggle('menu-off'));
 })();
 
