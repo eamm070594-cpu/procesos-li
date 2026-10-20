@@ -882,7 +882,7 @@ function emptyDB(){
     // Scorecard + Rocas (25-sep-2026) — viven en el nodo compartido junto con
     // secciones/centros porque son config/seguimiento por Sección, no datos
     // de un proyecto puntual.
-    indicadores:[], indicadorCapturas:[], rocas:[], planta:null, _plantaStr:null,
+    indicadores:[], indicadorCapturas:[], rocas:[], planta:null, _plantaStr:null, plantaApp:null,
     // Toma de tiempos (25-sep-2026) — catálogos globales, mismo criterio que
     // tabulador/puestos: se seeded con los defaults reales la primera vez,
     // Firebase manda después de eso.
@@ -985,7 +985,7 @@ async function pushShare(){
   try{
     // No pisamos otros campos que ya existan en el nodo real (proyectos viejos,
     // reglas, etc. del index.html anterior) — solo actualizamos users/secciones/centros.
-    await _refShare.update(cleanUndefined({...(DB._plantaStr?{planta:DB._plantaStr}:{}),users:DB.users,secciones:DB.secciones,centros:DB.centros,puestos:DB.puestos,tabulador:DB.tabulador,globalParams:DB.globalParams,indicadores:DB.indicadores,indicadorCapturas:DB.indicadorCapturas,rocas:DB.rocas,tiposPieza:DB.tiposPieza,suplementos:DB.suplementos,_v3SavedAt:Date.now()}));
+    await _refShare.update(cleanUndefined({users:DB.users,secciones:DB.secciones,centros:DB.centros,puestos:DB.puestos,tabulador:DB.tabulador,globalParams:DB.globalParams,indicadores:DB.indicadores,indicadorCapturas:DB.indicadorCapturas,rocas:DB.rocas,tiposPieza:DB.tiposPieza,suplementos:DB.suplementos,_v3SavedAt:Date.now()}));
     _sharePending=false;
   }catch(e){ console.error('[FB share] push error',e.message); }
   _shareBusy=false;
@@ -1012,7 +1012,7 @@ async function pullShare(){
     DB.indicadores=toArr(remote.indicadores);
     DB.indicadorCapturas=toArr(remote.indicadorCapturas);
     DB.rocas=toArr(remote.rocas);
-    plCargar(remote.planta);
+    
     DB.tiposPieza=toTiposPieza(remote.tiposPieza);
     DB.suplementos=toSuplementos(remote.suplementos);
   }
@@ -1047,7 +1047,7 @@ _refShare.on('value',snap=>{
   DB.indicadores=toArr(remote.indicadores);
   DB.indicadorCapturas=toArr(remote.indicadorCapturas);
   DB.rocas=toArr(remote.rocas);
-  plCargar(remote.planta);
+  
   DB.tiposPieza=toTiposPieza(remote.tiposPieza);
   DB.suplementos=toSuplementos(remote.suplementos);
   _sharedLoaded=true;
@@ -1275,7 +1275,7 @@ function render(){ showView(currentView); }
 document.querySelectorAll('.nav-btn[data-view]').forEach(b=>{
   b.addEventListener('click',()=>{
     if(b.dataset.view==='proyectos') _currentProjectId=null; // el nav siempre regresa a la lista
-    if(b.dataset.view==='centrotrabajo'){ _currentCentroId=null; _maqOrigen=null; } // el nav siempre regresa a la lista
+    if(b.dataset.view==='centrotrabajo'){ _currentCentroId=null; _maqOrigen=null; _plMain='orig'; _plCT=null; } // el nav siempre regresa a la lista
     showView(b.dataset.view);
   });
 });
@@ -2353,12 +2353,24 @@ const plMxn=v=>'$'+Math.round(+v||0).toLocaleString('es-MX');
 const plMxn2=v=>'$'+(+v||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
 const plDelta=v=>v==null?'':`<span class="ea-delta ${v<=0?'dn':'up'}">${v<=0?'▼':'▲'} ${Math.abs(v*100).toFixed(1)}%</span>`;
 const plPbar=v=>{const k=v>=67?'var(--ok)':v>=34?'#C4922A':'var(--bad)';return `<div class="ea-pbar"><div class="tr"><i style="width:${v}%;background:${k}"></i></div><b class="${eaCls(v)}">${v}%</b></div>`;};
-let _plView='mapa', _plCT=null, _plTab='resumen';
+let _plView='mapa', _plCT=null, _plTab='resumen', _plMain='orig';
+function plToolbarHTML(){
+  return `<div class="ea-tabs" id="pl-toolbar" style="margin-bottom:12px"><button class="ea-tab ${_plMain==='orig'?'on':''}" data-plmain="orig">🗺️ Mapa y costos de la planta</button><button class="ea-tab ${_plMain==='eos'?'on':''}" data-plmain="eos">📁 Proyectos y equipos por centro</button><button class="ea-tab" data-plmain="roi">📊 ROI de máquinas</button></div>`;
+}
+function plToolbarWire(root){
+  root.querySelectorAll('[data-plmain]').forEach(b=>b.onclick=()=>{ const k=b.dataset.plmain; if(k==='roi'){ showView('roimaquinas'); return; } _plMain=k; _plCT=null; render(); });
+}
 
+// Los datos de planta viven en su propio nodo (li_planta: data = JSON de los 18 CT, app = la app original) y se cargan solo al abrir Centros de trabajo.
+async function plEnsure(){
+  if(DB._plantaLoaded) return; DB._plantaLoaded=true;
+  try{ const v=(await _fbDB.ref('li_planta').get()).val()||{}; plCargar(v.data); DB.plantaApp=(typeof v.app==='string'&&v.app)?v.app:null; }
+  catch(e){ console.warn('[planta] no se pudo cargar:',e.message); }
+}
 function plImportar(file){
   const fr=new FileReader();
   fr.onload=()=>{ try{ const o=JSON.parse(fr.result); if(!o.CT26||!o.areas||!o.MAQ) throw new Error('no parece planta.json');
-      DB._plantaStr=JSON.stringify(o); DB.planta=o; saveDB(); toast('Datos de planta importados ✓'); }
+      DB._plantaStr=JSON.stringify(o); DB.planta=o; _fbDB.ref('li_planta/data').set(DB._plantaStr); toast('Datos de planta importados ✓'); render(); }
     catch(e){ toast('Archivo inválido: '+e.message,'err'); } };
   fr.readAsText(file);
 }
@@ -2367,16 +2379,26 @@ function plBannerImport(){
 }
 function renderCentroTrabajo(root){
   if(!dataReady()){ root.innerHTML=loadingHTML('Cargando centros de trabajo…'); return; }
-  if(_currentCentroId){ renderCentroDetail(root); return; }                      // detalle de ingeniería (balanceo, CIF, tabulador, máquinas)
+  if(_currentCentroId){ renderCentroDetail(root); return; }
+  if(!DB._plantaLoaded){ root.innerHTML=loadingHTML('Cargando el mapa de planta…'); plEnsure().then(()=>{ if(currentView==='centrotrabajo') render(); }); return; }                      // detalle de ingeniería (balanceo, CIF, tabulador, máquinas)
   if(!DB.planta){
     renderCentroTrabajoLegacy(root);
     if(isAdmin()){ root.insertAdjacentHTML('afterbegin',plBannerImport()); const f=root.querySelector('#pl-file'); root.querySelector('#pl-import').onclick=()=>f.click(); f.onchange=()=>f.files[0]&&plImportar(f.files[0]); }
     return;
   }
   if(_plCT==='__soporte_x') _plCT=null;
+  // Admin: la app "Planta Línea Italia" ORIGINAL (dashboard de costos + layout + catálogo de máquinas), tal cual, dentro de la pantalla.
+  if(isAdmin()&&DB.plantaApp){
+    if(_plMain==='orig'){
+      if(root.querySelector('#pl-frame')) return;           // ya está abierta: no se recarga con cada actualización de datos
+      root.innerHTML=plToolbarHTML()+`<iframe id="pl-frame" title="Planta Línea Italia" sandbox="allow-scripts allow-same-origin allow-downloads allow-modals allow-popups" style="width:100%;height:calc(100vh - 130px);min-height:560px;border:0;border-radius:12px;background:#0f1b21;display:block"></iframe>`;
+      root.querySelector('#pl-frame').srcdoc=DB.plantaApp; plToolbarWire(root); return;
+    }
+  }
   if(_plCT&&_plCT.startsWith('leg:')){ const r=byId(DB.centros,_plCT.slice(4)); if(r){ plVistaSoporte(root,r); return; } }
-  if(_plCT&&plGetCT(_plCT)){ plVistaDetalle(root,plGetCT(_plCT)); return; }
+  if(_plCT&&plGetCT(_plCT)){ plVistaDetalle(root,plGetCT(_plCT)); if(isAdmin()&&DB.plantaApp){ root.insertAdjacentHTML('afterbegin',plToolbarHTML()); plToolbarWire(root); } return; }
   plVistaLista(root);
+  if(isAdmin()&&DB.plantaApp){ root.insertAdjacentHTML('afterbegin',plToolbarHTML()); plToolbarWire(root); }
 }
 function plVistaLista(root){
   const P=DB.planta,L=P.CT26,M=P.measurement,ver=isAdmin();
