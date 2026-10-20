@@ -2367,8 +2367,9 @@ function plSubir(id){   // pasa a otra pestaña DENTRO de la app original (sus b
 }
 function plTopTabs(){
   const tr=document.getElementById('top-right'); if(!tr) return;
+  const orig=isAdmin()&&!!DB.plantaApp;
   const b=(attr,val,txt,on)=>`<button class="${on?'on':''}" data-${attr}="${val}">${txt}</button>`;
-  tr.innerHTML=`<div class="ea-seg" id="pl-top">${b('plsub','navDash','Dashboard',_plMain==='orig'&&_plSub==='navDash')}${b('plsub','navLayout','Layout de planta',_plMain==='orig'&&_plSub==='navLayout')}${b('plsub','navMaq','Máquinas',_plMain==='orig'&&_plSub==='navMaq')}${b('plmain','eos','Proyectos y equipos por centro',_plMain==='eos')}${b('plmain','roi','ROI de máquinas',false)}</div>`;
+  tr.innerHTML=`<div class="ea-seg" id="pl-top">${orig?b('plsub','navDash','Dashboard',_plMain==='orig'&&_plSub==='navDash')+b('plsub','navLayout','Layout de planta',_plMain==='orig'&&_plSub==='navLayout')+b('plsub','navMaq','Máquinas',_plMain==='orig'&&_plSub==='navMaq'):''}${b('plmain','eos','Proyectos y equipos por centro',_plMain==='eos'||!orig)}${b('plmain','roi','ROI de máquinas',false)}</div>`;
   tr.querySelectorAll('[data-plsub]').forEach(x=>x.onclick=()=>{ if(_plMain!=='orig'){ _plMain='orig'; _plSub=x.dataset.plsub; _plCT=null; render(); } else plSubir(x.dataset.plsub); });
   tr.querySelectorAll('[data-plmain]').forEach(x=>x.onclick=()=>{ if(x.dataset.plmain==='roi'){ showView('roimaquinas'); return; } _plMain='eos'; _plCT=null; render(); });
 }
@@ -2414,9 +2415,8 @@ function renderCentroTrabajo(root){
   }
   _area.classList.remove('pl-dark');
   if(_plCT&&_plCT.startsWith('leg:')){ const r=byId(DB.centros,_plCT.slice(4)); if(r){ plVistaSoporte(root,r); return; } }
-  if(_plCT&&plGetCT(_plCT)){ plVistaDetalle(root,plGetCT(_plCT)); if(isAdmin()&&DB.plantaApp){ root.insertAdjacentHTML('afterbegin',plToolbarHTML()); plToolbarWire(root); } return; }
-  plVistaLista(root);
-  if(isAdmin()&&DB.plantaApp){ root.insertAdjacentHTML('afterbegin',plToolbarHTML()); plToolbarWire(root); }
+  if(_plCT&&plGetCT(_plCT)){ plVistaDetalle(root,plGetCT(_plCT)); plTopTabs(); return; }
+  plVistaLista(root); plTopTabs();
 }
 function plVistaLista(root){
   const P=DB.planta,L=P.CT26,M=P.measurement,ver=isAdmin();
@@ -2443,7 +2443,7 @@ function plVistaLista(root){
   }
   const sop=(DB.centros||[]).filter(r=>PL_SOPORTE.includes(plSn(r.nombre))).map(r=>{const ps=(DB.projects||[]).filter(p=>(p.centroIds||[]).includes(r.id)),ds=(DB.deliverables||[]).filter(d=>ps.some(p=>p.id===d.projectId)&&d.status!=='Entregado');
     return `<button data-plct="leg:${esc(r.id)}">${esc(r.nombre)}<small>${ps.length} proyectos · ${ds.length} abiertas</small></button>`;}).join('');
-  root.innerHTML=`<div class="ea-light-title"><span class="t">Centros de trabajo</span><span class="s">Los 18 CT oficiales del layout de planta${ver?' · tasas 2026 de Finanzas':''} · haz clic en uno para ver su detalle.</span>${ver?'<button class="ea-btn" id="pl-roi" style="float:right">📊 ROI de todas las máquinas</button>':''}</div>
+  root.innerHTML=`<div class="ea-light-title"><span class="t">Centros de trabajo</span><span class="s">Los 18 CT oficiales del layout de planta${ver?' · tasas 2026 de Finanzas':''} · haz clic en uno para ver su detalle.</span><button class="ea-btn" id="pl-roi" style="float:right">📊 ROI de todas las máquinas</button></div>
     ${kp}<div class="ea-tabs">${vistas.map(([k,l])=>`<button class="ea-tab ${_plView===k?'on':''}" data-plv="${k}">${l}</button>`).join('')}</div>${body}
     <div class="ea-bar" style="margin-top:22px"><h2 style="color:var(--text)">Áreas de soporte <span class="ea-sm">· fuera del layout de producción</span></h2></div><div class="ea-soporte">${sop}</div>`;
   plWire(root);
@@ -2498,13 +2498,13 @@ function plEquiposHTML(c,ver){
   const rows=eq.map(m=>{const col=PL_EST[m.est]||'#888',i=m.inst;
     return `<tr><td>${m.foto?`<img class="ea-thumb" src="assets/planta/${esc(m.foto)}" loading="lazy" alt="">`:''}</td><td><b>${esc(m.n)}</b>${m.modelo?`<div class="ea-sm">${esc(m.modelo)}</div>`:''}${i?`<div class="ea-sm">${esc(i.hito||'')}</div><div class="ea-instbar"><i style="width:${i.pct}%"></i></div>`:''}</td>
       <td><span class="ea-est" style="background:${col}">${esc(m.est)}</span></td><td class="r">${m.anio||'—'}</td>${ver?`<td class="r">${m.costo?plMxn(m.costo):(m.inv?plMxn(m.inv):'—')}</td><td class="r">${m.vida||'—'}</td><td class="r">${m.libros!=null?plMxn(m.libros):'—'}</td>`:''}<td class="r">${m.kw?m.kw+' kW':'—'}</td></tr>`;}).join('');
-  const roi=[]; if(ver) plLegDeCT(c.nombre).forEach(r=>(r.maquinas||[]).forEach(m=>{ if(plCtDeMaquina(m,r)===c.nombre) roi.push({r,m}); }));
+  const roi=[]; plLegDeCT(c.nombre).forEach(r=>(r.maquinas||[]).forEach(m=>{ if(plCtDeMaquina(m,r)===c.nombre) roi.push({r,m}); }));
   const roiHTML=roi.map(({r,m})=>{const pr=calcROI(m,r),hd=tieneRoiRealDatos(m),rr=hd?calcROIRealPorConceptos(m,r):null,est=mEstatus(m,hd);
     return `<div class="ea-mcard" data-plmaq="${esc(m.id)}" data-plmaqc="${esc(r.id)}"><div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">${m.heroPhoto?`<img class="ea-thumb" style="width:62px;height:62px;border-radius:10px" src="${m.heroPhoto}" alt="">`:''}<div><div style="font-weight:700;font-size:14px;line-height:1.25">${esc(m.name||'')}</div><div class="ea-sm">${esc(m.model||'')}</div><div style="margin-top:6px"><span class="ea-est" style="background:${est.color}">${est.icon} ${esc(est.label)}</span></div></div></div>
       <div class="ea-stats" style="margin-top:0"><div><b>${plMxn(m.inv)}</b><span>INVERSIÓN</span></div><div><b style="color:${hd?(rr.roi>=100?'var(--ok)':rr.roi>=50?'#C4922A':'var(--bad)'):'var(--muted)'}">${hd?(rr.roi>=0?'+':'')+Math.round(rr.roi)+'%':'Pendiente'}</b><span>ROI REAL</span></div><div><b>${pr.ab>0?(pr.roi>=0?'+':'')+Math.round(pr.roi)+'%':'—'}</b><span>ROI PROYECT.</span></div></div></div>`;}).join('');
   return `<div class="ea-bar" style="margin-top:0"><h2 style="color:var(--text)">Equipos del centro (${eq.length}) ${ver?'':''}</h2></div>
   <div class="ea-card"><table class="ea-tbl"><thead><tr><th></th><th>EQUIPO</th><th>ESTATUS</th><th class="r">AÑO</th>${ver?'<th class="r">COSTO</th><th class="r">VIDA (AÑOS)</th><th class="r">VALOR EN LIBROS</th>':''}<th class="r">CONSUMO</th></tr></thead><tbody>${rows||`<tr><td colspan="8" class="ea-sm" style="padding:16px">Este CT no tiene equipos en el catálogo.</td></tr>`}</tbody></table></div>
-  ${ver?`<div class="ea-bar"><h2 style="color:var(--text)">Plan de inversión · ROI (${roi.length})</h2></div>${roi.length?`<div class="ea-mgrid">${roiHTML}</div>`:'<div class="ea-card"><div class="ea-empty">Este centro no tiene máquinas con plan de inversión capturado.</div></div>'}`:''}`;
+  <div class="ea-bar"><h2 style="color:var(--text)">Plan de inversión · ROI (${roi.length}) <span class="ea-sm">· haz clic en una máquina para ver y editar su ROI</span></h2></div>${roi.length?`<div class="ea-mgrid">${roiHTML}</div>`:'<div class="ea-card"><div class="ea-empty">Este centro no tiene máquinas con plan de inversión capturado.</div></div>'}`;
 }
 function plWire(root){
   root.querySelectorAll('[data-plct]').forEach(e=>e.onclick=()=>{ _plCT=e.dataset.plct; _plTab='resumen'; render(); });
@@ -5525,7 +5525,7 @@ function filaRoiRealHTML(m,c){
 // Centro de Trabajo, sin la caja de "Parámetros globales" arriba.
 let _roiMaqModo='proyectado'; // 'proyectado' | 'real'
 function renderRoiMaquinas(root){
-  if(!isAdmin()){ root.innerHTML=noPermissionHTML(); return; }
+  // ROI de máquinas: lo ve y edita todo el equipo (2026-10-20), no solo el admin.
   if(!dataReady()){ root.innerHTML=loadingHTML('Cargando…'); return; }
   const filas=reporteMaquinasFilas();
   if(_reporteMaqSel===null) _reporteMaqSel=new Set(filas.map(f=>f.m.id)); // por default, todas marcadas
