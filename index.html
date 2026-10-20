@@ -287,7 +287,8 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
 #btn-tareas{display:inline-flex;gap:8px;align-items:center}.ea-tbadge{background:#2A2A2C;color:#fff;border-radius:10px;font-size:11px;font-weight:800;padding:1px 7px}
 .shell.menu-off .sidebar{display:none}
 .nav-count{margin-left:auto;font-size:11px;font-weight:800;border-radius:12px;padding:1px 8px;background:var(--bad);color:#fff;display:none}
-.nav-count.on{display:inline-block}.nav-count.apr{background:#C4922A;margin-left:4px}
+.nav-count.on{display:inline-block}
+.nav-btn{flex-wrap:wrap}.nav-subline{flex:0 0 100%;font-size:11px;font-weight:600;padding-left:26px;margin-top:-2px;line-height:1.35;display:none}.nav-subline.on{display:block}.nav-subline b{font-weight:800}.nav-subline .r{color:var(--bad)}.nav-subline .a{color:#9a6c0e}.nav-count.apr{background:#C4922A;margin-left:4px}
 .ea-sm-btn{padding:4px 10px;font-size:12px;margin-left:6px}.ea-ok{margin-left:8px;color:var(--ok);font-weight:700;font-size:12px}.ea-wait{margin-left:8px;color:var(--warn);font-weight:700;font-size:12px}
 .area.eos-dark{background:#4C4F56}
 :root{--pl-bg:#10202a}
@@ -475,8 +476,8 @@ tr.ea-child td{background:var(--surface2)}tr.ea-child .ea-name{padding-left:30px
           </div>
         </div>
       </div>
-      <button class="nav-btn" data-view="actividades"><span class="ic">☑</span> Mis actividades <span class="nav-count" id="nav-act-count"></span><span class="nav-count apr" id="nav-apr-count" title="Por aprobar"></span></button>
-      <button class="nav-btn" data-view="micumplimiento"><span class="ic">◔</span> Mi cumplimiento <span class="nav-score" id="nav-mc-score"></span></button>
+      <button class="nav-btn" data-view="actividades"><span class="ic">☑</span> Mis actividades <span class="nav-subline" id="nav-act-sub"></span></button>
+      <button class="nav-btn" data-view="micumplimiento"><span class="ic">◔</span> Mi cumplimiento <span class="nav-score" id="nav-mc-score" title="Tu calificación global de 0 a 10"></span></button>
       <button class="nav-btn leader-only" id="btn-junta" style="display:none"><span class="ic">▦</span> Junta semanal <span class="nav-caret" id="junta-caret">▸</span></button>
       <div class="nav-sub leader-only" id="sub-junta" style="display:none">
         <button class="nav-btn nav-subbtn" data-view="scorecard"><span class="ic">⌁</span> Scorecard (KPIs)</button>
@@ -505,7 +506,6 @@ tr.ea-child td{background:var(--surface2)}tr.ea-child .ea-name{padding-left:30px
         <button class="icon-btn tb-burger" id="btn-collapse" title="Mostrar u ocultar el menú">☰</button>
         <h1 id="top-title">Dashboard</h1>
         <div class="top-right" id="top-right"></div>
-        <button class="ea-btn" id="btn-tareas" title="Ir a mis actividades">☑ Tareas <span class="ea-tbadge" id="tareas-badge">0</span></button>
       </div>
       <div class="main" id="view-root"><!-- la vista activa se dibuja aquí --></div>
     </div>
@@ -1273,6 +1273,7 @@ function showView(name){
   const fn=VIEW_RENDERERS[name];
   if(!fn){ root.innerHTML=noPermissionHTML(); return; }
   fn(root);
+  eaRefrescarMenu();
   document.getElementById('sidebar')?.classList.remove('open');
   document.getElementById('sidebar-overlay')?.classList.remove('open');
 }
@@ -2261,6 +2262,12 @@ function eaFiltrados(){
   if(_eaQ){ const q=_eaQ.toLowerCase(); l=l.filter(d=>((d.name||'')+' '+(byId(DB.users,d.assigneeId)?.name||'')+' '+(byId(DB.projects,d.projectId)?.name||'')).toLowerCase().includes(q)); }
   return l.sort((a,b)=>(a.dueDate||'9').localeCompare(b.dueDate||'9'));
 }
+function eaRefrescarMenu(){
+  const el=document.getElementById('nav-act-sub'); if(!el||!SESSION||!dataReady()) return;
+  const v=eaTodos().filter(d=>d.dueDate&&(eaDias(d.dueDate)??1)<0).length, a=eaPorAprobar().filter(d=>canManageDeliverable(d)).length;
+  const partes=[]; if(v) partes.push(`<b class="r">${v} vencida${v!==1?'s':''}</b>`); if(a) partes.push(`<b class="a">${a} por aprobar</b>`);
+  el.innerHTML=partes.join(' · '); el.classList.toggle('on',partes.length>0);
+}
 function eaFila(d){
   const u=byId(DB.users,d.assigneeId), p=byId(DB.projects,d.projectId), n=eaDias(d.dueDate), av=eaAvance(d), k=eaCls(av), nm=eaMinutas(d).length;
   const chip=n==null?'':n<0?'bad':n<=7?'warn':'';
@@ -2319,10 +2326,7 @@ function renderActividades(root){
   root.querySelectorAll('[data-ea-apr]').forEach(b=>b.onclick=()=>eaAprobar(b.dataset.eaApr));
   root.querySelectorAll('[data-ea-dev]').forEach(b=>b.onclick=()=>eaDevolver(b.dataset.eaDev));
   mcBadge();
-  const tb=document.getElementById('tareas-badge'); if(tb) tb.textContent=todos.filter(d=>(eaDias(d.dueDate)??1)<0).length;
-  const nc=document.getElementById('nav-act-count');
-  if(nc){ const v=todos.filter(d=>(eaDias(d.dueDate)??1)<0).length; nc.textContent=v; nc.classList.toggle('on',v>0); }
-  const na=document.getElementById('nav-apr-count'); if(na){ const v=eaPorAprobar().filter(d=>canManageDeliverable(d)).length; na.textContent=v+' ✓'; na.classList.toggle('on',v>0); }
+  eaRefrescarMenu();
 }
 VIEW_RENDERERS['actividades']=renderActividades;
 /* ══════════════════════════════════════════════════════
@@ -2367,7 +2371,7 @@ function plSubir(id){   // pasa a otra pestaña DENTRO de la app original (sus b
 }
 function plTopTabs(){
   const tr=document.getElementById('top-right'); if(!tr) return;
-  const orig=isAdmin()&&!!DB.plantaApp;
+  const orig=isLeader()&&!!DB.plantaApp;
   const b=(attr,val,txt,on)=>`<button class="${on?'on':''}" data-${attr}="${val}">${txt}</button>`;
   tr.innerHTML=`<div class="ea-seg" id="pl-top">${orig?b('plsub','navDash','Dashboard',_plMain==='orig'&&_plSub==='navDash')+b('plsub','navLayout','Layout de planta',_plMain==='orig'&&_plSub==='navLayout')+b('plsub','navMaq','Máquinas',_plMain==='orig'&&_plSub==='navMaq'):''}${b('plmain','eos','Proyectos y equipos por centro',_plMain==='eos'||!orig)}${b('plmain','roi','ROI de máquinas',false)}</div>`;
   tr.querySelectorAll('[data-plsub]').forEach(x=>x.onclick=()=>{ if(_plMain!=='orig'){ _plMain='orig'; _plSub=x.dataset.plsub; _plCT=null; render(); } else plSubir(x.dataset.plsub); });
@@ -2404,7 +2408,7 @@ function renderCentroTrabajo(root){
   // Admin: la app "Planta Línea Italia" ORIGINAL (dashboard de costos + layout + catálogo de máquinas), integrada a pantalla completa:
   // sin su encabezado (los botones van en la barra superior de la app), mismo fondo, sin marco.
   const _area=document.getElementById('area');
-  if(isAdmin()&&DB.plantaApp&&_plMain==='orig'){
+  if(isLeader()&&DB.plantaApp&&_plMain==='orig'){
     _area.classList.add('pl-dark'); plTopTabs();
     if(root.querySelector('#pl-frame')) return;           // ya está abierta: no se recarga con cada actualización de datos
     root.innerHTML='<iframe id="pl-frame" title="Planta Línea Italia" sandbox="allow-scripts allow-same-origin allow-downloads allow-modals allow-popups" style="display:block;width:100%;height:calc(100vh - 58px);border:0;background:var(--pl-bg)"></iframe>';
@@ -2419,7 +2423,7 @@ function renderCentroTrabajo(root){
   plVistaLista(root); plTopTabs();
 }
 function plVistaLista(root){
-  const P=DB.planta,L=P.CT26,M=P.measurement,ver=isAdmin();
+  const P=DB.planta,L=P.CT26,M=P.measurement,ver=isLeader();
   const totCIF=P.CIF26.cifTotal,totMOD=L.reduce((a,c)=>a+c.modMes,0);
   const kp=`<div class="ea-kpis"><div class="ea-kpi"><div class="v">18</div><div class="l">Centros de trabajo</div></div><div class="ea-kpi"><div class="v">${Math.round(M.net+M.allCorridors).toLocaleString('es-MX')} m²</div><div class="l">Producción + pasillos (layout)</div></div><div class="ea-kpi"><div class="v">${P.MAQ.length}</div><div class="l">Equipos y máquinas en el catálogo</div></div>${ver?`<div class="ea-kpi"><div class="v">${plMxn(totCIF)}</div><div class="l">CIF mensual · ene–jun 2026 <span class="ea-lock">🔒 admin</span></div></div>`:''}</div>`;
   const vistas=[['mapa','🗺️ Mapa de la planta'],['tarjetas','▦ Tarjetas']].concat(ver?[['tabla','☰ Tabla de costos']]:[]);
@@ -2435,7 +2439,7 @@ function plVistaLista(root){
     body=`<div class="ea-cgrid">${[...L].sort((a,b)=>(ver?b.tasaTot-a.tasaTot:a.nombre.localeCompare(b.nombre))).map(c=>{const st=plStatsCT(c.nombre);
       return `<div class="ea-ccard" data-plct="${esc(c.nombre)}"><h3>${esc(plNom(c.nombre))}</h3><div class="sub">${esc(c.cc)} · ${c.hrs} h/día</div>
       <div><span class="ea-mini">☺ ${c.personas} personas</span><span class="ea-mini">▦ ${c.m2} m²</span><span class="ea-mini">⚙ ${P.MAQ.filter(m=>m.ct===c.nombre).length} equipos</span></div>
-      ${ver?`<div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:22px;font-weight:800">${plMxn2(c.tasaTot)}</span><span class="ea-sm">/ hora</span>${plDelta(c.varTot)}</div><div class="ea-sm" style="margin-top:2px">2025: ${plMxn2(c.tasaTot25)}/h</div>`:''}
+      ${ver?`<div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:22px;font-weight:800">${plMxn2(c.tasaTot)}</span><span class="ea-sm">/ hora</span>${plDelta(c.varTot)}</div><div class="ea-sm" style="margin-top:2px">2025: ${plMxn2(c.tasaTot25)}/h</div>`:`<div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:20px;font-weight:800">${plMxn(c.cif+c.modMes)}</span><span class="ea-sm">al mes</span></div><div class="ea-sm" style="margin-top:2px">Tasa ${plMxn2(c.tasaTot)} por hora</div>`}
       <div class="ea-stats"><div><b>${st.pa}</b><span>PROYECTOS ACTIVOS</span></div><div><b>${st.ab.length}</b><span>ABIERTAS</span></div><div class="${st.ve?'bad':''}"><b>${st.ve}</b><span>VENCIDAS</span></div></div></div>`;}).join('')}</div>`;
   }else{
     body=`<div class="ea-card"><table class="ea-tbl"><thead><tr><th>CENTRO DE TRABAJO</th><th>GRUPO</th><th class="r">M²</th><th class="r">PERSONAS</th><th class="r">CIF / MES</th><th class="r">MOD / MES</th><th class="r">TASA 2026 /H</th><th class="r">TASA 2025 /H</th><th class="r">VAR.</th></tr></thead><tbody>${[...L].sort((a,b)=>b.tasaTot-a.tasaTot).map(c=>`<tr data-plct="${esc(c.nombre)}" style="cursor:pointer"><td><b>${esc(plNom(c.nombre))}</b></td><td class="ea-sm">${esc(c.cc)}</td><td class="r">${c.m2}</td><td class="r">${c.personas}</td><td class="r">${plMxn(c.cif)}</td><td class="r">${plMxn(c.modMes)}</td><td class="r"><b>${plMxn2(c.tasaTot)}</b></td><td class="r">${plMxn2(c.tasaTot25)}</td><td class="r">${plDelta(c.varTot)}</td></tr>`).join('')}
@@ -2443,7 +2447,7 @@ function plVistaLista(root){
   }
   const sop=(DB.centros||[]).filter(r=>PL_SOPORTE.includes(plSn(r.nombre))).map(r=>{const ps=(DB.projects||[]).filter(p=>(p.centroIds||[]).includes(r.id)),ds=(DB.deliverables||[]).filter(d=>ps.some(p=>p.id===d.projectId)&&d.status!=='Entregado');
     return `<button data-plct="leg:${esc(r.id)}">${esc(r.nombre)}<small>${ps.length} proyectos · ${ds.length} abiertas</small></button>`;}).join('');
-  root.innerHTML=`<div class="ea-light-title"><span class="t">Centros de trabajo</span><span class="s">Los 18 CT oficiales del layout de planta${ver?' · tasas 2026 de Finanzas':''} · haz clic en uno para ver su detalle.</span><button class="ea-btn" id="pl-roi" style="float:right">📊 ROI de todas las máquinas</button></div>
+  root.innerHTML=`<div class="ea-light-title"><span class="t">Centros de trabajo</span><span class="s">Los 18 CT oficiales del layout de planta${ver?' · tasas 2026 de Finanzas':' · resumen de costos por centro'} · haz clic en uno para ver su detalle.</span><button class="ea-btn" id="pl-roi" style="float:right">📊 ROI de todas las máquinas</button></div>
     ${kp}<div class="ea-tabs">${vistas.map(([k,l])=>`<button class="ea-tab ${_plView===k?'on':''}" data-plv="${k}">${l}</button>`).join('')}</div>${body}
     <div class="ea-bar" style="margin-top:22px"><h2 style="color:var(--text)">Áreas de soporte <span class="ea-sm">· fuera del layout de producción</span></h2></div><div class="ea-soporte">${sop}</div>`;
   plWire(root);
@@ -2455,7 +2459,7 @@ function plVistaSoporte(root,r){
   plWire(root); root.querySelector('#pl-ing').onclick=()=>{ _currentCentroId=r.id; _ctTab='distribucion'; render(); };
 }
 function plVistaDetalle(root,c){
-  const P=DB.planta,st=plStatsCT(c.nombre),aId=plAreaDeCT(c.nombre),ver=isAdmin();
+  const P=DB.planta,st=plStatsCT(c.nombre),aId=plAreaDeCT(c.nombre),ver=isLeader();
   const tabs=[['resumen',ver?'📊 Resumen y costos':'📊 Resumen'],['maquinas','🏗️ Equipos y ROI'],['proyectos','📁 Proyectos']];
   if(!tabs.some(t=>t[0]===_plTab)) _plTab='resumen';
   let body='';
@@ -2476,7 +2480,10 @@ function plCostosHTML(c,aId,ver){
   const P=DB.planta,tot=c.cif||1;
   const fotos=[]; if(aId){const f=P.FOTO_AREA[aId];if(f)fotos.push(f);(P.FOTOS_AREA_EXTRA[aId]||[]).forEach(x=>fotos.push(x));}
   const fotosHTML=fotos.length?`<div class="ea-panel"><h3>FOTOS DEL ÁREA</h3><div class="ea-fotos">${fotos.map(f=>`<figure><img src="assets/planta/${esc(f[0])}" loading="lazy" alt=""><figcaption>${esc(f[1])}</figcaption></figure>`).join('')}</div></div>`:'';
-  if(!ver) return `<div class="ea-kpis"><div class="ea-kpi"><div class="v">${c.m2} m²</div><div class="l">Layout 2026 · ${(c.pm2*100).toFixed(1)}% de la planta</div></div><div class="ea-kpi"><div class="v">${c.personas}</div><div class="l">Personas</div></div><div class="ea-kpi"><div class="v">${c.hrs} h</div><div class="l">Horas por día</div></div></div>${c.maquinas?`<div class="ea-panel"><h3>EQUIPOS PRINCIPALES</h3>${esc(c.maquinas)}</div>`:''}${fotosHTML}`;
+  if(!ver) return `<div class="ea-kpis"><div class="ea-kpi"><div class="v">${plMxn(c.cif+c.modMes)}</div><div class="l">Costo total al mes</div></div><div class="ea-kpi"><div class="v">${plMxn(c.modMes)}</div><div class="l">Mano de obra al mes · ${c.personas} personas</div></div><div class="ea-kpi"><div class="v">${plMxn(c.cif)}</div><div class="l">Gastos indirectos (CIF) al mes</div></div><div class="ea-kpi"><div class="v">${plMxn2(c.tasaTot)}</div><div class="l">Costo por hora del centro</div></div></div>
+    <div class="ea-kpis"><div class="ea-kpi"><div class="v">${c.m2} m²</div><div class="l">Layout 2026 · ${(c.pm2*100).toFixed(1)}% de la planta</div></div><div class="ea-kpi"><div class="v">${c.hrs} h</div><div class="l">Horas por día</div></div><div class="ea-kpi"><div class="v">${P.MAQ.filter(m=>m.ct===c.nombre).length}</div><div class="l">Equipos</div></div></div>
+    <div class="ea-sm" style="margin:-6px 0 16px">Resumen de los puntos principales. El desglose de los gastos y su comparación con 2025 lo ven los líderes y la administración.</div>
+    ${c.maquinas?`<div class="ea-panel"><h3>EQUIPOS PRINCIPALES</h3>${esc(c.maquinas)}</div>`:''}${fotosHTML}`;
   const rub=P.RUBROS_CIF.map((r,i)=>({n:r[1],v:c.v[i]||0})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
   const top=rub.slice(0,8),resto=rub.slice(8).reduce((a,x)=>a+x.v,0),mx=top[0]?top[0].v:1,maxT=Math.max(c.tasaTot,c.tasaTot25);
   const cmp=(l,v,col)=>`<div class="ea-cmp"><span>${l}</span><div class="tr"><i style="width:${100*v/maxT}%;background:${col}"></i></div><b style="text-align:right">${plMxn2(v)}</b></div>`;
@@ -2518,7 +2525,7 @@ function plWire(root){
     const c=plGetCT(pg.dataset.plk);
     pg.onclick=()=>{ _plCT=pg.dataset.plk; _plTab='resumen'; render(); };
     pg.onmousemove=e=>{ if(!c) return; const r=wrap.getBoundingClientRect(); tip.style.display='block'; tip.style.left=Math.min(e.clientX-r.left+14,r.width-240)+'px'; tip.style.top=(e.clientY-r.top+14)+'px';
-      tip.innerHTML=`<b>${esc(plNom(c.nombre))}</b>${c.m2} m² · ${c.personas} personas`+(isAdmin()?`<br>Tasa ${plMxn2(c.tasaTot)}/h ${c.varTot<=0?'▼':'▲'} ${Math.abs(c.varTot*100).toFixed(1)}% vs 2025`:''); };
+      tip.innerHTML=`<b>${esc(plNom(c.nombre))}</b>${c.m2} m² · ${c.personas} personas`+(isLeader()?`<br>Tasa ${plMxn2(c.tasaTot)}/h ${c.varTot<=0?'▼':'▲'} ${Math.abs(c.varTot*100).toFixed(1)}% vs 2025`:`<br>Costo ${plMxn(c.cif+c.modMes)} al mes`); };
     pg.onmouseleave=()=>{ tip.style.display='none'; };
   });
   eaWireProyTabla(root);
@@ -2760,7 +2767,6 @@ function eaPintarMinuta(){
   document.getElementById('ea-min-close').addEventListener('click',cerrar);
   dlg.addEventListener('click',e=>{ if(e.target===dlg) cerrar(); });
   dlg.addEventListener('cancel',e=>{ e.preventDefault(); cerrar(); });
-  document.getElementById('btn-tareas').addEventListener('click',()=>showView('actividades'));
   document.getElementById('btn-collapse').addEventListener('click',()=>document.querySelector('.shell').classList.toggle('menu-off'));
 })();
 
@@ -7249,95 +7255,74 @@ function maqAddSemanaDlg(c,m,vid){
   });
 }
 
+let _eqSec='todos', _eqQ='';
+function eqStats(u){
+  const hoyK=todayISO(), lim=Date.now()-30*864e5, ds=(DB.deliverables||[]).filter(d=>d.assigneeId===u.id);
+  const ab=ds.filter(d=>d.status!=='Entregado'), ve=ab.filter(d=>d.dueDate&&d.dueDate<hoyK&&d.status!=='En pausa');
+  const cer=ds.filter(d=>d.status==='Entregado'&&(d.updatedAt||0)>=lim);
+  const av=ab.length?Math.round(ab.reduce((a,d)=>a+eaAvance(d),0)/ab.length):null;
+  return {ab:ab.length,ve:ve.length,cer:cer.length,av};
+}
+function eqFila(u,esLider,puedeEditar){
+  const st=eqStats(u), puesto=puestoDeUsuario(u), pl=puesto?puesto.nombre:u.puesto;
+  const rol=u.loginRole==='admin'?'Admin':u.loginRole==='leader'||esLider?'Líder':'Integrante';
+  return `<tr><td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="width:34px;height:34px;font-size:12px">${esc(initials(u.name))}</div><div><div style="font-weight:700">${esc(u.name)}</div><div class="ea-sm">${esc(pl||'Sin puesto capturado')}</div></div></div></td>
+    <td><span class="ea-chip ${esLider?'':'eq-int'}" style="${esLider?'background:var(--accent-bg);color:var(--accent2)':'background:var(--surface2);color:var(--muted)'};padding:3px 10px;font-size:11.5px">${rol}</span></td>
+    <td class="c" style="text-align:center;font-weight:700">${st.ab}</td>
+    <td class="c" style="text-align:center;font-weight:800;color:${st.ve?'var(--bad)':'var(--muted)'}">${st.ve}</td>
+    <td class="c" style="text-align:center;font-weight:700;color:${st.cer?'var(--ok)':'var(--muted)'}">${st.cer}</td>
+    <td style="min-width:140px">${st.av==null?'<span class="ea-sm">Sin actividades abiertas</span>':plPbar(st.av)}</td>
+    <td style="white-space:nowrap"><button class="ea-open" data-ver-expediente="${u.id}">Ver expediente</button>${puedeEditar?` <button class="ea-open" data-edit-perfil="${u.id}">Editar perfil</button>`:''}</td></tr>`;
+}
+function eqTabla(personas,lider){
+  return `<table><thead><tr><th>PERSONA</th><th>ROL</th><th style="text-align:center">ABIERTAS</th><th style="text-align:center">VENCIDAS</th><th style="text-align:center">CERRADAS (30 D)</th><th>AVANCE PROMEDIO</th><th></th></tr></thead><tbody>${personas.map(u=>eqFila(u,lider&&u.id===lider.id,canEditPerfil(u.id))).join('')}</tbody></table>`;
+}
 function renderEquipo(root){
   if(!dataReady()){ root.innerHTML=loadingHTML('Cargando equipo…'); return; }
-  root.innerHTML=`<div class="view-head"><div><h1>Equipo</h1>
-    <div class="view-sub">Quién es quién y cuánto tiene abierto ahora mismo.</div></div></div>
-    <details class="proj-col" open style="margin-bottom:16px">
-      <summary>🪪 Mi puesto</summary>
-      <div class="proj-col-inner" id="equipo-mipuesto"></div>
-    </details>
-    <div id="equipo-body"></div>`;
-  // "Mi puesto" vive aquí adentro, siempre tu propio expediente — nunca el de
-  // quien hayas visto la última vez desde una tarjeta de Equipo.
-  const prevProfileId=_profileUserId;
-  _profileUserId=null;
-  renderMiPuesto(document.getElementById('equipo-mipuesto'));
-  _profileUserId=prevProfileId;
-  const body=document.getElementById('equipo-body');
-
+  const wire=r=>{ wirePersonCards(r); };
+  // Integrante: solo su propia ficha (nómina y datos de otros no se ven).
   if(!isLeader()){
-    // Integrante: solo se ve a sí mismo — no nómina ni datos de otros.
     const me=myUser();
-    if(!me){ body.innerHTML=emptyStateHTML('No encontramos tu perfil','Pídele a tu líder o al admin que revise tu usuario.'); return; }
-    body.innerHTML=personCardHTML(me);
-    wirePersonCards(body);
-    return;
+    if(!me){ root.innerHTML=emptyStateHTML('No encontramos tu perfil','Pídele a tu líder o al admin que revise tu usuario.'); return; }
+    const st=eqStats(me);
+    root.innerHTML=`<div class="ea-light-title"><span class="t">Equipo</span><span class="s">Tu ficha y cómo vas.</span></div>
+      <div class="ea-kpis"><div class="ea-kpi"><div class="v">${st.ab}</div><div class="l">Actividades abiertas</div></div><div class="ea-kpi ${st.ve?'bad':''}"><div class="v">${st.ve}</div><div class="l">Vencidas</div></div><div class="ea-kpi ok"><div class="v">${st.cer}</div><div class="l">Cerradas (30 días)</div></div></div>
+      <div class="ea-card">${eqTabla([me],null)}</div>`;
+    wire(root); return;
   }
-  if(!DB.users.length){ body.innerHTML=emptyStateHTML('Sin personas todavía','Un admin puede darlas de alta en Administración → Usuarios.'); return; }
-
-  const bySec=new Map();
-  const sinSeccion=[];
-  DB.users.forEach(u=>{
-    const sec=seccionOfUser(u.id);
-    if(sec){ if(!bySec.has(sec.id)) bySec.set(sec.id,[]); bySec.get(sec.id).push(u); }
-    else sinSeccion.push(u);
+  if(!(DB.users||[]).length){ root.innerHTML=emptyStateHTML('Sin personas todavía','Un admin puede darlas de alta en Administración → Usuarios.'); return; }
+  // Armado por sección (mismo criterio de siempre: reportsTo / líder de la sección)
+  const bySec=new Map(), sinSeccion=[];
+  DB.users.forEach(u=>{ const sec=seccionOfUser(u.id); if(sec){ if(!bySec.has(sec.id)) bySec.set(sec.id,[]); bySec.get(sec.id).push(u); } else sinSeccion.push(u); });
+  (DB.secciones||[]).forEach(sec=>{ if(!sec.liderId) return; const arr=bySec.get(sec.id)||[];
+    if(!arr.some(u=>u.id===sec.liderId)){ const l=byId(DB.users,sec.liderId); if(l){ arr.unshift(l); bySec.set(sec.id,arr); const i=sinSeccion.findIndex(u=>u.id===sec.liderId); if(i>=0) sinSeccion.splice(i,1); } } });
+  const q=_eqQ.toLowerCase(), pasaQ=u=>!q||(u.name||'').toLowerCase().includes(q)||((puestoDeUsuario(u)?.nombre||u.puesto||'').toLowerCase().includes(q));
+  const todas=(DB.secciones||[]).filter(sec=>(bySec.get(sec.id)||[]).length);
+  const todosLosQue=[...new Set([...bySec.values()].flat().concat(sinSeccion))];
+  const stT=todosLosQue.map(eqStats), conAtraso=stT.filter(x=>x.ve>0).length, vencTot=stT.reduce((a,x)=>a+x.ve,0);
+  let bloques='';
+  todas.forEach((sec,i)=>{
+    if(_eqSec!=='todos'&&_eqSec!==sec.id) return;
+    const lider=byId(DB.users,sec.liderId), gente=(bySec.get(sec.id)||[]).slice().sort((a,b)=>(b.id===sec.liderId)-(a.id===sec.liderId)||a.name.localeCompare(b.name));
+    const vis=gente.filter(pasaQ); if(!vis.length) return;
+    const stats=gente.map(eqStats), ab=stats.reduce((a,x)=>a+x.ab,0), ve=stats.reduce((a,x)=>a+x.ve,0), avs=stats.filter(x=>x.av!=null);
+    const avp=avs.length?Math.round(avs.reduce((a,x)=>a+x.av,0)/avs.length):null, puedeAgregar=isAdmin()||SESSION?.userId===sec.liderId;
+    bloques+=`<div class="ea-rcard"><div class="ea-rhead" style="background:${ROC_COLORS[i%ROC_COLORS.length]}"><div><h3>${esc(sec.nombre)}</h3><div class="l">Líder: ${esc(lider?.name||'sin líder')} · ${gente.length} persona${gente.length!==1?'s':''}</div></div>
+      <div class="sc" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><span>${ab} abiertas</span><span>${ve} vencidas</span>${avp!=null?`<span>Avance ${avp}%</span>`:''}${puedeAgregar?`<button class="ea-btn" style="background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.35);color:#fff" data-add-reporte="${esc(sec.id)}">＋ Agregar persona</button>`:''}</div></div>
+      <div class="ea-card" style="border-radius:0;box-shadow:none">${eqTabla(vis,lider)}</div></div>`;
   });
-  // El líder de una Sección le pertenece a ella siempre, sea o no también
-  // encargado/ingeniero de algún Centro (seccionOfUser puede no encontrarlo
-  // por ese camino) — si no cayó solo, se agrega a la fuerza en vez de
-  // dejarlo perdido en "Sin sección asignada".
-  DB.secciones.forEach(sec=>{
-    if(!sec.liderId) return;
-    const arr=bySec.get(sec.id)||[];
-    if(!arr.some(u=>u.id===sec.liderId)){
-      const lider=byId(DB.users,sec.liderId);
-      if(lider){
-        arr.unshift(lider);
-        bySec.set(sec.id,arr);
-        const i=sinSeccion.findIndex(u=>u.id===sec.liderId);
-        if(i>=0) sinSeccion.splice(i,1);
-      }
-    }
-  });
-  // Tipo organigrama: cada Sección es UN bloque con una barra de color a la
-  // izquierda — el líder arriba, sus reportes abajo, sangrados y con línea
-  // punteada de por medio, para que se vea de un vistazo "esto le reporta a
-  // esto" (nunca una cuadrícula plana donde el líder se confunde con su
-  // propia gente). El único lugar donde se arma este árbol es reportsTo —
-  // ver seccionOfUser/getMyReports — así que lo que se ve aquí es siempre
-  // exactamente lo mismo que ya rige permisos en el resto de la app.
-  let html='';
-  DB.secciones.forEach(sec=>{
-    const people=bySec.get(sec.id)||[];
-    const lider=people.find(u=>u.id===sec.liderId);
-    const reportes=people.filter(u=>u.id!==sec.liderId);
-    if(!lider && !reportes.length) return;
-    const puedeAgregar=isAdmin()||SESSION?.userId===sec.liderId;
-    html+=`<div class="card" style="border-left:3px solid var(--accent);margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-        <div style="font-weight:700;font-size:14px">🧭 ${esc(sec.nombre)}</div>
-        ${puedeAgregar?`<button class="btn xs" data-add-reporte="${sec.id}">＋ Agregar reporte directo</button>`:''}
-      </div>
-      ${lider?`<div class="small muted" style="font-weight:600;margin-bottom:6px">👑 Líder</div><div class="grid-cards">${personCardHTML(lider)}</div>`:''}
-      ${reportes.length?`<div style="margin-top:14px;padding-left:14px;border-left:2px dashed var(--border2)">
-          <div class="small muted" style="font-weight:600;margin-bottom:8px">↳ Reportan a ${lider?esc(lider.name):esc(sec.nombre)} <span class="pill muted" style="margin-left:4px">${reportes.length}</span></div>
-          <div class="grid-cards">${reportes.map(personCardHTML).join('')}</div>
-        </div>`:''}
-      </div>`;
-  });
-  if(sinSeccion.length){
-    html+=`<div class="card" style="border-left:3px solid var(--border2);margin-bottom:16px">
-      <div style="font-weight:700;font-size:14px;margin-bottom:12px">⚠️ Sin sección asignada</div>
-      <div class="small muted" style="margin-bottom:8px">Nadie los puso a reportarle a un líder todavía — usa "＋ Agregar reporte directo" en la sección que corresponda.</div>
-      <div class="grid-cards">${sinSeccion.map(personCardHTML).join('')}</div>
-      </div>`;
-  }
-  body.innerHTML=html||emptyStateHTML('Nadie agrupado todavía','Ve a Administración → Secciones para agrupar a la gente por Centro de Trabajo.');
-  wirePersonCards(body);
-  body.querySelectorAll('[data-add-reporte]').forEach(b=>{
-    b.addEventListener('click',()=>openAgregarReporteDlg(byId(DB.secciones,b.dataset.addReporte)));
-  });
+  const sinVis=_eqSec==='todos'?sinSeccion.filter(pasaQ):[];
+  if(sinVis.length) bloques+=`<div class="ea-rcard"><div class="ea-rhead" style="background:#82817C"><div><h3>Sin equipo asignado</h3><div class="l">Nadie les asignó un líder todavía: usa "Agregar persona" en el equipo que corresponda.</div></div></div><div class="ea-card" style="border-radius:0;box-shadow:none">${eqTabla(sinVis,null)}</div></div>`;
+  root.innerHTML=`<div class="ea-light-title"><span class="t">Equipo</span><span class="s">Quién forma cada equipo, cuánto tiene abierto y cómo va.</span></div>
+    <div class="ea-kpis"><div class="ea-kpi"><div class="v">${todosLosQue.length}</div><div class="l">Personas</div></div><div class="ea-kpi"><div class="v">${todas.length}</div><div class="l">Equipos</div></div><div class="ea-kpi ${conAtraso?'bad':'ok'}"><div class="v">${conAtraso}</div><div class="l">Personas con actividades vencidas</div></div><div class="ea-kpi ${vencTot?'bad':'ok'}"><div class="v">${vencTot}</div><div class="l">Actividades vencidas en total</div></div></div>
+    <div class="ea-bar" style="margin-top:0"><div class="ea-seg" id="eq-seg" style="background:var(--surface2)"><button data-s="todos" class="${_eqSec==='todos'?'on':''}">Todos</button>${todas.map(sec=>`<button data-s="${esc(sec.id)}" class="${_eqSec===sec.id?'on':''}">${esc(sec.nombre)}</button>`).join('')}</div>
+      <div class="ctl"><input class="ea-inp" id="eq-q" placeholder="🔍 Buscar persona o puesto…" value="${esc(_eqQ)}"></div></div>
+    ${bloques||'<div class="ea-card"><div class="ea-empty">Nadie coincide con ese filtro.</div></div>'}
+    <div class="ea-sm" style="margin-top:6px">Abiertas = actividades sin entregar · Vencidas = con fecha pasada · Cerradas = entregadas en los últimos 30 días · Avance = promedio de sus actividades abiertas.</div>`;
+  root.querySelectorAll('#eq-seg button').forEach(b=>b.onclick=()=>{ _eqSec=b.dataset.s; renderEquipo(root); });
+  const qi=root.querySelector('#eq-q'); qi.oninput=e=>{ _eqQ=e.target.value; const pos=e.target.selectionStart; renderEquipo(root); const n=root.querySelector('#eq-q'); n.focus(); n.setSelectionRange(pos,pos); };
+  root.querySelectorAll('[data-add-reporte]').forEach(b=>b.onclick=()=>openAgregarReporteDlg(byId(DB.secciones,b.dataset.addReporte)));
+  wire(root);
 }
 VIEW_RENDERERS['equipo']=renderEquipo;
 // Forma simple y directa de sumar a alguien al equipo de un líder — nada más
