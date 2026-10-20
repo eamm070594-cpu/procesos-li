@@ -436,6 +436,26 @@ tr.ea-child td{background:var(--surface2)}tr.ea-child .ea-name{padding-left:30px
 .mc-roca .enl b.ok{background:var(--ok-bg);color:var(--ok)}.mc-roca .enl b.bad{background:var(--bad-bg);color:var(--bad)}
 .mc-note{padding:20px;color:var(--muted);text-align:center;font-size:13px}
 .mc-link{margin-top:20px;font-size:13px}.mc-link button{border:0;background:none;color:var(--accent);font-weight:700;cursor:pointer;padding:0}
+
+/* ══ Aviso visual: actividades que piden cerrarse (por aprobar) ══ */
+@keyframes eaGlow{0%,100%{box-shadow:0 0 0 0 rgba(217,169,58,.60),0 0 18px rgba(217,169,58,.30)}50%{box-shadow:0 0 0 8px rgba(217,169,58,0),0 0 26px rgba(217,169,58,.55)}}
+@keyframes eaRing{0%,100%{transform:rotate(0)}10%,30%{transform:rotate(-14deg)}20%,40%{transform:rotate(14deg)}50%{transform:rotate(0)}}
+.ea-apr-panel{background:#FFF4D6;border:1px solid #D9A93A;border-left:7px solid #D9A93A;border-radius:12px;padding:14px 18px;margin-bottom:18px;animation:eaGlow 2.4s ease-in-out infinite;color:#2A2A2C}
+.ea-apr-panel .hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.ea-apr-panel .hd .bell{font-size:22px;display:inline-block;animation:eaRing 2.4s ease-in-out infinite;transform-origin:50% 0}
+.ea-apr-panel .hd b{font-size:15px}.ea-apr-panel .hd .tx{flex:1;min-width:220px;font-size:12.5px;color:#6b5412}
+.ea-apr-row{display:flex;align-items:center;gap:14px;padding:10px 0;border-top:1px dashed rgba(217,169,58,.55);flex-wrap:wrap}
+.ea-apr-row .t{flex:1;min-width:240px}.ea-apr-row .t b{display:block;font-size:14px;line-height:1.3}.ea-apr-row .t span{font-size:12px;color:#6b5412}
+.ea-apr-row .nuevo{background:#D9A93A;color:#fff;font-size:10px;font-weight:800;border-radius:8px;padding:2px 7px;margin-left:6px;letter-spacing:.04em}
+.ea-wait-panel{background:#E4EEF8;border-left:5px solid #2F5B8F;border-radius:12px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:#1d3a5c;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+tr.ea-pend td{background:var(--warn-bg)!important}tr.ea-pend td:first-child{box-shadow:inset 5px 0 0 #D9A93A}
+.ea-pidecierre{display:inline-block;margin-top:3px;background:#D9A93A;color:#fff;border-radius:8px;padding:1px 8px;font-size:10.5px;font-weight:800}
+.ea-seg button.glow:not(.on){background:#D9A93A;color:#fff;animation:eaGlow 2.4s ease-in-out infinite}
+.nav-btn.glow{animation:eaGlow 2.4s ease-in-out infinite;box-shadow:inset 4px 0 0 #D9A93A}
+.nav-subline .a{animation:eaPulseTxt 1.6s ease-in-out infinite}
+@keyframes eaPulseTxt{0%,100%{opacity:1}50%{opacity:.45}}
+.notif-bell.bell-glow{animation:eaRing 2.4s ease-in-out infinite;transform-origin:50% 0}
+@media (prefers-reduced-motion:reduce){.ea-apr-panel,.ea-seg button.glow,.nav-btn.glow,.ea-apr-panel .hd .bell,.notif-bell.bell-glow,.nav-subline .a{animation:none!important}}
 </style>
 </head>
 <body>
@@ -2105,7 +2125,7 @@ function deliverableRowHTML(d){
     : (d.status==='Entregado'
         ? (canFull?`<button class="btn xs primary" data-approve="${d.id}">Aprobar</button> <button class="btn xs" data-ea-dev="${d.id}">Devolver</button>`:'<span class="small muted">⏳ Esperando aprobación</span>')
         : `<span class="small muted">—</span>`);
-  return `<tr id="deliv-row-${d.id}">
+  return `<tr id="deliv-row-${d.id}" class="${d.status==='Entregado'&&!d.approved?'ea-pend':''}">
     <td>${esc(d.name)}${overdue?' <span class="pill bad" style="margin-left:4px">⏰ Atrasado</span>':''}</td>
     <td>${u?esc(u.name):'<span class="muted">—</span>'}</td>
     <td>${fmtDate(d.dueDate)}</td>
@@ -2262,19 +2282,28 @@ function eaFiltrados(){
   if(_eaQ){ const q=_eaQ.toLowerCase(); l=l.filter(d=>((d.name||'')+' '+(byId(DB.users,d.assigneeId)?.name||'')+' '+(byId(DB.projects,d.projectId)?.name||'')).toLowerCase().includes(q)); }
   return l.sort((a,b)=>(a.dueDate||'9').localeCompare(b.dueDate||'9'));
 }
+function eaHace(ms){
+  if(!ms) return ''; const m=Math.floor((Date.now()-ms)/60000);
+  if(m<1) return 'hace un momento'; if(m<60) return 'hace '+m+' min'; const h=Math.floor(m/60);
+  if(h<24) return 'hace '+h+' h'; const d=Math.floor(h/24); return d===1?'ayer':'hace '+d+' días';
+}
 function eaRefrescarMenu(){
   const el=document.getElementById('nav-act-sub'); if(!el||!SESSION||!dataReady()) return;
   const v=eaTodos().filter(d=>d.dueDate&&(eaDias(d.dueDate)??1)<0).length, a=eaPorAprobar().filter(d=>canManageDeliverable(d)).length;
   const partes=[]; if(v) partes.push(`<b class="r">${v} vencida${v!==1?'s':''}</b>`); if(a) partes.push(`<b class="a">${a} por aprobar</b>`);
   el.innerHTML=partes.join(' · '); el.classList.toggle('on',partes.length>0);
+  document.querySelector('.nav-btn[data-view="actividades"]')?.classList.toggle('glow',a>0);
+  const hayNotif=(typeof notifSinLeer==='function')&&notifSinLeer().some(n=>n.tipo==='por_aprobar'||n.tipo==='devuelto');
+  document.getElementById('btn-notif')?.classList.toggle('bell-glow',hayNotif);
 }
 function eaFila(d){
   const u=byId(DB.users,d.assigneeId), p=byId(DB.projects,d.projectId), n=eaDias(d.dueDate), av=eaAvance(d), k=eaCls(av), nm=eaMinutas(d).length;
   const chip=n==null?'':n<0?'bad':n<=7?'warn':'';
   const cts=(p?.centroIds||[]).map(id=>byId(DB.centros,id)?.nombre).filter(Boolean);
   const puede=eaPuede(d);
-  return `<tr data-ea="${esc(d.id)}">
-    <td class="ea-name">${esc(d.name)}${d.status==='En pausa'?'<small>En pausa</small>':''}</td>
+  const pend=d.status==='Entregado'&&!d.approved;
+  return `<tr data-ea="${esc(d.id)}" class="${pend?'ea-pend':''}">
+    <td class="ea-name">${esc(d.name)}${d.status==='En pausa'?'<small>En pausa</small>':''}${pend?`<br><span class="ea-pidecierre">📝 Pide cerrarse · ${eaHace(d.entregadoAt||d.updatedAt)}</span>`:''}</td>
     <td style="white-space:nowrap">${esc(u?.name||'Sin asignar')}</td>
     <td><span class="ea-chip ${chip}">${d.dueDate?fmtDate(d.dueDate):'—'}</span></td>
     <td>${p?`<span class="ea-tag t${(p.name||'').length%3}" title="${esc(p.name)}">${esc(p.name)}</span>`:'<span class="ea-tag none">— proyecto —</span>'}</td>
@@ -2301,10 +2330,17 @@ function renderActividades(root){
     const g={}; l.forEach(d=>(g[key(d)]=g[key(d)]||[]).push(d));
     body=Object.keys(g).sort().map(k=>`<tr class="grp"><td colspan="7">${esc(k)} · ${g[k].length}</td></tr>`+g[k].map(eaFila).join('')).join('');
   }
+  const misApr=eaPorAprobar().filter(d=>canManageDeliverable(d)).sort((a,b)=>(a.entregadoAt||a.updatedAt||0)-(b.entregadoAt||b.updatedAt||0));
+  const esperando=eaPorAprobar().filter(d=>d.assigneeId===SESSION?.userId&&!canManageDeliverable(d));
+  const reciente=d=>Date.now()-(d.entregadoAt||d.updatedAt||0)<864e5;
+  const panelApr=(_eaModo==='abiertas'&&misApr.length)?`<div class="ea-apr-panel"><div class="hd"><span class="bell">🔔</span><b>${misApr.length} actividad${misApr.length!==1?'es piden':' pide'} cerrarse</b><span class="tx">Las marcaron al 100%. Apruébalas para cerrarlas o devuélvelas con un comentario.</span>${misApr.length>3?`<button class="ea-btn dark" data-m-go="aprobar">Ver las ${misApr.length}</button>`:''}</div>
+      ${misApr.slice(0,3).map(d=>{const u=byId(DB.users,d.assigneeId),pr=byId(DB.projects,d.projectId);return `<div class="ea-apr-row"><div class="t"><b>${esc(d.name)}${reciente(d)?'<span class="nuevo">NUEVA</span>':''}</b><span>${esc(u?.name||'Sin asignar')} · ${esc(pr?.name||'sin proyecto')} · la marcó ${eaHace(d.entregadoAt||d.updatedAt)}</span></div><button class="ea-btn dark" data-ea-apr="${esc(d.id)}">Aprobar</button><button class="ea-btn" data-ea-dev="${esc(d.id)}">Devolver</button></div>`;}).join('')}</div>`:'';
+  const panelEsp=(_eaModo==='abiertas'&&esperando.length)?`<div class="ea-wait-panel">⏳ <b>${esperando.length} actividad${esperando.length!==1?'es tuyas esperan':' tuya espera'} la aprobación de tu líder.</b> <button class="ea-open" data-m-go="aprobar">Ver cuáles</button></div>`:'';
   root.innerHTML=`
     <div class="ea-head"><span class="ea-title">Mis actividades</span><span class="ea-sub">${isLeader()?'Las actividades de tu gente.':'Las actividades a tu cargo.'} Actualiza el % de avance y deja tu minuta.</span></div>
+    ${panelApr}${panelEsp}
     <div class="ea-bar"><h2>${_eaModo==='aprobar'?'Por aprobar':_eaModo==='cerradas'?'Cerradas · últimos 30 días':'Actividades a seguir'} · ${l.length}</h2><div class="ctl">
-      <div class="ea-seg onmain" id="ea-seg-m"><button data-m="abiertas" class="${_eaModo==='abiertas'?'on':''}">Abiertas · ${todos.length}</button><button data-m="aprobar" class="${_eaModo==='aprobar'?'on':''}">Por aprobar${nApr?' · '+nApr:''}</button><button data-m="cerradas" class="${_eaModo==='cerradas'?'on':''}">Cerradas · ${nCer}</button></div>
+      <div class="ea-seg onmain" id="ea-seg-m"><button data-m="abiertas" class="${_eaModo==='abiertas'?'on':''}">Abiertas · ${todos.length}</button><button data-m="aprobar" class="${_eaModo==='aprobar'?'on':''}${misApr.length?' glow':''}">Por aprobar${nApr?' · '+nApr:''}</button><button data-m="cerradas" class="${_eaModo==='cerradas'?'on':''}">Cerradas · ${nCer}</button></div>
       <div class="ea-seg onmain" id="ea-seg-g"><button data-g="normal" class="${_eaGroup==='normal'?'on':''}">Normal</button><button data-g="persona" class="${_eaGroup==='persona'?'on':''}">Por persona</button><button data-g="ct" class="${_eaGroup==='ct'?'on':''}">Por centro de trabajo</button></div>
       <select class="ea-sel" id="ea-proj"><option value="">Proyecto: todos</option>${proyConAbiertas.map(p=>`<option value="${esc(p.id)}" ${_eaProj===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
       <input class="ea-inp" id="ea-q" placeholder="🔍 Filtrar…" value="${esc(_eaQ)}"></div></div>
@@ -2316,6 +2352,7 @@ function renderActividades(root){
   }
   root.querySelectorAll('#ea-seg-g button').forEach(b=>b.onclick=()=>{ _eaGroup=b.dataset.g; renderActividades(root); });
   root.querySelectorAll('#ea-seg-m button').forEach(b=>b.onclick=()=>{ _eaModo=b.dataset.m; renderActividades(root); });
+  root.querySelectorAll('[data-m-go]').forEach(b=>b.onclick=()=>{ _eaModo=b.dataset.mGo; renderActividades(root); });
   root.querySelector('#ea-proj').onchange=e=>{ _eaProj=e.target.value; renderActividades(root); };
   const q=root.querySelector('#ea-q'); q.oninput=e=>{ _eaQ=e.target.value; const pos=e.target.selectionStart; renderActividades(root); const n=root.querySelector('#ea-q'); n.focus(); n.setSelectionRange(pos,pos); };
   root.querySelectorAll('input[data-ea-av]').forEach(r=>{
