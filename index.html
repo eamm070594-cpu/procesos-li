@@ -481,6 +481,9 @@ tr.ea-pend td{background:var(--warn-bg)!important}tr.ea-pend td:first-child{box-
 .ctl-step.hecho .chk{background:var(--ok);border-color:var(--ok)}
 .ctl-chip{display:inline-block;border-radius:10px;padding:2px 9px;font-size:11.5px;font-weight:800;margin-left:8px;vertical-align:middle}
 .ctl-chip.bad{background:var(--bad-bg);color:var(--bad)}.ctl-chip.warn{background:var(--warn-bg);color:var(--warn)}.ctl-chip.ok{background:var(--ok-bg);color:var(--ok)}.ctl-chip.mut{background:var(--surface2);color:var(--muted)}
+.gr-par{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}.gr-h{font-size:12px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+.gr-b{display:grid;grid-template-columns:minmax(90px,1.2fr) 1fr auto;gap:8px;align-items:center;font-size:12.5px;padding:4px 0}.gr-b .bar{height:8px;background:var(--surface2);border-radius:99px;overflow:hidden}.gr-b .bar i{display:block;height:100%;background:var(--accent);border-radius:99px}.gr-b small{color:var(--muted);font-weight:500}
+#volver-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:900;background:var(--accent);color:#fff;border:0;border-radius:999px;padding:11px 22px;font-weight:800;font-size:14px;box-shadow:0 6px 22px rgba(0,0,0,.28);cursor:pointer}#volver-bar:hover{filter:brightness(1.08)}
 .ap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
 .ap-card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:16px 18px;border-top:5px solid var(--border2)}
 .ap-card.verde{border-top-color:var(--ok)}.ap-card.ambar{border-top-color:#D9A93A}.ap-card.rojo{border-top-color:var(--bad)}.ap-card.sin{opacity:.8}
@@ -561,6 +564,7 @@ tr.ea-pend td{background:var(--warn-bg)!important}tr.ea-pend td:first-child{box-
       <button class="nav-btn" data-view="proyectos"><span class="ic">▤</span> Proyectos</button>
       <button class="nav-btn" data-view="centrotrabajo"><span class="ic">⚙</span> Centros de trabajo</button>
       <button class="nav-btn" data-view="equipo"><span class="ic">☺</span> Equipo</button>
+      <button class="nav-btn leader-only" data-view="garantias" style="display:none"><span class="ic">◈</span> Garantías</button>
       <button class="nav-btn" data-view="reportes"><span class="ic">▥</span> Reportes</button>
       <div class="nav-spacer"></div>
       <a class="nav-btn" href="https://subdireccion.lineaitalia.net" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic">▣</span> EOS <span class="nav-caret">↗</span></a>
@@ -1333,9 +1337,17 @@ function refreshNotifBadge(){
 ══════════════════════════════════════════════════════ */
 let currentView='actividades';
 const VIEW_RENDERERS={}; // cada vista registra aquí su función de render
-const VIEW_TITLES={control:'Control de la gerencia',micumplimiento:'Mi cumplimiento',rocas:'Rocas trimestrales',actividades:'Mis actividades',dashboard:'Dashboard',proyectos:'Proyectos',equipo:'Equipo',centrotrabajo:'Centros de trabajo',reportes:'Reportes',scorecard:'Scorecard',pedidosventa:'Pedidos venta',leadtime:'Lead Time',admin:'Administración',mipuesto:'Mi puesto',roimaquinas:'ROI de máquinas'};
+const VIEW_TITLES={control:'Control de la gerencia',garantias:'Control de garantías',micumplimiento:'Mi cumplimiento',rocas:'Rocas trimestrales',actividades:'Mis actividades',dashboard:'Dashboard',proyectos:'Proyectos',equipo:'Equipo',centrotrabajo:'Centros de trabajo',reportes:'Reportes',scorecard:'Scorecard',pedidosventa:'Pedidos venta',leadtime:'Lead Time',admin:'Administración',mipuesto:'Mi puesto',roimaquinas:'ROI de máquinas'};
+let _volverA=null;   // {view,y}: de dónde saliste (Control) para regresar al mismo lugar
+function ctlIr(fn){ _volverA={view:'control',y:window.scrollY||0}; fn(); if(currentView==='control') _volverA=null; }
+function volverBar(){
+  let b=document.getElementById('volver-bar');
+  if(_volverA&&currentView!==_volverA.view){ if(!b){ b=document.createElement('button'); b.id='volver-bar'; b.type='button'; b.textContent='← Volver a Control'; b.onclick=()=>showView(_volverA.view); document.body.appendChild(b); } }
+  else if(b) b.remove();
+}
 function showView(name){
   if(name==='dashboard'||name==='pedidosventa'||name==='leadtime') name='actividades';   // vistas ocultas por ahora
+  const _prev=currentView, _y0=window.scrollY||0;
   currentView=name;
   const _tt=document.getElementById('top-title'); if(_tt) _tt.textContent=VIEW_TITLES[name]||name;
   const _tr=document.getElementById('top-right'); if(_tr) _tr.innerHTML='';
@@ -1348,6 +1360,9 @@ function showView(name){
   const fn=VIEW_RENDERERS[name];
   if(!fn){ root.innerHTML=noPermissionHTML(); return; }
   fn(root);
+  if(_volverA&&name===_volverA.view){ const y=_volverA.y; _volverA=null; requestAnimationFrame(()=>window.scrollTo(0,y)); }
+  else if(!_volverA&&name===_prev&&_y0) requestAnimationFrame(()=>window.scrollTo(0,_y0));
+  volverBar();
   eaRefrescarMenu();
   document.getElementById('sidebar')?.classList.remove('open');
   document.getElementById('sidebar-overlay')?.classList.remove('open');
@@ -1355,6 +1370,7 @@ function showView(name){
 function render(){ showView(currentView); }
 document.querySelectorAll('.nav-btn[data-view]').forEach(b=>{
   b.addEventListener('click',()=>{
+    if(b.dataset.view!=='control') _volverA=null;
     if(b.dataset.view==='proyectos') _currentProjectId=null; // el nav siempre regresa a la lista
     if(b.dataset.view==='centrotrabajo'){ _currentCentroId=null; _maqOrigen=null; _plMain='orig'; _plCT=null; } // el nav siempre regresa a la lista
     showView(b.dataset.view);
@@ -2799,7 +2815,9 @@ function ctlIniciar(){
 }
 /* Aplicativos que Jarvis lee cada mañana y resume (li_control/parte/<fecha>/aplicativos/<id>) */
 const CTL_APPS=[
-  {id:'garantias',n:'Garantías',ic:'🛡️',falta:'Sale de los reportes de PCP; aún no hay lectura de hoy.'},
+  {id:'garantias',n:'Garantías · cumplimiento (en producción)',ic:'🛡️',falta:'Sale de los reportes de PCP; aún no hay lectura de hoy.'},
+  {id:'garantias_entrada',n:'Garantías · por entrar',ic:'📥',falta:'Falta la liga o exportación del aplicativo donde entran las garantías (Servicio al Cliente / Calidad).'},
+  {id:'garantias_ac',n:'Garantías · acciones correctivas',ic:'🧪',falta:'Aún no hay lectura de la base de garantías.',abrir:'garantias'},
   {id:'mantenimiento',n:'Mantenimiento preventivo',ic:'🔧',falta:'Jarvis aún no tiene la liga del aplicativo de mantenimiento.'},
   {id:'produccion',n:'Avance de producción',ic:'🏭',falta:'Sale de los reportes de PCP; aún no hay lectura de hoy.'},
   {id:'eos',n:'EOS: seguimiento y tareas',ic:'🎯',falta:'Jarvis lo lee con tu sesión de EOS en Chrome; hoy no se pudo.'},
@@ -2866,12 +2884,13 @@ function renderControl(root){
     <div class="ea-sm" style="margin-top:8px">Calificación de 0 a 10 por área (tareas, KPIs y rocas). Verde ≥ 8 · ámbar ≥ 5 · rojo &lt; 5.</div>
     <div class="ctl-sec"><h3>JARVIS</h3><span class="line"></span></div>
     <div class="ea-card" style="padding:16px"><b>Cómo trabaja contigo:</b> prepara el parte cada día hábil a las 6:45 (lo ves arriba), redacta borradores de tus correos (nunca los envía solo), te avisa de lo que se atora y entra por ti a garantías, mantenimiento, producción, EOS y compras para dejarte el resumen y el plan de acción. <span class="ea-sm">También puedes pedírmelo en cualquier momento aquí en Claude: «parte de la mañana».</span></div>`;
+  root.querySelectorAll('[data-ap-abrir]').forEach(b=>b.onclick=()=>ctlIr(()=>showView(b.dataset.apAbrir)));
   root.querySelectorAll('[data-pa]').forEach(b=>b.onclick=()=>{ const [k,id]=b.dataset.pa.split(':'); ctlPAccion(k,id); });
-  root.querySelectorAll('[data-ctl-att]').forEach(b=>b.onclick=()=>{ const f=att[+b.dataset.ctlAtt].go; if(f) f(); });
+  root.querySelectorAll('[data-ctl-att]').forEach(b=>b.onclick=()=>{ const f=att[+b.dataset.ctlAtt].go; if(f) ctlIr(f); });
   root.querySelectorAll('[data-ctl-chk]').forEach(b=>b.onclick=()=>ctlMarcar(b.dataset.ctlChk));
-  root.querySelectorAll('[data-ctl-go]').forEach(b=>b.onclick=()=>{ const [k,i]=b.dataset.ctlGo.split(':'); if(k==='sis'){ showView(i); return; } const a=pasos.find(x=>x.k===k).acc[+i];
+  root.querySelectorAll('[data-ctl-go]').forEach(b=>b.onclick=()=>ctlIr(()=>{ const [k,i]=b.dataset.ctlGo.split(':'); if(k==='sis'){ showView(i); return; } const a=pasos.find(x=>x.k===k).acc[+i];
     if(a.ancla){ document.getElementById(a.ancla)?.scrollIntoView({behavior:'smooth'}); return; }
-    if(a.go==='aprobar'){ _eaModo='aprobar'; showView('actividades'); } else if(a.go==='abiertas'){ _eaModo='abiertas'; showView('actividades'); } else showView(a.go); });
+    if(a.go==='aprobar'){ _eaModo='aprobar'; showView('actividades'); } else if(a.go==='abiertas'){ _eaModo='abiertas'; showView('actividades'); } else showView(a.go); }));
 
 }
 
@@ -2883,11 +2902,12 @@ function ctlAppsHTML(){
   const ids=[...CTL_APPS.map(x=>x.id),...Object.keys(ap).filter(k=>!CTL_APPS.some(x=>x.id===k))];
   return `<div class="ap-grid">${ids.map(id=>{
     const base=CTL_APPS.find(x=>x.id===id)||{id,n:ap[id]?.nombre||id,ic:ap[id]?.icono||'📌',falta:''}, a=ap[id];
-    if(!a) return `<div class="ap-card sin"><div class="ap-h"><span class="ic">${base.ic}</span><div><h4>${esc(base.n)}</h4><div class="ap-t">Sin lectura hoy</div></div><span class="ctl-chip mut">⚪ Sin lectura</span></div><div class="ea-sm" style="margin-top:10px">${esc(base.falta)}</div></div>`;
+    if(!a) return `<div class="ap-card sin"><div class="ap-h"><span class="ic">${base.ic}</span><div><h4>${esc(base.n)}</h4><div class="ap-t">Sin lectura hoy</div></div><span class="ctl-chip mut">⚪ Sin lectura</span></div><div class="ea-sm" style="margin-top:10px">${esc(base.falta)}</div>${base.abrir?`<div style="margin-top:10px"><button class="ea-btn dark" data-ap-abrir="${esc(base.abrir)}">Abrir control de garantías →</button></div>`:''}</div>`;
     const e=E[a.estado]||E.sin_acceso, hall=_arr(a.hallazgos), planes=_arr(a.planes);
     return `<div class="ap-card ${esc(a.estado||'')}"><div class="ap-h"><span class="ic">${a.icono||base.ic}</span><div style="flex:1"><h4>${esc(a.nombre||base.n)}</h4><div class="ap-t">${esc(a.titular||'')}</div></div><span class="ctl-chip ${a.estado==='rojo'?'bad':a.estado==='ambar'?'warn':a.estado==='verde'?'ok':'mut'}">${e[0]} ${e[1]}</span></div>
       ${hall.length?`<ul class="ap-l">${hall.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:''}
       ${planes.length?`<div class="ap-p"><b>Plan de acción</b>${planes.map(x=>`<div class="ap-pl"><span>➜</span><div>${esc(x.texto||'')}${x.quien?` <span class="ea-sm">· ${esc(x.quien)}${x.cuando?' · '+esc(x.cuando):''}</span>`:''}</div></div>`).join('')}</div>`:''}
+      ${(a.abrir||base.abrir)?`<div style="margin-top:10px"><button class="ea-btn dark" data-ap-abrir="${esc(a.abrir||base.abrir)}">Abrir control de garantías →</button></div>`:''}
       <div class="ea-sm ap-f">${esc(a.fuente||'')}${a.liga?` · <a href="${esc(a.liga)}" target="_blank" rel="noopener">Abrir ↗</a>`:''}</div></div>`; }).join('')}</div>`;
 }
 
@@ -2982,12 +3002,69 @@ function ctlReasignarAct(id){
 }
 function ctlPAccion(k,id){
   if(k==='cerrar') ctlCerrarAct(id); else if(k==='replantear') ctlReplantearAct(id); else if(k==='reasignar') ctlReasignarAct(id);
-  else if(k==='ver'){ const d=byId(DB.deliverables,id); _eaModo='abiertas'; _eaQ=d?d.name:''; showView('actividades'); }
-  else if(k==='ir_aprobar'){ _eaModo='aprobar'; showView('actividades'); }
-  else if(k==='ver_rocas') showView('rocas');
+  else if(k==='ver') ctlIr(()=>{ const d=byId(DB.deliverables,id); _eaModo='abiertas'; _eaQ=d?d.name:''; showView('actividades'); });
+  else if(k==='ir_aprobar') ctlIr(()=>{ _eaModo='aprobar'; showView('actividades'); });
+  else if(k==='ver_rocas') ctlIr(()=>showView('rocas'));
 }
 
 VIEW_RENDERERS['control']=renderControl;
+/* ══════════ GARANTÍAS: base de datos y acciones correctivas ══════════
+   li_garantias/registros/<pedido__sku>: lo del reporte lo escribe Jarvis (garantias_base.py);
+   causa, accion, responsable, estadoAC, nota las captura la gente aquí y Jarvis nunca las pisa. */
+let _garOn=false,_garFiltro='vigentes',_garQ='';
+function garIniciar(){
+  if(_garOn) return; _garOn=true;
+  _fbDB.ref('li_garantias').on('value',snap=>{ DB.gar=snap.val()||{}; DB._garOk=true; if(SESSION&&currentView==='garantias') render(); },e=>console.warn('[garantias]',e.message));
+}
+const GAR_CAUSAS=['Diseño del producto','Proceso de manufactura','Material o proveedor','Empaque o transporte','Instalación','Mal uso del cliente','Error de captura del pedido','Por determinar'];
+const GAR_EST={sin:'Sin analizar',proceso:'En proceso',cerrada:'Cerrada'};
+function garEditar(k){
+  const g=(DB.gar?.registros||{})[k]; if(!g) return;
+  const gente=(DB.users||[]).slice().sort((a,b)=>a.name.localeCompare(b.name));
+  openDlg({title:'Causa y acción correctiva',sub:`${g.sku} · ${g.cliente} · ${g.pedido}`,saveLabel:'Guardar',
+    body:`<div style="background:var(--surface2);border-radius:12px;padding:12px 14px;margin-bottom:14px"><b>${esc(g.desc||g.sku)}</b><div class="small muted" style="margin-top:3px">Costo ${plMxn(g.costo)} · ${g.piezas||0} pza. · visto por primera vez ${g.vistaPrimera?fmtDate(g.vistaPrimera):'—'} · ${g.vigente?'sigue pendiente en producción':'ya salió del reporte'}</div></div>
+      <label class="lbl">¿Por qué se generó la garantía?</label><select class="select-input" id="gr-causa"><option value="">— Sin analizar —</option>${GAR_CAUSAS.map(c=>`<option ${g.causa===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+      <label class="lbl" style="margin-top:12px">Acción correctiva (qué se hace para que no se repita)</label><textarea class="input" id="gr-accion" rows="3">${esc(g.accion||'')}</textarea>
+      <label class="lbl" style="margin-top:12px">Responsable</label><select class="select-input" id="gr-resp"><option value="">— Sin asignar —</option>${gente.map(u=>`<option value="${u.id}" ${g.responsable===u.id?'selected':''}>${esc(u.name)}</option>`).join('')}</select>
+      <label class="lbl" style="margin-top:12px">Estado de la acción</label><select class="select-input" id="gr-est">${Object.entries(GAR_EST).map(([v,t])=>`<option value="${v}" ${(g.estadoAC||'sin')===v?'selected':''}>${t}</option>`).join('')}</select>`,
+    onSave:()=>{ const causa=document.getElementById('gr-causa').value, accion=document.getElementById('gr-accion').value.trim(), est=document.getElementById('gr-est').value;
+      _fbDB.ref('li_garantias/registros/'+k).update({causa:causa||null,accion:accion||null,responsable:document.getElementById('gr-resp').value||null,estadoAC:(causa||accion)&&est==='sin'?'proceso':est,actualizado:Date.now(),por:SESSION.name}); toast('Guardado ✓'); } });
+}
+function renderGarantias(root){
+  if(!isLeader()){ root.innerHTML=noPermissionHTML(); return; }
+  garIniciar();
+  if(!dataReady()||!DB._garOk){ root.innerHTML=loadingHTML('Cargando la base de garantías…'); return; }
+  const todas=Object.entries(DB.gar?.registros||{}).map(([k,v])=>({...v,_k:k})).sort((a,b)=>(b.vistaPrimera||'').localeCompare(a.vistaPrimera||''));
+  const est=g=>g.estadoAC||'sin', q=_garQ.trim().toLowerCase();
+  const vig=todas.filter(g=>g.vigente), sinA=todas.filter(g=>!g.causa), enP=todas.filter(g=>est(g)==='proceso'), cer=todas.filter(g=>est(g)==='cerrada');
+  const costo=todas.reduce((a,g)=>a+(+g.costo||0),0);
+  const FIL={vigentes:['En producción',vig],todas:['Todas',todas],sin:['Sin analizar',sinA],proceso:['En proceso',enP],cerrada:['Cerradas',cer]};
+  if(!FIL[_garFiltro]) _garFiltro='vigentes';
+  const lista=FIL[_garFiltro][1].filter(g=>!q||[g.sku,g.desc,g.cliente,g.pedido,g.causa,g.accion].join(' ').toLowerCase().includes(q));
+  const par=(keyFn,lab)=>{ const m={}; todas.forEach(g=>{ const k=keyFn(g); if(!k) return; (m[k]=m[k]||{n:0,c:0,l:lab?lab(g):k}); m[k].n++; m[k].c+=+g.costo||0; });
+    const a=Object.values(m).sort((x,y)=>y.c-x.c).slice(0,6), mx=Math.max(1,...a.map(x=>x.c));
+    return a.length?a.map(x=>`<div class="gr-b"><span title="${esc(x.l)}">${esc(x.l.length>34?x.l.slice(0,34)+'…':x.l)}</span><div class="bar"><i style="width:${Math.round(100*x.c/mx)}%"></i></div><b>${plMxn(x.c)}<small> · ${x.n}</small></b></div>`).join(''):'<div class="ea-sm">Aún no hay datos.</div>'; };
+  const resp=id=>byId(DB.users,id)?.name||'';
+  root.innerHTML=`
+    <div class="pt-bar"><span class="ctl-chip ${vig.length?'warn':'ok'}">${vig.length} en producción</span><span class="ctl-chip mut">${todas.length} en la base</span><span class="ctl-chip ${sinA.length?'bad':'ok'}">${sinA.length} sin analizar</span><span class="ctl-chip mut">${enP.length} en proceso</span><span class="ctl-chip ok">${cer.length} cerradas</span><span class="ctl-chip mut">${plMxn(costo)} de costo acumulado</span></div>
+    <div class="ea-sm" style="margin-bottom:6px">La base se llena sola con los reportes diarios de PCP (Jarvis). Lo que captures aquí —causa, acción, responsable— nunca se pisa. Arrancó con ${DB.gar?.meta?.registros||todas.length} garantías de los reportes disponibles; se completa día a día.</div>
+    <div class="ctl-sec"><h3>DÓNDE PEGAN MÁS</h3><span class="line"></span><span class="ea-sm">Por costo acumulado · número de garantías</span></div>
+    <div class="gr-par"><div class="ea-card" style="padding:14px 16px"><h4 class="gr-h">Por SKU</h4>${par(g=>g.sku,g=>g.sku+' · '+(g.desc||''))}</div><div class="ea-card" style="padding:14px 16px"><h4 class="gr-h">Por cliente</h4>${par(g=>g.cliente)}</div><div class="ea-card" style="padding:14px 16px"><h4 class="gr-h">Por causa</h4>${par(g=>g.causa)}</div></div>
+    <div class="ctl-sec"><h3>REGISTRO DE GARANTÍAS</h3><span class="line"></span></div>
+    <div class="pt-bar">${Object.entries(FIL).map(([k,[t,l]])=>`<button class="ea-btn ${k===_garFiltro?'dark':''}" data-gf="${k}">${t} (${l.length})</button>`).join('')}<input class="ea-inp" id="gr-q" placeholder="Buscar SKU, cliente, pedido o causa…" value="${esc(_garQ)}" style="flex:1;min-width:200px"></div>
+    <div class="ea-card"><table class="ea-tbl"><thead><tr><th>Pedido / cliente</th><th>SKU</th><th>Costo</th><th>Visto</th><th>Causa y acción correctiva</th><th>Estado</th><th></th></tr></thead><tbody>
+      ${lista.length?lista.map(g=>`<tr><td><b>${esc(g.cliente||'—')}</b><div class="ea-sm">${esc(g.pedido)} · ${esc(g.tipoVenta||'')}</div></td><td><b>${esc(g.sku)}</b><div class="ea-sm">${esc(g.desc||'')}${g.piezas?' · '+g.piezas+' pza.':''}</div></td><td>${plMxn(g.costo)}</td><td class="ea-sm">${g.vistaPrimera?fmtDate(g.vistaPrimera):'—'}${g.vigente?'':'<br>ya salió'}</td>
+        <td>${g.causa?`<b>${esc(g.causa)}</b>`:'<span class="ctl-chip bad">Sin analizar</span>'}${g.accion?`<div class="ea-sm">${esc(g.accion)}</div>`:''}${g.responsable?`<div class="ea-sm">👤 ${esc(resp(g.responsable))}</div>`:''}</td>
+        <td><span class="ctl-chip ${est(g)==='cerrada'?'ok':est(g)==='proceso'?'warn':'mut'}">${GAR_EST[est(g)]}</span></td><td><button class="ea-btn" data-gr-ed="${esc(g._k)}">Editar</button></td></tr>`).join(''):`<tr><td colspan="7"><div class="ea-empty">Nada en este filtro.</div></td></tr>`}
+    </tbody></table></div>
+    <div class="ctl-sec"><h3>GARANTÍAS POR ENTRAR</h3><span class="line"></span></div>
+    <div class="ea-card" style="padding:16px"><b>Falta conectar el aplicativo donde entran las garantías.</b><div class="ea-sm" style="margin-top:4px">Ahí vive lo que todavía no llega a producción y, sobre todo, el motivo con que se capturó. En cuanto pase la liga o una exportación, Jarvis lo suma a esta base para ligar cada garantía con su causa.</div></div>`;
+  root.querySelectorAll('[data-gf]').forEach(b=>b.onclick=()=>{ _garFiltro=b.dataset.gf; render(); });
+  root.querySelector('#gr-q').oninput=e=>{ _garQ=e.target.value; const pos=e.target.selectionStart; render(); const i=document.getElementById('gr-q'); i.focus(); i.setSelectionRange(pos,pos); };
+  root.querySelectorAll('[data-gr-ed]').forEach(b=>b.onclick=()=>garEditar(b.dataset.grEd));
+}
+VIEW_RENDERERS['garantias']=renderGarantias;
+
 
 
 (function(){
