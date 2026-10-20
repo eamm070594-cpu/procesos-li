@@ -287,7 +287,8 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
 #btn-tareas{display:inline-flex;gap:8px;align-items:center}.ea-tbadge{background:#2A2A2C;color:#fff;border-radius:10px;font-size:11px;font-weight:800;padding:1px 7px}
 .shell.menu-off .sidebar{display:none}
 .nav-count{margin-left:auto;font-size:11px;font-weight:800;border-radius:12px;padding:1px 8px;background:var(--bad);color:#fff;display:none}
-.nav-count.on{display:inline-block}
+.nav-count.on{display:inline-block}.nav-count.apr{background:#C4922A;margin-left:4px}
+.ea-sm-btn{padding:4px 10px;font-size:12px;margin-left:6px}.ea-ok{margin-left:8px;color:var(--ok);font-weight:700;font-size:12px}.ea-wait{margin-left:8px;color:var(--warn);font-weight:700;font-size:12px}
 .area.eos-dark{background:#4C4F56}
 .area.eos-dark .main{max-width:none}
 @media(max-width:820px){.topbar{padding:0 16px 0 58px}.topbar .tb-burger{display:none}}
@@ -470,7 +471,7 @@ tr.ea-child td{background:var(--surface2)}tr.ea-child .ea-name{padding-left:30px
           </div>
         </div>
       </div>
-      <button class="nav-btn" data-view="actividades"><span class="ic">☑</span> Mis actividades <span class="nav-count" id="nav-act-count"></span></button>
+      <button class="nav-btn" data-view="actividades"><span class="ic">☑</span> Mis actividades <span class="nav-count" id="nav-act-count"></span><span class="nav-count apr" id="nav-apr-count" title="Por aprobar"></span></button>
       <button class="nav-btn" data-view="micumplimiento"><span class="ic">◔</span> Mi cumplimiento <span class="nav-score" id="nav-mc-score"></span></button>
       <button class="nav-btn leader-only" id="btn-junta" style="display:none"><span class="ic">▦</span> Junta semanal <span class="nav-caret" id="junta-caret">▸</span></button>
       <div class="nav-sub leader-only" id="sub-junta" style="display:none">
@@ -1802,7 +1803,7 @@ function copiarNotifPorCorreo(n){
   const paraLinea=destinatarios.length?destinatarios.join(', '):'(sin correo capturado — Administración → Usuarios)';
   copiarAlPortapapeles(`Para: ${paraLinea}\nAsunto: ${subject}\n\n${body}`);
 }
-const NOTIF_ICON={proyecto_nuevo:'📁',entregable_nuevo:'📋',aprobacion:'✅',aviso_individual:'✉️',pt_quincena:'📊',pt_mensual:'🏁'};
+const NOTIF_ICON={proyecto_nuevo:'📁',entregable_nuevo:'📋',aprobacion:'✅',aviso_individual:'✉️',pt_quincena:'📊',pt_mensual:'🏁',por_aprobar:'📝',devuelto:'↩️'};
 let _notifVerLeidas=false; // mismo patrón que _enviarVerResueltas: por default solo lo pendiente
 function renderNotifPanel(){
   const todas=notificacionesVisibles(); // solo lo tuyo, siempre
@@ -2062,13 +2063,17 @@ function renderProyectoDetail(root){
   }
   list.innerHTML=`<div class="card" style="padding:0;overflow-x:auto">
     <table class="tbl">
-      <thead><tr><th>Entregable</th><th>Responsable</th><th>Fecha</th><th>Estatus</th><th>Aprobado</th><th></th></tr></thead>
+      <thead><tr><th>Entregable</th><th>Responsable</th><th>Fecha</th><th>Avance</th><th>Estatus (automático)</th><th>Aprobación</th><th></th></tr></thead>
       <tbody>${dels.map(d=>deliverableRowHTML(d)).join('')}</tbody>
     </table>
   </div>`;
-  list.querySelectorAll('[data-set-status]').forEach(sel=>{
-    sel.addEventListener('change',()=>setDeliverableStatus(sel.dataset.setStatus,sel.value));
+  list.querySelectorAll('input[data-ea-av]').forEach(r=>{
+    r.oninput=()=>{ const v=+r.value,k=eaCls(v); r.style.setProperty('--p',v+'%'); r.className=k; const pc=r.nextElementSibling; pc.textContent=v+'%'; pc.className='pc '+k; };
+    r.onchange=()=>eaAplicarAvance(r.dataset.eaAv,+r.value);
   });
+  list.querySelectorAll('[data-ea-min]').forEach(b=>b.onclick=()=>eaAbrirMinuta(b.dataset.eaMin));
+  list.querySelectorAll('[data-ea-dev]').forEach(b=>b.onclick=()=>eaDevolver(b.dataset.eaDev));
+  list.querySelectorAll('[data-pausa]').forEach(b=>b.onclick=()=>{ const d=byId(DB.deliverables,b.dataset.pausa); if(d) setDeliverableStatus(d.id,d.status==='En pausa'?(eaAvance(d)>0?'En proceso':'Pendiente'):'En pausa'); });
   list.querySelectorAll('[data-approve]').forEach(btn=>{
     btn.addEventListener('click',()=>approveDeliverable(btn.dataset.approve));
   });
@@ -2085,20 +2090,20 @@ function deliverableRowHTML(d){
   const canFull=canManageDeliverable(d);
   const canOwn=canUpdateOwnDeliverable(d);
   const canEditStatus=canFull||canOwn;
-  const statusSelect=canEditStatus
-    ?`<select class="select-input" style="width:auto;padding:5px 8px;font-size:12px" data-set-status="${d.id}">
-        ${DELIVERABLE_STATUS.map(s=>`<option value="${s.key}"${d.status===s.key?' selected':''}>${s.icon} ${s.key}</option>`).join('')}
-      </select>`
-    :statusPillHTML(DELIVERABLE_STATUS,d.status);
+  const av=eaAvance(d), kk=eaCls(av), nm=eaMinutas(d).length;
+  const avanceCell=`<div style="display:flex;align-items:center;gap:8px"><div class="ea-av" style="min-width:150px"><input type="range" min="0" max="100" step="5" value="${av}" style="--p:${av}%" class="${kk}" data-ea-av="${esc(d.id)}" ${canEditStatus?'':'disabled'}><span class="pc ${kk}">${av}%</span></div><button class="ea-min" data-ea-min="${esc(d.id)}" title="Minuta">🗒${nm?`<span class="n">${nm}</span>`:''}</button></div>`;
+  const statusSelect=statusPillHTML(DELIVERABLE_STATUS,d.status)
+    +(canEditStatus&&d.status!=='Entregado'?` <button class="btn xs" data-pausa="${d.id}" title="El estatus se calcula solo con el avance; la pausa es manual">${d.status==='En pausa'?'▶ Reanudar':'⏸ Pausar'}</button>`:'');
   const approveCell = d.approved
     ? `<span class="pill ok" title="${esc(d.approved.byName||'')}">✓ Aprobado</span>`
-    : (d.status==='Entregado' && canFull
-        ? `<button class="btn xs primary" data-approve="${d.id}">Aprobar</button>`
+    : (d.status==='Entregado'
+        ? (canFull?`<button class="btn xs primary" data-approve="${d.id}">Aprobar</button> <button class="btn xs" data-ea-dev="${d.id}">Devolver</button>`:'<span class="small muted">⏳ Esperando aprobación</span>')
         : `<span class="small muted">—</span>`);
   return `<tr id="deliv-row-${d.id}">
     <td>${esc(d.name)}${overdue?' <span class="pill bad" style="margin-left:4px">⏰ Atrasado</span>':''}</td>
     <td>${u?esc(u.name):'<span class="muted">—</span>'}</td>
     <td>${fmtDate(d.dueDate)}</td>
+    <td>${avanceCell}</td>
     <td>${statusSelect}</td>
     <td>${approveCell}</td>
     <td style="white-space:nowrap">${canFull?`<button class="btn xs" data-edit-del="${d.id}">✎</button> <button class="btn xs danger" data-del-del="${d.id}">✕</button>`:''}</td>
@@ -2226,20 +2231,22 @@ VIEW_RENDERERS['proyectos']=renderProyectos;
      avance:  0-100 (si no existe se deriva del estatus)
      minutas: [{t:texto, f:ms, by:nombre}]
 ══════════════════════════════════════════════════════ */
-let _eaGroup='normal', _eaProj='', _eaQ='', _eaTeam='todos';
+let _eaGroup='normal', _eaProj='', _eaQ='', _eaTeam='todos', _eaModo='abiertas';
 function eaFechaLocal(ms){ const t=new Date(ms); return fmtDate(t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')); }
 function eaMinutas(d){ return Array.isArray(d.minutas)?d.minutas:[]; }
 function eaAvance(d){ return typeof d.avance==='number'?d.avance:({'Entregado':100,'En proceso':50,'En pausa':25}[d.status]??0); }
 function eaPuede(d){ return canManageDeliverable(d)||canUpdateOwnDeliverable(d); }
 function eaCls(v){ return v>=67?'ea-c-ok':v>=34?'ea-c-warn':'ea-c-bad'; }
 function eaDias(iso){ if(!iso) return null; const h=new Date(); h.setHours(0,0,0,0); return Math.round((new Date(iso+'T00:00:00')-h)/864e5); }
-function eaTodos(){
-  const out=[];
-  visibleProjects().forEach(p=>visibleDeliverables(p.id).forEach(d=>{ if(d.status!=='Entregado') out.push(d); }));
-  return out;
-}
+function eaTodosEstados(){ const out=[]; visibleProjects().forEach(p=>visibleDeliverables(p.id).forEach(d=>out.push(d))); return out; }
+function eaTodos(){ return eaTodosEstados().filter(d=>d.status!=='Entregado'); }
+// Por aprobar: Entregado y sin aprobar — el líder ve los de su gente; cada quien ve los suyos (esperando).
+// (Se ignoran los "Entregado" viejos de la app anterior que nunca se aprobaron: solo cuentan los del flujo nuevo o de los últimos 45 días.)
+function eaPorAprobar(){ const lim=Date.now()-45*864e5; return eaTodosEstados().filter(d=>d.status==='Entregado'&&!d.approved&&(d.entregadoAt||(d.updatedAt||0)>=lim)&&(canManageDeliverable(d)||d.assigneeId===SESSION?.userId)); }
+function eaCerradas(){ const lim=Date.now()-30*864e5; return eaTodosEstados().filter(d=>d.status==='Entregado'&&d.approved&&(d.approved.at||d.updatedAt||0)>=lim); }
+function eaFuente(){ return _eaModo==='aprobar'?eaPorAprobar():_eaModo==='cerradas'?eaCerradas():eaTodos(); }
 function eaFiltrados(){
-  let l=eaTodos();
+  let l=eaFuente();
   if(_eaTeam!=='todos'){
     const sec=byId(DB.secciones,_eaTeam); const ids=new Set(sec?seccionScope(sec).people.map(u=>u.id):[]);
     if(sec?.liderId) ids.add(sec.liderId);
@@ -2261,15 +2268,21 @@ function eaFila(d){
     <td>${p?`<span class="ea-tag t${(p.name||'').length%3}" title="${esc(p.name)}">${esc(p.name)}</span>`:'<span class="ea-tag none">— proyecto —</span>'}</td>
     <td>${cts.length?`<span class="ea-ct" title="${esc(cts.join(', '))}">${esc(cts[0])}${cts.length>1?' +'+(cts.length-1):''}</span>`:'<span class="ea-tag none">—</span>'}</td>
     <td><div class="ea-av"><input type="range" min="0" max="100" step="5" value="${av}" style="--p:${av}%" class="${k}" data-ea-av="${esc(d.id)}" ${puede?'':'disabled title="Solo el responsable o su líder pueden cambiarlo"'}><span class="pc ${k}">${av}%</span></div></td>
-    <td><button class="ea-min" data-ea-min="${esc(d.id)}" title="Minuta de la actividad">🗒${nm?`<span class="n">${nm}</span>`:''}</button></td></tr>`;
+    <td style="white-space:nowrap"><button class="ea-min" data-ea-min="${esc(d.id)}" title="Minuta de la actividad">🗒${nm?`<span class="n">${nm}</span>`:''}</button>${eaAccion(d)}</td></tr>`;
+}
+function eaAccion(d){
+  if(d.status!=='Entregado') return '';
+  if(d.approved) return `<span class="ea-ok" title="${esc(d.approved.byName||'')}">✓ Aprobada</span>`;
+  if(canManageDeliverable(d)) return `<button class="ea-btn dark ea-sm-btn" data-ea-apr="${esc(d.id)}">Aprobar</button><button class="ea-btn ea-sm-btn" data-ea-dev="${esc(d.id)}">Devolver</button>`;
+  return '<span class="ea-wait">⏳ Esperando aprobación</span>';
 }
 function renderActividades(root){
-  const l=eaFiltrados(), todos=eaTodos();
+  const l=eaFiltrados(), todos=eaTodos(), nApr=eaPorAprobar().length, nCer=eaCerradas().length;
   const proyConAbiertas=[...new Set(todos.map(d=>d.projectId))].map(id=>byId(DB.projects,id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
   const secs=(DB.secciones||[]).filter(s=>byId(DB.users,s.liderId));
   const mostrarEquipos=isAdmin()&&secs.length>1;
   let body='';
-  if(!l.length) body='<tr><td colspan="7" class="ea-empty">Sin actividades abiertas con este filtro.</td></tr>';
+  if(!l.length) body=`<tr><td colspan="7" class="ea-empty">${_eaModo==='aprobar'?'No hay actividades esperando aprobación.':_eaModo==='cerradas'?'Aún no hay actividades cerradas en los últimos 30 días.':'Sin actividades abiertas con este filtro.'}</td></tr>`;
   else if(_eaGroup==='normal') body=l.map(eaFila).join('');
   else{
     const key=_eaGroup==='persona'?d=>byId(DB.users,d.assigneeId)?.name||'Sin asignar':d=>{const p=byId(DB.projects,d.projectId);return (p?.centroIds||[]).map(id=>byId(DB.centros,id)?.nombre).filter(Boolean)[0]||'Sin centro de trabajo';};
@@ -2278,7 +2291,8 @@ function renderActividades(root){
   }
   root.innerHTML=`
     <div class="ea-head"><span class="ea-title">Mis actividades</span><span class="ea-sub">${isLeader()?'Las actividades de tu gente.':'Las actividades a tu cargo.'} Actualiza el % de avance y deja tu minuta.</span></div>
-    <div class="ea-bar"><h2>Actividades a seguir · ${l.length}</h2><div class="ctl">
+    <div class="ea-bar"><h2>${_eaModo==='aprobar'?'Por aprobar':_eaModo==='cerradas'?'Cerradas · últimos 30 días':'Actividades a seguir'} · ${l.length}</h2><div class="ctl">
+      <div class="ea-seg onmain" id="ea-seg-m"><button data-m="abiertas" class="${_eaModo==='abiertas'?'on':''}">Abiertas · ${todos.length}</button><button data-m="aprobar" class="${_eaModo==='aprobar'?'on':''}">Por aprobar${nApr?' · '+nApr:''}</button><button data-m="cerradas" class="${_eaModo==='cerradas'?'on':''}">Cerradas · ${nCer}</button></div>
       <div class="ea-seg onmain" id="ea-seg-g"><button data-g="normal" class="${_eaGroup==='normal'?'on':''}">Normal</button><button data-g="persona" class="${_eaGroup==='persona'?'on':''}">Por persona</button><button data-g="ct" class="${_eaGroup==='ct'?'on':''}">Por centro de trabajo</button></div>
       <select class="ea-sel" id="ea-proj"><option value="">Proyecto: todos</option>${proyConAbiertas.map(p=>`<option value="${esc(p.id)}" ${_eaProj===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
       <input class="ea-inp" id="ea-q" placeholder="🔍 Filtrar…" value="${esc(_eaQ)}"></div></div>
@@ -2289,6 +2303,7 @@ function renderActividades(root){
     document.querySelectorAll('#ea-seg-t button').forEach(b=>b.onclick=()=>{ _eaTeam=b.dataset.t; renderActividades(root); });
   }
   root.querySelectorAll('#ea-seg-g button').forEach(b=>b.onclick=()=>{ _eaGroup=b.dataset.g; renderActividades(root); });
+  root.querySelectorAll('#ea-seg-m button').forEach(b=>b.onclick=()=>{ _eaModo=b.dataset.m; renderActividades(root); });
   root.querySelector('#ea-proj').onchange=e=>{ _eaProj=e.target.value; renderActividades(root); };
   const q=root.querySelector('#ea-q'); q.oninput=e=>{ _eaQ=e.target.value; const pos=e.target.selectionStart; renderActividades(root); const n=root.querySelector('#ea-q'); n.focus(); n.setSelectionRange(pos,pos); };
   root.querySelectorAll('input[data-ea-av]').forEach(r=>{
@@ -2296,10 +2311,13 @@ function renderActividades(root){
     r.onchange=()=>eaGuardarAvance(r.dataset.eaAv,+r.value);
   });
   root.querySelectorAll('[data-ea-min]').forEach(b=>b.onclick=()=>eaAbrirMinuta(b.dataset.eaMin));
+  root.querySelectorAll('[data-ea-apr]').forEach(b=>b.onclick=()=>eaAprobar(b.dataset.eaApr));
+  root.querySelectorAll('[data-ea-dev]').forEach(b=>b.onclick=()=>eaDevolver(b.dataset.eaDev));
   mcBadge();
   const tb=document.getElementById('tareas-badge'); if(tb) tb.textContent=todos.filter(d=>(eaDias(d.dueDate)??1)<0).length;
   const nc=document.getElementById('nav-act-count');
   if(nc){ const v=todos.filter(d=>(eaDias(d.dueDate)??1)<0).length; nc.textContent=v; nc.classList.toggle('on',v>0); }
+  const na=document.getElementById('nav-apr-count'); if(na){ const v=eaPorAprobar().filter(d=>canManageDeliverable(d)).length; na.textContent=v+' ✓'; na.classList.toggle('on',v>0); }
 }
 VIEW_RENDERERS['actividades']=renderActividades;
 /* ══════════════════════════════════════════════════════
@@ -2632,12 +2650,49 @@ VIEW_RENDERERS['micumplimiento']=renderMiCumplimiento;
   if(b) b.addEventListener('click',()=>{ sub.classList.toggle('open'); document.getElementById('junta-caret').textContent=sub.classList.contains('open')?'▾':'▸'; });
 })();
 
-function eaGuardarAvance(id,v){
-  const d=byId(DB.deliverables,id); if(!d||!eaPuede(d)) return;
+// Estatus AUTOMÁTICO a partir del avance (la única excepción manual es "En pausa"):
+//   0% → Pendiente · 1-99% → En proceso · 100% → Entregado, queda POR APROBAR por el líder.
+function eaAprobadores(d){
+  const ids=new Set(), sec=seccionOfUser(d.assigneeId); if(sec?.liderId) ids.add(sec.liderId);
+  seccionesDeProyecto(byId(DB.projects,d.projectId)).forEach(x=>{ if(x.liderId) ids.add(x.liderId); });
+  ids.delete(d.assigneeId);
+  if(!ids.size) (DB.users||[]).filter(u=>u.loginRole==='admin'&&u.id!==d.assigneeId).forEach(u=>ids.add(u.id));
+  return [...ids];
+}
+async function eaAplicarAvance(id,v){
+  const d=byId(DB.deliverables,id); if(!d||!eaPuede(d)){ render(); return; }
+  const eraCerrado=d.status==='Entregado';
+  if(v>=100&&!eraCerrado){
+    const ok=await appConfirm('¿Marcar como terminada?',`"${d.name}" pasará a Entregado y se enviará a tu líder para su aprobación.`);
+    if(!ok){ render(); return; }                       // cancelado: la barra regresa a su avance anterior
+    Object.assign(d,{avance:100,status:'Entregado',approved:null,entregadoAt:Date.now(),updatedAt:Date.now()});
+    const p=byId(DB.projects,d.projectId), quien=byId(DB.users,d.assigneeId)?.name||'Alguien';
+    const para=eaAprobadores(d);
+    if(para.length) crearNotificacion({tipo:'por_aprobar',texto:`Por aprobar: "${d.name}"${p?' en '+p.name:''} — ${quien} lo marcó al 100%`,proyectoId:d.projectId,entregableId:d.id,paraUserIds:para});
+    saveDB(); toast(para.length?'Enviada a aprobación de tu líder ✓':'Marcada como terminada ✓ (sin líder asignado para aprobarla)');
+    return;
+  }
   d.avance=v; d.updatedAt=Date.now();
-  if(v>0&&d.status==='Pendiente') d.status='En proceso';   // si ya hay avance, deja de estar "Pendiente"
-  saveApp();                                                // sin render(): la barra ya se movió en pantalla
-  toast('Avance guardado ✓');
+  if(eraCerrado){ d.status='En proceso'; d.approved=null; d.entregadoAt=null; }   // se reabre: pierde la aprobación
+  else if(d.status!=='En pausa') d.status=v>0?'En proceso':'Pendiente';
+  saveDB(); toast('Avance guardado ✓');
+}
+function eaGuardarAvance(id,v){ eaAplicarAvance(id,v); }
+function eaAprobar(id){
+  const d=byId(DB.deliverables,id); if(!d||!canManageDeliverable(d)){ toast('No tienes permiso para aprobar esto','err'); return; }
+  d.approved={by:SESSION.userId,byName:SESSION.name,at:Date.now()}; d.updatedAt=Date.now();
+  if(d.assigneeId&&d.assigneeId!==SESSION.userId){ const p=byId(DB.projects,d.projectId); crearNotificacion({tipo:'aprobacion',texto:`Te aprobaron: "${d.name}"${p?' en '+p.name:''}`,proyectoId:d.projectId,entregableId:d.id,paraUserIds:[d.assigneeId]}); }
+  saveDB(); toast('Aprobada ✓');
+}
+function eaDevolver(id){
+  const d=byId(DB.deliverables,id); if(!d||!canManageDeliverable(d)){ toast('No tienes permiso','err'); return; }
+  openDlg({title:'Devolver actividad',sub:esc(d.name),saveLabel:'Devolver',
+    body:'<label class="lbl">¿Qué falta o qué hay que corregir? *</label><textarea class="input" id="dev-motivo" rows="3" placeholder="Queda en la minuta y se le avisa a la persona"></textarea>',
+    onSave:()=>{ const m=document.getElementById('dev-motivo').value.trim(); if(!m){ toast('Escribe el motivo'); return false; }
+      d.minutas=[...eaMinutas(d),{t:'↩ Devuelta por '+SESSION.name+': '+m,f:Date.now(),by:SESSION.name}];
+      Object.assign(d,{status:'En proceso',avance:90,approved:null,entregadoAt:null,updatedAt:Date.now()});
+      if(d.assigneeId&&d.assigneeId!==SESSION.userId){ const p=byId(DB.projects,d.projectId); crearNotificacion({tipo:'devuelto',texto:`Te devolvieron: "${d.name}"${p?' en '+p.name:''} — ${m}`,proyectoId:d.projectId,entregableId:d.id,paraUserIds:[d.assigneeId]}); }
+      saveDB(); toast('Devuelta ✓'); } });
 }
 let _eaMinId=null;
 function eaAbrirMinuta(id){
