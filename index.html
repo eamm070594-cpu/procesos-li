@@ -10,58 +10,73 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
 /* ══════════════════════════════════════════════════════
-   TOKENS — paleta "B · Cercano" (ya elegida por el usuario)
+   TOKENS — 25-sep-2026: restyle a la paleta de la app EOS de
+   Subdirección (subdireccion.lineaitalia.net), a pedido de Adrian
+   ("cambies el estilo de la app a el de EOS"). Valores tomados con
+   getComputedStyle directo de la app real (no a ojo): fondo crema,
+   sidebar en degradado gris carbón, azul #2F5B8F como acento, tipografía
+   Montserrat. Reemplaza la paleta verde oliva "B · Cercano" anterior.
+   El nombre de las variables no cambió — todo lo que ya usaba
+   var(--accent)/var(--ok)/etc. se actualiza solo, sin tocar cada vista.
 ══════════════════════════════════════════════════════ */
 :root{
-  --bg:       #F7F5EF;
+  --bg:       #F1F0ED;
   --surface:  #FFFFFF;
-  --surface2: #F1EEE4;
-  --border2:  rgba(70,80,55,.12);
-  --text:     #333B29;
-  --muted:    #6E7A61;
-  --accent:   #5B7553;
-  --accent2:  #4A6144;
-  --accent-bg:rgba(91,117,83,.13);
-  --ok:       #4C7A3F;
-  --ok-bg:    rgba(76,122,63,.14);
-  --warn:     #A87A22;
-  --warn-bg:  rgba(168,122,34,.15);
-  --bad:      #A6402F;
-  --bad-bg:   rgba(166,64,47,.14);
-  --r:    14px;
-  --r-sm: 10px;
+  --surface2: #E6E5E0;
+  --border2:  #E4E2DC;
+  --text:     #2A2A2C;
+  --muted:    #82817C;
+  --accent:   #2F5B8F;
+  --accent2:  #24476F;
+  --accent-bg:rgba(47,91,143,.13);
+  --ok:       #3C8A5C;
+  --ok-bg:    rgba(60,138,92,.14);
+  --warn:     #BD8A1E;
+  --warn-bg:  rgba(189,138,30,.15);
+  --bad:      #B0463C;
+  --bad-bg:   rgba(176,70,60,.14);
+  --r:    12px;
+  --r-sm: 9px;
   --r-pill: 20px;
-  --shadow: 0 1px 2px rgba(51,59,41,.06), 0 4px 16px rgba(51,59,41,.06);
+  --shadow: 0 1px 2px rgba(40,40,45,.04), 0 8px 24px rgba(40,40,45,.06);
+  /* Sidebar: degradado oscuro propio (no sigue --bg/--surface, que son para
+     el contenido principal, claro) — mismo criterio que la app EOS real. */
+  --sidebar-bg1: #34363B;
+  --sidebar-bg2: #2C2E32;
+  --sidebar-text: #D8D7D2;
+  --sidebar-text-soft: #9A9994;
+  --sidebar-chip-bg: #E6E5E0;
+  --sidebar-chip-text: #2F3136;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:       #1C1F17;
-    --surface:  #262A1F;
-    --surface2: #2F3426;
-    --border2:  rgba(224,228,210,.12);
-    --text:     #E7E9DD;
-    --muted:    #A4AD96;
-    --accent:   #8FAE82;
-    --accent2:  #A6C398;
-    --accent-bg:rgba(143,174,130,.18);
-    --ok:       #7FBE6C;
-    --ok-bg:    rgba(127,190,108,.16);
-    --warn:     #D9A64A;
-    --warn-bg:  rgba(217,166,74,.16);
-    --bad:      #E1786A;
-    --bad-bg:   rgba(225,120,106,.16);
-    --shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 16px rgba(0,0,0,.3);
+    --bg:       #1B1D22;
+    --surface:  #24262B;
+    --surface2: #2E3036;
+    --border2:  rgba(230,229,224,.14);
+    --text:     #EDEDEA;
+    --muted:    #A0A0A0;
+    --accent:   #6FA0D8;
+    --accent2:  #8FB8E6;
+    --accent-bg:rgba(111,160,216,.18);
+    --ok:       #6FBE8E;
+    --ok-bg:    rgba(111,190,142,.16);
+    --warn:     #E0B15A;
+    --warn-bg:  rgba(224,177,90,.16);
+    --bad:      #E58579;
+    --bad-bg:   rgba(229,133,121,.16);
+    --shadow: 0 1px 2px rgba(0,0,0,.25), 0 8px 24px rgba(0,0,0,.3);
   }
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
   background:var(--bg);color:var(--text);
-  font-family:'Work Sans',system-ui,-apple-system,sans-serif;
+  font-family:'Montserrat',system-ui,-apple-system,sans-serif;
   font-size:14px;line-height:1.45;
   -webkit-font-smoothing:antialiased;
 }
@@ -73,42 +88,46 @@ button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit
 /* ── Layout ── */
 #app{display:none;min-height:100vh}
 .shell{display:flex;min-height:100vh}
+/* Sidebar en degradado oscuro (igual que la app EOS: linear-gradient gris
+   carbón de arriba a abajo) con botones tipo "chip" claro — no un fondo
+   plano con texto que se resalta solo al pasar el mouse, como antes. */
 .sidebar{
-  width:216px;flex:0 0 216px;background:var(--surface);
-  border-right:1px solid var(--border2);
+  width:216px;flex:0 0 216px;
+  background:linear-gradient(180deg,var(--sidebar-bg1),var(--sidebar-bg2));
+  border-right:none;color:var(--sidebar-text);
   display:flex;flex-direction:column;padding:16px 12px;
   position:sticky;top:0;height:100vh;
 }
-.brand{font-weight:700;font-size:15px;padding:6px 10px 18px;color:var(--text)}
-.brand span{color:var(--accent)}
+.brand{font-weight:700;font-size:15px;padding:6px 10px 18px;color:var(--sidebar-text)}
+.brand span{color:var(--accent2)}
 .brand-block{padding:12px 12px 6px}
 .brand-logo{background:#fff;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:center;box-shadow:var(--shadow)}
 .brand-logo img{width:100%;max-width:150px;height:auto;display:block}
 .brand-row{display:flex;align-items:center;justify-content:space-between;padding:0 2px}
-.brand-sub{font-weight:700;font-size:14px;color:var(--text)}
-.brand-sub span{color:var(--accent)}
+.brand-sub{font-weight:700;font-size:14px;color:#F4F3EF}
+.brand-sub span{color:#B9CBE0}
 .notif-bell{font-size:20px;position:relative;padding:6px 8px}
 .notif-badge-count{
   position:absolute;top:-2px;right:-2px;background:var(--bad);color:#fff;font-size:10.5px;font-weight:800;
   border-radius:99px;min-width:17px;height:17px;text-align:center;padding:0 4px;
-  display:none;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--surface);
+  display:none;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--sidebar-bg2);
 }
 .nav-btn{
   display:flex;align-items:center;gap:10px;width:100%;text-align:left;
-  padding:10px 12px;border:none;background:none;border-radius:var(--r-sm);
-  color:var(--muted);font-weight:500;cursor:pointer;margin-bottom:2px;
+  padding:10px 12px;border:none;border-radius:9px;
+  background:var(--sidebar-chip-bg);color:var(--sidebar-chip-text);font-weight:700;cursor:pointer;margin-bottom:6px;
 }
 .nav-btn .ic{font-size:16px}
-.nav-btn:hover{background:var(--surface2);color:var(--text)}
-.nav-btn.active{background:var(--accent-bg);color:var(--accent);font-weight:600}
-.sidebar-foot{margin-top:auto;padding-top:12px;border-top:1px solid var(--border2)}
+.nav-btn:hover{background:#DAD9D3}
+.nav-btn.active{background:var(--accent);color:#fff}
+.sidebar-foot{margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,.12)}
 .user-chip{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r-sm)}
-.user-chip .av{width:30px;height:30px;border-radius:50%;background:var(--accent-bg);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:0 0 30px}
+.user-chip .av{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:0 0 30px}
 .user-chip .who{flex:1;min-width:0}
-.user-chip .who .n{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.user-chip .who .r{font-size:11px;color:var(--muted)}
-.icon-btn{border:none;background:none;color:var(--muted);cursor:pointer;padding:6px;border-radius:8px;font-size:15px}
-.icon-btn:hover{background:var(--surface2);color:var(--text)}
+.user-chip .who .n{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#F4F3EF}
+.user-chip .who .r{font-size:11px;color:var(--sidebar-text-soft)}
+.icon-btn{border:none;background:none;color:var(--sidebar-text);cursor:pointer;padding:6px;border-radius:8px;font-size:15px}
+.icon-btn:hover{background:rgba(255,255,255,.1);color:#fff}
 
 .main{flex:1;min-width:0;padding:28px 32px 60px;max-width:1180px}
 .view-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap}
@@ -164,6 +183,16 @@ table.tbl tr:last-child td{border-bottom:none}
 
 .bar-track{background:var(--surface2);border-radius:8px;height:7px;overflow:hidden}
 .bar-fill{height:100%;background:var(--accent);border-radius:8px}
+
+/* Scorecard EOS (25-sep-2026): tarjeta oscura con medidores + banda de
+   sección coloreada — mismos componentes que subdireccion.lineaitalia.net */
+.sc-header-card{background:#2B303B;color:#fff;border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:16px}
+.sc-header-gauges{display:flex;gap:22px;flex-wrap:wrap}
+.gauge-wrap{text-align:center;width:110px}
+.gauge-label{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:rgba(255,255,255,.75);margin-bottom:2px}
+.gauge-num{font-size:22px;font-weight:800;font-family:'Montserrat',sans-serif}
+.esp-ch{background:var(--accent);color:#fff;font-weight:800;font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding:10px 14px;border-radius:var(--r) var(--r) 0 0}
+.esp-ch.ok{background:var(--ok)}
 
 /* ── Login ── */
 #login-screen{
@@ -246,6 +275,72 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
   #btn-mobile-menu{display:flex}
   #sidebar-overlay.open{display:block;position:fixed;inset:0;background:rgba(28,31,23,.35);z-index:41}
 }
+
+/* ══ Marco estilo EOS (2026-10-19): barra superior + "Mis actividades" ══ */
+.area{flex:1;min-width:0;display:flex;flex-direction:column}
+.area .main{flex:1;max-width:1180px;width:100%}
+.topbar{height:58px;flex:0 0 58px;background:var(--surface);border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:14px;padding:0 24px;position:sticky;top:0;z-index:20}
+.topbar h1{font-size:18px;font-weight:700}
+.topbar .tb-burger{color:var(--muted);font-size:19px}
+.topbar .tb-burger:hover{background:var(--surface2);color:var(--text)}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.shell.menu-off .sidebar{display:none}
+.nav-count{margin-left:auto;font-size:11px;font-weight:800;border-radius:12px;padding:1px 8px;background:var(--bad);color:#fff;display:none}
+.nav-count.on{display:inline-block}
+.area.eos-dark{background:#4C4F56}
+.area.eos-dark .main{max-width:none}
+@media(max-width:820px){.topbar{padding:0 16px 0 58px}.topbar .tb-burger{display:none}}
+.ea-head{margin-bottom:16px}
+.ea-head .ea-title{font-size:27px;font-weight:800;color:#fff;display:inline}
+.ea-head .ea-sub{font-size:13.5px;color:#d5d5d2;margin-left:10px}
+.ea-seg{display:inline-flex;background:var(--surface2);border-radius:12px;padding:4px;border:1px solid var(--border2)}
+.ea-seg button{border:0;background:none;padding:7px 15px;border-radius:9px;font-weight:600;color:var(--muted);font-size:13px;cursor:pointer}
+.ea-seg button.on{background:var(--text);color:var(--surface)}
+.eos-dark .ea-seg.onmain{background:#5d6068;border-color:#6b6e76}
+.eos-dark .ea-seg.onmain button{color:#d6d6d3}.eos-dark .ea-seg.onmain button.on{background:#2A2A2C;color:#fff}
+.ea-btn{border:1px solid var(--border2);background:var(--surface);border-radius:9px;padding:8px 14px;font-weight:700;font-size:13px;color:var(--text);cursor:pointer}
+.ea-btn:hover{background:var(--surface2)}.ea-btn.dark{background:#2A2A2C;border-color:#2A2A2C;color:#fff}
+.ea-bar{display:flex;align-items:center;gap:14px;margin:6px 0 12px;flex-wrap:wrap}
+.ea-bar h2{font-size:18px;font-weight:700;color:#fff}
+.ea-bar .ctl{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ea-sel,.ea-inp{border:1px solid var(--border2);background:var(--surface);border-radius:9px;padding:9px 12px;font-size:13px;color:var(--text);min-width:150px}
+.ea-card{background:var(--surface);border-radius:12px;box-shadow:var(--shadow);overflow-x:auto}
+.ea-card table{width:100%;border-collapse:collapse}
+.ea-card th{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-align:left;padding:12px 10px;background:var(--surface2);white-space:nowrap}
+.ea-card td{padding:12px 10px;border-bottom:1px solid var(--border2);vertical-align:middle}
+.ea-card tr:last-child td{border-bottom:0}
+.ea-card tbody tr:hover td{background:var(--accent-bg)}
+.ea-card tr.grp td{background:var(--accent-bg);font-weight:800;color:var(--accent2);font-size:12.5px;padding:9px 12px}
+.ea-name{font-size:13.5px;line-height:1.3;min-width:200px}
+.ea-name small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.ea-chip{display:inline-block;border-radius:8px;padding:6px 11px;font-weight:700;font-size:12.5px;white-space:nowrap}
+.ea-chip.bad{background:var(--bad-bg);color:var(--bad)}.ea-chip.warn{background:var(--warn-bg);color:var(--warn)}
+.ea-tag{display:inline-block;border-radius:16px;padding:6px 13px;font-weight:700;font-size:12px;max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ea-tag.t0{background:var(--ok-bg);color:var(--ok)}.ea-tag.t1{background:var(--accent-bg);color:var(--accent2)}.ea-tag.t2{background:var(--warn-bg);color:var(--warn)}.ea-tag.none{background:var(--surface2);color:var(--muted);font-weight:600}
+.ea-ct{display:inline-block;background:var(--accent-bg);color:var(--accent2);border-radius:8px;padding:5px 10px;font-weight:700;font-size:12px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ea-av{display:flex;align-items:center;gap:10px;min-width:150px}
+.ea-av input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:16px;border-radius:8px;background:linear-gradient(to right,var(--c) 0,var(--c) var(--p),var(--surface2) var(--p),var(--surface2) 100%);outline:none;cursor:pointer;margin:0}
+.ea-av input[type=range]:disabled{cursor:default;opacity:.85}
+.ea-av input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:5px;height:22px;border-radius:3px;background:rgba(40,40,45,.55);opacity:0;transition:.15s}
+.ea-av:hover input[type=range]:not(:disabled)::-webkit-slider-thumb,.ea-av input[type=range]:focus::-webkit-slider-thumb{opacity:1}
+.ea-av input[type=range]::-moz-range-thumb{width:5px;height:22px;border:0;border-radius:3px;background:rgba(40,40,45,.55)}
+.ea-av .pc{font-weight:800;font-size:14px;width:44px;text-align:right}
+.ea-c-bad{--c:var(--bad);color:var(--bad)}.ea-c-warn{--c:#C4922A;color:#b58720}.ea-c-ok{--c:var(--ok);color:var(--ok)}
+.ea-min{border:1px solid var(--border2);background:var(--surface);border-radius:9px;padding:6px 10px;display:inline-flex;align-items:center;gap:6px;font-size:15px;cursor:pointer}
+.ea-min:hover{background:var(--surface2)}
+.ea-min .n{background:var(--accent);color:#fff;border-radius:10px;font-size:11px;font-weight:800;padding:1px 7px}
+.ea-empty{padding:40px;text-align:center;color:var(--muted)}
+.ea-banner{background:var(--surface);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:20px;box-shadow:inset 4px 0 0 var(--warn)}
+.ea-banner span.t{flex:1;color:var(--muted)}
+.ea-dlg{border:0;border-radius:18px;padding:22px;width:min(460px,92vw);background:var(--surface);color:var(--text);box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.ea-dlg::backdrop{background:rgba(30,31,34,.55)}
+.ea-dlg-head h2{font-size:18px;line-height:1.3;margin-bottom:12px}
+#ea-min-list{border:1px solid var(--border2);border-radius:12px;overflow:hidden;margin-bottom:12px}
+.ea-m{display:flex;gap:12px;align-items:flex-start;padding:11px 14px;border-bottom:1px solid var(--border2)}
+.ea-m:last-child{border-bottom:0}.ea-m .nn{color:var(--accent);font-weight:800}.ea-m .tx{flex:1;line-height:1.4}.ea-m .dt{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+.ea-m button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:14px}.ea-m button:hover{color:var(--bad)}
+.ea-min-add{display:flex;gap:8px}.ea-min-add .ea-inp{flex:1;min-width:0}
+.ea-dlg-foot{display:flex;justify-content:flex-end;margin-top:14px}
 </style>
 </head>
 <body>
@@ -286,6 +381,7 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
           </div>
         </div>
       </div>
+      <button class="nav-btn" data-view="actividades"><span class="ic">☑</span> Mis actividades <span class="nav-count" id="nav-act-count"></span></button>
       <button class="nav-btn" data-view="dashboard"><span class="ic">🏠</span> Dashboard</button>
       <button class="nav-btn" data-view="proyectos"><span class="ic">📁</span> Proyectos</button>
       <button class="nav-btn" data-view="equipo"><span class="ic">👥</span> Equipo</button>
@@ -295,6 +391,11 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
            Proyectado/Real, accesible desde dentro de Centro de Trabajo (ver
            renderRoiMaquinas / botón "📊 ROI de todas las máquinas" en renderCentroTrabajo). -->
       <button class="nav-btn" data-view="reportes"><span class="ic">📊</span> Reportes</button>
+      <!-- Scorecard + Rocas trimestrales (25-sep-2026) — portado del estilo
+           "Score de áreas" de la app EOS de Subdirección (Adrian la mostró en
+           Chrome): KPIs semanales con tendencia + prioridades del trimestre,
+           por Sección. Solo lo ve quien tiene una Sección que darle seguimiento. -->
+      <button class="nav-btn leader-only" data-view="scorecard" style="display:none"><span class="ic">📈</span> Scorecard</button>
       <button class="nav-btn admin-only" data-view="pedidosventa" style="display:none"><span class="ic">🧾</span> Pedidos venta</button>
       <button class="nav-btn admin-only" data-view="leadtime" style="display:none"><span class="ic">⏱️</span> Lead Time</button>
       <button class="nav-btn admin-only" data-view="admin" style="display:none"><span class="ic">⚙️</span> Administración</button>
@@ -313,7 +414,14 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
         </div>
       </div>
     </div>
-    <div class="main" id="view-root"><!-- la vista activa se dibuja aquí --></div>
+    <div class="area" id="area">
+      <div class="topbar no-print">
+        <button class="icon-btn tb-burger" id="btn-collapse" title="Mostrar u ocultar el menú">☰</button>
+        <h1 id="top-title">Dashboard</h1>
+        <div class="top-right" id="top-right"></div>
+      </div>
+      <div class="main" id="view-root"><!-- la vista activa se dibuja aquí --></div>
+    </div>
   </div>
   <button class="icon-btn" id="btn-mobile-menu" title="Menú">☰</button>
   <div id="sidebar-overlay"></div>
@@ -372,6 +480,13 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
   <div class="dlg-foot">
     <button class="btn primary" id="dlg-enviar-close">Cerrar</button>
   </div>
+</dialog>
+
+<dialog id="dlg-minuta" class="ea-dlg">
+  <div class="ea-dlg-head"><h2 id="ea-min-title">Minuta</h2></div>
+  <div id="ea-min-list"></div>
+  <div class="ea-min-add"><input id="ea-min-input" class="ea-inp" placeholder="Escribe el comentario…" maxlength="600"><button class="ea-btn dark" id="ea-min-save">Guardar</button></div>
+  <div class="ea-dlg-foot"><button class="ea-btn dark" id="ea-min-close">Cerrar</button></div>
 </dialog>
 
 <div id="toast"></div>
@@ -652,11 +767,43 @@ const ADMIN_PASS = 'Lineaitalia.1';
 const DEFAULT_PASS = 'LI2025';
 
 const DEFAULT_GLOBAL_PARAMS = {salary:19661, days:21.5, hours:8.5, fx:18, cfe:3.5, months:12, ptPenalizacion:0.5};
+// Toma de tiempos (25-sep-2026) — catálogo de "tipos de pieza" (mismo criterio
+// de tu Excel "TIEMPOS ESTANDAR POR CT": Dificultad baja/media/alta/crítica,
+// con su tiempo estándar en segundos ya validado por Valeria) y catálogo real
+// de suplementos OIT/ILO (el Excel solo traía un +20% fijo — aquí sí se
+// desglosa, a pedido tuyo). Ambos editables desde Administración.
+const DEFAULT_TIPOS_PIEZA = [
+  {id:'tp_baja',    nombre:'Dificultad baja',     tiempoEstandarSeg:20.12, notas:''},
+  {id:'tp_media',   nombre:'Dificultad media',    tiempoEstandarSeg:45.97, notas:''},
+  {id:'tp_alta',    nombre:'Dificultad alta',     tiempoEstandarSeg:80.96, notas:''},
+  {id:'tp_critica', nombre:'Dificultad crítica',  tiempoEstandarSeg:92.76, notas:''},
+];
+const DEFAULT_SUPLEMENTOS = [
+  {id:'sp_necesidades', categoria:'constante', nombre:'Necesidades personales', porcentaje:5},
+  {id:'sp_fatiga',      categoria:'constante', nombre:'Fatiga básica',          porcentaje:4},
+  {id:'sp_depie',       categoria:'variable',  nombre:'Trabajar de pie',        porcentaje:2},
+  {id:'sp_postura',     categoria:'variable',  nombre:'Postura anormal',        porcentaje:2},
+  {id:'sp_peso',        categoria:'variable',  nombre:'Levantar/mover peso moderado', porcentaje:4},
+  {id:'sp_fuerza',      categoria:'variable',  nombre:'Uso de fuerza muscular',  porcentaje:2},
+  {id:'sp_luz',         categoria:'variable',  nombre:'Mala iluminación',        porcentaje:2},
+  {id:'sp_ambiente',    categoria:'variable',  nombre:'Calor/humedad del área',  porcentaje:3},
+  {id:'sp_ruido',       categoria:'variable',  nombre:'Nivel de ruido',          porcentaje:2},
+  {id:'sp_concentracion', categoria:'variable', nombre:'Concentración intensa', porcentaje:2},
+  {id:'sp_monotonia',   categoria:'variable',  nombre:'Monotonía',              porcentaje:1},
+];
 function emptyDB(){
   return {
     users:[], secciones:[], centros:[], puestos:[],
     tabulador:{grupos:[],categorias:[],niveles:[]},
     globalParams:{...DEFAULT_GLOBAL_PARAMS},
+    // Scorecard + Rocas (25-sep-2026) — viven en el nodo compartido junto con
+    // secciones/centros porque son config/seguimiento por Sección, no datos
+    // de un proyecto puntual.
+    indicadores:[], indicadorCapturas:[], rocas:[],
+    // Toma de tiempos (25-sep-2026) — catálogos globales, mismo criterio que
+    // tabulador/puestos: se seeded con los defaults reales la primera vez,
+    // Firebase manda después de eso.
+    tiposPieza:[...DEFAULT_TIPOS_PIEZA], suplementos:[...DEFAULT_SUPLEMENTOS],
     projects:[], deliverables:[], _deleted:{}, notificaciones:[],
   };
 }
@@ -685,7 +832,7 @@ function centrosParaCache(centros){
 
 // Cache local inmediata (para que un refresh no muestre "vacío" un instante)
 (function loadCache(){
-  try{ const s=localStorage.getItem(LS_SHARE); if(s){ const p=JSON.parse(s); Object.assign(DB,{users:p.users||[],secciones:p.secciones||[],centros:p.centros||[],puestos:p.puestos||[],tabulador:p.tabulador||{grupos:[],categorias:[],niveles:[]},globalParams:{...DEFAULT_GLOBAL_PARAMS,...(p.globalParams||{})}}); } }catch{}
+  try{ const s=localStorage.getItem(LS_SHARE); if(s){ const p=JSON.parse(s); Object.assign(DB,{users:p.users||[],secciones:p.secciones||[],centros:p.centros||[],puestos:p.puestos||[],tabulador:p.tabulador||{grupos:[],categorias:[],niveles:[]},globalParams:{...DEFAULT_GLOBAL_PARAMS,...(p.globalParams||{})},indicadores:p.indicadores||[],indicadorCapturas:p.indicadorCapturas||[],rocas:p.rocas||[],tiposPieza:(p.tiposPieza&&p.tiposPieza.length)?p.tiposPieza:[...DEFAULT_TIPOS_PIEZA],suplementos:(p.suplementos&&p.suplementos.length)?p.suplementos:[...DEFAULT_SUPLEMENTOS]}); } }catch{}
   try{ const a=localStorage.getItem(LS_APP); if(a){ const p=JSON.parse(a); Object.assign(DB,{projects:p.projects||[],deliverables:toDeliverablesArr(p.deliverables),_deleted:p._deleted||{},notificaciones:toNotifArr(p.notificaciones)}); } }catch{}
 })();
 
@@ -711,6 +858,8 @@ function cleanUndefined(obj){
 function toArr(v){ return v&&typeof v==='object'&&!Array.isArray(v) ? Object.values(v) : (v||[]); }
 function toTabulador(v){ return {grupos:toArr(v?.grupos),categorias:toArr(v?.categorias),niveles:toArr(v?.niveles)}; }
 function toGlobalParams(v){ return {...DEFAULT_GLOBAL_PARAMS,...(v||{})}; }
+function toTiposPieza(v){ const a=toArr(v); return a.length?a:[...DEFAULT_TIPOS_PIEZA]; }
+function toSuplementos(v){ const a=toArr(v); return a.length?a:[...DEFAULT_SUPLEMENTOS]; }
 // Firebase Realtime Database no guarda arreglos vacíos [] tal cual — al
 // leerlos de vuelta la clave simplemente no viene (undefined), no []. Una
 // notificación recién creada siempre tiene leidoPor:[] — en cuanto se guarda
@@ -724,14 +873,14 @@ function toNotifArr(v){ return toArr(v).map(n=>({...n,leidoPor:n.leidoPor||[],pa
 // también se defiende para entregables creados antes de que existiera ese
 // campo (usa dueDate como si siempre hubiera sido la fecha original).
 function toDeliverablesArr(v){
-  return toArr(v).map(d=>({...d,cambiosFecha:d.cambiosFecha||[],dueDateOriginal:d.dueDateOriginal||d.dueDate||null}));
+  return toArr(v).map(d=>({...d,cambiosFecha:d.cambiosFecha||[],dueDateOriginal:d.dueDateOriginal||d.dueDate||null,minutas:toArr(d.minutas)}));
 }
 
 let _shareBusy=false,_appBusy=false;
 let _sharePending=false,_appPending=false;
 
 function saveShare(){
-  lsSetSafe(LS_SHARE,JSON.stringify({users:DB.users,secciones:DB.secciones,centros:centrosParaCache(DB.centros),puestos:DB.puestos,tabulador:DB.tabulador,globalParams:DB.globalParams}));
+  lsSetSafe(LS_SHARE,JSON.stringify({users:DB.users,secciones:DB.secciones,centros:centrosParaCache(DB.centros),puestos:DB.puestos,tabulador:DB.tabulador,globalParams:DB.globalParams,indicadores:DB.indicadores,indicadorCapturas:DB.indicadorCapturas,rocas:DB.rocas,tiposPieza:DB.tiposPieza,suplementos:DB.suplementos}));
   _sharePending=true;
   clearTimeout(saveShare._t);
   saveShare._t=setTimeout(pushShare,700);
@@ -753,7 +902,7 @@ async function pushShare(){
   try{
     // No pisamos otros campos que ya existan en el nodo real (proyectos viejos,
     // reglas, etc. del index.html anterior) — solo actualizamos users/secciones/centros.
-    await _refShare.update(cleanUndefined({users:DB.users,secciones:DB.secciones,centros:DB.centros,puestos:DB.puestos,tabulador:DB.tabulador,globalParams:DB.globalParams,_v3SavedAt:Date.now()}));
+    await _refShare.update(cleanUndefined({users:DB.users,secciones:DB.secciones,centros:DB.centros,puestos:DB.puestos,tabulador:DB.tabulador,globalParams:DB.globalParams,indicadores:DB.indicadores,indicadorCapturas:DB.indicadorCapturas,rocas:DB.rocas,tiposPieza:DB.tiposPieza,suplementos:DB.suplementos,_v3SavedAt:Date.now()}));
     _sharePending=false;
   }catch(e){ console.error('[FB share] push error',e.message); }
   _shareBusy=false;
@@ -777,9 +926,14 @@ async function pullShare(){
     DB.puestos=toArr(remote.puestos);
     DB.tabulador=toTabulador(remote.tabulador);
     DB.globalParams=toGlobalParams(remote.globalParams);
+    DB.indicadores=toArr(remote.indicadores);
+    DB.indicadorCapturas=toArr(remote.indicadorCapturas);
+    DB.rocas=toArr(remote.rocas);
+    DB.tiposPieza=toTiposPieza(remote.tiposPieza);
+    DB.suplementos=toSuplementos(remote.suplementos);
   }
   _sharedLoaded=true;
-  lsSetSafe(LS_SHARE,JSON.stringify({users:DB.users,secciones:DB.secciones,centros:centrosParaCache(DB.centros),puestos:DB.puestos,tabulador:DB.tabulador,globalParams:DB.globalParams}));
+  lsSetSafe(LS_SHARE,JSON.stringify({users:DB.users,secciones:DB.secciones,centros:centrosParaCache(DB.centros),puestos:DB.puestos,tabulador:DB.tabulador,globalParams:DB.globalParams,indicadores:DB.indicadores,indicadorCapturas:DB.indicadorCapturas,rocas:DB.rocas,tiposPieza:DB.tiposPieza,suplementos:DB.suplementos}));
 }
 async function pullApp(){
   const snap=await _refApp.get();
@@ -806,6 +960,11 @@ _refShare.on('value',snap=>{
   DB.puestos=toArr(remote.puestos);
   DB.tabulador=toTabulador(remote.tabulador);
   DB.globalParams=toGlobalParams(remote.globalParams);
+  DB.indicadores=toArr(remote.indicadores);
+  DB.indicadorCapturas=toArr(remote.indicadorCapturas);
+  DB.rocas=toArr(remote.rocas);
+  DB.tiposPieza=toTiposPieza(remote.tiposPieza);
+  DB.suplementos=toSuplementos(remote.suplementos);
   _sharedLoaded=true;
   if(SESSION) render();
 });
@@ -874,8 +1033,9 @@ function enterApp(){
     // vez de interrumpir con el resumen de pendientes.
     abrirDesdeHash();
   } else {
-    showView('dashboard');
-    openResumenPendientesDlg();
+    showView('actividades');
+    // El resumen emergente de pendientes ya no se abre solo: la pantalla de inicio (Mis actividades) lo reemplaza.
+    // Sigue disponible en el código (openResumenPendientesDlg) por si se quiere volver a activar.
   }
 }
 document.getElementById('btn-login').addEventListener('click',doLogin);
@@ -1007,10 +1167,14 @@ function refreshNotifBadge(){
 /* ══════════════════════════════════════════════════════
    RUTEO DE VISTAS
 ══════════════════════════════════════════════════════ */
-let currentView='dashboard';
+let currentView='actividades';
 const VIEW_RENDERERS={}; // cada vista registra aquí su función de render
+const VIEW_TITLES={actividades:'Mis actividades',dashboard:'Dashboard',proyectos:'Proyectos',equipo:'Equipo',centrotrabajo:'Centros de trabajo',reportes:'Reportes',scorecard:'Scorecard',pedidosventa:'Pedidos venta',leadtime:'Lead Time',admin:'Administración',mipuesto:'Mi puesto',roimaquinas:'ROI de máquinas'};
 function showView(name){
   currentView=name;
+  const _tt=document.getElementById('top-title'); if(_tt) _tt.textContent=VIEW_TITLES[name]||name;
+  const _tr=document.getElementById('top-right'); if(_tr) _tr.innerHTML='';
+  document.getElementById('area')?.classList.toggle('eos-dark',name==='actividades');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
   refreshNotifBadge();
   const root=document.getElementById('view-root');
@@ -1972,6 +2136,122 @@ function approveDeliverable(id){
   toast('Entregable aprobado ✓');
 }
 VIEW_RENDERERS['proyectos']=renderProyectos;
+/* ══════════════════════════════════════════════════════
+   MIS ACTIVIDADES (estilo EOS) — avance con barra deslizable + minutas
+   Campos nuevos en cada entregable (aditivos, la app anterior los ignora):
+     avance:  0-100 (si no existe se deriva del estatus)
+     minutas: [{t:texto, f:ms, by:nombre}]
+══════════════════════════════════════════════════════ */
+let _eaGroup='normal', _eaProj='', _eaQ='', _eaTeam='todos';
+function eaFechaLocal(ms){ const t=new Date(ms); return fmtDate(t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')); }
+function eaMinutas(d){ return Array.isArray(d.minutas)?d.minutas:[]; }
+function eaAvance(d){ return typeof d.avance==='number'?d.avance:({'Entregado':100,'En proceso':50,'En pausa':25}[d.status]??0); }
+function eaPuede(d){ return canManageDeliverable(d)||canUpdateOwnDeliverable(d); }
+function eaCls(v){ return v>=67?'ea-c-ok':v>=34?'ea-c-warn':'ea-c-bad'; }
+function eaDias(iso){ if(!iso) return null; const h=new Date(); h.setHours(0,0,0,0); return Math.round((new Date(iso+'T00:00:00')-h)/864e5); }
+function eaTodos(){
+  const out=[];
+  visibleProjects().forEach(p=>visibleDeliverables(p.id).forEach(d=>{ if(d.status!=='Entregado') out.push(d); }));
+  return out;
+}
+function eaFiltrados(){
+  let l=eaTodos();
+  if(_eaTeam!=='todos'){
+    const sec=byId(DB.secciones,_eaTeam); const ids=new Set(sec?seccionScope(sec).people.map(u=>u.id):[]);
+    if(sec?.liderId) ids.add(sec.liderId);
+    l=l.filter(d=>ids.has(d.assigneeId));
+  }
+  if(_eaProj) l=l.filter(d=>d.projectId===_eaProj);
+  if(_eaQ){ const q=_eaQ.toLowerCase(); l=l.filter(d=>((d.name||'')+' '+(byId(DB.users,d.assigneeId)?.name||'')+' '+(byId(DB.projects,d.projectId)?.name||'')).toLowerCase().includes(q)); }
+  return l.sort((a,b)=>(a.dueDate||'9').localeCompare(b.dueDate||'9'));
+}
+function eaFila(d){
+  const u=byId(DB.users,d.assigneeId), p=byId(DB.projects,d.projectId), n=eaDias(d.dueDate), av=eaAvance(d), k=eaCls(av), nm=eaMinutas(d).length;
+  const chip=n==null?'':n<0?'bad':n<=7?'warn':'';
+  const cts=(p?.centroIds||[]).map(id=>byId(DB.centros,id)?.nombre).filter(Boolean);
+  const puede=eaPuede(d);
+  return `<tr data-ea="${esc(d.id)}">
+    <td class="ea-name">${esc(d.name)}${d.status==='En pausa'?'<small>En pausa</small>':''}</td>
+    <td style="white-space:nowrap">${esc(u?.name||'Sin asignar')}</td>
+    <td><span class="ea-chip ${chip}">${d.dueDate?fmtDate(d.dueDate):'—'}</span></td>
+    <td>${p?`<span class="ea-tag t${(p.name||'').length%3}" title="${esc(p.name)}">${esc(p.name)}</span>`:'<span class="ea-tag none">— proyecto —</span>'}</td>
+    <td>${cts.length?`<span class="ea-ct" title="${esc(cts.join(', '))}">${esc(cts[0])}${cts.length>1?' +'+(cts.length-1):''}</span>`:'<span class="ea-tag none">—</span>'}</td>
+    <td><div class="ea-av"><input type="range" min="0" max="100" step="5" value="${av}" style="--p:${av}%" class="${k}" data-ea-av="${esc(d.id)}" ${puede?'':'disabled title="Solo el responsable o su líder pueden cambiarlo"'}><span class="pc ${k}">${av}%</span></div></td>
+    <td><button class="ea-min" data-ea-min="${esc(d.id)}" title="Minuta de la actividad">🗒${nm?`<span class="n">${nm}</span>`:''}</button></td></tr>`;
+}
+function renderActividades(root){
+  const l=eaFiltrados(), todos=eaTodos();
+  const proyConAbiertas=[...new Set(todos.map(d=>d.projectId))].map(id=>byId(DB.projects,id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
+  const secs=(DB.secciones||[]).filter(s=>byId(DB.users,s.liderId));
+  const mostrarEquipos=isAdmin()&&secs.length>1;
+  let body='';
+  if(!l.length) body='<tr><td colspan="7" class="ea-empty">Sin actividades abiertas con este filtro.</td></tr>';
+  else if(_eaGroup==='normal') body=l.map(eaFila).join('');
+  else{
+    const key=_eaGroup==='persona'?d=>byId(DB.users,d.assigneeId)?.name||'Sin asignar':d=>{const p=byId(DB.projects,d.projectId);return (p?.centroIds||[]).map(id=>byId(DB.centros,id)?.nombre).filter(Boolean)[0]||'Sin centro de trabajo';};
+    const g={}; l.forEach(d=>(g[key(d)]=g[key(d)]||[]).push(d));
+    body=Object.keys(g).sort().map(k=>`<tr class="grp"><td colspan="7">${esc(k)} · ${g[k].length}</td></tr>`+g[k].map(eaFila).join('')).join('');
+  }
+  root.innerHTML=`
+    <div class="ea-head"><span class="ea-title">Mis actividades</span><span class="ea-sub">${isLeader()?'Las actividades de tu gente.':'Las actividades a tu cargo.'} Actualiza el % de avance y deja tu minuta.</span></div>
+    <div class="ea-bar"><h2>Actividades a seguir · ${l.length}</h2><div class="ctl">
+      <div class="ea-seg onmain" id="ea-seg-g"><button data-g="normal" class="${_eaGroup==='normal'?'on':''}">Normal</button><button data-g="persona" class="${_eaGroup==='persona'?'on':''}">Por persona</button><button data-g="ct" class="${_eaGroup==='ct'?'on':''}">Por centro de trabajo</button></div>
+      <select class="ea-sel" id="ea-proj"><option value="">Proyecto: todos</option>${proyConAbiertas.map(p=>`<option value="${esc(p.id)}" ${_eaProj===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+      <input class="ea-inp" id="ea-q" placeholder="🔍 Filtrar…" value="${esc(_eaQ)}"></div></div>
+    <div class="ea-card"><table><thead><tr><th>ACTIVIDAD</th><th>RESPONSABLE</th><th>ENTREGA</th><th>PROYECTO</th><th>CENTRO DE TRABAJO</th><th>% AVANCE</th><th>MINUTA</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  if(mostrarEquipos){
+    const tr=document.getElementById('top-right');
+    if(tr) tr.innerHTML=`<div class="ea-seg" id="ea-seg-t"><button data-t="todos" class="${_eaTeam==='todos'?'on':''}">Todo el depto.</button>${secs.map(s=>`<button data-t="${esc(s.id)}" class="${_eaTeam===s.id?'on':''}">${esc((byId(DB.users,s.liderId).name||'').split(' ')[0])}</button>`).join('')}</div>`;
+    document.querySelectorAll('#ea-seg-t button').forEach(b=>b.onclick=()=>{ _eaTeam=b.dataset.t; renderActividades(root); });
+  }
+  root.querySelectorAll('#ea-seg-g button').forEach(b=>b.onclick=()=>{ _eaGroup=b.dataset.g; renderActividades(root); });
+  root.querySelector('#ea-proj').onchange=e=>{ _eaProj=e.target.value; renderActividades(root); };
+  const q=root.querySelector('#ea-q'); q.oninput=e=>{ _eaQ=e.target.value; const pos=e.target.selectionStart; renderActividades(root); const n=root.querySelector('#ea-q'); n.focus(); n.setSelectionRange(pos,pos); };
+  root.querySelectorAll('input[data-ea-av]').forEach(r=>{
+    r.oninput=()=>{ const v=+r.value,k=eaCls(v); r.style.setProperty('--p',v+'%'); r.className=k; const pc=r.nextElementSibling; pc.textContent=v+'%'; pc.className='pc '+k; };
+    r.onchange=()=>eaGuardarAvance(r.dataset.eaAv,+r.value);
+  });
+  root.querySelectorAll('[data-ea-min]').forEach(b=>b.onclick=()=>eaAbrirMinuta(b.dataset.eaMin));
+  const nc=document.getElementById('nav-act-count');
+  if(nc){ const v=todos.filter(d=>(eaDias(d.dueDate)??1)<0).length; nc.textContent=v; nc.classList.toggle('on',v>0); }
+}
+VIEW_RENDERERS['actividades']=renderActividades;
+function eaGuardarAvance(id,v){
+  const d=byId(DB.deliverables,id); if(!d||!eaPuede(d)) return;
+  d.avance=v; d.updatedAt=Date.now();
+  if(v>0&&d.status==='Pendiente') d.status='En proceso';   // si ya hay avance, deja de estar "Pendiente"
+  saveApp();                                                // sin render(): la barra ya se movió en pantalla
+  toast('Avance guardado ✓');
+}
+let _eaMinId=null;
+function eaAbrirMinuta(id){
+  const d=byId(DB.deliverables,id); if(!d) return;
+  _eaMinId=id;
+  document.getElementById('ea-min-title').textContent='Minuta · '+d.name;
+  eaPintarMinuta();
+  const dlg=document.getElementById('dlg-minuta'); dlg.showModal();
+  setTimeout(()=>document.getElementById('ea-min-input').focus(),50);
+}
+function eaPintarMinuta(){
+  const d=byId(DB.deliverables,_eaMinId); if(!d) return;
+  const m=eaMinutas(d), puede=eaPuede(d)||isLeader();
+  document.getElementById('ea-min-list').innerHTML=m.length?m.map((x,i)=>`<div class="ea-m"><span class="nn">${i+1}</span><span class="tx">${esc(x.t)}<span class="dt">${x.f?eaFechaLocal(x.f):''}${x.by?' · '+esc(x.by):''}</span></span>${(isLeader()||x.by===SESSION?.name)?`<button data-ea-del="${i}" title="Borrar">🗑</button>`:''}</div>`).join(''):'<div class="ea-m" style="color:var(--muted)">Aún no hay minutas. Escribe la primera.</div>';
+  document.querySelectorAll('[data-ea-del]').forEach(b=>b.onclick=()=>{ d.minutas=eaMinutas(d).filter((_,i)=>i!==+b.dataset.eaDel); d.updatedAt=Date.now(); saveApp(); eaPintarMinuta(); });
+  document.getElementById('ea-min-input').disabled=!puede; document.getElementById('ea-min-save').disabled=!puede;
+}
+(function(){
+  const add=()=>{ const d=byId(DB.deliverables,_eaMinId); const inp=document.getElementById('ea-min-input'); const t=inp.value.trim(); if(!d||!t) return;
+    d.minutas=[...eaMinutas(d),{t,f:Date.now(),by:SESSION?.name||''}]; d.updatedAt=Date.now(); saveApp(); inp.value=''; eaPintarMinuta(); inp.focus(); };
+  document.getElementById('ea-min-save').addEventListener('click',add);
+  document.getElementById('ea-min-input').addEventListener('keydown',e=>{ if(e.key==='Enter') add(); });
+  const dlg=document.getElementById('dlg-minuta');
+  const cerrar=()=>{ dlg.close(); if(currentView==='actividades') render(); };
+  document.getElementById('ea-min-close').addEventListener('click',cerrar);
+  dlg.addEventListener('click',e=>{ if(e.target===dlg) cerrar(); });
+  dlg.addEventListener('cancel',e=>{ e.preventDefault(); cerrar(); });
+  document.getElementById('btn-collapse').addEventListener('click',()=>document.querySelector('.shell').classList.toggle('menu-off'));
+})();
+
 
 /* ══════════════════════════════════════════════════════
    VISTAS TODAVÍA NO CONSTRUIDAS EN ESTE PASE — quedan
@@ -2116,6 +2396,390 @@ function renderReporteCarga(people){
   el.innerHTML=cargaListHTML(people||(isLeader()?getMyReports():[myUser()].filter(Boolean)));
 }
 VIEW_RENDERERS['reportes']=renderReportes;
+
+/* ══════════════════════════════════════════════════════
+   SCORECARD + ROCAS TRIMESTRALES (25-sep-2026)
+   Adrian mostró en Chrome la app EOS de Subdirección (subdireccion.
+   lineaitalia.net) y pidió traer 2 piezas de su "Score de áreas": el
+   scorecard semanal de KPIs con tendencia, y las Rocas del trimestre —
+   ambas por Sección, reusando isLeader()/misSeccionesLider()/mySeccion()
+   que ya existen (no se rediseña el modelo de permisos, se reutiliza).
+   Vive junto con secciones/centros en el nodo compartido (li_procesos) —
+   es config/seguimiento por Sección, no datos de un proyecto puntual.
+   ══════════════════════════════════════════════════════ */
+
+// ---- Semana (lunes a domingo) ----
+function lunesDe(d){
+  const x=new Date(d); const dow=(x.getDay()+6)%7; // lunes=0
+  x.setDate(x.getDate()-dow); x.setHours(0,0,0,0);
+  return x;
+}
+function isoDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function semanaActualKey(){ return isoDate(lunesDe(new Date())); }
+// offset=0 la semana actual, -1 la anterior, -2...
+function semanaKeyDe(offset){ const l=lunesDe(new Date()); l.setDate(l.getDate()+offset*7); return isoDate(l); }
+function semanaLabel(lunesKey){
+  const ini=new Date(lunesKey+'T00:00:00');
+  const fin=new Date(ini); fin.setDate(fin.getDate()+6);
+  const f=d=>d.toLocaleDateString('es-MX',{day:'2-digit',month:'short'}).replace('.','');
+  return `${f(ini)}–${f(fin)}`;
+}
+// ---- Permisos: admin gestiona cualquier Sección; un líder solo la(s) suya(s) ----
+function puedeGestionarSeccion(seccionId){
+  if(isAdmin()) return true;
+  return misSeccionesLider().some(s=>s.id===seccionId);
+}
+function seccionesVisiblesScorecard(){
+  if(isAdmin()) return (DB.secciones||[]).slice().sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  return misSeccionesLider();
+}
+
+// ---- Indicadores (Scorecard) ----
+function indicadoresDeSeccion(seccionId){
+  return (DB.indicadores||[]).filter(i=>i.seccionId===seccionId).sort((a,b)=>(a.orden||0)-(b.orden||0));
+}
+function capturasDeIndicador(indicadorId){
+  return (DB.indicadorCapturas||[]).filter(c=>c.indicadorId===indicadorId).sort((a,b)=>a.semana.localeCompare(b.semana));
+}
+function capturaDe(indicadorId,semanaKey){
+  return (DB.indicadorCapturas||[]).find(c=>c.indicadorId===indicadorId&&c.semana===semanaKey)||null;
+}
+// 'bueno'/'cerca'/'malo' según qué tan lejos está del objetivo (mínimo o
+// máximo) — 'cerca' es la franja ámbar de "dentro del 20%" (mismo look de
+// 3 colores que la app EOS, no solo bueno/malo binario); 'sin-dato' si no
+// hay captura.
+function estadoIndicador(ind,valor){
+  if(valor===null||valor===undefined||valor==='') return 'sin-dato';
+  const v=Number(valor), obj=Number(ind.objetivo);
+  if(isNaN(v)||isNaN(obj)) return 'sin-dato';
+  if(obj===0) return v===0?'bueno':'cerca';
+  const ratio=ind.comparacion==='max' ? obj/Math.max(v,0.0001) : v/obj; // >=1 cumple
+  if(ratio>=1) return 'bueno';
+  if(ratio>=0.8) return 'cerca';
+  return 'malo';
+}
+const ESTADO_COLOR={bueno:'var(--ok)',cerca:'var(--warn)',malo:'var(--bad)','sin-dato':'var(--muted)'};
+const ESTADO_ICONO={bueno:'✅',cerca:'⚠️',malo:'🔴','sin-dato':'➖'};
+const ESTADO_NOMBRE={bueno:'bueno',cerca:'cerca',malo:'malo','sin-dato':'sin dato'};
+function crearIndicador(seccionId,nombre,objetivo,comparacion){
+  if(!puedeGestionarSeccion(seccionId)||!nombre.trim()) return;
+  DB.indicadores=DB.indicadores||[];
+  DB.indicadores.push({id:uid('ind'),seccionId,nombre:nombre.trim(),objetivo:Number(objetivo)||0,comparacion:comparacion==='max'?'max':'min',orden:DB.indicadores.length,creadoPor:SESSION?.userId||null,createdAt:Date.now()});
+  saveDB();
+}
+function eliminarIndicador(id){
+  DB.indicadores=(DB.indicadores||[]).filter(i=>i.id!==id);
+  DB.indicadorCapturas=(DB.indicadorCapturas||[]).filter(c=>c.indicadorId!==id);
+  saveDB();
+}
+function capturarIndicador(indicadorId,semanaKey,valorTexto){
+  DB.indicadorCapturas=DB.indicadorCapturas||[];
+  const existente=DB.indicadorCapturas.find(c=>c.indicadorId===indicadorId&&c.semana===semanaKey);
+  if(valorTexto===''||valorTexto===null||valorTexto===undefined){
+    if(existente) DB.indicadorCapturas=DB.indicadorCapturas.filter(c=>c!==existente);
+  } else if(existente){
+    existente.valor=Number(valorTexto); existente.capturadoPor=SESSION?.userId||null; existente.capturadoAt=Date.now();
+  } else {
+    DB.indicadorCapturas.push({id:uid('cap'),indicadorId,semana:semanaKey,valor:Number(valorTexto),capturadoPor:SESSION?.userId||null,capturadoAt:Date.now()});
+  }
+  saveDB();
+}
+// Mini-gráfica de tendencia (últimas capturas, sin depender de las semanas
+// visibles en la tabla) — SVG inline, sin Chart.js, para que sea barata de
+// pintar en una tabla con muchos indicadores.
+function sparklineSVG(valores,color){
+  const vals=(valores||[]).filter(v=>v!==null&&v!==undefined&&!isNaN(v));
+  if(vals.length<2) return '<span class="small muted">—</span>';
+  const min=Math.min(...vals), max=Math.max(...vals), rango=(max-min)||1;
+  const w=70,h=24,pad=3;
+  const pts=vals.map((v,i)=>[pad+(i/(vals.length-1))*(w-pad*2), h-pad-((v-min)/rango)*(h-pad*2)]);
+  const linea=pts.map(p=>p.join(',')).join(' ');
+  const [lx,ly]=pts[pts.length-1];
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="color:${color||'var(--accent)'};display:block">
+    <polyline points="${linea}" fill="none" stroke="currentColor" stroke-width="1.6"/>
+    <circle cx="${lx}" cy="${ly}" r="2.2" fill="currentColor"/>
+  </svg>`;
+}
+// Medidor semicircular idéntico al de la app EOS (mismo arco SVG de 180°,
+// mismo criterio de color por umbral) — valor sobre una escala 0-max
+// (max=10 por default, como allá). Reobtenido con getComputedStyle directo
+// de subdireccion.lineaitalia.net, no a ojo por captura de pantalla.
+function gaugeSVG(valor,label,max=10){
+  const sinDato=valor===null||valor===undefined||isNaN(Number(valor));
+  const v=sinDato?0:Math.max(0,Math.min(max,Number(valor)));
+  const frac=(!sinDato&&max>0)?v/max:0;
+  const cx=73,cy=74,r=59;
+  const ang=Math.PI*(1-frac); // 180°→0°, de izquierda a derecha
+  const x=cx+r*Math.cos(ang), y=cy-r*Math.sin(ang);
+  const color=sinDato?'rgba(255,255,255,.4)':frac>=0.8?'var(--ok)':frac>=0.4?'var(--warn)':'var(--bad)';
+  return `<div class="gauge-wrap">
+    <div class="gauge-label">${esc(label)}</div>
+    <svg viewBox="0 0 146 80" width="100%" style="max-width:130px">
+      <path d="M 14 74 A 59 59 0 0 1 132 74" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="13" stroke-linecap="round"/>
+      ${sinDato?'':`<path d="M 14 74 A 59 59 0 0 1 ${x.toFixed(2)} ${y.toFixed(2)}" fill="none" stroke="${color}" stroke-width="13" stroke-linecap="round"/>`}
+      <text x="73" y="72" text-anchor="middle" class="gauge-num" fill="${color}">${sinDato?'—':v.toFixed(1)}</text>
+    </svg>
+  </div>`;
+}
+
+// ---- Rocas del trimestre ----
+// OJO: cuando se construyó esto ya existían 3 rocas reales en Firebase
+// (li_procesos.rocas) con OTRO esquema — title/department/ownerIds/quarter/
+// year/status/avance, id con prefijo "rk_" — sembradas desde otra sesión
+// (coincide texto por texto con "Mejora Continua" de la app EOS de
+// Subdirección que Adrian mostró: "Implementacion de las maquinas KDT al
+// 100%"). Nunca hubo código en este archivo leyéndolas (se verificó antes
+// de escribir esto). En vez de inventar un esquema aparte que las ignore
+// para siempre, ESTE es el mismo esquema — solo se le agrega `seccionId`
+// (nuevo, para ligarlas a una Sección desde aquí) y `orden`. Las 3 que ya
+// existían no tienen seccionId todavía — aparecen en rocasSinSeccion() para
+// que un admin las asigne con un clic en vez de perderlas de vista.
+const ROCA_STATUS={en_progreso:{label:'En progreso',pill:'accent'},completada:{label:'Completada',pill:'ok'},atrasada:{label:'Atrasada',pill:'bad'}};
+const ROCA_STATUS_ORDEN=['en_progreso','completada','atrasada'];
+function siguienteEstadoRoca(status){
+  const i=ROCA_STATUS_ORDEN.indexOf(status);
+  return ROCA_STATUS_ORDEN[(i+1)%ROCA_STATUS_ORDEN.length]||'en_progreso';
+}
+function rocaTrimestreActual(){ const d=new Date(); return {quarter:Math.floor(d.getMonth()/3)+1,year:d.getFullYear()}; }
+function rocasDeSeccion(seccionId){
+  const {quarter,year}=rocaTrimestreActual();
+  return (DB.rocas||[]).filter(r=>r.seccionId===seccionId&&r.quarter===quarter&&r.year===year).sort((a,b)=>(a.orden||0)-(b.orden||0));
+}
+// Rocas del trimestre actual que aún no se ligaron a ninguna Sección (las 3
+// sembradas antes de que existiera esta vista, o cualquiera creada a mano
+// directo en Firebase) — solo admin las ve, para asignarlas.
+function rocasSinSeccion(){
+  const {quarter,year}=rocaTrimestreActual();
+  return (DB.rocas||[]).filter(r=>!r.seccionId&&r.quarter===quarter&&r.year===year);
+}
+function crearRoca(sec,texto){
+  if(!puedeGestionarSeccion(sec.id)||!texto.trim()) return;
+  DB.rocas=DB.rocas||[];
+  const {quarter,year}=rocaTrimestreActual();
+  const orden=DB.rocas.filter(r=>r.seccionId===sec.id&&r.quarter===quarter&&r.year===year).length;
+  DB.rocas.push({id:uid('rk'),seccionId:sec.id,department:sec.nombre,title:texto.trim(),ownerIds:sec.liderId?[sec.liderId]:[],quarter,year,status:'en_progreso',avance:0,orden,creadoPor:SESSION?.userId||null,createdAt:Date.now()});
+  saveDB();
+}
+function actualizarRoca(id,cambios){
+  const r=byId(DB.rocas,id); if(!r) return;
+  Object.assign(r,cambios,{updatedAt:Date.now()});
+  saveDB();
+}
+function asignarSeccionARoca(id,seccionId){
+  const r=byId(DB.rocas,id); if(!r) return;
+  const sec=byId(DB.secciones,seccionId);
+  Object.assign(r,{seccionId,department:sec?sec.nombre:r.department,updatedAt:Date.now()});
+  saveDB();
+}
+function eliminarRoca(id){
+  DB.rocas=(DB.rocas||[]).filter(r=>r.id!==id);
+  saveDB();
+}
+
+let _scorecardSeccionId=null;
+function renderScorecard(root){
+  if(!dataReady()){ root.innerHTML=loadingHTML('Cargando scorecard…'); return; }
+  const secciones=seccionesVisiblesScorecard();
+  if(!secciones.length){
+    root.innerHTML=`<div class="view-head"><div><h1>Scorecard</h1><div class="view-sub">KPIs semanales y Rocas del trimestre, por Sección.</div></div></div>`
+      +emptyStateHTML('Sin Sección asignada','Pide a un admin que te asigne como líder de una Sección en Administración → Secciones.');
+    return;
+  }
+  if(!_scorecardSeccionId||!secciones.some(s=>s.id===_scorecardSeccionId)) _scorecardSeccionId=secciones[0].id;
+  const idx=Math.max(0,secciones.findIndex(s=>s.id===_scorecardSeccionId));
+  const sec=secciones[idx];
+  const lider=byId(DB.users,sec.liderId);
+  const puedeGestionar=puedeGestionarSeccion(sec.id);
+
+  const NSEM=6; // 5 semanas anteriores + la actual
+  const semKeyActual=semanaActualKey();
+  const semanas=Array.from({length:NSEM},(_,i)=>semanaKeyDe(i-(NSEM-1)));
+
+  const inds=indicadoresDeSeccion(sec.id);
+  // Estado de cada indicador con el último valor capturado (para el gauge KPIS
+  // y para colorear cada celda de la tabla, no solo la columna final — mismo
+  // look de 3 colores que EOS, ver estadoIndicador()).
+  const estadosConDato=[];
+  const filasHTML=inds.map(ind=>{
+    const serie=capturasDeIndicador(ind.id).map(c=>c.valor);
+    const ultimo=serie.length?serie[serie.length-1]:null;
+    const estadoFinal=estadoIndicador(ind,ultimo);
+    if(estadoFinal!=='sin-dato') estadosConDato.push(estadoFinal);
+    const estadoHTML=`<span class="pill ${estadoFinal==='bueno'?'ok':estadoFinal==='cerca'?'warn':estadoFinal==='malo'?'bad':'muted'}">${ESTADO_ICONO[estadoFinal]} ${ESTADO_NOMBRE[estadoFinal]}</span>`;
+    const celdas=semanas.map(sk=>{
+      const cap=capturaDe(ind.id,sk);
+      const v=cap?cap.valor:null;
+      if(sk===semKeyActual&&puedeGestionar){
+        return `<td><input type="number" step="any" class="input" style="width:64px;padding:4px 6px;font-size:12.5px" data-cap-indicador="${ind.id}" data-cap-semana="${sk}" value="${v!==null?v:''}" placeholder="—"></td>`;
+      }
+      const est=estadoIndicador(ind,v);
+      return `<td class="small" style="text-align:center;font-weight:700;color:${ESTADO_COLOR[est]}">${v!==null?fmtNum(v):'<span class="muted" style="font-weight:400">—</span>'}</td>`;
+    }).join('');
+    return `<tr>
+      <td style="min-width:170px">${esc(ind.nombre)}</td>
+      <td class="small muted" style="white-space:nowrap">${ind.comparacion==='max'?'Máx ':'Mín '}${fmtNum(ind.objetivo)}</td>
+      ${celdas}
+      <td>${sparklineSVG(serie.slice(-8),ESTADO_COLOR[estadoFinal])}</td>
+      <td>${estadoHTML}</td>
+      ${puedeGestionar?`<td><button class="btn xs danger" data-del-indicador="${ind.id}" title="Eliminar indicador">🗑</button></td>`:''}
+    </tr>`;
+  }).join('');
+  const gaugeKPIs=estadosConDato.length?(estadosConDato.filter(e=>e==='bueno').length/estadosConDato.length)*10:null;
+
+  const kpiTableHTML=`<div class="card" style="padding:0;overflow-x:auto">
+    <div class="esp-ch">📊 KPIs — captura semanal</div>
+    <table class="tbl">
+      <thead><tr>
+        <th>Indicador</th><th>Objetivo</th>
+        ${semanas.map(sk=>`<th class="small" style="text-align:center${sk===semKeyActual?';color:var(--accent)':''}">${semanaLabel(sk)}${sk===semKeyActual?' <span class="small muted">(hoy)</span>':''}</th>`).join('')}
+        <th>Tendencia</th><th>Estado</th>${puedeGestionar?'<th></th>':''}
+      </tr></thead>
+      <tbody>${filasHTML||`<tr><td colspan="${4+NSEM}" class="small muted" style="padding:14px">Sin indicadores todavía${puedeGestionar?' — agrega el primero abajo.':'.'}</td></tr>`}</tbody>
+    </table>
+    ${puedeGestionar?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 14px;border-top:1px solid var(--border2)">
+      <input class="input" id="sc-nuevo-nombre" placeholder="Nombre del indicador" style="flex:1;min-width:160px">
+      <input class="input" id="sc-nuevo-objetivo" type="number" step="any" placeholder="Objetivo" style="width:100px">
+      <select class="select-input" id="sc-nuevo-comparacion" style="width:130px">
+        <option value="min">Mínimo</option>
+        <option value="max">Máximo</option>
+      </select>
+      <button class="btn primary sm" id="sc-btn-agregar-indicador">+ Agregar indicador</button>
+    </div>`:''}
+  </div>`;
+
+  const {quarter:trimQ,year:trimY}=rocaTrimestreActual();
+  const rocas=rocasDeSeccion(sec.id);
+  const promedioRocas=rocas.length?Math.round(rocas.reduce((a,r)=>a+(Number(r.avance)||0),0)/rocas.length):null;
+  const nombresDe=ids=>(ids||[]).map(id=>byId(DB.users,id)?.name).filter(Boolean).join(', ');
+  const rocaRowHTML=(r,i)=>{
+    const st=ROCA_STATUS[r.status]||ROCA_STATUS.en_progreso;
+    const owners=nombresDe(r.ownerIds);
+    return `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border2)">
+      <div style="font-weight:800;color:var(--muted);width:18px;flex-shrink:0">${i+1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13.5px;font-weight:600">${esc(r.title||'')}</div>
+        ${owners?`<div class="small muted" style="margin-top:2px">👤 ${esc(owners)}</div>`:''}
+        <div class="bar-track" style="margin-top:7px"><div class="bar-fill" style="width:${Math.max(0,Math.min(100,r.avance||0))}%;background:${st.pill==='bad'?'var(--bad)':st.pill==='ok'?'var(--ok)':'var(--accent)'}"></div></div>
+      </div>
+      ${puedeGestionar?`<input type="number" min="0" max="100" value="${r.avance||0}" class="input" style="width:60px;text-align:center" data-roca-pct="${r.id}">`
+        :`<div style="width:50px;text-align:right;font-weight:600">${r.avance||0}%</div>`}
+      ${puedeGestionar?`<button class="btn xs" data-roca-estado="${r.id}" style="white-space:nowrap">${st.label}</button>`
+        :`<span class="pill ${st.pill}">${st.label}</span>`}
+      ${puedeGestionar?`<button class="btn xs danger" data-del-roca="${r.id}" title="Eliminar">🗑</button>`:''}
+    </div>`;
+  };
+  const rocasFilasHTML=rocas.length?rocas.map(rocaRowHTML).join(''):`<div style="padding:16px">${emptyStateHTML('Sin rocas capturadas este trimestre',puedeGestionar?'Agrega las 3-5 prioridades del trimestre para esta Sección.':'Esta Sección no tiene prioridades capturadas todavía.')}</div>`;
+
+  // Rocas sembradas antes de que existiera esta vista (o creadas directo en
+  // Firebase) sin Sección todavía — solo el admin las ve, para asignarlas.
+  const huerfanas=isAdmin()?rocasSinSeccion():[];
+  const huerfanasHTML=huerfanas.length?`<div class="card" style="margin-top:10px;background:var(--surface2)">
+    <div class="small" style="font-weight:600;margin-bottom:8px">⚠️ ${huerfanas.length} roca${huerfanas.length!==1?'s':''} de este trimestre sin Sección asignada</div>
+    ${huerfanas.map(r=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12.5px">
+      <div style="flex:1;min-width:0">${esc(r.title||'')} <span class="small muted">(${esc(r.department||'sin depto.')})</span></div>
+      <select class="select-input" style="width:170px" data-roca-asignar="${r.id}">
+        <option value="">Asignar a Sección…</option>
+        ${(DB.secciones||[]).map(s=>`<option value="${s.id}">${esc(s.nombre)}</option>`).join('')}
+      </select>
+    </div>`).join('')}
+  </div>`:'';
+
+  const gaugeRocas=rocas.length?promedioRocas/10:null;
+
+  const rocasHTML=`<div class="card" style="padding:0;margin-top:20px">
+    <div class="esp-ch ok">🎯 Rocas del trimestre — T${trimQ} ${trimY}</div>
+    ${rocasFilasHTML}
+    ${puedeGestionar?`<div style="display:flex;gap:8px;padding:12px 16px">
+      <input class="input" id="sc-nueva-roca" placeholder="Nueva prioridad del trimestre…" style="flex:1">
+      <button class="btn primary sm" id="sc-btn-agregar-roca">+ Agregar roca</button>
+    </div>`:''}
+  </div>
+  ${huerfanasHTML}`;
+
+  const selectorHTML=secciones.length>1?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <button class="btn sm" id="sc-anterior" ${idx===0?'disabled':''}>◀ Anterior</button>
+    <select class="select-input" id="sc-selector-seccion" style="min-width:220px">
+      ${secciones.map((s,i)=>`<option value="${s.id}"${i===idx?' selected':''}>${esc(s.nombre)}</option>`).join('')}
+    </select>
+    <span class="small muted">Sección ${idx+1} de ${secciones.length}</span>
+    <button class="btn sm" id="sc-siguiente" ${idx===secciones.length-1?'disabled':''} style="margin-left:auto">Siguiente ▶</button>
+  </div>`:'';
+
+  // Gauge "Tareas" — % de entregables abiertos de la Sección que NO están
+  // atrasados, escalado a 0-10 (mismo criterio de "a tiempo" que ya usa el
+  // resto de la app). Gauge "Global" — promedio de los 3 disponibles.
+  const delsAbiertos=seccionScope(sec).deliverables.filter(d=>d.status!=='Entregado');
+  const today=todayISO();
+  const gaugeTareas=delsAbiertos.length?(delsAbiertos.filter(d=>!(d.dueDate&&d.dueDate<today)).length/delsAbiertos.length)*10:null;
+  const disponibles=[gaugeTareas,gaugeKPIs,gaugeRocas].filter(v=>v!==null);
+  const gaugeGlobal=disponibles.length?disponibles.reduce((a,b)=>a+b,0)/disponibles.length:null;
+
+  const headerCardHTML=`<div class="sc-header-card">
+    <div>
+      <div style="font-weight:800;font-size:19px">🧭 ${esc(sec.nombre)}</div>
+      <div class="small" style="margin-top:3px;color:rgba(255,255,255,.75)">${lider?'Responsable: '+esc(lider.name):'Sin líder asignado'}</div>
+    </div>
+    <div class="sc-header-gauges">
+      ${gaugeSVG(gaugeTareas,'Tareas')}
+      ${gaugeSVG(gaugeKPIs,'KPIs')}
+      ${gaugeSVG(gaugeRocas,'Rocas')}
+      ${gaugeSVG(gaugeGlobal,'Calificación global')}
+    </div>
+  </div>`;
+
+  root.innerHTML=`<div class="view-head"><div><h1>Scorecard</h1>
+    <div class="view-sub">KPIs semanales con tendencia y Rocas del trimestre, por Sección.</div></div></div>
+    ${selectorHTML}
+    ${headerCardHTML}
+    ${kpiTableHTML}
+    ${rocasHTML}`;
+
+  if(secciones.length>1){
+    document.getElementById('sc-anterior')?.addEventListener('click',()=>{ if(idx>0){ _scorecardSeccionId=secciones[idx-1].id; render(); } });
+    document.getElementById('sc-siguiente')?.addEventListener('click',()=>{ if(idx<secciones.length-1){ _scorecardSeccionId=secciones[idx+1].id; render(); } });
+    document.getElementById('sc-selector-seccion')?.addEventListener('change',e=>{ _scorecardSeccionId=e.target.value; render(); });
+  }
+  root.querySelectorAll('[data-cap-indicador]').forEach(inp=>{
+    inp.addEventListener('change',()=>{ capturarIndicador(inp.dataset.capIndicador,inp.dataset.capSemana,inp.value); });
+  });
+  root.querySelectorAll('[data-del-indicador]').forEach(btn=>{
+    btn.addEventListener('click',async()=>{ if(await appConfirm('¿Eliminar este indicador y todo su historial capturado?')) eliminarIndicador(btn.dataset.delIndicador); });
+  });
+  document.getElementById('sc-btn-agregar-indicador')?.addEventListener('click',()=>{
+    const nombre=document.getElementById('sc-nuevo-nombre').value;
+    const objetivo=document.getElementById('sc-nuevo-objetivo').value;
+    const comparacion=document.getElementById('sc-nuevo-comparacion').value;
+    if(!nombre.trim()){ toast('Ponle nombre al indicador','err'); return; }
+    crearIndicador(sec.id,nombre,objetivo,comparacion);
+  });
+  root.querySelectorAll('[data-roca-pct]').forEach(inp=>{
+    inp.addEventListener('change',()=>{
+      let v=Math.round(Number(inp.value)||0); v=Math.max(0,Math.min(100,v));
+      actualizarRoca(inp.dataset.rocaPct,{avance:v});
+    });
+  });
+  root.querySelectorAll('[data-roca-estado]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const r=byId(DB.rocas,btn.dataset.rocaEstado); if(!r) return;
+      actualizarRoca(r.id,{status:siguienteEstadoRoca(r.status||'en_progreso')});
+    });
+  });
+  root.querySelectorAll('[data-del-roca]').forEach(btn=>{
+    btn.addEventListener('click',async()=>{ if(await appConfirm('¿Eliminar esta roca?')) eliminarRoca(btn.dataset.delRoca); });
+  });
+  root.querySelectorAll('[data-roca-asignar]').forEach(sel=>{
+    sel.addEventListener('change',()=>{
+      if(!sel.value) return;
+      asignarSeccionARoca(sel.dataset.rocaAsignar,sel.value);
+    });
+  });
+  document.getElementById('sc-btn-agregar-roca')?.addEventListener('click',()=>{
+    const el=document.getElementById('sc-nueva-roca');
+    if(!el.value.trim()){ toast('Escribe la prioridad primero','err'); return; }
+    crearRoca(sec,el.value);
+  });
+}
+VIEW_RENDERERS['scorecard']=renderScorecard;
 
 /* ══════════════════════════════════════════════════════
    RESUMEN AL ENTRAR — ventana que aparece justo después de iniciar sesión
@@ -3224,6 +3888,32 @@ VIEW_RENDERERS['mipuesto']=renderMiPuesto;
    compartido de siempre — ver campos agregados en applyCTMigration).
 ══════════════════════════════════════════════════════ */
 function curCT(){ return byId(DB.centros,_currentCentroId); }
+
+/* ══════════════════════════════════════════════════════
+   TOMA DE TIEMPOS (25-sep-2026) — a partir de "TIEMPOS ESTANDAR POR CT.xlsx"
+   que Adrian compartió: mismo concepto de "tipo de pieza" con tiempo
+   estándar en segundos (dificultad baja/media/alta/crítica), y — a
+   diferencia del Excel, que solo tenía un +20% fijo — un desglose real de
+   valoración del ritmo + suplementos OIT/ILO. Vive dentro de la operación
+   de un Centro de Trabajo (Distribución), no como app aparte: sigue
+   guardando el resultado final en `min` (minutos/pieza), el mismo campo que
+   ya lee ctCalcularResultados() — el balanceo no necesita saber CÓMO se
+   obtuvo ese tiempo. */
+function calcularTiempoEstandar(tiempoObservadoSeg,valoracion,suplementosIds){
+  const v=Number(valoracion)||100;
+  const tiempoNormalSeg=(Number(tiempoObservadoSeg)||0)*(v/100);
+  const pctSuplementos=(suplementosIds||[]).reduce((a,id)=>{
+    const s=byId(DB.suplementos,id); return a+(s?Number(s.porcentaje)||0:0);
+  },0);
+  const tiempoEstandarSeg=tiempoNormalSeg*(1+pctSuplementos/100);
+  return {tiempoNormalSeg,pctSuplementos,tiempoEstandarSeg,minutos:tiempoEstandarSeg/60};
+}
+function crearTipoPieza(nombre,tiempoEstandarSeg,notas=''){
+  if(!nombre.trim()) return null;
+  const t={id:uid('tp'),nombre:nombre.trim(),tiempoEstandarSeg:Number(tiempoEstandarSeg)||0,notas};
+  DB.tiposPieza=DB.tiposPieza||[]; DB.tiposPieza.push(t);
+  return t;
+}
 function ctEnsureShape(c){
   c.ingenieroIds=c.ingenieroIds||[]; c.operaciones=c.operaciones||[]; c.personal=c.personal||[];
   c.cif=c.cif||[]; c.equipos=c.equipos||[]; c.flujos=c.flujos||[];
@@ -3660,6 +4350,29 @@ function calcROI(m, c) {
   var roi = netInv > 0 ? (ng / netInv) * 100 : 0;
   var pay = fl > 0 ? netInv / fl : Infinity;
   return { ab:ab, opx:opx, fl:fl, ng:ng, roi:roi, pay:pay, netInv:netInv };
+}
+
+// Depreciación en línea recta (pedido del usuario 05-oct-2026) — usa datos que
+// YA existen en cada máquina, nada nuevo que capturar:
+//   depreciación anual = (Inversión bruta − Valor de rescate) / Vida útil (años)
+//   años transcurridos  = desde "Fecha real de inicio de operación" (Identificación)
+//     hasta hoy — sin esa fecha no se sabe cuánto lleva operando, así que no se
+//     calcula un acumulado (queda null, no se inventa un supuesto).
+//   depreciación acumulada se topa en (Inversión bruta − Valor de rescate):
+//     nunca deprecia por debajo del valor de rescate ni más allá de su vida útil.
+function calcDepreciacion(m){
+  const base=Math.max(0,(m.inv||0)-(m.res||0));
+  const anual=(m.yr||0)>0?base/m.yr:0;
+  let anios=null, acumulada=0;
+  if(m.fechaInicioOperacion){
+    const inicio=new Date(m.fechaInicioOperacion+'T00:00:00');
+    if(!isNaN(inicio.getTime())){
+      anios=Math.max(0,(new Date()-inicio)/(365.25*86400000));
+      acumulada=Math.min(anual*anios,base);
+    }
+  }
+  const valorLibros=(m.inv||0)-acumulada;
+  return {anual,acumulada,valorLibros,anios,base};
 }
 
 // ── "ROI Real" (2026-09-19, bitácora semanal desde 2026-09-19) — captura real
@@ -4639,11 +5352,73 @@ function ctEditParamsDlg(c){
 function ctEditOperacionDlg(c,idx){
   const o=idx!=null?c.operaciones[idx]:null;
   const otrasOps=c.operaciones.map((op,i)=>i).filter(i=>i!==idx);
-  const dependeChecks=otrasOps.map(i=>`<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;padding:2px 0"><input type="checkbox" value="${i}"${(o?.depende||[]).includes(i)?' checked':''}> ${esc(c.operaciones[i].nombre)}</label>`).join('');
+  const dependeChecks=otrasOps.map(i=>`<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;padding:2px 0"><input type="checkbox" class="cto-depende-chk" value="${i}"${(o?.depende||[]).includes(i)?' checked':''}> ${esc(c.operaciones[i].nombre)}</label>`).join('');
+  const metodo=o?.metodo||'manual';
+  // Cronómetro: no se guardan los ciclos crudos de una captura vieja (solo su
+  // promedio, en tiempoObservadoSeg) — al reabrir para editar, ese promedio
+  // se recupera como si fuera "ciclo 1" (se puede volver a medir de cero con
+  // Iniciar). Ver nota de diseño arriba de calcularTiempoEstandar().
+  const ciclosIniciales=(metodo==='cronometro'&&o?.tiempoObservadoSeg)?[o.tiempoObservadoSeg]:[];
+  const cronoState={running:false,startAt:0,lastLap:0,ciclos:ciclosIniciales,intervalId:null};
   openDlg({
     title:o?'Editar operación':'Nueva operación', sub:esc(c.nombre),
     body:`<label class="lbl">Nombre *</label><input class="input" id="cto-nombre" value="${esc(o?.nombre||'')}"/>
-      <label class="lbl" style="margin-top:10px">Minutos por pieza *</label><input class="input" type="number" step="0.01" id="cto-min" value="${o?.min??''}"/>
+
+      <label class="lbl" style="margin-top:10px">¿Cómo se define el tiempo? *</label>
+      <select class="select-input" id="cto-metodo">
+        <option value="manual"${metodo==='manual'?' selected':''}>Manual</option>
+        <option value="tipo"${metodo==='tipo'?' selected':''}>Por tipo de pieza (catálogo)</option>
+        <option value="cronometro"${metodo==='cronometro'?' selected':''}>Cronómetro (medir ahora)</option>
+      </select>
+
+      <div id="cto-panel-manual" style="margin-top:10px">
+        <label class="lbl">Minutos por unidad/inserto *</label>
+        <input class="input" type="number" step="0.01" id="cto-min" value="${o?.min!=null?(o.min/(o?.cantidad||1)):''}"/>
+      </div>
+
+      <div id="cto-panel-tipo" style="margin-top:10px">
+        <label class="lbl">Tipo de pieza <span class="muted">(tiempo de 1 sola unidad/inserto)</span></label>
+        <select class="select-input" id="cto-tipo-pieza">
+          ${(DB.tiposPieza||[]).map(t=>`<option value="${t.id}" data-seg="${t.tiempoEstandarSeg}"${o?.tipoPiezaId===t.id?' selected':''}>${esc(t.nombre)} — ${fmtNum(t.tiempoEstandarSeg)}s</option>`).join('')}
+        </select>
+        <div class="small muted" style="margin-top:4px">¿No hay un tipo que aplique? Usa "Cronómetro" y captura uno nuevo.</div>
+      </div>
+
+      <div style="margin-top:10px">
+        <label class="lbl">Cantidad por pieza terminada *</label>
+        <input class="input" type="number" step="1" min="1" id="cto-cantidad" value="${o?.cantidad||1}"/>
+        <div class="small muted" style="margin-top:4px">Ej.: esta cubierta lleva 4 insertos de Habilitado de Muebles → captura <b>4</b>. El tiempo de arriba es de 1 sola unidad; aquí se multiplica.</div>
+      </div>
+
+      <div id="cto-panel-crono" style="margin-top:10px">
+        <div class="card" style="text-align:center;background:var(--surface2)">
+          <div id="cto-crono-display" style="font-size:30px;font-weight:800;font-family:'IBM Plex Mono',monospace,'Montserrat'">00:00.0</div>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:10px">
+            <button type="button" class="btn primary sm" id="cto-crono-start">▶ Iniciar</button>
+            <button type="button" class="btn sm" id="cto-crono-lap" disabled>⏱ Vuelta</button>
+            <button type="button" class="btn danger sm" id="cto-crono-stop" disabled>⏹ Detener</button>
+          </div>
+          <div id="cto-crono-ciclos" class="small muted" style="margin-top:10px;text-align:left"></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12.5px"><input type="checkbox" id="cto-guardar-tipo"> Guardar el promedio como nuevo tipo de pieza reutilizable</label>
+        <div id="cto-guardar-tipo-wrap" style="margin-top:6px" hidden>
+          <input class="input" id="cto-guardar-tipo-nombre" placeholder="Nombre del nuevo tipo (ej. Dificultad muy alta)"/>
+        </div>
+      </div>
+
+      <div id="cto-panel-suplementos" style="margin-top:10px">
+        <label class="lbl">Valoración del ritmo <span class="muted">(100 = ritmo normal)</span></label>
+        <input class="input" type="number" id="cto-valoracion" value="${o?.valoracion??100}"/>
+        <label class="lbl" style="margin-top:10px">Suplementos aplicables</label>
+        <div style="max-height:150px;overflow-y:auto;border:1px solid var(--border2);border-radius:var(--r-sm);padding:8px">
+          ${(DB.suplementos||[]).map(s=>`<label style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:3px 0">
+            <span><input type="checkbox" class="cto-suplemento-chk" value="${s.id}"${(o?.suplementosIds||[]).includes(s.id)?' checked':''}> ${esc(s.nombre)}</span>
+            <span class="small muted">${s.porcentaje}%</span>
+          </label>`).join('')}
+        </div>
+        <div id="cto-preview" class="card" style="margin-top:10px;background:var(--accent-bg);color:var(--accent);font-weight:600;font-size:12.5px;text-align:center"></div>
+      </div>
+
       <label class="lbl" style="margin-top:10px">Recursos (máquinas/estaciones)</label><input class="input" type="number" id="cto-recursos" value="${o?.recursos||1}"/>
       <label class="lbl" style="margin-top:10px">Piezas por ciclo</label><input class="input" type="number" id="cto-piezas" value="${o?.piezas||1}"/>
       <label class="lbl" style="margin-top:10px">Modo de flujo</label>
@@ -4652,16 +5427,126 @@ function ctEditOperacionDlg(c,idx){
       <label class="lbl" style="margin-top:10px"><input type="checkbox" id="cto-activa"${o?.activa!==false?' checked':''}/> Activa</label>`,
     onSave:()=>{
       const nombre=document.getElementById('cto-nombre').value.trim();
-      const min=Number(document.getElementById('cto-min').value);
       if(!nombre){ toast('Ingresa un nombre'); return false; }
-      if(isNaN(min)||min<0){ toast('Ingresa minutos válidos'); return false; }
-      const depende=otrasOps.length?[...document.querySelectorAll('#dlg-body input[type=checkbox]')].filter(cb=>cb!==document.getElementById('cto-activa')&&cb.checked).map(cb=>Number(cb.value)):[];
-      const entry={nombre,min,recursos:Number(document.getElementById('cto-recursos').value)||1,piezas:Number(document.getElementById('cto-piezas').value)||1,modoFlujo:document.getElementById('cto-modo').value,depende,activa:document.getElementById('cto-activa').checked,flujo:o?.flujo||null};
+      const metodoSel=document.getElementById('cto-metodo').value;
+      const cantidad=Math.max(1,Number(document.getElementById('cto-cantidad').value)||1);
+      let minUnitario,tipoPiezaId=null,valoracion=null,suplementosIds=[],tiempoObservadoSeg=null;
+      if(metodoSel==='manual'){
+        minUnitario=Number(document.getElementById('cto-min').value);
+        if(isNaN(minUnitario)||minUnitario<0){ toast('Ingresa minutos válidos'); return false; }
+      }else{
+        valoracion=Number(document.getElementById('cto-valoracion').value)||100;
+        suplementosIds=[...document.querySelectorAll('.cto-suplemento-chk:checked')].map(cb=>cb.value);
+        if(metodoSel==='tipo'){
+          tipoPiezaId=document.getElementById('cto-tipo-pieza').value;
+          const tp=byId(DB.tiposPieza,tipoPiezaId);
+          if(!tp){ toast('Selecciona un tipo de pieza'); return false; }
+          tiempoObservadoSeg=tp.tiempoEstandarSeg;
+        }else{ // cronometro
+          if(!cronoState.ciclos.length){ toast('Captura al menos un ciclo con el cronómetro'); return false; }
+          tiempoObservadoSeg=cronoState.ciclos.reduce((a,b)=>a+b,0)/cronoState.ciclos.length;
+          if(document.getElementById('cto-guardar-tipo').checked){
+            const nombreTipo=document.getElementById('cto-guardar-tipo-nombre').value.trim();
+            if(!nombreTipo){ toast('Ponle nombre al nuevo tipo de pieza'); return false; }
+            const nuevo=crearTipoPieza(nombreTipo,tiempoObservadoSeg);
+            tipoPiezaId=nuevo?.id||null;
+          }
+        }
+        minUnitario=calcularTiempoEstandar(tiempoObservadoSeg,valoracion,suplementosIds).minutos;
+      }
+      const min=minUnitario*cantidad; // tiempo de la pieza terminada = tiempo unitario × cuántas veces ocurre (igual que "NO. PIEZAS"/"Cantidad" del Excel)
+      const depende=[...document.querySelectorAll('.cto-depende-chk:checked')].map(cb=>Number(cb.value));
+      const entry={nombre,min,cantidad,metodo:metodoSel,tipoPiezaId,valoracion,suplementosIds,tiempoObservadoSeg,
+        recursos:Number(document.getElementById('cto-recursos').value)||1,
+        piezas:Number(document.getElementById('cto-piezas').value)||1,
+        modoFlujo:document.getElementById('cto-modo').value,
+        depende,activa:document.getElementById('cto-activa').checked,flujo:o?.flujo||null};
       if(idx!=null) c.operaciones[idx]={...c.operaciones[idx],...entry};
       else c.operaciones.push(entry);
       c.updatedAt=Date.now(); saveDB(); toast(idx!=null?'Operación actualizada ✓':'Operación creada ✓'); render();
     }
   });
+
+  // ---- Wiring (después de openDlg: #dlg-body ya existe en el DOM) ----
+  function fmtCrono(ms){
+    const totalSeg=ms/1000, m=Math.floor(totalSeg/60), s=(totalSeg%60).toFixed(1);
+    return String(m).padStart(2,'0')+':'+String(s).padStart(4,'0');
+  }
+  function renderCiclos(){
+    const wrap=document.getElementById('cto-crono-ciclos'); if(!wrap) return;
+    if(!cronoState.ciclos.length){ wrap.textContent='Sin ciclos capturados todavía.'; recomputarPreview(); return; }
+    const prom=cronoState.ciclos.reduce((a,b)=>a+b,0)/cronoState.ciclos.length;
+    wrap.innerHTML=cronoState.ciclos.map((v,i)=>`Ciclo ${i+1}: ${v.toFixed(2)}s`).join(' · ')+`<br><b>Promedio: ${prom.toFixed(2)}s (${cronoState.ciclos.length} ciclo${cronoState.ciclos.length!==1?'s':''})</b>`;
+    recomputarPreview();
+  }
+  function tiempoObservadoActual(){
+    const m=document.getElementById('cto-metodo').value;
+    if(m==='tipo'){
+      const sel=document.getElementById('cto-tipo-pieza');
+      return sel&&sel.selectedOptions.length?Number(sel.selectedOptions[0].dataset.seg)||0:null;
+    }
+    if(m==='cronometro') return cronoState.ciclos.length?cronoState.ciclos.reduce((a,b)=>a+b,0)/cronoState.ciclos.length:null;
+    return null;
+  }
+  function recomputarPreview(){
+    const prev=document.getElementById('cto-preview'); if(!prev) return;
+    const m=document.getElementById('cto-metodo').value;
+    const cantidad=Math.max(1,Number(document.getElementById('cto-cantidad')?.value)||1);
+    if(m==='manual'){ prev.textContent=''; return; }
+    const obs=tiempoObservadoActual();
+    if(obs===null){ prev.textContent='Falta capturar el tiempo.'; return; }
+    const valoracion=Number(document.getElementById('cto-valoracion').value)||100;
+    const suplementosIds=[...document.querySelectorAll('.cto-suplemento-chk:checked')].map(cb=>cb.value);
+    const r=calcularTiempoEstandar(obs,valoracion,suplementosIds);
+    const cantidadTxt=cantidad>1?` · × ${cantidad} = <b>${(r.minutos*cantidad).toFixed(3)} min/pieza terminada</b>`:'';
+    prev.innerHTML=`Tiempo observado: ${obs.toFixed(2)}s · Suplementos: ${r.pctSuplementos}% · Tiempo estándar por unidad: <b>${r.minutos.toFixed(3)} min</b>${cantidadTxt}`;
+  }
+  function syncPaneles(){
+    const m=document.getElementById('cto-metodo').value;
+    document.getElementById('cto-panel-manual').hidden=m!=='manual';
+    document.getElementById('cto-panel-tipo').hidden=m!=='tipo';
+    document.getElementById('cto-panel-crono').hidden=m!=='cronometro';
+    document.getElementById('cto-panel-suplementos').hidden=m==='manual';
+    recomputarPreview();
+  }
+  document.getElementById('cto-metodo').addEventListener('change',syncPaneles);
+  document.getElementById('cto-tipo-pieza').addEventListener('change',recomputarPreview);
+  document.getElementById('cto-valoracion').addEventListener('input',recomputarPreview);
+  document.getElementById('cto-cantidad').addEventListener('input',recomputarPreview);
+  document.querySelectorAll('.cto-suplemento-chk').forEach(cb=>cb.addEventListener('change',recomputarPreview));
+  document.getElementById('cto-guardar-tipo').addEventListener('change',e=>{
+    document.getElementById('cto-guardar-tipo-wrap').hidden=!e.target.checked;
+  });
+  document.getElementById('cto-crono-start').addEventListener('click',()=>{
+    cronoState.ciclos=[]; cronoState.startAt=performance.now(); cronoState.lastLap=cronoState.startAt; cronoState.running=true;
+    document.getElementById('cto-crono-start').disabled=true;
+    document.getElementById('cto-crono-lap').disabled=false;
+    document.getElementById('cto-crono-stop').disabled=false;
+    renderCiclos();
+    clearInterval(cronoState.intervalId);
+    cronoState.intervalId=setInterval(()=>{
+      const disp=document.getElementById('cto-crono-display');
+      if(disp) disp.textContent=fmtCrono(performance.now()-cronoState.startAt);
+    },100);
+  });
+  document.getElementById('cto-crono-lap').addEventListener('click',()=>{
+    const now=performance.now();
+    cronoState.ciclos.push((now-cronoState.lastLap)/1000);
+    cronoState.lastLap=now;
+    renderCiclos();
+  });
+  document.getElementById('cto-crono-stop').addEventListener('click',()=>{
+    cronoState.running=false;
+    clearInterval(cronoState.intervalId);
+    document.getElementById('cto-crono-start').disabled=false;
+    document.getElementById('cto-crono-lap').disabled=true;
+    document.getElementById('cto-crono-stop').disabled=true;
+  });
+  renderCiclos();
+  syncPaneles();
+  // Si cierran el diálogo (Cancelar, Guardar, o Esc) con el cronómetro
+  // corriendo, no dejar el setInterval vivo para siempre en segundo plano.
+  document.getElementById('dlg-edit').addEventListener('close',()=>clearInterval(cronoState.intervalId),{once:true});
 }
 async function ctDeleteOperacion(c,idx){
   const o=c.operaciones[idx]; if(!o) return;
@@ -5162,6 +6047,7 @@ function renderMaqTabDashboard(el,c,m){
     return vdef&&vdef.cat!=='opex';
   }).map(vid=>({vdef:VAR_LIB.find(v=>v.id===vid),proy:calcVar(m,vid,c),real:calcVarReal(m,vid,c)}));
   const est=mEstatus(m,hd);
+  const dep=calcDepreciacion(m);
 
   el.innerHTML=`
   <div class="card" style="margin-bottom:14px">
@@ -5175,6 +6061,8 @@ function renderMaqTabDashboard(el,c,m){
       <div style="display:flex;gap:18px;flex-wrap:wrap">
         <div><div class="small muted">Inv. bruta</div><div style="font-weight:700">${fmtMoney(m.inv||0)}</div></div>
         <div><div class="small muted">Inv. neta</div><div style="font-weight:700;color:#2563EB">${fmtMoney(r.netInv)}</div></div>
+        <div><div class="small muted">📉 Valor en libros</div><div style="font-weight:700">${dep.anios!=null?fmtMoney(dep.valorLibros):'—'}</div></div>
+        <div><div class="small muted">Depreciación anual</div><div style="font-weight:700">${fmtMoney(dep.anual)}</div></div>
         <div><div class="small muted">ROI Proyectado (${m.yr||8} años)</div><div style="font-weight:700;color:${roiColor}">${hd?(r.roi>=0?'+':'')+r.roi.toFixed(0)+'%':'—'}</div></div>
         <div><div class="small muted">Payback proyectado</div><div style="font-weight:700;color:#D97706">${isFinite(r.pay)?r.pay.toFixed(1)+' años':'—'}</div></div>
         ${hdReal?`<div><div class="small muted">ROI Real</div><div style="font-weight:700;color:${roiColorReal}">${rr.roi>=0?'+':''}${rr.roi.toFixed(0)}%</div></div>`:''}
@@ -5979,6 +6867,7 @@ function openAgregarReporteDlg(sec){
 const ADMIN_TABS=[
   {key:'equipo',label:'👥 Equipo y Secciones'},
   {key:'tabulador',label:'💵 Tabulador salarial'},
+  {key:'tiempos',label:'⏱️ Toma de tiempos'},
   {key:'importar',label:'📥 Importación de datos'},
 ];
 function renderAdmin(root){
@@ -6006,6 +6895,11 @@ function renderAdmin(root){
   } else if(_adminTab==='tabulador'){
     body.innerHTML=`<div id="adm-tabulador"></div>`;
     renderAdminTabulador();
+  } else if(_adminTab==='tiempos'){
+    body.innerHTML=`<div id="adm-tipos-pieza" style="margin-bottom:18px"></div>
+      <div id="adm-suplementos"></div>`;
+    renderAdminTiposPieza();
+    renderAdminSuplementos();
   } else if(_adminTab==='importar'){
     body.innerHTML=`<div class="small muted" style="margin-bottom:14px">Trae datos reales ya capturados en las apps viejas (Control_CT_v7.html, LineaItalia.html) hacia este catálogo unificado. Se puede correr varias veces sin duplicar — solo hace falta si sigues capturando algo nuevo allá; si ya no las usas, no necesitas volver a tocar esto.</div>
       <div id="adm-ct-import" style="margin-bottom:18px"></div>
@@ -6547,6 +7441,103 @@ function renderAdminGlobalParams(){
       DB.globalParams[k]=parseNum(e.target.value); saveDB();
     });
   });
+}
+
+/* ── Toma de tiempos: catálogos globales "Tipos de pieza" y "Suplementos"
+   (25-sep-2026, ver calcularTiempoEstandar() y ctEditOperacionDlg()). ── */
+function renderAdminTiposPieza(){
+  const c=document.getElementById('adm-tipos-pieza'); if(!c) return;
+  const rows=(DB.tiposPieza||[]).map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--r-sm);margin-bottom:6px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:13px">${esc(t.nombre)}</div>
+        <div class="small muted">${fmtNum(t.tiempoEstandarSeg)} seg/pieza${t.notas?' · '+esc(t.notas):''}</div>
+      </div>
+      <button class="btn xs" data-edit-tipo="${t.id}">✎ Editar</button>
+      <button class="btn xs danger" data-del-tipo="${t.id}">✕</button>
+    </div>`).join('');
+  c.innerHTML=`<div class="card">
+    <div style="font-weight:600;margin-bottom:4px">🧩 Tipos de pieza <span class="pill muted">${(DB.tiposPieza||[]).length}</span></div>
+    <div class="small muted" style="margin-bottom:10px">Catálogo de tiempos estándar por dificultad de pieza (tomado de tus estudios de tiempos reales) — al capturar una operación en Centro de Trabajo, se elige uno de estos en vez de cronometrar desde cero.</div>
+    ${rows||'<div class="small muted" style="padding:6px 0">Sin tipos todavía.</div>'}
+    <button class="btn sm primary" id="btn-new-tipo" style="margin-top:6px">＋ Nuevo tipo de pieza</button>
+  </div>`;
+  c.querySelectorAll('[data-edit-tipo]').forEach(b=>b.addEventListener('click',()=>editTipoPiezaDlg(b.dataset.editTipo)));
+  c.querySelectorAll('[data-del-tipo]').forEach(b=>b.addEventListener('click',()=>deleteTipoPiezaPrompt(b.dataset.delTipo)));
+  document.getElementById('btn-new-tipo').addEventListener('click',()=>editTipoPiezaDlg(null));
+}
+function editTipoPiezaDlg(id){
+  const t=id?byId(DB.tiposPieza,id):null;
+  openDlg({
+    title:t?'Editar tipo de pieza':'Nuevo tipo de pieza', sub:t?esc(t.nombre):'',
+    body:`<label class="lbl">Nombre *</label><input class="input" id="tp-nombre" value="${esc(t?.nombre||'')}"/>
+      <label class="lbl" style="margin-top:10px">Tiempo estándar (segundos/pieza) *</label><input class="input" type="number" step="0.01" id="tp-seg" value="${t?.tiempoEstandarSeg??''}"/>
+      <label class="lbl" style="margin-top:10px">Notas</label><input class="input" id="tp-notas" value="${esc(t?.notas||'')}"/>`,
+    onSave:()=>{
+      const nombre=document.getElementById('tp-nombre').value.trim();
+      const seg=Number(document.getElementById('tp-seg').value);
+      if(!nombre){ toast('Ingresa un nombre'); return false; }
+      if(isNaN(seg)||seg<0){ toast('Ingresa un tiempo válido'); return false; }
+      const entry={nombre,tiempoEstandarSeg:seg,notas:document.getElementById('tp-notas').value.trim()};
+      if(t) Object.assign(t,entry);
+      else{ DB.tiposPieza=DB.tiposPieza||[]; DB.tiposPieza.push({id:uid('tp'),...entry}); }
+      saveDB(); renderAdminTiposPieza(); toast(t?'Tipo actualizado ✓':'Tipo creado ✓');
+    }
+  });
+}
+async function deleteTipoPiezaPrompt(id){
+  const t=byId(DB.tiposPieza,id); if(!t) return;
+  if(!await appConfirm(`¿Eliminar el tipo de pieza "${t.nombre}"?`,'Las operaciones que ya lo usan conservan su tiempo, solo dejan de poder editarlo desde este catálogo.')) return;
+  DB.tiposPieza=DB.tiposPieza.filter(x=>x.id!==id);
+  saveDB(); renderAdminTiposPieza(); toast('Tipo eliminado');
+}
+function renderAdminSuplementos(){
+  const c=document.getElementById('adm-suplementos'); if(!c) return;
+  const grupos=[{key:'constante',label:'Constantes'},{key:'variable',label:'Variables'}];
+  const rows=grupos.map(g=>{
+    const items=(DB.suplementos||[]).filter(s=>s.categoria===g.key);
+    if(!items.length) return '';
+    return `<div class="small muted" style="font-weight:700;margin:10px 0 4px">${g.label}</div>`+items.map(s=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--r-sm);margin-bottom:6px">
+      <div style="flex:1;min-width:0;font-size:13px">${esc(s.nombre)}</div>
+      <div class="pill accent">${s.porcentaje}%</div>
+      <button class="btn xs" data-edit-sup="${s.id}">✎</button>
+      <button class="btn xs danger" data-del-sup="${s.id}">✕</button>
+    </div>`).join('');
+  }).join('');
+  c.innerHTML=`<div class="card">
+    <div style="font-weight:600;margin-bottom:4px">🧮 Suplementos (OIT/ILO) <span class="pill muted">${(DB.suplementos||[]).length}</span></div>
+    <div class="small muted" style="margin-bottom:6px">Tiempo Estándar = Tiempo Observado × (Valoración/100) × (1 + %Suplementos) — se aplican al capturar una operación por tipo de pieza o cronómetro.</div>
+    ${rows||'<div class="small muted" style="padding:6px 0">Sin suplementos todavía.</div>'}
+    <button class="btn sm primary" id="btn-new-sup" style="margin-top:10px">＋ Nuevo suplemento</button>
+  </div>`;
+  c.querySelectorAll('[data-edit-sup]').forEach(b=>b.addEventListener('click',()=>editSuplementoDlg(b.dataset.editSup)));
+  c.querySelectorAll('[data-del-sup]').forEach(b=>b.addEventListener('click',()=>deleteSuplementoPrompt(b.dataset.delSup)));
+  document.getElementById('btn-new-sup').addEventListener('click',()=>editSuplementoDlg(null));
+}
+function editSuplementoDlg(id){
+  const s=id?byId(DB.suplementos,id):null;
+  openDlg({
+    title:s?'Editar suplemento':'Nuevo suplemento', sub:s?esc(s.nombre):'',
+    body:`<label class="lbl">Nombre *</label><input class="input" id="sup-nombre" value="${esc(s?.nombre||'')}"/>
+      <label class="lbl" style="margin-top:10px">Categoría</label>
+      <select class="select-input" id="sup-categoria"><option value="constante"${s?.categoria!=='variable'?' selected':''}>Constante (aplica siempre)</option><option value="variable"${s?.categoria==='variable'?' selected':''}>Variable (según la operación)</option></select>
+      <label class="lbl" style="margin-top:10px">% Suplemento *</label><input class="input" type="number" step="0.1" id="sup-pct" value="${s?.porcentaje??''}"/>`,
+    onSave:()=>{
+      const nombre=document.getElementById('sup-nombre').value.trim();
+      const pct=Number(document.getElementById('sup-pct').value);
+      if(!nombre){ toast('Ingresa un nombre'); return false; }
+      if(isNaN(pct)||pct<0){ toast('Ingresa un % válido'); return false; }
+      const entry={nombre,categoria:document.getElementById('sup-categoria').value,porcentaje:pct};
+      if(s) Object.assign(s,entry);
+      else{ DB.suplementos=DB.suplementos||[]; DB.suplementos.push({id:uid('sp'),...entry}); }
+      saveDB(); renderAdminSuplementos(); toast(s?'Suplemento actualizado ✓':'Suplemento creado ✓');
+    }
+  });
+}
+async function deleteSuplementoPrompt(id){
+  const s=byId(DB.suplementos,id); if(!s) return;
+  if(!await appConfirm(`¿Eliminar el suplemento "${s.nombre}"?`)) return;
+  DB.suplementos=DB.suplementos.filter(x=>x.id!==id);
+  saveDB(); renderAdminSuplementos(); toast('Suplemento eliminado');
 }
 
 /* ── Tabulador salarial — catálogo global (grupos → categorías → niveles),
