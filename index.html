@@ -341,6 +341,70 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
 .ea-m button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:14px}.ea-m button:hover{color:var(--bad)}
 .ea-min-add{display:flex;gap:8px}.ea-min-add .ea-inp{flex:1;min-width:0}
 .ea-dlg-foot{display:flex;justify-content:flex-end;margin-top:14px}
+
+/* ══ Etapa 2: menú, Proyectos, Centros de trabajo (planta) y Rocas ══ */
+.nav-caret{margin-left:auto;opacity:.6;font-size:12px}
+.nav-spacer{flex:1;min-height:12px}
+.sidebar{overflow-y:auto}
+.nav-sub{margin:-2px 0 6px 10px;display:none}.nav-sub.open{display:block}
+.nav-btn.nav-subbtn{background:transparent;color:var(--sidebar-text);padding:8px 12px;font-weight:600;margin-bottom:2px}
+.nav-btn.nav-subbtn:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-btn.nav-subbtn.active{background:rgba(255,255,255,.14);color:#fff;box-shadow:inset 3px 0 0 var(--accent)}
+.view-head h1{font-size:27px;font-weight:800}
+.ea-light-title{margin-bottom:16px}.ea-light-title .t{font-size:27px;font-weight:800;display:inline}.ea-light-title .s{font-size:13.5px;color:var(--muted);margin-left:10px}
+.ea-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+.ea-kpi{background:var(--surface);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow)}
+.ea-kpi .v{font-size:24px;font-weight:800}.ea-kpi .l{font-size:11.5px;color:var(--muted);font-weight:600}
+.ea-kpi.bad .v{color:var(--bad)}.ea-kpi.ok .v{color:var(--ok)}
+.ea-tabs{display:flex;gap:6px;margin:4px 0 16px;flex-wrap:wrap}
+.ea-tab{border:0;background:var(--surface2);border-radius:10px;padding:9px 16px;font-weight:700;font-size:13px;color:var(--muted);cursor:pointer}
+.ea-tab.on{background:var(--text);color:var(--surface)}
+.ea-pbar{display:flex;align-items:center;gap:10px;min-width:130px}.ea-pbar .tr{flex:1;height:10px;border-radius:6px;background:var(--surface2);overflow:hidden}.ea-pbar .tr i{display:block;height:100%;border-radius:6px}.ea-pbar b{width:42px;text-align:right;font-size:13px}
+tr.ea-prow{cursor:pointer}tr.ea-prow td{font-weight:600}.ea-prow .car{display:inline-block;width:16px;color:var(--muted);transition:transform .15s}.ea-prow.open .car{transform:rotate(90deg)}
+tr.ea-child td{background:var(--surface2)}tr.ea-child .ea-name{padding-left:30px;font-weight:400}
+.ea-sm{font-size:12px;color:var(--muted);font-weight:500}
+.ea-open{border:1px solid var(--border2);background:var(--surface);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--accent2)}
+.ea-mapcard{background:var(--surface);border-radius:12px;padding:14px;box-shadow:var(--shadow);margin-bottom:16px}
+.ea-mapwrap{position:relative;line-height:0}.ea-mapwrap img{width:100%;display:block;border-radius:8px}.ea-mapwrap svg{position:absolute;inset:0;width:100%;height:100%}
+.ea-mapwrap polygon{cursor:pointer;stroke-width:1.5;stroke-linejoin:round}.ea-mapwrap polygon:hover{fill-opacity:.55!important;stroke-width:2.5}
+.ea-mapwrap text{font-family:Montserrat,sans-serif;font-size:9.5px;font-weight:700;fill:#1d1d1f;paint-order:stroke;stroke:#fff;stroke-width:2.6px;pointer-events:none;text-anchor:middle}
+.ea-maptip{position:absolute;background:#2A2A2C;color:#fff;border-radius:8px;padding:7px 10px;font-size:12px;line-height:1.4;pointer-events:none;display:none;z-index:5;white-space:nowrap}.ea-maptip b{display:block;font-size:13px}
+.ea-legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.ea-legend button{border:1px solid var(--border2);background:var(--surface);border-radius:16px;padding:5px 11px 5px 8px;font-size:12px;font-weight:600;display:inline-flex;gap:6px;align-items:center;cursor:pointer}.ea-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.ea-delta{font-size:11px;font-weight:800;border-radius:8px;padding:2px 7px;display:inline-block}.ea-delta.dn{background:var(--ok-bg);color:var(--ok)}.ea-delta.up{background:var(--bad-bg);color:var(--bad)}
+.ea-lock{font-size:10.5px;font-weight:700;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:2px 8px;margin-left:8px}
+.ea-cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
+.ea-ccard{background:var(--surface);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow);cursor:pointer;border-top:4px solid var(--accent);transition:transform .12s}.ea-ccard:hover{transform:translateY(-2px)}
+.ea-ccard h3{font-size:16px;margin-bottom:2px}.ea-ccard .sub{font-size:12px;color:var(--muted);margin-bottom:12px}
+.ea-mini{background:var(--accent-bg);color:var(--accent2);border-radius:8px;padding:4px 9px;font-size:11.5px;font-weight:700;display:inline-block;margin:0 6px 6px 0}
+.ea-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border-top:1px solid var(--border2);padding-top:12px;margin-top:10px}.ea-stats div{text-align:center}.ea-stats b{display:block;font-size:18px}.ea-stats span{font-size:10.5px;color:var(--muted);font-weight:600}.ea-stats .bad b{color:var(--bad)}
+.ea-back{border:0;background:none;color:var(--accent);font-weight:700;font-size:13px;padding:0;margin-bottom:10px;cursor:pointer}
+.ea-two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.ea-panel{background:var(--surface);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow);margin-bottom:16px}.ea-two .ea-panel{margin-bottom:0}
+.ea-panel h3{font-size:12px;letter-spacing:.05em;margin-bottom:12px;color:var(--muted)}
+.ea-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.ea-metrics div{background:var(--surface2);border-radius:10px;padding:9px 11px;font-size:11px;color:var(--muted);font-weight:600}.ea-metrics b{display:block;font-size:16px;color:var(--text);margin-top:2px}
+.ea-rbar{display:grid;grid-template-columns:150px 1fr 96px 42px;gap:10px;align-items:center;font-size:12.5px;padding:5px 0}.ea-rbar .tr{height:10px;border-radius:6px;background:var(--surface2);overflow:hidden}.ea-rbar .tr i{display:block;height:100%;border-radius:6px;background:var(--accent)}.ea-rbar b{text-align:right}.ea-rbar .p{text-align:right;color:var(--muted)}
+.ea-cmp{display:grid;grid-template-columns:50px 1fr 90px;gap:10px;align-items:center;font-size:12.5px;margin:6px 0}.ea-cmp .tr{height:12px;border-radius:6px;background:var(--surface2);overflow:hidden}.ea-cmp .tr i{display:block;height:100%;border-radius:6px}
+.ea-fotos{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}.ea-fotos figure{margin:0;flex:0 0 190px}.ea-fotos img{width:190px;height:125px;object-fit:cover;border-radius:10px;display:block}.ea-fotos figcaption{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.3}
+.ea-instbar{height:7px;border-radius:5px;background:var(--surface2);overflow:hidden;margin-top:4px}.ea-instbar i{display:block;height:100%;background:#2563EB}
+.ea-thumb{width:46px;height:34px;object-fit:cover;border-radius:6px;background:var(--surface2);display:block}
+.ea-est{display:inline-block;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;color:#fff}
+.ea-tbl{width:100%;border-collapse:collapse}.ea-tbl th{font-size:11px;letter-spacing:.05em;color:var(--muted);text-align:left;padding:9px 8px;background:var(--surface2)}.ea-tbl td{padding:9px 8px;border-bottom:1px solid var(--border2);font-size:13px}.ea-tbl .r{text-align:right;white-space:nowrap}
+.ea-mono{font-family:Consolas,monospace;font-size:12px;color:var(--muted);background:var(--surface2);border-radius:8px;padding:8px 10px;margin-top:8px;line-height:1.6}
+.ea-mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}.ea-mcard .ea-stats b{font-size:14px}
+.ea-mcard{background:var(--surface);border-radius:12px;padding:14px;box-shadow:var(--shadow);cursor:pointer}.ea-mcard:hover{transform:translateY(-2px)}
+.ea-soporte{display:flex;flex-wrap:wrap;gap:8px}.ea-soporte button{border:1px solid var(--border2);background:var(--surface);border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:600;text-align:left;cursor:pointer}.ea-soporte button small{display:block;color:var(--muted);font-weight:500;margin-top:2px}
+.ea-banner2{background:var(--warn-bg);border:1px solid var(--warn);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.ea-banner2 span{flex:1;min-width:220px}
+.ea-rq{background:var(--surface);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;box-shadow:var(--shadow)}
+.ea-rq .lbl{font-weight:800;font-size:11px;letter-spacing:.08em;color:var(--muted);margin-right:6px}
+.ea-q{border:0;background:var(--surface2);border-radius:18px;padding:7px 14px;font-weight:700;font-size:12.5px;color:var(--muted);cursor:pointer}.ea-q.on{background:var(--text);color:var(--surface)}
+.ea-rcard{background:var(--surface);border-radius:12px;overflow:hidden;margin-bottom:20px;box-shadow:var(--shadow)}
+.ea-rhead{display:flex;align-items:center;gap:14px;padding:14px 18px;color:#fff}.ea-rhead h3{font-size:17px}.ea-rhead .l{font-size:11.5px;opacity:.85;margin-top:2px}.ea-rhead .sc{margin-left:auto;font-weight:700;font-size:13px}.ea-rhead .sc b{font-size:26px;margin-left:6px}
+.ea-rrow{display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid var(--border2)}.ea-rrow:last-child{border-bottom:0}
+.ea-rrow .no{color:var(--muted);font-weight:700;width:14px}.ea-rrow .t{flex:1;min-width:0}.ea-rrow .tt{font-size:14.5px;font-weight:600;line-height:1.3}
+.ea-rrow .bar{height:5px;border-radius:3px;background:var(--surface2);margin-top:7px;overflow:hidden}.ea-rrow .bar i{display:block;height:100%}
+.ea-rrow .sl{width:110px}.ea-rrow .sl input{width:100%}.ea-rrow .pct{font-weight:800;font-size:15px;width:46px;text-align:right}
+.ea-radd{display:flex;gap:8px;padding:12px 18px;background:var(--surface2)}.ea-radd input{flex:1;min-width:0}
+@media(max-width:900px){.ea-two{grid-template-columns:1fr}.ea-rbar{grid-template-columns:110px 1fr 70px 38px}.ea-metrics{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -383,26 +447,20 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
       </div>
       <button class="nav-btn" data-view="actividades"><span class="ic">☑</span> Mis actividades <span class="nav-count" id="nav-act-count"></span></button>
       <button class="nav-btn" data-view="dashboard"><span class="ic">🏠</span> Dashboard</button>
+      <button class="nav-btn leader-only" id="btn-junta" style="display:none"><span class="ic">▦</span> Junta semanal <span class="nav-caret" id="junta-caret">▸</span></button>
+      <div class="nav-sub leader-only" id="sub-junta" style="display:none">
+        <button class="nav-btn nav-subbtn" data-view="scorecard"><span class="ic">📈</span> Scorecard (KPIs)</button>
+        <button class="nav-btn nav-subbtn" data-view="rocas"><span class="ic">☆</span> Rocas</button>
+      </div>
       <button class="nav-btn" data-view="proyectos"><span class="ic">📁</span> Proyectos</button>
+      <button class="nav-btn" data-view="centrotrabajo"><span class="ic">🏭</span> Centros de trabajo</button>
       <button class="nav-btn" data-view="equipo"><span class="ic">👥</span> Equipo</button>
-      <button class="nav-btn" data-view="centrotrabajo"><span class="ic">🏭</span> Centro de Trabajo</button>
-      <!-- "ROI Proyectado"/"ROI Real" dejaron de ser botones del menú principal
-           (2026-09-19, "quedó revuelto") — ahora es una sola pantalla con selector
-           Proyectado/Real, accesible desde dentro de Centro de Trabajo (ver
-           renderRoiMaquinas / botón "📊 ROI de todas las máquinas" en renderCentroTrabajo). -->
       <button class="nav-btn" data-view="reportes"><span class="ic">📊</span> Reportes</button>
-      <!-- Scorecard + Rocas trimestrales (25-sep-2026) — portado del estilo
-           "Score de áreas" de la app EOS de Subdirección (Adrian la mostró en
-           Chrome): KPIs semanales con tendencia + prioridades del trimestre,
-           por Sección. Solo lo ve quien tiene una Sección que darle seguimiento. -->
-      <button class="nav-btn leader-only" data-view="scorecard" style="display:none"><span class="ic">📈</span> Scorecard</button>
       <button class="nav-btn admin-only" data-view="pedidosventa" style="display:none"><span class="ic">🧾</span> Pedidos venta</button>
       <button class="nav-btn admin-only" data-view="leadtime" style="display:none"><span class="ic">⏱️</span> Lead Time</button>
+      <div class="nav-spacer"></div>
+      <a class="nav-btn" href="https://subdireccion.lineaitalia.net" target="_blank" rel="noopener" style="text-decoration:none"><span class="ic">▣</span> EOS <span class="nav-caret">↗</span></a>
       <button class="nav-btn admin-only" data-view="admin" style="display:none"><span class="ic">⚙️</span> Administración</button>
-      <!-- Sección "Otras apps" (enlaces a Control_CT_v7.html, infraestructura_dashboard_v10.html,
-           CT_MH_v8.html, LineaItalia.html) retirada del menú a pedido del usuario (2026-09-15,
-           "me confunden") — los 4 archivos siguen en el repo, movidos a apps-archivadas/,
-           no se borró nada. Ver memoria procesos-li-remaster para el detalle. -->
       <div class="sidebar-foot">
         <div class="user-chip">
           <div class="av" id="sb-av">--</div>
@@ -799,7 +857,7 @@ function emptyDB(){
     // Scorecard + Rocas (25-sep-2026) — viven en el nodo compartido junto con
     // secciones/centros porque son config/seguimiento por Sección, no datos
     // de un proyecto puntual.
-    indicadores:[], indicadorCapturas:[], rocas:[],
+    indicadores:[], indicadorCapturas:[], rocas:[], planta:null, _plantaStr:null,
     // Toma de tiempos (25-sep-2026) — catálogos globales, mismo criterio que
     // tabulador/puestos: se seeded con los defaults reales la primera vez,
     // Firebase manda después de eso.
@@ -902,7 +960,7 @@ async function pushShare(){
   try{
     // No pisamos otros campos que ya existan en el nodo real (proyectos viejos,
     // reglas, etc. del index.html anterior) — solo actualizamos users/secciones/centros.
-    await _refShare.update(cleanUndefined({users:DB.users,secciones:DB.secciones,centros:DB.centros,puestos:DB.puestos,tabulador:DB.tabulador,globalParams:DB.globalParams,indicadores:DB.indicadores,indicadorCapturas:DB.indicadorCapturas,rocas:DB.rocas,tiposPieza:DB.tiposPieza,suplementos:DB.suplementos,_v3SavedAt:Date.now()}));
+    await _refShare.update(cleanUndefined({...(DB._plantaStr?{planta:DB._plantaStr}:{}),users:DB.users,secciones:DB.secciones,centros:DB.centros,puestos:DB.puestos,tabulador:DB.tabulador,globalParams:DB.globalParams,indicadores:DB.indicadores,indicadorCapturas:DB.indicadorCapturas,rocas:DB.rocas,tiposPieza:DB.tiposPieza,suplementos:DB.suplementos,_v3SavedAt:Date.now()}));
     _sharePending=false;
   }catch(e){ console.error('[FB share] push error',e.message); }
   _shareBusy=false;
@@ -929,6 +987,7 @@ async function pullShare(){
     DB.indicadores=toArr(remote.indicadores);
     DB.indicadorCapturas=toArr(remote.indicadorCapturas);
     DB.rocas=toArr(remote.rocas);
+    plCargar(remote.planta);
     DB.tiposPieza=toTiposPieza(remote.tiposPieza);
     DB.suplementos=toSuplementos(remote.suplementos);
   }
@@ -963,6 +1022,7 @@ _refShare.on('value',snap=>{
   DB.indicadores=toArr(remote.indicadores);
   DB.indicadorCapturas=toArr(remote.indicadorCapturas);
   DB.rocas=toArr(remote.rocas);
+  plCargar(remote.planta);
   DB.tiposPieza=toTiposPieza(remote.tiposPieza);
   DB.suplementos=toSuplementos(remote.suplementos);
   _sharedLoaded=true;
@@ -1169,7 +1229,7 @@ function refreshNotifBadge(){
 ══════════════════════════════════════════════════════ */
 let currentView='actividades';
 const VIEW_RENDERERS={}; // cada vista registra aquí su función de render
-const VIEW_TITLES={actividades:'Mis actividades',dashboard:'Dashboard',proyectos:'Proyectos',equipo:'Equipo',centrotrabajo:'Centros de trabajo',reportes:'Reportes',scorecard:'Scorecard',pedidosventa:'Pedidos venta',leadtime:'Lead Time',admin:'Administración',mipuesto:'Mi puesto',roimaquinas:'ROI de máquinas'};
+const VIEW_TITLES={rocas:'Rocas trimestrales',actividades:'Mis actividades',dashboard:'Dashboard',proyectos:'Proyectos',equipo:'Equipo',centrotrabajo:'Centros de trabajo',reportes:'Reportes',scorecard:'Scorecard',pedidosventa:'Pedidos venta',leadtime:'Lead Time',admin:'Administración',mipuesto:'Mi puesto',roimaquinas:'ROI de máquinas'};
 function showView(name){
   currentView=name;
   const _tt=document.getElementById('top-title'); if(_tt) _tt.textContent=VIEW_TITLES[name]||name;
@@ -1424,17 +1484,16 @@ function renderProyectos(root){
       tab==='activos'?'Todos los proyectos de tu alcance están cerrados por ahora.':'Aquí aparecerán los proyectos en cuanto se cierren (todos sus entregables en "Entregado").');
     return;
   }
-  grid.className='';
-  grid.innerHTML=proyectosAgrupadosHTML(enTabPorPersona,liderFilter);
-  if(!grid.innerHTML.trim()){
+  grid.className='ea-card';
+  const _lista=liderFilter?enTabPorPersona.filter(p=>seccionesDeProyecto(p).some(s=>s.liderId===liderFilter)):enTabPorPersona;
+  grid.innerHTML=eaProyTablaHTML(_lista);
+  if(!_lista.length){
     const liderNombre=liderOpts.find(u=>u.id===liderFilter)?.name||'';
     grid.innerHTML=emptyStateHTML('Sin proyectos para este líder',
       `${liderNombre?esc(liderNombre)+' no tiene':'Ese líder no tiene'} proyectos en esta pestaña ahora mismo.`);
     return;
   }
-  grid.querySelectorAll('[data-open-project]').forEach(el=>{
-    el.addEventListener('click',()=>{ _proyectosScrollY=window.scrollY; openProjectDetail(el.dataset.openProject); });
-  });
+  eaWireProyTabla(grid);
   // Botón "＋ Asignar centro" de la tarjeta — stopPropagation para que no
   // dispare también el clic de la tarjeta completa (que abriría el detalle).
   grid.querySelectorAll('[data-quick-ct]').forEach(btn=>{
@@ -2216,6 +2275,243 @@ function renderActividades(root){
   if(nc){ const v=todos.filter(d=>(eaDias(d.dueDate)??1)<0).length; nc.textContent=v; nc.classList.toggle('on',v>0); }
 }
 VIEW_RENDERERS['actividades']=renderActividades;
+/* ══════════════════════════════════════════════════════
+   PLANTA / CENTROS DE TRABAJO (estilo EOS) — los 18 CT oficiales del mapa de planta
+   Datos: DB.planta (texto JSON en li_procesos/planta). Lo carga un admin con "Importar datos de planta"
+   desde data/planta.json (NO está publicado en GitHub porque trae costos). Las imágenes sí están en assets/planta/.
+══════════════════════════════════════════════════════ */
+function plCargar(v){ try{ DB._plantaStr=(typeof v==='string'&&v)?v:null; DB.planta=DB._plantaStr?JSON.parse(DB._plantaStr):null; }catch(e){ DB.planta=null; DB._plantaStr=null; } }
+const plSn=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+const PL_LEG2CT={'enchapado':['ENCHAPADO RECTO','CURVO'],'troqueles':['PRENSAS','DOBLADORAS'],'corte acero':['LASER'],'corte telas':['TELAS'],'carpinteria':['CARPINTERIA'],'multitaladro':['CARPINTERIA'],
+ 'habilitado de muebles':['HABILITADO MUEBLES'],'empaque de muebles':['EMPAQUE DE MUEBLES'],'empaque de libreros':['EMPAQUE DE LIBREROS'],'armado y empaque de archiveros':['EMPAQUE DE ARCHIVEROS'],
+ 'armado y empaque de sillas / sillones':['EMPAQUE SILLAS'],'armado y empaque de mamparas':['ENSAMBLE MAMPARAS'],'estructura de muebles':['ESTRUCTURA MUEBLES'],'estructura de mamparas':['ESTRUCTURA MAMPARAS'],
+ 'estructura de sillas':['ESTRUCTURA SILLAS'],'pintura':['PINTURA'],'cajas':['CAJAS']};
+const PL_SOPORTE=['almacen y logistica','consumos','folios','mantenimiento','maquinas y herramientas','planeacion y control de la produccion'];
+const PL_CORTO={1:'Prensas',17:'Dobladoras',2:'Est. sillas',3:'Est. mamparas',4:'Emp. sillas',5:'Telas',6:'Ens. mamparas',16:'Láser',15:'Est. muebles',7:'Pintura',14:'Carpintería',12:'Ench. recto',18:'Ench. curvo',13:'Emp. libreros',11:'Habilitado',8:'Emp. archiveros',10:'Emp. muebles',9:'Cajas'};
+const PL_NOMBRE={'PRENSAS':'Prensas','DOBLADORAS':'Dobladoras','LASER':'Láser (incluye Sierra)','PINTURA':'Pintura','CAJAS':'Cajas','TELAS':'Telas','ESTRUCTURA MUEBLES':'Estructura de muebles','ESTRUCTURA MAMPARAS':'Estructura de mamparas','ESTRUCTURA SILLAS':'Estructura de sillas','EMPAQUE DE MUEBLES':'Empaque de muebles','EMPAQUE DE LIBREROS':'Empaque de libreros','EMPAQUE DE ARCHIVEROS':'Empaque de archiveros','EMPAQUE SILLAS':'Empaque de sillas y sillones','ENSAMBLE MAMPARAS':'Ensamble de mamparas','HABILITADO MUEBLES':'Habilitado de muebles','CARPINTERIA':'Carpintería (Corte CNC)','ENCHAPADO RECTO':'Enchapado recto','CURVO':'Enchapado curvo'};
+const PL_EST={'Operando':'#2ca02c','En instalación':'#ff7f0e','En tránsito':'#c99a2e','En depreciación':'#1f77b4','Depreciada':'#7f8c8d','En venta':'#d62728','Sin uso':'#95a5a6'};
+const plNom=k=>PL_NOMBRE[k]||k;
+const plCT18=()=>DB.planta?DB.planta.CT26:[];
+const plGetCT=k=>plCT18().find(c=>c.nombre===k);
+const plAreaDeCT=k=>{const e=Object.entries(DB.planta.AREA_CT).find(([,v])=>v.includes(k));return e?+e[0]:null;};
+const plLegDeCT=k=>(DB.centros||[]).filter(r=>(PL_LEG2CT[plSn(r.nombre)]||[]).includes(k));
+const plCtDeMaquina=(m,raw)=>{const l=PL_LEG2CT[plSn(raw.nombre)]||[];if(l.length<2)return l[0]||null;const n=plSn(m.name);
+  if(l.includes('CURVO'))return /curv/.test(n)?'CURVO':'ENCHAPADO RECTO';
+  if(l.includes('DOBLADORAS'))return /dobl|newton|gwk/.test(n)?'DOBLADORAS':'PRENSAS';return l[0];};
+const plProjsDeCT=k=>{const ids=new Set(plLegDeCT(k).map(r=>r.id));return (DB.projects||[]).filter(p=>(p.centroIds||[]).some(i=>ids.has(i)));};
+const plAvProy=ds=>ds.length?Math.round(ds.reduce((a,d)=>a+eaAvance(d),0)/ds.length):0;
+const plStatsProy=p=>{const ds=(DB.deliverables||[]).filter(d=>d.projectId===p.id),ab=ds.filter(d=>d.status!=='Entregado');
+  return {ds,ab,ve:ab.filter(d=>(eaDias(d.dueDate)??1)<0).length,prox:ab.map(d=>d.dueDate).filter(Boolean).sort()[0],av:plAvProy(ds)};};
+const plStatsCT=k=>{const ps=plProjsDeCT(k),ds=(DB.deliverables||[]).filter(d=>ps.some(p=>p.id===d.projectId)),ab=ds.filter(d=>d.status!=='Entregado');
+  return {ps,ds,ab,ve:ab.filter(d=>(eaDias(d.dueDate)??1)<0).length,av:plAvProy(ds),pa:ps.filter(p=>plStatsProy(p).ab.length).length};};
+const plMxn=v=>'$'+Math.round(+v||0).toLocaleString('es-MX');
+const plMxn2=v=>'$'+(+v||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+const plDelta=v=>v==null?'':`<span class="ea-delta ${v<=0?'dn':'up'}">${v<=0?'▼':'▲'} ${Math.abs(v*100).toFixed(1)}%</span>`;
+const plPbar=v=>{const k=v>=67?'var(--ok)':v>=34?'#C4922A':'var(--bad)';return `<div class="ea-pbar"><div class="tr"><i style="width:${v}%;background:${k}"></i></div><b class="${eaCls(v)}">${v}%</b></div>`;};
+let _plView='mapa', _plCT=null, _plTab='resumen';
+
+function plImportar(file){
+  const fr=new FileReader();
+  fr.onload=()=>{ try{ const o=JSON.parse(fr.result); if(!o.CT26||!o.areas||!o.MAQ) throw new Error('no parece planta.json');
+      DB._plantaStr=JSON.stringify(o); DB.planta=o; saveDB(); toast('Datos de planta importados ✓'); }
+    catch(e){ toast('Archivo inválido: '+e.message,'err'); } };
+  fr.readAsText(file);
+}
+function plBannerImport(){
+  return `<div class="ea-banner2"><span><b>Faltan los datos de planta.</b> Aquí van los 18 centros de trabajo oficiales con su mapa, costos, equipos y fotos. Como traen costos, el archivo no se publica en internet: un admin lo carga una sola vez desde su computadora (<code>data/planta.json</code>).</span><input type="file" id="pl-file" accept=".json" hidden><button class="ea-btn dark" id="pl-import">Importar datos de planta</button></div>`;
+}
+function renderCentroTrabajo(root){
+  if(!dataReady()){ root.innerHTML=loadingHTML('Cargando centros de trabajo…'); return; }
+  if(_currentCentroId){ renderCentroDetail(root); return; }                      // detalle de ingeniería (balanceo, CIF, tabulador, máquinas)
+  if(!DB.planta){
+    renderCentroTrabajoLegacy(root);
+    if(isAdmin()){ root.insertAdjacentHTML('afterbegin',plBannerImport()); const f=root.querySelector('#pl-file'); root.querySelector('#pl-import').onclick=()=>f.click(); f.onchange=()=>f.files[0]&&plImportar(f.files[0]); }
+    return;
+  }
+  if(_plCT==='__soporte_x') _plCT=null;
+  if(_plCT&&_plCT.startsWith('leg:')){ const r=byId(DB.centros,_plCT.slice(4)); if(r){ plVistaSoporte(root,r); return; } }
+  if(_plCT&&plGetCT(_plCT)){ plVistaDetalle(root,plGetCT(_plCT)); return; }
+  plVistaLista(root);
+}
+function plVistaLista(root){
+  const P=DB.planta,L=P.CT26,M=P.measurement,ver=isAdmin();
+  const totCIF=P.CIF26.cifTotal,totMOD=L.reduce((a,c)=>a+c.modMes,0);
+  const kp=`<div class="ea-kpis"><div class="ea-kpi"><div class="v">18</div><div class="l">Centros de trabajo</div></div><div class="ea-kpi"><div class="v">${Math.round(M.net+M.allCorridors).toLocaleString('es-MX')} m²</div><div class="l">Producción + pasillos (layout)</div></div><div class="ea-kpi"><div class="v">${P.MAQ.length}</div><div class="l">Equipos y máquinas en el catálogo</div></div>${ver?`<div class="ea-kpi"><div class="v">${plMxn(totCIF)}</div><div class="l">CIF mensual · ene–jun 2026 <span class="ea-lock">🔒 admin</span></div></div>`:''}</div>`;
+  const vistas=[['mapa','🗺️ Mapa de la planta'],['tarjetas','▦ Tarjetas']].concat(ver?[['tabla','☰ Tabla de costos']]:[]);
+  if(!vistas.some(v=>v[0]===_plView)) _plView='mapa';
+  let body='';
+  if(_plView==='mapa'){
+    const polys=P.areas.map(a=>{const nm=(P.AREA_CT[a.id]||[])[0];return `<polygon data-plk="${esc(nm)}" points="${a.points.map(q=>q.join(',')).join(' ')}" fill="${a.color}" fill-opacity=".30" stroke="${a.color}"></polygon>`;}).join('');
+    const labels=P.areas.map(a=>{const xs=a.points.map(q=>q[0]),ys=a.points.map(q=>q[1]);return `<text x="${(Math.min(...xs)+Math.max(...xs))/2}" y="${(Math.min(...ys)+Math.max(...ys))/2+3}">${esc(PL_CORTO[a.id]||'')}</text>`;}).join('');
+    body=`<div class="ea-mapcard"><div class="ea-mapwrap" id="pl-mapwrap"><img src="assets/planta/plano_planta.png" alt="Layout de la planta"><svg viewBox="0 0 1003 513">${polys}${labels}</svg><div class="ea-maptip" id="pl-tip"></div></div>
+      <div class="ea-legend">${P.areas.map(a=>{const nm=(P.AREA_CT[a.id]||[])[0];return `<button data-plct="${esc(nm)}"><i style="background:${a.color}"></i>${esc(PL_CORTO[a.id]||'')}</button>`;}).join('')}</div>
+      <div class="ea-sm" style="margin-top:10px">Clic en un área para abrir su centro de trabajo. Las medidas del layout son aproximadas y deben validarse antes de usarse en costos definitivos.</div></div>`;
+  }else if(_plView==='tarjetas'){
+    body=`<div class="ea-cgrid">${[...L].sort((a,b)=>(ver?b.tasaTot-a.tasaTot:a.nombre.localeCompare(b.nombre))).map(c=>{const st=plStatsCT(c.nombre);
+      return `<div class="ea-ccard" data-plct="${esc(c.nombre)}"><h3>${esc(plNom(c.nombre))}</h3><div class="sub">${esc(c.cc)} · ${c.hrs} h/día</div>
+      <div><span class="ea-mini">☺ ${c.personas} personas</span><span class="ea-mini">▦ ${c.m2} m²</span><span class="ea-mini">⚙ ${P.MAQ.filter(m=>m.ct===c.nombre).length} equipos</span></div>
+      ${ver?`<div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:22px;font-weight:800">${plMxn2(c.tasaTot)}</span><span class="ea-sm">/ hora</span>${plDelta(c.varTot)}</div><div class="ea-sm" style="margin-top:2px">2025: ${plMxn2(c.tasaTot25)}/h</div>`:''}
+      <div class="ea-stats"><div><b>${st.pa}</b><span>PROYECTOS ACTIVOS</span></div><div><b>${st.ab.length}</b><span>ABIERTAS</span></div><div class="${st.ve?'bad':''}"><b>${st.ve}</b><span>VENCIDAS</span></div></div></div>`;}).join('')}</div>`;
+  }else{
+    body=`<div class="ea-card"><table class="ea-tbl"><thead><tr><th>CENTRO DE TRABAJO</th><th>GRUPO</th><th class="r">M²</th><th class="r">PERSONAS</th><th class="r">CIF / MES</th><th class="r">MOD / MES</th><th class="r">TASA 2026 /H</th><th class="r">TASA 2025 /H</th><th class="r">VAR.</th></tr></thead><tbody>${[...L].sort((a,b)=>b.tasaTot-a.tasaTot).map(c=>`<tr data-plct="${esc(c.nombre)}" style="cursor:pointer"><td><b>${esc(plNom(c.nombre))}</b></td><td class="ea-sm">${esc(c.cc)}</td><td class="r">${c.m2}</td><td class="r">${c.personas}</td><td class="r">${plMxn(c.cif)}</td><td class="r">${plMxn(c.modMes)}</td><td class="r"><b>${plMxn2(c.tasaTot)}</b></td><td class="r">${plMxn2(c.tasaTot25)}</td><td class="r">${plDelta(c.varTot)}</td></tr>`).join('')}
+      <tr><td colspan="4"><b>Total</b></td><td class="r"><b>${plMxn(totCIF)}</b></td><td class="r"><b>${plMxn(totMOD)}</b></td><td colspan="3"></td></tr></tbody></table></div>`;
+  }
+  const sop=(DB.centros||[]).filter(r=>PL_SOPORTE.includes(plSn(r.nombre))).map(r=>{const ps=(DB.projects||[]).filter(p=>(p.centroIds||[]).includes(r.id)),ds=(DB.deliverables||[]).filter(d=>ps.some(p=>p.id===d.projectId)&&d.status!=='Entregado');
+    return `<button data-plct="leg:${esc(r.id)}">${esc(r.nombre)}<small>${ps.length} proyectos · ${ds.length} abiertas</small></button>`;}).join('');
+  root.innerHTML=`<div class="ea-light-title"><span class="t">Centros de trabajo</span><span class="s">Los 18 CT oficiales del layout de planta${ver?' · tasas 2026 de Finanzas':''} · haz clic en uno para ver su detalle.</span>${ver?'<button class="ea-btn" id="pl-roi" style="float:right">📊 ROI de todas las máquinas</button>':''}</div>
+    ${kp}<div class="ea-tabs">${vistas.map(([k,l])=>`<button class="ea-tab ${_plView===k?'on':''}" data-plv="${k}">${l}</button>`).join('')}</div>${body}
+    <div class="ea-bar" style="margin-top:22px"><h2 style="color:var(--text)">Áreas de soporte <span class="ea-sm">· fuera del layout de producción</span></h2></div><div class="ea-soporte">${sop}</div>`;
+  plWire(root);
+}
+function plVistaSoporte(root,r){
+  const ps=(DB.projects||[]).filter(p=>(p.centroIds||[]).includes(r.id));
+  root.innerHTML=`<button class="ea-back" id="pl-back">← Todos los centros de trabajo</button><div class="ea-light-title"><span class="t">${esc(r.nombre)}</span><span class="s">Área de soporte · no está en el layout de producción</span></div><div class="ea-card" id="pl-ptable">${eaProyTablaHTML(ps)}</div>
+   <div style="margin-top:12px"><button class="ea-btn" id="pl-ing">⚙️ Abrir ingeniería de este centro (CIF, personal, equipos)</button></div>`;
+  plWire(root); root.querySelector('#pl-ing').onclick=()=>{ _currentCentroId=r.id; _ctTab='distribucion'; render(); };
+}
+function plVistaDetalle(root,c){
+  const P=DB.planta,st=plStatsCT(c.nombre),aId=plAreaDeCT(c.nombre),ver=isAdmin();
+  const tabs=[['resumen',ver?'📊 Resumen y costos':'📊 Resumen'],['maquinas','🏗️ Equipos y ROI'],['proyectos','📁 Proyectos']];
+  if(!tabs.some(t=>t[0]===_plTab)) _plTab='resumen';
+  let body='';
+  if(_plTab==='resumen') body=plCostosHTML(c,aId,ver);
+  else if(_plTab==='maquinas') body=plEquiposHTML(c,ver);
+  else body=`<div class="ea-kpis"><div class="ea-kpi"><div class="v">${st.ps.length}</div><div class="l">Proyectos</div></div><div class="ea-kpi ok"><div class="v">${st.pa}</div><div class="l">Con trabajo abierto</div></div><div class="ea-kpi"><div class="v">${st.ab.length}</div><div class="l">Entregables abiertos</div></div><div class="ea-kpi bad"><div class="v">${st.ve}</div><div class="l">Vencidos</div></div><div class="ea-kpi"><div class="v">${st.av}%</div><div class="l">Avance promedio</div></div></div><div class="ea-card" id="pl-ptable">${eaProyTablaHTML(st.ps)}</div>`;
+  const legs=plLegDeCT(c.nombre);const enc=legs.map(r=>byId(DB.users,r.encargadoId)?.name).filter(Boolean)[0];const ings=[...new Set(legs.flatMap(r=>(r.ingenieroIds||[]).map(i=>byId(DB.users,i)?.name)).filter(Boolean))];
+  root.innerHTML=`<button class="ea-back" id="pl-back">← Todos los centros de trabajo</button>
+  <div class="ea-light-title"><span class="t">${esc(plNom(c.nombre))}</span><span class="s">${esc(c.cc)} · ${c.hrs} h/día</span>${legs.length&&isLeader()?`<span style="float:right;display:flex;gap:8px;flex-wrap:wrap">${plLegsOrd(legs).map(r=>`<button class="ea-btn" data-pl-ing="${esc(r.id)}">⚙️ Ingeniería${legs.length>1?': '+esc(r.nombre):' del centro'} (balanceo, CIF, tabulador)</button>`).join('')}</span>`:''}</div>
+  <div style="margin:-6px 0 16px">${enc?`<span class="ea-mini">Encargado: <b>${esc(enc)}</b></span>`:''}${ings.length?`<span class="ea-mini">Ingeniero: <b>${ings.map(esc).join(', ')}</b></span>`:''}<span class="ea-mini">☺ ${c.personas} personas</span><span class="ea-mini">▦ ${c.m2} m²</span><span class="ea-mini">⚙ ${P.MAQ.filter(m=>m.ct===c.nombre).length} equipos</span></div>
+  <div class="ea-tabs">${tabs.map(([k,l])=>`<button class="ea-tab ${k===_plTab?'on':''}" data-plt="${k}">${l}</button>`).join('')}</div>${body}`;
+  plWire(root);
+  root.querySelectorAll('[data-pl-ing]').forEach(b=>b.onclick=()=>{ _currentCentroId=b.dataset.plIng; _ctTab='distribucion'; render(); });
+}
+const plRiqueza=r=>(r.personal||[]).length+(r.operaciones||[]).length+(r.maquinas||[]).length+(r.equipos||[]).length+((r.cif||[]).length?1:0);
+const plLegsOrd=legs=>[...legs].sort((a,b)=>plRiqueza(b)-plRiqueza(a));
+function plCostosHTML(c,aId,ver){
+  const P=DB.planta,tot=c.cif||1;
+  const fotos=[]; if(aId){const f=P.FOTO_AREA[aId];if(f)fotos.push(f);(P.FOTOS_AREA_EXTRA[aId]||[]).forEach(x=>fotos.push(x));}
+  const fotosHTML=fotos.length?`<div class="ea-panel"><h3>FOTOS DEL ÁREA</h3><div class="ea-fotos">${fotos.map(f=>`<figure><img src="assets/planta/${esc(f[0])}" loading="lazy" alt=""><figcaption>${esc(f[1])}</figcaption></figure>`).join('')}</div></div>`:'';
+  if(!ver) return `<div class="ea-kpis"><div class="ea-kpi"><div class="v">${c.m2} m²</div><div class="l">Layout 2026 · ${(c.pm2*100).toFixed(1)}% de la planta</div></div><div class="ea-kpi"><div class="v">${c.personas}</div><div class="l">Personas</div></div><div class="ea-kpi"><div class="v">${c.hrs} h</div><div class="l">Horas por día</div></div></div>${c.maquinas?`<div class="ea-panel"><h3>EQUIPOS PRINCIPALES</h3>${esc(c.maquinas)}</div>`:''}${fotosHTML}`;
+  const rub=P.RUBROS_CIF.map((r,i)=>({n:r[1],v:c.v[i]||0})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+  const top=rub.slice(0,8),resto=rub.slice(8).reduce((a,x)=>a+x.v,0),mx=top[0]?top[0].v:1,maxT=Math.max(c.tasaTot,c.tasaTot25);
+  const cmp=(l,v,col)=>`<div class="ea-cmp"><span>${l}</span><div class="tr"><i style="width:${100*v/maxT}%;background:${col}"></i></div><b style="text-align:right">${plMxn2(v)}</b></div>`;
+  return `<div class="ea-kpis"><div class="ea-kpi"><div class="v">${plMxn2(c.tasaTot)}</div><div class="l">Tasa total por hora 2026 ${plDelta(c.varTot)} <span class="ea-lock">🔒 admin</span></div></div>
+    <div class="ea-kpi"><div class="v">${plMxn(c.cif)}</div><div class="l">CIF al mes ${plDelta(c.varCif)}</div></div>
+    <div class="ea-kpi"><div class="v">${plMxn(c.modMes)}</div><div class="l">MOD al mes · ${c.personas} personas</div></div>
+    <div class="ea-kpi"><div class="v">${c.m2} m²</div><div class="l">Layout 2026 · ${(c.pm2*100).toFixed(1)}% de la planta</div></div></div>
+  <div class="ea-two"><div class="ea-panel"><h3>DÓNDE SE VA EL CIF · ${plMxn(c.cif)} AL MES</h3>${top.map(x=>`<div class="ea-rbar"><span>${esc(x.n)}</span><div class="tr"><i style="width:${100*x.v/mx}%"></i></div><b>${plMxn(x.v)}</b><span class="p">${(100*x.v/tot).toFixed(0)}%</span></div>`).join('')}${resto>0?`<div class="ea-rbar"><span class="ea-sm">Otros conceptos</span><div class="tr"><i style="width:${100*resto/mx}%;background:#bbb"></i></div><b>${plMxn(resto)}</b><span class="p">${(100*resto/tot).toFixed(0)}%</span></div>`:''}</div>
+  <div class="ea-panel"><h3>TASA POR HORA · 2025 CONTRA 2026</h3>${cmp('2025',c.tasaTot25,'#9bb3d0')}${cmp('2026',c.tasaTot,'var(--accent)')}
+    <div class="ea-metrics" style="margin-top:14px"><div>Tasa MOD<b>${plMxn2(c.tasaMod)}</b></div><div>Tasa CIF<b>${plMxn2(c.tasa)}</b></div><div>Horas por día<b>${c.hrs}</b></div></div>
+    <div class="ea-mono">Tasa CIF = CIF mensual ÷ 21 días ÷ ${c.hrs} h = ${plMxn2(c.tasa)}/h<br>Tasa MOD = nómina × 1.3 de carga social ÷ (21 días × ${c.hrs} h) = ${plMxn2(c.tasaMod)}/h</div></div></div>
+  <div class="ea-panel"><h3>ENERGÍA, RENTA, ARRENDAMIENTOS, DEPRECIACIÓN Y MANTENIMIENTO</h3><div class="ea-metrics" style="grid-template-columns:repeat(5,1fr)"><div>Energía<b>${plMxn(c.energia)}</b></div><div>Renta<b>${plMxn(c.renta)}</b></div><div>Arrendamientos<b>${plMxn(c.arrend)}</b></div><div>Depreciación<b>${plMxn(c.deprec)}</b></div><div>Mantenimiento<b>${plMxn(c.mtto)}</b></div></div>
+    <div class="ea-sm" style="margin-top:8px">Energía: ${c.elec?`luz medida ${plMxn(c.elec)} (${(c.pen*100).toFixed(1)}% de la planta)`:'sin consumo medido; solo su parte igual del 10%'} · Renta por m² 2026 · Arrendamientos y depreciaciones solo se cargan a los CT con máquinas · Mantenimiento: ${(c.pmt*100).toFixed(1)}% asignado.</div></div>
+  ${c.maquinas?`<div class="ea-panel"><h3>EQUIPOS PRINCIPALES</h3>${esc(c.maquinas)}</div>`:''}${fotosHTML}
+  <div class="ea-sm" style="margin-top:12px">Fuente: Tasas_Centros_Trabajo_2026.xlsx (Finanzas), versión oficial del 14-oct-2026 · CIF promedio mensual ene–jun 2026 · MOD nómina semana 40 · 18 CT oficiales.</div>`;
+}
+function plEquiposHTML(c,ver){
+  const P=DB.planta,eq=P.MAQ.filter(m=>m.ct===c.nombre);
+  const rows=eq.map(m=>{const col=PL_EST[m.est]||'#888',i=m.inst;
+    return `<tr><td>${m.foto?`<img class="ea-thumb" src="assets/planta/${esc(m.foto)}" loading="lazy" alt="">`:''}</td><td><b>${esc(m.n)}</b>${m.modelo?`<div class="ea-sm">${esc(m.modelo)}</div>`:''}${i?`<div class="ea-sm">${esc(i.hito||'')}</div><div class="ea-instbar"><i style="width:${i.pct}%"></i></div>`:''}</td>
+      <td><span class="ea-est" style="background:${col}">${esc(m.est)}</span></td><td class="r">${m.anio||'—'}</td>${ver?`<td class="r">${m.costo?plMxn(m.costo):(m.inv?plMxn(m.inv):'—')}</td><td class="r">${m.vida||'—'}</td><td class="r">${m.libros!=null?plMxn(m.libros):'—'}</td>`:''}<td class="r">${m.kw?m.kw+' kW':'—'}</td></tr>`;}).join('');
+  const roi=[]; if(ver) plLegDeCT(c.nombre).forEach(r=>(r.maquinas||[]).forEach(m=>{ if(plCtDeMaquina(m,r)===c.nombre) roi.push({r,m}); }));
+  const roiHTML=roi.map(({r,m})=>{const pr=calcROI(m,r),hd=tieneRoiRealDatos(m),rr=hd?calcROIRealPorConceptos(m,r):null,est=mEstatus(m,hd);
+    return `<div class="ea-mcard" data-plmaq="${esc(m.id)}" data-plmaqc="${esc(r.id)}"><div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">${m.heroPhoto?`<img class="ea-thumb" style="width:62px;height:62px;border-radius:10px" src="${m.heroPhoto}" alt="">`:''}<div><div style="font-weight:700;font-size:14px;line-height:1.25">${esc(m.name||'')}</div><div class="ea-sm">${esc(m.model||'')}</div><div style="margin-top:6px"><span class="ea-est" style="background:${est.color}">${est.icon} ${esc(est.label)}</span></div></div></div>
+      <div class="ea-stats" style="margin-top:0"><div><b>${plMxn(m.inv)}</b><span>INVERSIÓN</span></div><div><b style="color:${hd?(rr.roi>=100?'var(--ok)':rr.roi>=50?'#C4922A':'var(--bad)'):'var(--muted)'}">${hd?(rr.roi>=0?'+':'')+Math.round(rr.roi)+'%':'Pendiente'}</b><span>ROI REAL</span></div><div><b>${pr.ab>0?(pr.roi>=0?'+':'')+Math.round(pr.roi)+'%':'—'}</b><span>ROI PROYECT.</span></div></div></div>`;}).join('');
+  return `<div class="ea-bar" style="margin-top:0"><h2 style="color:var(--text)">Equipos del centro (${eq.length}) ${ver?'':''}</h2></div>
+  <div class="ea-card"><table class="ea-tbl"><thead><tr><th></th><th>EQUIPO</th><th>ESTATUS</th><th class="r">AÑO</th>${ver?'<th class="r">COSTO</th><th class="r">VIDA (AÑOS)</th><th class="r">VALOR EN LIBROS</th>':''}<th class="r">CONSUMO</th></tr></thead><tbody>${rows||`<tr><td colspan="8" class="ea-sm" style="padding:16px">Este CT no tiene equipos en el catálogo.</td></tr>`}</tbody></table></div>
+  ${ver?`<div class="ea-bar"><h2 style="color:var(--text)">Plan de inversión · ROI (${roi.length})</h2></div>${roi.length?`<div class="ea-mgrid">${roiHTML}</div>`:'<div class="ea-card"><div class="ea-empty">Este centro no tiene máquinas con plan de inversión capturado.</div></div>'}`:''}`;
+}
+function plWire(root){
+  root.querySelectorAll('[data-plct]').forEach(e=>e.onclick=()=>{ _plCT=e.dataset.plct; _plTab='resumen'; render(); });
+  root.querySelectorAll('[data-plv]').forEach(b=>b.onclick=()=>{ _plView=b.dataset.plv; render(); });
+  root.querySelectorAll('[data-plt]').forEach(b=>b.onclick=()=>{ _plTab=b.dataset.plt; render(); });
+  const back=root.querySelector('#pl-back'); if(back) back.onclick=()=>{ _plCT=null; render(); };
+  const roi=root.querySelector('#pl-roi'); if(roi) roi.onclick=()=>showView('roimaquinas');
+  root.querySelectorAll('[data-plmaq]').forEach(e=>e.onclick=()=>{ _currentCentroId=e.dataset.plmaqc; _ctTab='maquinas'; _currentMaquinaId=e.dataset.plmaq; _maqTab='dash'; _maqOrigen=null; render(); });
+  const tip=root.querySelector('#pl-tip'),wrap=root.querySelector('#pl-mapwrap');
+  root.querySelectorAll('#pl-mapwrap polygon').forEach(pg=>{
+    const c=plGetCT(pg.dataset.plk);
+    pg.onclick=()=>{ _plCT=pg.dataset.plk; _plTab='resumen'; render(); };
+    pg.onmousemove=e=>{ if(!c) return; const r=wrap.getBoundingClientRect(); tip.style.display='block'; tip.style.left=Math.min(e.clientX-r.left+14,r.width-240)+'px'; tip.style.top=(e.clientY-r.top+14)+'px';
+      tip.innerHTML=`<b>${esc(plNom(c.nombre))}</b>${c.m2} m² · ${c.personas} personas`+(isAdmin()?`<br>Tasa ${plMxn2(c.tasaTot)}/h ${c.varTot<=0?'▼':'▲'} ${Math.abs(c.varTot*100).toFixed(1)}% vs 2025`:''); };
+    pg.onmouseleave=()=>{ tip.style.display='none'; };
+  });
+  eaWireProyTabla(root);
+}
+
+/* ══ Proyectos en tabla (estilo EOS): se expanden para ver y actualizar entregables ══ */
+let _eaOpen=new Set();
+function eaFilaHija(d){
+  const u=byId(DB.users,d.assigneeId), n=eaDias(d.dueDate), av=eaAvance(d), k=eaCls(av), nm=eaMinutas(d).length, puede=eaPuede(d);
+  const chip=d.status==='Entregado'||n==null?'':n<0?'bad':n<=7?'warn':'';
+  return `<tr class="ea-child"><td class="ea-name">${esc(d.name)}<small>${esc(u?.name||'Sin asignar')} · ${esc(d.status)}</small></td><td></td><td></td><td></td>
+    <td><span class="ea-chip ${chip}">${d.dueDate?fmtDate(d.dueDate):'—'}</span></td>
+    <td><div style="display:flex;align-items:center;gap:10px"><div class="ea-av" style="flex:1"><input type="range" min="0" max="100" step="5" value="${av}" style="--p:${av}%" class="${k}" data-ea-av="${esc(d.id)}" ${puede?'':'disabled'}><span class="pc ${k}">${av}%</span></div><button class="ea-min" data-ea-min="${esc(d.id)}" title="Minuta">🗒${nm?`<span class="n">${nm}</span>`:''}</button></div></td></tr>`;
+}
+function eaProyTablaHTML(lista){
+  const filas=lista.map(p=>{
+    const st=plStatsProy(p), open=_eaOpen.has(p.id), cts=(p.centroIds||[]).map(id=>byId(DB.centros,id)?.nombre).filter(Boolean);
+    let h=`<tr class="ea-prow ${open?'open':''}" data-eaproj="${esc(p.id)}"><td><span class="car">▸</span>${esc(p.name)}</td>
+      <td>${cts.length?`<span class="ea-ct" title="${esc(cts.join(', '))}">${esc(cts[0])}${cts.length>1?' +'+(cts.length-1):''}</span>`:'<span class="ea-sm">—</span>'}</td>
+      <td><span class="ea-sm">${st.ab.length} abiertas · ${st.ds.length} total</span></td>
+      <td>${st.ve?`<span class="ea-chip bad">${st.ve} vencida${st.ve>1?'s':''}</span>`:'<span class="ea-sm">al corriente</span>'}</td>
+      <td><span class="ea-sm">${st.prox?fmtDate(st.prox):'—'}</span></td><td><div style="display:flex;align-items:center;gap:8px">${plPbar(st.av)}<button class="ea-open" data-open-project="${esc(p.id)}" title="Abrir el detalle del proyecto">Abrir ▸</button></div></td></tr>`;
+    if(open){ const rows=visibleDeliverables(p.id).filter(d=>d.status!=='Entregado').sort((a,b)=>(a.dueDate||'9').localeCompare(b.dueDate||'9'));
+      h+=rows.length?rows.map(eaFilaHija).join(''):`<tr class="ea-child"><td colspan="6" class="ea-sm" style="padding:12px 30px">Sin entregables abiertos.</td></tr>`; }
+    return h;}).join('');
+  return `<table><thead><tr><th>PROYECTO</th><th>CENTRO DE TRABAJO</th><th>ENTREGABLES</th><th>ESTADO</th><th>PRÓX. ENTREGA</th><th>AVANCE</th></tr></thead><tbody>${filas||'<tr><td colspan="6" class="ea-empty">Sin proyectos.</td></tr>'}</tbody></table>`;
+}
+function eaWireProyTabla(root){
+  root.querySelectorAll('tr[data-eaproj]').forEach(r=>r.onclick=ev=>{ if(ev.target.closest('[data-open-project]')) return; const id=r.dataset.eaproj; _eaOpen.has(id)?_eaOpen.delete(id):_eaOpen.add(id); render(); });
+  root.querySelectorAll('input[data-ea-av]').forEach(r=>{
+    r.oninput=()=>{ const v=+r.value,k=eaCls(v); r.style.setProperty('--p',v+'%'); r.className=k; const pc=r.nextElementSibling; pc.textContent=v+'%'; pc.className='pc '+k; };
+    r.onchange=()=>eaGuardarAvance(r.dataset.eaAv,+r.value);
+  });
+  root.querySelectorAll('[data-ea-min]').forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); eaAbrirMinuta(b.dataset.eaMin); });
+  root.querySelectorAll('[data-open-project]').forEach(el=>el.onclick=ev=>{ ev.stopPropagation(); _proyectosScrollY=window.scrollY; openProjectDetail(el.dataset.openProject); });
+}
+
+/* ══ Rocas trimestrales (estilo EOS) ══ */
+let _rocQ=null;
+const ROC_COLORS=['#4C4F56','#13917F','#B35A2B','#2F5B8F','#7A4E9C','#B0463C'];
+function renderRocas(root){
+  if(!dataReady()){ root.innerHTML=loadingHTML('Cargando rocas…'); return; }
+  const rocas=(DB.rocas||[]), ahora=rocaTrimestreActual();
+  const key=r=>(r.year||'')+'-'+(r.quarter||'');
+  const qs=[...new Set([ahora.year+'-'+ahora.quarter,...rocas.map(key)])].filter(x=>x!=='-').sort();
+  if(!_rocQ||!qs.includes(_rocQ)) _rocQ=ahora.year+'-'+ahora.quarter;
+  const [qy,qn]=_rocQ.split('-').map(Number), esActual=(qy===ahora.year&&qn===ahora.quarter);
+  const secs=seccionesVisiblesScorecard();
+  const delQ=rocas.filter(r=>key(r)===_rocQ);
+  const tarjetas=secs.map((sec,i)=>{
+    const rs=delQ.filter(r=>r.seccionId===sec.id).sort((a,b)=>(a.orden||0)-(b.orden||0));
+    if(!rs.length&&!(esActual&&puedeGestionarSeccion(sec.id))) return '';
+    const lider=byId(DB.users,sec.liderId), avg=rs.length?Math.round(rs.reduce((a,r)=>a+(+r.avance||0),0)/rs.length):0, puede=puedeGestionarSeccion(sec.id);
+    return `<div class="ea-rcard"><div class="ea-rhead" style="background:${ROC_COLORS[i%ROC_COLORS.length]}"><div><h3>${esc(sec.nombre)}</h3><div class="l">${esc(lider?.name||'')}</div></div><div class="sc">Avance promedio<b>${avg}%</b></div></div>
+      ${rs.map((r,j)=>{const a=+r.avance||0,col=a>=67?'var(--ok)':a>=34?'#C4922A':'var(--bad)';
+        return `<div class="ea-rrow"><span class="no">${j+1}</span><div class="t"><div class="tt">${esc(r.title)}</div><div class="bar"><i style="width:${a}%;background:${col}"></i></div></div>
+        <div class="sl"><input type="range" min="0" max="100" step="1" value="${a}" data-roc="${esc(r.id)}" ${puede?'':'disabled'}></div><div class="pct ${eaCls(a)}">${a}%</div></div>`;}).join('')||'<div class="ea-rrow ea-sm">Aún no hay rocas capturadas en este trimestre.</div>'}
+      ${esActual&&puede?`<div class="ea-radd"><input class="ea-inp" data-roc-new="${esc(sec.id)}" placeholder="Nueva roca de ${esc(sec.nombre)} para ${qn}Q ${qy}…"><button class="ea-btn dark" data-roc-add="${esc(sec.id)}">+ Agregar</button></div>`:''}</div>`;}).join('');
+  const sueltas=isAdmin()?delQ.filter(r=>!r.seccionId):[];
+  root.innerHTML=`<div class="ea-light-title"><span class="t">☆ Rocas</span><span class="s">Prioridades del trimestre por sección.</span></div>
+    <div class="ea-rq"><span class="lbl">TRIMESTRE</span>${qs.map(q=>{const[y,n]=q.split('-');return `<button class="ea-q ${q===_rocQ?'on':''}" data-rq="${q}">${n}Q ${y}</button>`;}).join('')}</div>
+    ${tarjetas||'<div class="ea-card"><div class="ea-empty">No hay rocas para tus secciones en este trimestre.</div></div>'}
+    ${sueltas.length?`<div class="ea-panel"><h3>ROCAS SIN SECCIÓN (${sueltas.length}) · asígnalas desde Scorecard</h3>${sueltas.map(r=>`<div style="padding:6px 0">${esc(r.title)} <span class="ea-sm">· ${esc(r.department||'')} · ${+r.avance||0}%</span></div>`).join('')}</div>`:''}`;
+  root.querySelectorAll('[data-rq]').forEach(b=>b.onclick=()=>{ _rocQ=b.dataset.rq; renderRocas(root); });
+  root.querySelectorAll('input[data-roc]').forEach(r=>{
+    r.oninput=()=>{ const row=r.closest('.ea-rrow'); const v=+r.value; row.querySelector('.pct').textContent=v+'%'; row.querySelector('.bar i').style.width=v+'%'; };
+    r.onchange=()=>{ const v=+r.value; actualizarRoca(r.dataset.roc,{avance:v,status:v>=100?'completada':'en_progreso'}); };
+  });
+  const add=sid=>{ const inp=root.querySelector(`[data-roc-new="${sid}"]`); const sec=byId(DB.secciones,sid); if(inp&&sec&&inp.value.trim()) crearRoca(sec,inp.value); };
+  root.querySelectorAll('[data-roc-add]').forEach(b=>b.onclick=()=>add(b.dataset.rocAdd));
+  root.querySelectorAll('[data-roc-new]').forEach(i=>i.onkeydown=e=>{ if(e.key==='Enter') add(i.dataset.rocNew); });
+}
+VIEW_RENDERERS['rocas']=renderRocas;
+(function(){
+  const b=document.getElementById('btn-junta'), sub=document.getElementById('sub-junta');
+  if(b) b.addEventListener('click',()=>{ sub.classList.toggle('open'); document.getElementById('junta-caret').textContent=sub.classList.contains('open')?'▾':'▸'; });
+})();
+
 function eaGuardarAvance(id,v){
   const d=byId(DB.deliverables,id); if(!d||!eaPuede(d)) return;
   d.avance=v; d.updatedAt=Date.now();
@@ -4794,7 +5090,7 @@ function centrosResumenHTML(centros){
     ${resto.length?`<div class="small muted" style="margin-top:4px">+ ${resto.length} centro${resto.length!==1?'s':''} más, ${fmtMoney(resto.reduce((a,f)=>a+f.costo,0))}/mes en total (${(resto.reduce((a,f)=>a+f.costo,0)/total*100).toFixed(1)}%)</div>`:''}
   </div>`;
 }
-function renderCentroTrabajo(root){
+function renderCentroTrabajoLegacy(root){
   if(!dataReady()){ root.innerHTML=loadingHTML('Cargando centros de trabajo…'); return; }
   if(_currentCentroId){ renderCentroDetail(root); return; }
   root.innerHTML=`<div class="view-head"><div><h1>Centro de Trabajo</h1>
