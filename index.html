@@ -493,6 +493,16 @@ tr.ea-pend td{background:var(--warn-bg)!important}tr.ea-pend td:first-child{box-
 .ctl-sc h4{font-size:14px}.ctl-sc .d{font-size:11.5px;color:var(--muted);margin:3px 0 8px;line-height:1.4}.ctl-sc .f{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .ctl-sem{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border2);font-size:13px}.ctl-sem:first-child{border-top:0}
 .ctl-dot{width:12px;height:12px;border-radius:50%;flex:0 0 12px}
+
+/* ══ Parte matutino ══ */
+.pt-card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:16px 18px;margin-bottom:12px;border-left:6px solid var(--accent)}
+.pt-card.alta{border-left-color:var(--bad)}.pt-card.vieja{border-left-color:#8a8a85}.pt-card.roca,.pt-card.por_aprobar,.pt-card.autorizar{border-left-color:#D9A93A}
+.pt-card h4{font-size:14.5px;line-height:1.35}.pt-card .dt{font-size:12px;color:var(--muted);margin-top:3px}
+.pt-act{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px dashed var(--border2)}
+.pt-act .t{flex:1;min-width:230px}.pt-act .t b{display:block;font-size:13.5px;line-height:1.3}.pt-act .t span{font-size:12px;color:var(--muted)}
+.pt-act.listo{opacity:.55}.pt-act.listo .t b{text-decoration:line-through}
+.pt-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.pt-old{background:var(--warn-bg);border-radius:10px;padding:8px 12px;font-size:12.5px;margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -2840,6 +2850,8 @@ function renderControl(root){
     <div class="ctl-hero"><div class="ctl-ring"><svg viewBox="0 0 84 84"><circle cx="42" cy="42" r="36" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="9"/><circle cx="42" cy="42" r="36" fill="none" stroke="${pct===100?'#4FB27D':'#D9A93A'}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${c*pct/100} ${c}"/></svg><b>${hechos}/${pasos.length}</b></div>
       <div style="flex:1;min-width:240px"><h2>Buen día, ${esc((SESSION?.name||'').split(' ')[0])}</h2><div class="sub">${fechaTxt.charAt(0).toUpperCase()+fechaTxt.slice(1)}</div><div class="sub" style="text-transform:none;margin-top:6px">${pct===100?'Rutina del día completa. 👏':`Tu rutina de hoy va ${pct}%. Sigue el orden: cada paso deja un número y un responsable.`}</div></div>
       <div class="sub" style="max-width:300px">Meta: <b>$5,000,000 MXN/año</b> en ahorros de mejora continua. Toda mejora con impacto se registra en el F-MC-01.</div></div>
+    <div class="ctl-sec"><h3>PARTE DE JARVIS · DECIDE PRIMERO</h3><span class="line"></span></div>
+    ${ctlParteHTML()}
     <div class="ctl-sec"><h3>LO QUE REQUIERE TU ATENCIÓN AHORA</h3><span class="line"></span></div>
     <div class="ctl-att">${att.map((x,i)=>`<button class="${x.sev}" data-ctl-att="${i}"><span class="ic">${x.ic}</span><span><b>${esc(x.t)}</b><span class="s">${esc(x.s)}</span></span></button>`).join('')}</div>
     <div class="ctl-sec"><h3>TU RUTINA DE HOY, EN ORDEN</h3><span class="line"></span></div>
@@ -2861,7 +2873,8 @@ function renderControl(root){
       <div class="f">${url?`<a class="ea-btn" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none">Abrir ↗</a>`:''}<button class="ea-btn" data-sis-edit="${x.id}">✎ Liga / nota</button><button class="ea-btn ${rev?'':'dark'}" data-sis-rev="${x.id}">${rev?'Quitar revisado':'Marcar revisado'}</button></div>
       <div class="f">${['verde','ambar','rojo'].map(e=>`<button class="ea-btn" style="${est===e?'background:'+(e==='verde'?'var(--ok)':e==='ambar'?'#D9A93A':'var(--bad)')+';color:#fff':''}" data-sis-est="${x.id}:${e}">${e==='verde'?'🟢 Bien':e==='ambar'?'🟠 Atención':'🔴 Mal'}</button>`).join('')}</div>${d.nota?`<div class="ea-sm" style="margin-top:8px"><i>${esc(d.nota)}</i></div>`:''}`}</div>`;}).join('')}</div>
     <div class="ctl-sec"><h3>JARVIS</h3><span class="line"></span></div>
-    <div class="ea-card" style="padding:16px"><b>Cómo trabaja contigo:</b> prepara el reporte matutino de las 7:30, redacta borradores de tus correos (nunca los envía solo), te avisa de lo que se atora y propone cada solicitud nueva para esta lista de autorizaciones. <span class="ea-sm">Estado: el reporte matutino se activa cuando confirmes que esta pantalla te sirve.</span></div>`;
+    <div class="ea-card" style="padding:16px"><b>Cómo trabaja contigo:</b> prepara el parte cada día hábil a las 6:45 (lo ves arriba), redacta borradores de tus correos (nunca los envía solo), te avisa de lo que se atora y propone cada solicitud nueva para esta lista de autorizaciones. <span class="ea-sm">También puedes pedírmelo en cualquier momento aquí en Claude: «parte de la mañana».</span></div>`;
+  root.querySelectorAll('[data-pa]').forEach(b=>b.onclick=()=>{ const [k,id]=b.dataset.pa.split(':'); ctlPAccion(k,id); });
   root.querySelectorAll('[data-ctl-att]').forEach(b=>b.onclick=()=>{ const f=att[+b.dataset.ctlAtt].go; if(f) f(); });
   root.querySelectorAll('[data-ctl-chk]').forEach(b=>b.onclick=()=>ctlMarcar(b.dataset.ctlChk));
   root.querySelectorAll('[data-ctl-go]').forEach(b=>b.onclick=()=>{ const [k,i]=b.dataset.ctlGo.split(':'); if(k==='sis'){ showView(i); return; } const a=pasos.find(x=>x.k===k).acc[+i];
@@ -2878,6 +2891,55 @@ function renderControl(root){
     openDlg({title:x.n,sub:'Liga y nota',saveLabel:'Guardar',body:`<label class="lbl">Liga del aplicativo o archivo</label><input class="input" id="sis-url" value="${esc(d.url||'')}" placeholder="https://…"><label class="lbl" style="margin-top:10px">Nota (qué mirar, quién lo captura, qué umbral)</label><textarea class="input" id="sis-nota" rows="3">${esc(d.nota||'')}</textarea>`,
       onSave:()=>{ _fbDB.ref('li_control/sistemas/'+id).update({url:document.getElementById('sis-url').value.trim()||null,nota:document.getElementById('sis-nota').value.trim()||null}); toast('Guardado ✓'); }}); });
 }
+
+/* ── Parte matutino: lo publica la rutina de las 6:45 en li_control/parte/<fecha> ── */
+function ctlParteActual(){
+  const P=DB.control?.parte||{}, hoyK=ctlHoy();
+  if(P[hoyK]) return {p:P[hoyK],esHoy:true};
+  const ks=Object.keys(P).sort(); return ks.length?{p:P[ks[ks.length-1]],esHoy:false}:null;
+}
+function ctlActResuelta(a){ const d=byId(DB.deliverables,a.id); return !d||d.status==='Entregado'||(d.dueDate&&d.dueDate>=todayISO()); }
+function ctlParteHTML(){
+  const r=ctlParteActual();
+  if(!r) return `<div class="ea-card"><div class="ea-empty">Aún no hay parte. Jarvis lo prepara cada día hábil a las 6:45 y lo deja aquí con botones para decidir.</div></div>`;
+  const p=r.p, rs=p.resumen||{};
+  const cab=`<div class="pt-bar"><b>Parte de las ${esc(p.hora||'')}</b><span class="ea-sm">${esc(p.fecha)}</span>${[['abiertas',rs.abiertas,''],['vencidas',rs.vencidas,rs.vencidas?'bad':'ok'],['por aprobar',rs.porAprobar,rs.porAprobar?'warn':'ok'],['cerradas ayer',rs.cerradasAyer,'ok'],['vencen hoy',rs.vencenHoy,rs.vencenHoy?'warn':'ok']].map(([t,v,c])=>`<span class="ctl-chip ${c||'mut'}">${v} ${t}</span>`).join('')}</div>${r.esHoy?'':`<div class="pt-old">Este es el parte del <b>${esc(p.fecha)}</b>. El de hoy se genera a las 6:45.</div>`}`;
+  const btn=(a,id)=>({cerrar:`<button class="ea-btn dark" data-pa="cerrar:${id}">✔ Cerrar</button>`,replantear:`<button class="ea-btn" data-pa="replantear:${id}">📅 Replantear</button>`,ver:`<button class="ea-btn" data-pa="ver:${id}">Ver</button>`}[a]||'');
+  const tarj=(p.decisiones||[]).map((x,i)=>{
+    const acts=(x.actividades||[]).map(a=>{ const ok=ctlActResuelta(a); const d=byId(DB.deliverables,a.id);
+      return `<div class="pt-act ${ok?'listo':''}"><div class="t"><b>${esc(a.nombre)}</b><span>${esc(a.quien)} · ${esc(a.proyecto)}${a.dias?` · <b style="display:inline;color:var(--bad)">${a.dias} días vencida</b>`:''}</span></div>${ok?'<span class="ctl-chip ok">✔ Resuelta</span>':(x.acciones||[]).filter(k=>['cerrar','replantear','ver'].includes(k)).map(k=>btn(k,a.id)).join('')}</div>`; }).join('');
+    const glob=(x.acciones||[]).includes('ir_aprobar')?'<button class="ea-btn dark" data-pa="ir_aprobar:">Revisar y aprobar</button>':(x.acciones||[]).includes('ir_autorizar')?'<button class="ea-btn dark" data-pa="ir_autorizar:">Ir a autorizaciones</button>':(x.acciones||[]).includes('ver_rocas')?'<button class="ea-btn" data-pa="ver_rocas:">Ver rocas</button>':'';
+    return `<div class="pt-card ${esc(x.tipo)}"><div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><span style="font-size:20px">${x.icono||'•'}</span><div style="flex:1;min-width:220px"><h4>${i+1}. ${esc(x.titulo)}</h4>${x.detalle?`<div class="dt">${esc(x.detalle)}</div>`:''}</div>${glob}</div>${acts}</div>`; }).join('');
+  const nv=(p.noVisible||[]).length?`<details style="margin-top:6px"><summary class="ea-sm" style="cursor:pointer;font-weight:700">Lo que Jarvis todavía no puede ver (${p.noVisible.length})</summary>${p.noVisible.map(x=>`<div class="ea-sm" style="padding:3px 0">• ${esc(x)}</div>`).join('')}</details>`:'';
+  return cab+(tarj||'<div class="ea-card"><div class="ea-empty">Nada urgente que decidir hoy. ✅</div></div>')+nv;
+}
+function ctlCerrarAct(id){
+  const d=byId(DB.deliverables,id); if(!d) return;
+  appConfirm('¿Cerrar esta actividad?',`"${d.name}" pasará a Entregado y aprobado por ti.`).then(ok=>{ if(!ok) return;
+    Object.assign(d,{avance:100,status:'Entregado',approved:{by:SESSION.userId,byName:SESSION.name,at:Date.now()},entregadoAt:Date.now(),updatedAt:Date.now()});
+    d.minutas=[...eaMinutas(d),{t:'Cerrada desde el parte matutino por '+SESSION.name,f:Date.now(),by:SESSION.name}];
+    saveDB(); toast('Cerrada ✓'); });
+}
+function ctlReplantearAct(id){
+  const d=byId(DB.deliverables,id); if(!d) return;
+  const sug=new Date(Date.now()+7*864e5), sugK=isoDate(sug);
+  openDlg({title:'Replantear actividad',sub:d.name,saveLabel:'Replantear',body:`<label class="lbl">Nueva fecha de entrega *</label><input class="input" type="date" id="rp-fecha" value="${sugK}">
+    <label class="lbl" style="margin-top:10px">Motivo (afecta el PT de la persona) *</label><select class="select-input" id="rp-motivo"><option value="">— Selecciona —</option><option value="fuera_de_control">Fuera de sus posibilidades (no se penaliza)</option><option value="ineficiencia">Fue por ineficiencia (se penaliza en PT)</option></select>
+    <label class="lbl" style="margin-top:10px">Comentario (queda en la minuta)</label><textarea class="input" id="rp-nota" rows="2"></textarea>`,
+    onSave:()=>{ const f=document.getElementById('rp-fecha').value, m=document.getElementById('rp-motivo').value; if(!f){ toast('Pon la nueva fecha'); return false; } if(!m){ toast('Selecciona el motivo: afecta el PT'); return false; }
+      d.cambiosFecha=[...(d.cambiosFecha||[]),{anterior:d.dueDate,nueva:f,motivo:m,at:Date.now(),by:SESSION.userId}]; if(!d.dueDateOriginal) d.dueDateOriginal=d.dueDate; d.dueDate=f; d.updatedAt=Date.now();
+      const nota=document.getElementById('rp-nota').value.trim(); d.minutas=[...eaMinutas(d),{t:'Replanteada al '+fmtDate(f)+' desde el parte matutino'+(nota?': '+nota:''),f:Date.now(),by:SESSION.name}];
+      if(d.assigneeId&&d.assigneeId!==SESSION.userId) crearNotificacion({tipo:'devuelto',texto:`Nueva fecha para "${d.name}": ${fmtDate(f)}`,proyectoId:d.projectId,entregableId:d.id,paraUserIds:[d.assigneeId]});
+      saveDB(); toast('Replanteada ✓'); } });
+}
+function ctlPAccion(k,id){
+  if(k==='cerrar') ctlCerrarAct(id); else if(k==='replantear') ctlReplantearAct(id);
+  else if(k==='ver'){ const d=byId(DB.deliverables,id); _eaModo='abiertas'; _eaQ=d?d.name:''; showView('actividades'); }
+  else if(k==='ir_aprobar'){ _eaModo='aprobar'; showView('actividades'); }
+  else if(k==='ir_autorizar') document.getElementById('ctl-aut')?.scrollIntoView({behavior:'smooth'});
+  else if(k==='ver_rocas') showView('rocas');
+}
+
 VIEW_RENDERERS['control']=renderControl;
 
 
