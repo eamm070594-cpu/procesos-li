@@ -2309,6 +2309,7 @@ VIEW_RENDERERS['proyectos']=renderProyectos;
 ══════════════════════════════════════════════════════ */
 let _eaGroup='normal', _eaProj='', _eaQ='', _eaTeam='todos', _eaModo='abiertas';
 function eaFechaLocal(ms){ const t=new Date(ms); return fmtDate(t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')); }
+const eaPrioridad=d=>d.prioridad||byId(DB.projects,d.projectId)?._oldPriority||'';
 function eaMinutas(d){ return Array.isArray(d.minutas)?d.minutas:[]; }
 function eaAvance(d){ return typeof d.avance==='number'?d.avance:({'Entregado':100,'En proceso':50,'En pausa':25}[d.status]??0); }
 function eaPuede(d){ return canManageDeliverable(d)||canUpdateOwnDeliverable(d); }
@@ -2353,7 +2354,7 @@ function eaFila(d){
   const puede=eaPuede(d);
   const pend=d.status==='Entregado'&&!d.approved;
   return `<tr data-ea="${esc(d.id)}" class="${pend?'ea-pend':''}">
-    <td class="ea-name">${esc(d.name)}${d.status==='En pausa'?'<small>En pausa</small>':''}${pend?`<br><span class="ea-pidecierre">📝 Pide cerrarse · ${eaHace(d.entregadoAt||d.updatedAt)}</span>`:''}</td>
+    <td class="ea-name">${esc(d.name)}${eaPrioridad(d)==='Alta'?' <span class="ea-chip bad" style="padding:2px 7px;font-size:10.5px" title="Prioridad alta">🔥 Alta</span>':''}${d.status==='En pausa'?'<small>En pausa</small>':''}${pend?`<br><span class="ea-pidecierre">📝 Pide cerrarse · ${eaHace(d.entregadoAt||d.updatedAt)}</span>`:''}</td>
     <td style="white-space:nowrap">${esc(u?.name||'Sin asignar')}</td>
     <td><span class="ea-chip ${chip}">${d.dueDate?fmtDate(d.dueDate):'—'}</span></td>
     <td>${p?`<span class="ea-tag t${(p.name||'').length%3}" title="${esc(p.name)}">${esc(p.name)}</span>`:'<span class="ea-tag none">— proyecto —</span>'}</td>
@@ -2362,7 +2363,7 @@ function eaFila(d){
     <td style="white-space:nowrap"><button class="ea-min" data-ea-min="${esc(d.id)}" title="Minuta de la actividad">🗒${nm?`<span class="n">${nm}</span>`:''}</button>${eaAccion(d)}</td></tr>`;
 }
 function eaAccion(d){
-  if(d.status!=='Entregado') return '';
+  if(d.status!=='Entregado') return canManageDeliverable(d)?`<button class="ea-min" data-ea-asg="${esc(d.id)}" title="Reasignar o cambiar prioridad" style="margin-left:6px">👤</button>`:'';
   if(d.approved&&d.resultado==='no_cumplida') return `<span class="ea-ok" style="color:var(--bad)" title="${esc(d.motivoNoCumplida==='fuera_de_control'?'Sin penalización en el PT':'Penaliza en el PT')}">✖ No cumplida</span>`;
   if(d.approved) return `<span class="ea-ok" title="${esc(d.approved.byName||'')}">✓ Aprobada</span>`;
   if(canManageDeliverable(d)) return `<button class="ea-btn dark ea-sm-btn" data-ea-apr="${esc(d.id)}">Aprobar</button><button class="ea-btn ea-sm-btn" data-ea-dev="${esc(d.id)}">Devolver</button>`;
@@ -2411,6 +2412,7 @@ function renderActividades(root){
     r.onchange=()=>eaGuardarAvance(r.dataset.eaAv,+r.value);
   });
   root.querySelectorAll('[data-ea-min]').forEach(b=>b.onclick=()=>eaAbrirMinuta(b.dataset.eaMin));
+  root.querySelectorAll('[data-ea-asg]').forEach(b=>b.onclick=()=>ctlReasignarAct(b.dataset.eaAsg));
   root.querySelectorAll('[data-ea-apr]').forEach(b=>b.onclick=()=>eaAprobar(b.dataset.eaApr));
   root.querySelectorAll('[data-ea-dev]').forEach(b=>b.onclick=()=>eaDevolver(b.dataset.eaDev));
   mcBadge();
@@ -2819,7 +2821,7 @@ function ctlAtencion(){
   if(apr.length){ const v=Math.max(...apr.map(d=>ahora-(d.entregadoAt||d.updatedAt||ahora))); out.push({sev:v>864e5?'bad':'warn',ic:'📝',t:`${apr.length} actividad${apr.length!==1?'es piden':' pide'} cerrarse`,s:v>864e5?'La más antigua lleva más de 24 h esperando':'Aprueba o devuelve',go:()=>{_eaModo='aprobar';showView('actividades');}}); }
   const au=ctlAuts().filter(a=>a.estado==='pendiente');
   if(au.length){ const v=Math.max(...au.map(a=>ahora-(a.creado||ahora))); out.push({sev:v>1728e5?'bad':'warn',ic:'✍️',t:`${au.length} por autorizar`,s:v>1728e5?'Hay una con más de 48 h sin respuesta':'Compras, presupuestos, bonos o personal',go:()=>document.getElementById('ctl-aut')?.scrollIntoView({behavior:'smooth'})}); }
-  const alta=(DB.deliverables||[]).filter(d=>d.status!=='Entregado'&&d.status!=='En pausa'&&d.dueDate&&d.dueDate<hoyK&&byId(DB.projects,d.projectId)?._oldPriority==='Alta');
+  const alta=(DB.deliverables||[]).filter(d=>d.status!=='Entregado'&&d.status!=='En pausa'&&d.dueDate&&d.dueDate<hoyK&&eaPrioridad(d)==='Alta');
   if(alta.length) out.push({sev:'bad',ic:'🔥',t:`${alta.length} vencida${alta.length!==1?'s':''} de prioridad Alta`,s:'Pregunta hoy a su responsable',go:()=>{_eaModo='abiertas';_eaQ='';showView('actividades');}});
   const h=rocaTrimestreActual(), rit=ctlRitmo(); let atras=0;
   (DB.secciones||[]).forEach(sec=>{ const rs=mcRocas(sec,h.year,h.quarter); if(rs.length&&rs.reduce((a,r)=>a+(+r.avance||0),0)/rs.length<rit-10) atras++; });
@@ -2907,10 +2909,10 @@ function ctlParteHTML(){
   if(!r) return `<div class="ea-card"><div class="ea-empty">Aún no hay parte. Jarvis lo prepara cada día hábil a las 6:45 y lo deja aquí con botones para decidir.</div></div>`;
   const p=r.p, rs=p.resumen||{};
   const cab=`<div class="pt-bar"><b>Parte de las ${esc(p.hora||'')}</b><span class="ea-sm">${esc(p.fecha)}</span>${[['abiertas',rs.abiertas,''],['vencidas',rs.vencidas,rs.vencidas?'bad':'ok'],['por aprobar',rs.porAprobar,rs.porAprobar?'warn':'ok'],['cerradas ayer',rs.cerradasAyer,'ok'],['vencen hoy',rs.vencenHoy,rs.vencenHoy?'warn':'ok']].map(([t,v,c])=>`<span class="ctl-chip ${c||'mut'}">${v} ${t}</span>`).join('')}</div>${r.esHoy?'':`<div class="pt-old">Este es el parte del <b>${esc(p.fecha)}</b>. El de hoy se genera a las 6:45.</div>`}`;
-  const btn=(a,id)=>({cerrar:`<button class="ea-btn dark" data-pa="cerrar:${id}">Cerrar…</button>`,replantear:`<button class="ea-btn" data-pa="replantear:${id}">📅 Replantear</button>`,ver:`<button class="ea-btn" data-pa="ver:${id}">Ver</button>`}[a]||'');
+  const btn=(a,id)=>({cerrar:`<button class="ea-btn dark" data-pa="cerrar:${id}">Cerrar…</button>`,replantear:`<button class="ea-btn" data-pa="replantear:${id}">📅 Replantear</button><button class="ea-btn" data-pa="reasignar:${id}">👤 Reasignar / prioridad</button>`,ver:`<button class="ea-btn" data-pa="ver:${id}">Ver</button>`}[a]||'');
   const tarj=(p.decisiones||[]).map((x,i)=>{
     const acts=(x.actividades||[]).map(a=>{ const ok=ctlActResuelta(a); const d=byId(DB.deliverables,a.id);
-      return `<div class="pt-act ${ok?'listo':''}"><div class="t"><b>${esc(a.nombre)}</b><span>${esc(a.quien)} · ${esc(a.proyecto)}${a.dias?` · <b style="display:inline;color:var(--bad)">${a.dias} días vencida</b>`:''}</span></div>${ok?'<span class="ctl-chip ok">✔ Resuelta</span>':(x.acciones||[]).filter(k=>['cerrar','replantear','ver'].includes(k)).map(k=>btn(k,a.id)).join('')}</div>`; }).join('');
+      return `<div class="pt-act ${ok?'listo':''}"><div class="t"><b>${esc(a.nombre)}</b><span>👤 <b style="display:inline;color:var(--text)">${esc((byId(DB.deliverables,a.id)&&byId(DB.users,byId(DB.deliverables,a.id).assigneeId)?.name)||a.quien)}</b> · ${esc(a.proyecto)}${a.dias?` · <b style="display:inline;color:var(--bad)">${a.dias} días vencida</b>`:''}</span></div>${ok?'<span class="ctl-chip ok">✔ Resuelta</span>':(x.acciones||[]).filter(k=>['cerrar','replantear','ver'].includes(k)).map(k=>btn(k,a.id)).join('')}</div>`; }).join('');
     const glob=(x.acciones||[]).includes('ir_aprobar')?'<button class="ea-btn dark" data-pa="ir_aprobar:">Revisar y aprobar</button>':(x.acciones||[]).includes('ir_autorizar')?'<button class="ea-btn dark" data-pa="ir_autorizar:">Ir a autorizaciones</button>':(x.acciones||[]).includes('ver_rocas')?'<button class="ea-btn" data-pa="ver_rocas:">Ver rocas</button>':'';
     return `<div class="pt-card ${esc(x.tipo)}"><div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><span style="font-size:20px">${x.icono||'•'}</span><div style="flex:1;min-width:220px"><h4>${i+1}. ${esc(x.titulo)}</h4>${x.detalle?`<div class="dt">${esc(x.detalle)}</div>`:''}</div>${glob}</div>${acts}</div>`; }).join('');
   const nv=(p.noVisible||[]).length?`<details style="margin-top:6px"><summary class="ea-sm" style="cursor:pointer;font-weight:700">Lo que Jarvis todavía no puede ver (${p.noVisible.length})</summary>${p.noVisible.map(x=>`<div class="ea-sm" style="padding:3px 0">• ${esc(x)}</div>`).join('')}</details>`:'';
@@ -2951,8 +2953,41 @@ function ctlReplantearAct(id){
       if(d.assigneeId&&d.assigneeId!==SESSION.userId) crearNotificacion({tipo:'devuelto',texto:`Nueva fecha para "${d.name}": ${fmtDate(f)}`,proyectoId:d.projectId,entregableId:d.id,paraUserIds:[d.assigneeId]});
       saveDB(); toast('Replanteada ✓'); } });
 }
+
+function ctlReasignarAct(id){
+  const d=byId(DB.deliverables,id); if(!d) return;
+  const cur=byId(DB.users,d.assigneeId), p=byId(DB.projects,d.projectId);
+  const gente=(isAdmin()?DB.users:getMyReports()).filter(u=>u.id!==d.assigneeId).slice().sort((a,b)=>a.name.localeCompare(b.name));
+  const priDef=p?._oldPriority||'';
+  openDlg({title:'Reasignar y priorizar',sub:d.name,saveLabel:'Guardar',
+    body:`<div style="background:var(--surface2);border-radius:12px;padding:12px 14px;margin-bottom:14px"><div class="small muted">Responsable actual</div><div style="font-weight:800;font-size:15px">👤 ${esc(cur?.name||'Sin asignar')}</div><div class="small muted" style="margin-top:3px">${esc(p?.name||'Sin proyecto')} · entrega ${d.dueDate?fmtDate(d.dueDate):'—'} · prioridad ${esc(eaPrioridad(d)||'sin definir')}</div></div>
+      <label class="lbl">Dárselo a otra persona</label><select class="select-input" id="rs-quien"><option value="">— Sigue con ${esc(cur?.name||'la misma persona')} —</option>${gente.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select>
+      <div id="rs-pen" style="display:none;margin-top:10px"><label class="lbl">Nueva fecha de entrega${d.dueDate&&d.dueDate<todayISO()?' (ya está vencida: sin fecha nueva, la persona la recibe atrasada)':' (opcional)'}</label><input class="input" type="date" id="rs-fecha" value="${d.dueDate&&d.dueDate<todayISO()?isoDate(new Date(Date.now()+7*864e5)):''}"><label class="lbl" style="margin-top:10px">¿Se penaliza a ${esc(cur?.name||'la persona actual')} en su PT? *</label><select class="select-input" id="rs-penaliza"><option value="">— Selecciona —</option><option value="no">No: cambió la prioridad o no dependía de la persona</option><option value="si">Sí: fue incumplimiento</option></select></div>
+      <label class="lbl" style="margin-top:12px">Prioridad de esta actividad</label><select class="select-input" id="rs-pri"><option value="">${priDef?'Sin cambio (hereda del proyecto: '+esc(priDef)+')':'Sin cambio'}</option><option value="Alta">🔥 Alta</option><option value="Media">Media</option><option value="Baja">Baja</option></select>
+      <label class="lbl" style="margin-top:12px">Comentario (queda en la minuta)</label><textarea class="input" id="rs-nota" rows="2"></textarea>`,
+    onSave:()=>{
+      const nuevo=document.getElementById('rs-quien').value, pri=document.getElementById('rs-pri').value, pen=document.getElementById('rs-penaliza').value, nota=document.getElementById('rs-nota').value.trim();
+      if(!nuevo&&!pri){ toast('No hay nada que cambiar: elige a otra persona o una prioridad'); return false; }
+      if(nuevo&&!pen){ toast('Indica si se penaliza a la persona actual en su PT'); return false; }
+      const partes=[];
+      if(pri){ d.prioridad=pri; partes.push('prioridad '+pri); }
+      if(nuevo){
+        const prev=d.assigneeId, u=byId(DB.users,nuevo);
+        d.reasignaciones=[...(d.reasignaciones||[]),{de:prev,a:nuevo,at:Date.now(),by:SESSION.userId,penaliza:pen==='si'}];
+        d.assigneeId=nuevo; partes.push('reasignada a '+u.name+(pen==='si'?' (penaliza a '+(cur?.name||'la persona anterior')+' en PT)':''));
+        const pr=byId(DB.projects,d.projectId);
+        crearNotificacion({tipo:'entregable_nuevo',texto:`Te asignaron: "${d.name}"${pr?' en '+pr.name:''}`,proyectoId:d.projectId,entregableId:d.id,paraUserIds:[nuevo]});
+        if(prev&&prev!==SESSION.userId) crearNotificacion({tipo:'devuelto',texto:`Se reasignó "${d.name}" a ${u.name}`,proyectoId:d.projectId,entregableId:d.id,paraUserIds:[prev]});
+      }
+      const nf=nuevo?document.getElementById('rs-fecha').value:'';
+      if(nf&&nf!==d.dueDate){ d.cambiosFecha=[...(d.cambiosFecha||[]),{anterior:d.dueDate,nueva:nf,motivo:'fuera_de_control',at:Date.now(),by:SESSION.userId}]; if(!d.dueDateOriginal) d.dueDateOriginal=d.dueDate; d.dueDate=nf; partes.push('nueva fecha '+fmtDate(nf)); }
+      d.updatedAt=Date.now();
+      d.minutas=[...eaMinutas(d),{t:'Cambio por '+SESSION.name+': '+partes.join(' · ')+(nota?' — '+nota:''),f:Date.now(),by:SESSION.name}];
+      saveDB(); toast('Guardado ✓'); } });
+  document.getElementById('rs-quien').addEventListener('change',e=>{ document.getElementById('rs-pen').style.display=e.target.value?'':'none'; });
+}
 function ctlPAccion(k,id){
-  if(k==='cerrar') ctlCerrarAct(id); else if(k==='replantear') ctlReplantearAct(id);
+  if(k==='cerrar') ctlCerrarAct(id); else if(k==='replantear') ctlReplantearAct(id); else if(k==='reasignar') ctlReasignarAct(id);
   else if(k==='ver'){ const d=byId(DB.deliverables,id); _eaModo='abiertas'; _eaQ=d?d.name:''; showView('actividades'); }
   else if(k==='ir_aprobar'){ _eaModo='aprobar'; showView('actividades'); }
   else if(k==='ir_autorizar') document.getElementById('ctl-aut')?.scrollIntoView({behavior:'smooth'});
@@ -4305,7 +4340,17 @@ function statsProyectosNoTerminados(userId){
 ══════════════════════════════════════════════════════ */
 // 1 = cumplió completo, 0 = no cumplió, un número entre 0-1 = penalización
 // parcial (ineficiencia), null = excluido del cálculo (fuera de su control).
-function ptScoreEntregable(d){
+function ptScoreEntregable(d,userId){
+  if(userId&&d.assigneeId!==userId) return 0;   // la tuvo antes y se le quitó por incumplimiento (ver ptDelPeriodo)
+  const _re=d.reasignaciones||[];
+  if(_re.length&&d.resultado!=='no_cumplida'){   // nuevo responsable: se evalúa desde que la recibió, con la fecha vigente (no hereda atrasos ni penalizaciones del anterior)
+    const desde=isoDate(new Date(_re[_re.length-1].at||0));
+    if(d.dueDate&&d.dueDate<desde&&d.status!=='Entregado') return null;   // sigue con la fecha vieja: no se le evalúa hasta que haya nueva fecha
+    const okT=d.status==='Entregado'&&(!d.dueDate||!d.updatedAt||new Date(d.updatedAt)<=new Date(d.dueDate+'T23:59:59'));
+    if(okT) return 1;
+    if(d.dueDate&&d.dueDate<todayISO()&&d.status!=='Entregado') return 0;
+    return null;
+  }
   if(d.resultado==='no_cumplida') return d.motivoNoCumplida==='fuera_de_control'?null:0;   // cerrada sin cumplirse: penaliza solo si fue incumplimiento
   const cambios=d.cambiosFecha||[];
   const huboIneficiencia=cambios.some(c=>c.motivo==='ineficiencia');
@@ -4321,12 +4366,12 @@ function ptScoreEntregable(d){
 // Cumplimiento de UNA persona en UN mes calendario (year, month 0-based).
 function ptDelPeriodo(userId,year,month){
   const dels=(DB.deliverables||[]).filter(d=>{
-    if(d.assigneeId!==userId) return false;
-    const orig=d.dueDateOriginal||d.dueDate; if(!orig) return false;
+    if(d.assigneeId!==userId&&!(d.reasignaciones||[]).some(r=>r.de===userId&&r.penaliza)) return false;   // incluye lo que se le quitó por incumplimiento
+    const orig=((d.reasignaciones||[]).length&&d.assigneeId===userId)?d.dueDate:(d.dueDateOriginal||d.dueDate); if(!orig) return false;   // quien la recibe cuenta en el mes de la fecha vigente
     const dt=new Date(orig+'T00:00:00');
     return dt.getFullYear()===year&&dt.getMonth()===month;
   });
-  const scores=dels.map(ptScoreEntregable).filter(s=>s!==null);
+  const scores=dels.map(d=>ptScoreEntregable(d,userId)).filter(s=>s!==null);
   const pct=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*100):null;
   return {total:dels.length,evaluados:scores.length,excluidos:dels.length-scores.length,pct,deliverables:dels};
 }
@@ -4552,7 +4597,7 @@ function renderMiPuesto(root){
         <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--accent)">Ver detalle</summary>
         <table class="tbl" style="margin-top:8px"><thead><tr><th>Entregable</th><th>Fecha original</th><th>Resultado</th></tr></thead><tbody>
           ${pt.deliverables.map(d=>{
-            const s=ptScoreEntregable(d);
+            const s=ptScoreEntregable(d,u.id);
             const label=s===null?'<span class="pill muted">pendiente/excluido</span>':s>=1?'<span class="pill ok">✓ cumplió</span>':s>0?`<span class="pill warn">${Math.round(s*100)}% (ineficiencia)</span>`:'<span class="pill bad">✕ no cumplió</span>';
             return `<tr><td>${esc(d.name)}</td><td>${fmtDate(d.dueDateOriginal)}</td><td>${label}</td></tr>`;
           }).join('')}
