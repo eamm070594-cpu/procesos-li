@@ -406,6 +406,30 @@ tr.ea-child td{background:var(--surface2)}tr.ea-child .ea-name{padding-left:30px
 .ea-rrow .sl{width:110px}.ea-rrow .sl input{width:100%}.ea-rrow .pct{font-weight:800;font-size:15px;width:46px;text-align:right}
 .ea-radd{display:flex;gap:8px;padding:12px 18px;background:var(--surface2)}.ea-radd input{flex:1;min-width:0}
 @media(max-width:900px){.ea-two{grid-template-columns:1fr}.ea-rbar{grid-template-columns:110px 1fr 70px 38px}.ea-metrics{grid-template-columns:repeat(2,1fr)}}
+
+/* ══ Mi cumplimiento (estilo "Mi calificación" de EOS) ══ */
+.nav-score{margin-left:auto;font-size:11px;font-weight:800;border-radius:12px;padding:1px 9px;background:#C4922A;color:#fff;display:none}.nav-score.on{display:inline-block}.nav-score.ok{background:var(--ok)}.nav-score.bad{background:var(--bad)}
+.mc-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.mc-bar .mid{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mc-head{background:#2B2E37;color:#fff;border-radius:14px;padding:22px 26px;display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.mc-head .who{flex:1;min-width:260px}.mc-head h2{font-size:26px;font-weight:800}.mc-head .r{font-size:13px;margin-top:4px}.mc-head .inc{font-size:12.5px;color:#c9c9c6;margin-top:6px;line-height:1.5}
+.mc-gauges{display:flex;gap:6px;align-items:flex-end}
+.mc-g{text-align:center;font-size:10.5px;font-weight:800;letter-spacing:.07em;color:#d8d7d2;min-width:104px}.mc-g.glob{border-left:1px solid rgba(255,255,255,.18);padding-left:14px;margin-left:8px}
+.mc-sec{border-radius:12px 12px 0 0;padding:11px 18px;color:#fff;font-size:12px;font-weight:800;letter-spacing:.06em;display:flex;justify-content:space-between;margin-top:18px}
+.mc-sec.blue{background:#2F5B8F}.mc-sec.green{background:#3C8A5C}.mc-sec.dark{background:#4C4F56}
+.mc-body{background:var(--surface);border-radius:0 0 12px 12px;box-shadow:var(--shadow);overflow-x:auto}
+.mc-body table{width:100%;border-collapse:collapse}.mc-body th{font-size:10.5px;letter-spacing:.05em;color:var(--muted);text-align:left;padding:10px 12px;font-weight:800}
+.mc-body td{padding:11px 12px;border-top:1px solid var(--border2);font-size:13.5px}.mc-body .c{text-align:center}
+.mc-body td.last,.mc-body th.last{background:var(--bad-bg)}
+.mc-est{display:inline-block;border-radius:12px;padding:3px 11px;font-size:11.5px;font-weight:700}
+.mc-est.bueno{background:var(--ok-bg);color:var(--ok)}.mc-est.cerca{background:var(--warn-bg);color:var(--warn)}.mc-est.malo{background:var(--bad-bg);color:var(--bad)}.mc-est.sin-dato{background:var(--surface2);color:var(--muted)}
+.mc-roca{display:flex;align-items:center;gap:16px;padding:13px 18px;border-top:1px solid var(--border2)}.mc-roca:first-child{border-top:0}
+.mc-roca .no{color:var(--muted);font-weight:700}.mc-roca .t{flex:1;min-width:0}.mc-roca .tt{font-size:14px;font-weight:600;line-height:1.3}
+.mc-roca .bar{height:6px;border-radius:3px;background:var(--surface2);margin-top:7px;overflow:hidden}.mc-roca .bar i{display:block;height:100%}
+.mc-roca .pct{font-weight:800;font-size:18px;width:56px;text-align:right}.mc-roca .enl{font-size:9.5px;letter-spacing:.05em;text-align:center;color:var(--muted);font-weight:700}.mc-roca .enl b{display:block;margin-top:3px;border-radius:7px;padding:2px 9px;font-size:11.5px;letter-spacing:0}
+.mc-roca .enl b.ok{background:var(--ok-bg);color:var(--ok)}.mc-roca .enl b.bad{background:var(--bad-bg);color:var(--bad)}
+.mc-note{padding:20px;color:var(--muted);text-align:center;font-size:13px}
+.mc-link{margin-top:20px;font-size:13px}.mc-link button{border:0;background:none;color:var(--accent);font-weight:700;cursor:pointer;padding:0}
 </style>
 </head>
 <body>
@@ -447,7 +471,7 @@ tr.ea-child td{background:var(--surface2)}tr.ea-child .ea-name{padding-left:30px
         </div>
       </div>
       <button class="nav-btn" data-view="actividades"><span class="ic">☑</span> Mis actividades <span class="nav-count" id="nav-act-count"></span></button>
-      <button class="nav-btn" data-view="micumplimiento"><span class="ic">◔</span> Mi cumplimiento</button>
+      <button class="nav-btn" data-view="micumplimiento"><span class="ic">◔</span> Mi cumplimiento <span class="nav-score" id="nav-mc-score"></span></button>
       <button class="nav-btn leader-only" id="btn-junta" style="display:none"><span class="ic">▦</span> Junta semanal <span class="nav-caret" id="junta-caret">▸</span></button>
       <div class="nav-sub leader-only" id="sub-junta" style="display:none">
         <button class="nav-btn nav-subbtn" data-view="scorecard"><span class="ic">⌁</span> Scorecard (KPIs)</button>
@@ -2272,6 +2296,7 @@ function renderActividades(root){
     r.onchange=()=>eaGuardarAvance(r.dataset.eaAv,+r.value);
   });
   root.querySelectorAll('[data-ea-min]').forEach(b=>b.onclick=()=>eaAbrirMinuta(b.dataset.eaMin));
+  mcBadge();
   const tb=document.getElementById('tareas-badge'); if(tb) tb.textContent=todos.filter(d=>(eaDias(d.dueDate)??1)<0).length;
   const nc=document.getElementById('nav-act-count');
   if(nc){ const v=todos.filter(d=>(eaDias(d.dueDate)??1)<0).length; nc.textContent=v; nc.classList.toggle('on',v>0); }
@@ -2510,7 +2535,98 @@ function renderRocas(root){
 }
 VIEW_RENDERERS['rocas']=renderRocas;
 // Mi cumplimiento = tu ficha (PT del mes, puesto, indicadores). El Dashboard general queda oculto por ahora (código intacto).
-VIEW_RENDERERS['micumplimiento']=function(root){ _profileUserId=null; renderMiPuesto(root); };
+
+/* ══════════════════════════════════════════════════════
+   MI CUMPLIMIENTO (estilo "Mi calificación" de EOS)
+   Calificación 0-10 de un área (Sección): TAREAS + KPIS + ROCAS → GLOBAL.
+   - TAREAS: 10 × (1 − vencidas / abiertas) de la gente de la sección.
+   - KPIS:   10 × (bueno + ½ cerca) / indicadores con dato (última captura).
+   - ROCAS:  promedio de avance de las rocas del trimestre ÷ 10 (igual que Junta de Pulso en EOS).
+   - GLOBAL: 25% tareas + 25% KPIS + 50% rocas, usando solo lo que tenga datos. (Pesos inferidos de EOS; ajustables.)
+══════════════════════════════════════════════════════ */
+let _mcSec=null, _mcQ=null;
+const MC_MESES={1:'ene-mar',2:'abr-jun',3:'jul-sep',4:'oct-dic'};
+function mcAreas(){
+  if(isAdmin()) return (DB.secciones||[]).filter(s=>s.liderId||true).slice().sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  if(isLeader()) return misSeccionesLider();
+  const s=seccionOfUser(SESSION?.userId); return s?[s]:[];
+}
+function mcGente(sec){ const ids=new Set(seccionScope(sec).people.map(u=>u.id)); if(sec.liderId) ids.add(sec.liderId); return ids; }
+function mcTareas(sec){ const ids=mcGente(sec); return (DB.deliverables||[]).filter(d=>ids.has(d.assigneeId)&&d.status!=='Entregado').sort((a,b)=>(a.dueDate||'9').localeCompare(b.dueDate||'9')); }
+function mcRocas(sec,qy,qn){ return (DB.rocas||[]).filter(r=>r.seccionId===sec.id&&r.year===qy&&r.quarter===qn).sort((a,b)=>(a.orden||0)-(b.orden||0)); }
+function mcScores(sec,qy,qn){
+  const ts=mcTareas(sec), venc=ts.filter(d=>d.dueDate&&(eaDias(d.dueDate)??1)<0).length;
+  const tareas=ts.length?Math.max(0,10*(1-venc/ts.length)):null;
+  const inds=indicadoresDeSeccion(sec.id).map(i=>{const cs=capturasDeIndicador(i.id);const u=cs.length?cs[cs.length-1].valor:null;return estadoIndicador(i,u);}).filter(e=>e!=='sin-dato');
+  const kpis=inds.length?10*(inds.filter(e=>e==='bueno').length+0.5*inds.filter(e=>e==='cerca').length)/inds.length:null;
+  const rs=mcRocas(sec,qy,qn); const rocas=rs.length?rs.reduce((a,r)=>a+(+r.avance||0),0)/rs.length/10:null;
+  const comp=[[tareas,.25],[kpis,.25],[rocas,.5]].filter(x=>x[0]!=null), pesos=comp.reduce((a,x)=>a+x[1],0);
+  const global=comp.length?comp.reduce((a,x)=>a+x[0]*x[1],0)/pesos:null;
+  return {tareas,kpis,rocas,global,vencidas:venc,abiertas:ts.length};
+}
+const mcColor=v=>v==null?'#9a9992':v>=8?'#4FB27D':v>=5?'#D9A93A':'#E0675B';
+function mcGauge(v){
+  const c=mcColor(v), n=v==null?'—':v.toFixed(1);
+  return `<svg viewBox="0 0 100 62" width="104" height="64"><path d="M10 52 A40 40 0 0 1 90 52" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="10" stroke-linecap="round" pathLength="100"/>${v==null?'':`<path d="M10 52 A40 40 0 0 1 90 52" fill="none" stroke="${c}" stroke-width="10" stroke-linecap="round" pathLength="100" stroke-dasharray="${Math.max(1,v*10)} 100"/>`}<text x="50" y="52" text-anchor="middle" font-size="22" font-weight="800" fill="${c}">${n}</text></svg>`;
+}
+function mcBadge(){
+  const el=document.getElementById('nav-mc-score'); if(!el||!SESSION||!dataReady()) return;
+  const as=mcAreas(), h=rocaTrimestreActual(); if(!as.length){ el.classList.remove('on'); return; }
+  const propia=as.find(s=>s.liderId===SESSION.userId);
+  // Tu área si encabezas una sección; si no (admin), el promedio de las secciones que ya tienen datos.
+  const gl=(propia?[propia]:as).map(s=>mcScores(s,h.year,h.quarter).global).filter(v=>v!=null);
+  if(!gl.length){ el.classList.remove('on'); return; }
+  const g=gl.reduce((a,v)=>a+v,0)/gl.length;
+  el.textContent=g.toFixed(1); el.className='nav-score on '+(g>=8?'ok':g<5?'bad':'');
+}
+function renderMiCumplimiento(root){
+  if(!dataReady()){ root.innerHTML=loadingHTML('Cargando…'); return; }
+  const areas=mcAreas();
+  if(!areas.length){ root.innerHTML=`<div class="ea-light-title"><span class="t">Mi cumplimiento</span></div><div class="ea-card"><div class="ea-empty">Todavía no estás ligado a ninguna sección. Pídele a un admin que te asigne a un equipo.</div></div><div class="mc-link"><button id="mc-exp">Ver mi expediente (puesto, desempeño y PT del mes) →</button></div>`; root.querySelector('#mc-exp').onclick=()=>{ _profileUserId=null; showView('mipuesto'); }; return; }
+  const h=rocaTrimestreActual();
+  if(!_mcSec||!areas.some(a=>a.id===_mcSec)) _mcSec=(areas.find(s=>s.liderId===SESSION.userId)||areas[0]).id;
+  if(!_mcQ) _mcQ=h.year+'-'+h.quarter;
+  const sec=areas.find(a=>a.id===_mcSec), [qy,qn]=_mcQ.split('-').map(Number), esActual=(qy===h.year&&qn===h.quarter);
+  const sc=mcScores(sec,qy,qn), lider=byId(DB.users,sec.liderId), gente=[...mcGente(sec)].map(id=>byId(DB.users,id)?.name).filter(Boolean);
+  const trimestres=[]; for(let y=2025;y<=2027;y++) for(let q=1;q<=4;q++){ if((y===2025&&q<3)||(y===2027&&q>1)) continue; trimestres.push([y,q]); }
+  // KPIs
+  const inds=indicadoresDeSeccion(sec.id), wk=[-3,-2,-1].map(o=>semanaKeyDe(o));
+  const filasK=inds.map(i=>{
+    const vals=wk.map(k=>{const c=capturaDe(i.id,k);return c?c.valor:null;}), serie=[]; for(let o=-8;o<=-1;o++){const c=capturaDe(i.id,semanaKeyDe(o)); if(c) serie.push(c.valor);}
+    const cs=capturasDeIndicador(i.id), ult=cs.length?cs[cs.length-1].valor:null, est=estadoIndicador(i,ult);
+    const f=v=>v==null?'—':Number(v).toLocaleString('es-MX');
+    return `<tr><td>${esc(i.nombre)}</td><td class="ea-sm">${i.comparacion==='max'?'máx ':'mín '}${f(i.objetivo)}</td>${vals.map((v,j)=>`<td class="c ${j===2?'last':''}" style="font-weight:700;color:${v==null?'var(--muted)':ESTADO_COLOR[estadoIndicador(i,v)]}">${f(v)}</td>`).join('')}<td class="c">${serie.length>1?sparklineSVG(serie,ESTADO_COLOR[est]):'<span class="ea-sm">—</span>'}</td><td class="c"><span class="mc-est ${est}">${est==='sin-dato'?'Sin dato':est==='bueno'?'Bueno':est==='cerca'?'Regular':'Malo'}</span></td></tr>`;}).join('');
+  const kBody=inds.length?`<table><thead><tr><th>INDICADOR</th><th>OBJETIVO</th>${wk.map((k,j)=>`<th class="c ${j===2?'last':''}">${j===2?'ÚLTIMA SEMANA<br>':''}${semanaLabel(k).toUpperCase()}</th>`).join('')}<th class="c">TENDENCIA (8 SEM)</th><th class="c">ESTADO</th></tr></thead><tbody>${filasK}</tbody></table>`:`<div class="mc-note">Aún no hay KPIs capturados para esta sección. Se dan de alta y se capturan cada semana en <b>Junta semanal → Scorecard (KPIs)</b>.</div>`;
+  // Rocas
+  const rs=mcRocas(sec,qy,qn);
+  const rBody=rs.length?rs.map((r,j)=>{const a=+r.avance||0,col=a>=67?'var(--ok)':a>=34?'#C4922A':'var(--bad)',lin=a>=Math.max(0,(esActual?Math.round(((new Date()-new Date(qy,(qn-1)*3,1))/864e5)/91*100):100)-10);
+    return `<div class="mc-roca"><span class="no">${j+1}</span><div class="t"><div class="tt">${esc(r.title)}</div><div class="bar"><i style="width:${a}%;background:${col}"></i></div></div><div class="pct" style="color:${col}">${a}%</div><div class="enl">EN LÍNEA<b class="${lin?'ok':'bad'}">${lin?'Sí':'No'}</b></div></div>`;}).join(''):`<div class="mc-note">Sin rocas capturadas para este trimestre. Se agregan en <b>Junta semanal → Rocas</b>.</div>`;
+  // Tareas
+  const ts=mcTareas(sec);
+  const tBody=ts.length?`<table><thead><tr><th>ACTIVIDAD</th><th>RESPONSABLE</th><th>ENTREGA</th><th>PROYECTO</th><th>CENTRO DE TRABAJO</th><th>% AVANCE</th><th>MINUTA</th></tr></thead><tbody>${ts.map(eaFila).join('')}</tbody></table>`:'<div class="mc-note">Sin actividades abiertas de esta área.</div>';
+  const idx=areas.findIndex(a=>a.id===_mcSec);
+  root.innerHTML=`
+    <div class="mc-bar"><button class="ea-btn" id="mc-prev">◀ Anterior</button>
+      <div class="mid"><select class="ea-sel" id="mc-area" style="font-weight:700">${areas.map(a=>`<option value="${esc(a.id)}" ${a.id===_mcSec?'selected':''}>${esc(a.nombre)}</option>`).join('')}</select>
+      <select class="ea-sel" id="mc-q">${trimestres.map(([y,q])=>`<option value="${y}-${q}" ${_mcQ===y+'-'+q?'selected':''}>${q}Q ${y} · ${MC_MESES[q]}${y===h.year&&q===h.quarter?' · hoy':''}</option>`).join('')}</select></div>
+      <button class="ea-btn" id="mc-next">Siguiente ▶</button></div>
+    <div class="ea-sm" style="text-align:center;margin:-8px 0 14px">Área ${idx+1} de ${areas.length}</div>
+    <div class="mc-head"><div class="who"><h2>☺ ${esc(sec.nombre)}</h2><div class="r">Responsable: <b>${esc(lider?.name||'Sin líder')}</b></div><div class="inc">Incluye: ${gente.length?gente.map(esc).join(' · '):'—'}</div></div>
+      <div class="mc-gauges"><div class="mc-g">TAREAS${mcGauge(sc.tareas)}</div><div class="mc-g">KPIS${mcGauge(sc.kpis)}</div><div class="mc-g">ROCAS${mcGauge(sc.rocas)}</div><div class="mc-g glob">CALIFICACIÓN GLOBAL · ${qn}Q ${qy}${mcGauge(sc.global)}</div></div></div>
+    <div class="mc-sec blue"><span>KPIS — CAPTURA DE LA ÚLTIMA SEMANA</span></div><div class="mc-body">${kBody}</div>
+    <div class="mc-sec green"><span>ROCAS DE ${qn}Q ${qy} · ${MC_MESES[qn].toUpperCase()}</span><span>${rs.length} ROCA${rs.length!==1?'S':''}</span></div><div class="mc-body">${rBody}</div>
+    <div class="mc-sec dark"><span>TAREAS Y ACTIVIDADES</span><span>${sc.vencidas} VENCIDA${sc.vencidas!==1?'S':''}</span></div><div class="mc-body">${tBody}</div>
+    <div class="mc-link"><button id="mc-exp">Ver mi expediente (puesto, desempeño y PT del mes) →</button></div>`;
+  const ir=d=>{ const i=(idx+d+areas.length)%areas.length; _mcSec=areas[i].id; renderMiCumplimiento(root); };
+  root.querySelector('#mc-prev').onclick=()=>ir(-1); root.querySelector('#mc-next').onclick=()=>ir(1);
+  root.querySelector('#mc-area').onchange=e=>{ _mcSec=e.target.value; renderMiCumplimiento(root); };
+  root.querySelector('#mc-q').onchange=e=>{ _mcQ=e.target.value; renderMiCumplimiento(root); };
+  root.querySelector('#mc-exp').onclick=()=>{ _profileUserId=null; showView('mipuesto'); };
+  eaWireProyTabla(root);
+  mcBadge();
+}
+VIEW_RENDERERS['micumplimiento']=renderMiCumplimiento;
+
 (function(){
   const b=document.getElementById('btn-junta'), sub=document.getElementById('sub-junta');
   if(b) b.addEventListener('click',()=>{ sub.classList.toggle('open'); document.getElementById('junta-caret').textContent=sub.classList.contains('open')?'▾':'▸'; });
