@@ -437,6 +437,13 @@ tr.ea-child td{background:var(--surface2)}tr.ea-child .ea-name{padding-left:30px
 .mc-note{padding:20px;color:var(--muted);text-align:center;font-size:13px}
 .mc-link{margin-top:20px;font-size:13px}.mc-link button{border:0;background:none;color:var(--accent);font-weight:700;cursor:pointer;padding:0}
 
+/* ══ Ajuste de bloques en pantallas medianas (que todo se vea sin desplazarse de lado) ══ */
+.ea-card td,.ea-card th{padding:11px 9px}
+.ea-name{min-width:160px}.ea-av{min-width:120px}
+.brand-sub{white-space:nowrap;font-size:13px}.brand-row{gap:4px}
+.nav-subline b{display:block}.nav-subline .sep{display:none}
+@media (max-width:1450px){.ea-hm{display:none!important}.ea-tag{max-width:130px}.main{padding-left:22px;padding-right:22px}}
+@media (max-width:1250px){.ea-card td,.ea-card th{padding:9px 6px}.ea-tag{max-width:105px;font-size:11px;padding:5px 9px}.ea-av{min-width:100px}.ea-av .pc{width:36px;font-size:12.5px}.ea-name{min-width:135px;font-size:13px}.ea-chip{padding:5px 8px;font-size:12px}}
 /* ══ Aviso visual: actividades que piden cerrarse (por aprobar) ══ */
 @keyframes eaGlow{0%,100%{box-shadow:0 0 0 0 rgba(217,169,58,.60),0 0 18px rgba(217,169,58,.30)}50%{box-shadow:0 0 0 8px rgba(217,169,58,0),0 0 26px rgba(217,169,58,.55)}}
 @keyframes eaRing{0%,100%{transform:rotate(0)}10%,30%{transform:rotate(-14deg)}20%,40%{transform:rotate(14deg)}50%{transform:rotate(0)}}
@@ -2291,7 +2298,7 @@ function eaRefrescarMenu(){
   const el=document.getElementById('nav-act-sub'); if(!el||!SESSION||!dataReady()) return;
   const v=eaTodos().filter(d=>d.dueDate&&(eaDias(d.dueDate)??1)<0).length, a=eaPorAprobar().filter(d=>canManageDeliverable(d)).length;
   const partes=[]; if(v) partes.push(`<b class="r">${v} vencida${v!==1?'s':''}</b>`); if(a) partes.push(`<b class="a">${a} por aprobar</b>`);
-  el.innerHTML=partes.join(' · '); el.classList.toggle('on',partes.length>0);
+  el.innerHTML=partes.join(''); el.classList.toggle('on',partes.length>0);
   document.querySelector('.nav-btn[data-view="actividades"]')?.classList.toggle('glow',a>0);
   const hayNotif=(typeof notifSinLeer==='function')&&notifSinLeer().some(n=>n.tipo==='por_aprobar'||n.tipo==='devuelto');
   document.getElementById('btn-notif')?.classList.toggle('bell-glow',hayNotif);
@@ -2307,7 +2314,7 @@ function eaFila(d){
     <td style="white-space:nowrap">${esc(u?.name||'Sin asignar')}</td>
     <td><span class="ea-chip ${chip}">${d.dueDate?fmtDate(d.dueDate):'—'}</span></td>
     <td>${p?`<span class="ea-tag t${(p.name||'').length%3}" title="${esc(p.name)}">${esc(p.name)}</span>`:'<span class="ea-tag none">— proyecto —</span>'}</td>
-    <td>${cts.length?`<span class="ea-ct" title="${esc(cts.join(', '))}">${esc(cts[0])}${cts.length>1?' +'+(cts.length-1):''}</span>`:'<span class="ea-tag none">—</span>'}</td>
+    <td class="ea-hm">${cts.length?`<span class="ea-ct" title="${esc(cts.join(', '))}">${esc(cts[0])}${cts.length>1?' +'+(cts.length-1):''}</span>`:'<span class="ea-tag none">—</span>'}</td>
     <td><div class="ea-av"><input type="range" min="0" max="100" step="5" value="${av}" style="--p:${av}%" class="${k}" data-ea-av="${esc(d.id)}" ${puede?'':'disabled title="Solo el responsable o su líder pueden cambiarlo"'}><span class="pc ${k}">${av}%</span></div></td>
     <td style="white-space:nowrap"><button class="ea-min" data-ea-min="${esc(d.id)}" title="Minuta de la actividad">🗒${nm?`<span class="n">${nm}</span>`:''}</button>${eaAccion(d)}</td></tr>`;
 }
@@ -2344,7 +2351,7 @@ function renderActividades(root){
       <div class="ea-seg onmain" id="ea-seg-g"><button data-g="normal" class="${_eaGroup==='normal'?'on':''}">Normal</button><button data-g="persona" class="${_eaGroup==='persona'?'on':''}">Por persona</button><button data-g="ct" class="${_eaGroup==='ct'?'on':''}">Por centro de trabajo</button></div>
       <select class="ea-sel" id="ea-proj"><option value="">Proyecto: todos</option>${proyConAbiertas.map(p=>`<option value="${esc(p.id)}" ${_eaProj===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
       <input class="ea-inp" id="ea-q" placeholder="🔍 Filtrar…" value="${esc(_eaQ)}"></div></div>
-    <div class="ea-card"><table><thead><tr><th>ACTIVIDAD</th><th>RESPONSABLE</th><th>ENTREGA</th><th>PROYECTO</th><th>CENTRO DE TRABAJO</th><th>% AVANCE</th><th>MINUTA</th></tr></thead><tbody>${body}</tbody></table></div>`;
+    <div class="ea-card"><table><thead><tr><th>ACTIVIDAD</th><th>RESPONSABLE</th><th>ENTREGA</th><th>PROYECTO</th><th class="ea-hm">CENTRO DE TRABAJO</th><th>% AVANCE</th><th>MINUTA</th></tr></thead><tbody>${body}</tbody></table></div>`;
   if(mostrarEquipos){
     const tr=document.getElementById('top-right');
     if(tr) tr.innerHTML=`<div class="ea-seg" id="ea-seg-t"><button data-t="todos" class="${_eaTeam==='todos'?'on':''}">Todo el depto.</button>${secs.map(s=>`<button data-t="${esc(s.id)}" class="${_eaTeam===s.id?'on':''}">${esc((byId(DB.users,s.liderId).name||'').split(' ')[0])}</button>`).join('')}</div>`;
@@ -2581,14 +2588,14 @@ function eaProyTablaHTML(lista){
   const filas=lista.map(p=>{
     const st=plStatsProy(p), open=_eaOpen.has(p.id), cts=(p.centroIds||[]).map(id=>byId(DB.centros,id)?.nombre).filter(Boolean);
     let h=`<tr class="ea-prow ${open?'open':''}" data-eaproj="${esc(p.id)}"><td><span class="car">▸</span>${esc(p.name)}</td>
-      <td>${cts.length?`<span class="ea-ct" title="${esc(cts.join(', '))}">${esc(cts[0])}${cts.length>1?' +'+(cts.length-1):''}</span>`:'<span class="ea-sm">—</span>'}</td>
+      <td class="ea-hm">${cts.length?`<span class="ea-ct" title="${esc(cts.join(', '))}">${esc(cts[0])}${cts.length>1?' +'+(cts.length-1):''}</span>`:'<span class="ea-sm">—</span>'}</td>
       <td><span class="ea-sm">${st.ab.length} abiertas · ${st.ds.length} total</span></td>
       <td>${st.ve?`<span class="ea-chip bad">${st.ve} vencida${st.ve>1?'s':''}</span>`:'<span class="ea-sm">al corriente</span>'}</td>
       <td><span class="ea-sm">${st.prox?fmtDate(st.prox):'—'}</span></td><td><div style="display:flex;align-items:center;gap:8px">${plPbar(st.av)}<button class="ea-open" data-open-project="${esc(p.id)}" title="Abrir el detalle del proyecto">Abrir ▸</button></div></td></tr>`;
     if(open){ const rows=visibleDeliverables(p.id).filter(d=>d.status!=='Entregado').sort((a,b)=>(a.dueDate||'9').localeCompare(b.dueDate||'9'));
       h+=rows.length?rows.map(eaFilaHija).join(''):`<tr class="ea-child"><td colspan="6" class="ea-sm" style="padding:12px 30px">Sin entregables abiertos.</td></tr>`; }
     return h;}).join('');
-  return `<table><thead><tr><th>PROYECTO</th><th>CENTRO DE TRABAJO</th><th>ENTREGABLES</th><th>ESTADO</th><th>PRÓX. ENTREGA</th><th>AVANCE</th></tr></thead><tbody>${filas||'<tr><td colspan="6" class="ea-empty">Sin proyectos.</td></tr>'}</tbody></table>`;
+  return `<table><thead><tr><th>PROYECTO</th><th class="ea-hm">CENTRO DE TRABAJO</th><th>ENTREGABLES</th><th>ESTADO</th><th>PRÓX. ENTREGA</th><th>AVANCE</th></tr></thead><tbody>${filas||'<tr><td colspan="6" class="ea-empty">Sin proyectos.</td></tr>'}</tbody></table>`;
 }
 function eaWireProyTabla(root){
   root.querySelectorAll('tr[data-eaproj]').forEach(r=>r.onclick=ev=>{ if(ev.target.closest('[data-open-project]')) return; const id=r.dataset.eaproj; _eaOpen.has(id)?_eaOpen.delete(id):_eaOpen.add(id); render(); });
@@ -2705,7 +2712,7 @@ function renderMiCumplimiento(root){
     return `<div class="mc-roca"><span class="no">${j+1}</span><div class="t"><div class="tt">${esc(r.title)}</div><div class="bar"><i style="width:${a}%;background:${col}"></i></div></div><div class="pct" style="color:${col}">${a}%</div><div class="enl">EN LÍNEA<b class="${lin?'ok':'bad'}">${lin?'Sí':'No'}</b></div></div>`;}).join(''):`<div class="mc-note">Sin rocas capturadas para este trimestre. Se agregan en <b>Junta semanal → Rocas</b>.</div>`;
   // Tareas
   const ts=mcTareas(sec);
-  const tBody=ts.length?`<table><thead><tr><th>ACTIVIDAD</th><th>RESPONSABLE</th><th>ENTREGA</th><th>PROYECTO</th><th>CENTRO DE TRABAJO</th><th>% AVANCE</th><th>MINUTA</th></tr></thead><tbody>${ts.map(eaFila).join('')}</tbody></table>`:'<div class="mc-note">Sin actividades abiertas de esta área.</div>';
+  const tBody=ts.length?`<table><thead><tr><th>ACTIVIDAD</th><th>RESPONSABLE</th><th>ENTREGA</th><th>PROYECTO</th><th class="ea-hm">CENTRO DE TRABAJO</th><th>% AVANCE</th><th>MINUTA</th></tr></thead><tbody>${ts.map(eaFila).join('')}</tbody></table>`:'<div class="mc-note">Sin actividades abiertas de esta área.</div>';
   const idx=areas.findIndex(a=>a.id===_mcSec);
   root.innerHTML=`
     <div class="mc-bar"><button class="ea-btn" id="mc-prev">◀ Anterior</button>
