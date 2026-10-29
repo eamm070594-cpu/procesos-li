@@ -631,7 +631,7 @@ tr.ea-pend td{background:var(--warn-bg)!important}tr.ea-pend td:first-child{box-
      de la app; por correo llevan un botón ✉️ por fila (no hay backend de
      correo aquí, es mailto: con el link directo ya adentro). -->
 <dialog id="dlg-notif">
-  <div class="dlg-head"><h2>🔔 Notificaciones</h2><div class="sub">Lo que es para ti — proyectos/entregables nuevos y aprobaciones</div></div>
+  <div class="dlg-head"><h2>🔔 Notificaciones</h2><div class="sub">Lo que es para ti, con lo que necesita tu acción arriba</div></div>
   <div class="dlg-body" id="dlg-notif-body"></div>
   <div class="dlg-foot">
     <button class="btn primary" id="dlg-notif-close">Cerrar</button>
@@ -641,7 +641,7 @@ tr.ea-pend td{background:var(--warn-bg)!important}tr.ea-pend td:first-child{box-
 <!-- 📤 Envío — solo admin/líder. Aparte de la campana a propósito: esto es
      "avisar a mi gente por correo", no "lo que me toca a mí". -->
 <dialog id="dlg-enviar">
-  <div class="dlg-head"><h2>📤 Avisar a mi equipo por correo</h2><div class="sub">Todo lo que le puedes mandar a tu gente — nada se envía solo, tú confirmas cada uno</div></div>
+  <div class="dlg-head"><h2>📤 Avisar a mi equipo por correo</h2><div class="sub">Un correo por persona con todos sus pendientes — nada se envía solo, tú confirmas</div></div>
   <div class="dlg-body" id="dlg-enviar-body"></div>
   <div class="dlg-foot">
     <button class="btn primary" id="dlg-enviar-close">Cerrar</button>
@@ -1542,6 +1542,11 @@ function renderProyectos(root){
   // integrante normal no debe ver esto ni de él mismo (getMyReports() siempre
   // se incluye a sí mismo, por eso antes se colaba este acceso).
   const userOpts=isLeader()?(isAdmin()?DB.users:getMyReports()).slice().sort((a,b)=>a.name.localeCompare(b.name)):[];
+  // Filtro por centro de trabajo — solo los centros que de verdad tienen
+  // proyectos en tu alcance (cualquier pestaña), con cuántos activos/cerrados.
+  const centroFilter=root._centroFilter||'';
+  const centroOpts=[...new Set(projects.flatMap(p=>p.centroIds||[]))].map(id=>byId(DB.centros,id)).filter(Boolean)
+    .sort((a,b)=>a.nombre.localeCompare(b.nombre));
 
   root.innerHTML=`
     <div class="view-head">
@@ -1568,6 +1573,14 @@ function renderProyectos(root){
           ${userOpts.map(u=>`<option value="${u.id}"${userFilter===u.id?' selected':''}>${esc(u.name)}</option>`).join('')}
         </select>
       </div>`:''}
+      ${centroOpts.length>1?`<div style="display:flex;gap:8px;align-items:center">
+        <label class="small muted" for="proj-centro-filter">Centro de trabajo:</label>
+        <select class="select-input" id="proj-centro-filter" style="width:auto;padding:7px 10px;font-size:13px">
+          <option value="">Todos los centros</option>
+          ${centroOpts.map(ct=>`<option value="${ct.id}"${centroFilter===ct.id?' selected':''}>${esc(ct.nombre)} (${projects.filter(p=>(p.centroIds||[]).includes(ct.id)&&computeProjectStatus(p)===(tab==='activos'?'Activo':'Cerrado')).length})</option>`).join('')}
+        </select>
+      </div>`:''}
+      ${(liderFilter||userFilter||centroFilter)?'<button class="btn xs" id="proj-limpiar-filtros">✕ Quitar filtros</button>':''}
     </div>
     <div id="proj-resumen-individual"></div>
     <div id="proj-grid"></div>
@@ -1580,6 +1593,9 @@ function renderProyectos(root){
   if(liderSel) liderSel.addEventListener('change',()=>{ root._liderFilter=liderSel.value; renderProyectos(root); });
   const userSel=document.getElementById('proj-user-filter');
   if(userSel) userSel.addEventListener('change',()=>{ root._userFilter=userSel.value; renderProyectos(root); });
+  const centroSel=document.getElementById('proj-centro-filter');
+  if(centroSel) centroSel.addEventListener('change',()=>{ root._centroFilter=centroSel.value; renderProyectos(root); });
+  document.getElementById('proj-limpiar-filtros')?.addEventListener('click',()=>{ root._liderFilter=''; root._userFilter=''; root._centroFilter=''; renderProyectos(root); });
   const resumenCont=document.getElementById('proj-resumen-individual');
   if(userFilter){
     resumenCont.innerHTML=resumenIndividualHTML(userFilter);
@@ -1591,14 +1607,19 @@ function renderProyectos(root){
 
   // Proyectos con al menos un entregable de la persona filtrada (misma lógica
   // de "el proyecto entero se ve" que ya usa el filtro por líder).
-  const enTabPorPersona=userFilter
+  const enTabPorPersona=(userFilter
     ? enTab.filter(p=>(DB.deliverables||[]).some(d=>d.projectId===p.id&&d.assigneeId===userFilter))
-    : enTab;
+    : enTab
+  ).filter(p=>!centroFilter||(p.centroIds||[]).includes(centroFilter));
 
   const grid=document.getElementById('proj-grid');
   if(!projects.length){
     grid.innerHTML=emptyStateHTML('Sin proyectos todavía',
       canCreate?'Da clic en "Nuevo proyecto" para crear el primero.':'Cuando te asignen un entregable, el proyecto aparecerá aquí.');
+    return;
+  }
+  if(!enTabPorPersona.length&&centroFilter){
+    grid.innerHTML=emptyStateHTML('Sin proyectos en este centro',`${esc(byId(DB.centros,centroFilter)?.nombre||'Ese centro')} no tiene proyectos ${tab==='activos'?'activos':'cerrados'} en tu alcance.`);
     return;
   }
   if(!enTabPorPersona.length){
@@ -1770,8 +1791,18 @@ function crearNotificacion({tipo,texto,proyectoId,entregableId,paraUserIds}){
 function notificacionesVisibles(){
   return (DB.notificaciones||[]).filter(n=>n.paraUserIds.includes(SESSION?.userId));
 }
+// Una notificación que pedía acción y ya se resolvió sola (se aprobó, se
+// volvió a entregar, el entregable ya no existe) cuenta como leída: no hay
+// que tacharla a mano.
+function notifResueltaSola(n){
+  if(n.tipo!=='por_aprobar'&&n.tipo!=='devuelto') return false;
+  const d=n.entregableId?byId(DB.deliverables,n.entregableId):null;
+  if(!d) return true;
+  if(n.tipo==='por_aprobar') return !!d.approved||d.status!=='Entregado';
+  return d.status==='Entregado';
+}
 function notifSinLeer(){
-  return notificacionesVisibles().filter(n=>!n.leidoPor.includes(SESSION?.userId));
+  return notificacionesVisibles().filter(n=>!n.leidoPor.includes(SESSION?.userId)&&!notifResueltaSola(n));
 }
 // 📤 Ícono de envío — solo admin/líder. Es la bandeja de "avisar a mi gente
 // por correo", nunca se mezcla con la campana personal de cada quien. Admin
@@ -1785,8 +1816,47 @@ function notificacionesParaEnviar(){
   }
   return [];
 }
+// Un aviso por correo deja de ser "pendiente" SOLO (sin que tengas que tacharlo):
+// la persona ya lo vio en su campana, el entregable ya se cerró o se borró, el
+// proyecto ya no existe, o tiene más de 7 días. Nada se borra — solo deja de
+// contar y aparece en "resueltas".
+const NOTIF_VIGENCIA_DIAS=7;
+function notifObsoletaPara(n,uid){
+  if((n.leidoPor||[]).includes(uid)) return 'la persona ya lo vio';
+  if(Date.now()-n.createdAt>NOTIF_VIGENCIA_DIAS*86400000) return 'tiene más de '+NOTIF_VIGENCIA_DIAS+' días';
+  if(n.proyectoId&&!byId(DB.projects,n.proyectoId)) return 'el proyecto ya no existe';
+  if(n.entregableId){
+    const d=byId(DB.deliverables,n.entregableId);
+    if(!d) return 'el entregable ya no existe';
+    if((n.tipo==='entregable_nuevo'||n.tipo==='devuelto')&&d.status==='Entregado') return 'ya lo entregó';
+    if(n.tipo==='entregable_nuevo'&&d.assigneeId&&d.assigneeId!==uid) return 'se reasignó';
+  }
+  return '';
+}
+function notifPendienteParaPersona(n,uid){
+  return !n.emailEnviado&&!n.descartado&&!(n.resueltoPara||[]).includes(uid)&&!notifObsoletaPara(n,uid);
+}
+// {userId → [notificaciones pendientes]} — lo que se le puede avisar a cada persona
+function pendientesPorPersona(){
+  const out={};
+  notificacionesParaEnviar().forEach(n=>n.paraUserIds.forEach(uid=>{
+    if(uid===SESSION?.userId) return;
+    if(notifPendienteParaPersona(n,uid)) (out[uid]=out[uid]||[]).push(n);
+  }));
+  return out;
+}
 function notifPendientesDeEnviar(){
-  return notificacionesParaEnviar().filter(n=>!n.emailEnviado&&!n.descartado);
+  return notificacionesParaEnviar().filter(n=>n.paraUserIds.some(uid=>uid!==SESSION?.userId&&notifPendienteParaPersona(n,uid)));
+}
+// Marca resuelto un aviso para UNA persona; cuando ya no queda nadie sin
+// resolver, se cierra el aviso completo (emailEnviado o descartado).
+function resolverNotifPara(n,uid,modo){
+  n.resueltoPara=n.resueltoPara||[];
+  if(!n.resueltoPara.includes(uid)) n.resueltoPara.push(uid);
+  if(n.paraUserIds.every(u=>n.resueltoPara.includes(u))){
+    const m={at:Date.now(),by:SESSION?.userId||null};
+    if(modo==='enviado') n.emailEnviado=m; else if(!n.emailEnviado) n.descartado=m;
+  }
 }
 // "Descartar" = ya no hace falta avisarlo por correo (se resolvió de otra
 // forma, ya no aplica, etc.) — sale del pendiente sin mandar nada, así es
@@ -1901,92 +1971,221 @@ function copiarNotifPorCorreo(n){
   copiarAlPortapapeles(`Para: ${paraLinea}\nAsunto: ${subject}\n\n${body}`);
 }
 const NOTIF_ICON={proyecto_nuevo:'📁',entregable_nuevo:'📋',aprobacion:'✅',aviso_individual:'✉️',pt_quincena:'📊',pt_mensual:'🏁',por_aprobar:'📝',devuelto:'↩️'};
-let _notifVerLeidas=false; // mismo patrón que _enviarVerResueltas: por default solo lo pendiente
+const NOTIF_TIPO={
+  por_aprobar:{label:'Por aprobar',cls:'warn'}, devuelto:{label:'Devuelto',cls:'bad'},
+  entregable_nuevo:{label:'Entregable nuevo',cls:'muted'}, proyecto_nuevo:{label:'Proyecto nuevo',cls:'muted'},
+  aprobacion:{label:'Aprobado',cls:'ok'}, aviso_individual:{label:'Aviso',cls:'muted'},
+  pt_quincena:{label:'Reporte',cls:'muted'}, pt_mensual:{label:'Reporte',cls:'muted'},
+};
+// Chip de fecha límite con color — "vence en 3 días" / "venció hace 2 días"
+function chipVenceHTML(iso){
+  if(!iso) return '';
+  const dias=Math.round((new Date(iso+'T00:00:00')-new Date(todayISO()+'T00:00:00'))/86400000);
+  const [cls,txt]=dias<0?['bad','venció hace '+(-dias)+' día'+(dias!==-1?'s':'')]:dias===0?['bad','vence hoy']:dias<=3?['warn','vence en '+dias+' día'+(dias!==1?'s':'')]:['muted','vence '+fmtDate(iso)];
+  return `<span class="pill ${cls}">⏰ ${txt}</span>`;
+}
+// Contexto de una notificación: proyecto, entregable, persona
+function notifContexto(n){
+  const p=n.proyectoId?byId(DB.projects,n.proyectoId):null;
+  const d=n.entregableId?byId(DB.deliverables,n.entregableId):null;
+  const quien=d?.assigneeId?byId(DB.users,d.assigneeId):null;
+  return {p,d,quien};
+}
+// Secciones por antigüedad: Hoy / Ayer / Esta semana / Antes
+function notifGrupoFecha(ms){
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const dias=Math.floor((hoy-new Date(ms).setHours(0,0,0,0))/86400000);
+  return dias<=0?'Hoy':dias===1?'Ayer':dias<7?'Esta semana':'Antes';
+}
+function notifPorGrupoFecha(lista){
+  const orden=['Hoy','Ayer','Esta semana','Antes'], g={};
+  lista.forEach(n=>{ const k=notifGrupoFecha(n.createdAt); (g[k]=g[k]||[]).push(n); });
+  return orden.filter(k=>g[k]).map(k=>({titulo:k,items:g[k]}));
+}
+let _notifVerLeidas=false; // por default solo lo pendiente
+let _notifFiltro='';       // '' = todas · 'accion' · tipo
+// 🔔 Bandeja personal: lo que REQUIERE tu acción (por aprobar, devueltos) se
+// marca y se puede filtrar; lo demás va agrupado por día. Cada tarjeta dice
+// qué, dónde, para cuándo y trae sus botones — se aprueba sin salir de aquí.
+function notifRequiereAccion(n){
+  const {d}=notifContexto(n);
+  if(n.tipo==='por_aprobar') return !!d&&d.status==='Entregado'&&!d.approved&&canManageDeliverable(d);
+  if(n.tipo==='devuelto') return !!d&&d.status!=='Entregado'&&d.assigneeId===SESSION?.userId;
+  return false;
+}
 function renderNotifPanel(){
-  const todas=notificacionesVisibles(); // solo lo tuyo, siempre
-  const noLeidas=todas.filter(n=>!n.leidoPor.includes(SESSION?.userId));
-  const leidas=todas.filter(n=>n.leidoPor.includes(SESSION?.userId));
+  const todas=notificacionesVisibles();
+  const esLeida=n=>n.leidoPor.includes(SESSION?.userId)||notifResueltaSola(n);
+  const noLeidas=todas.filter(n=>!esLeida(n));
+  const leidas=todas.filter(esLeida);
   refreshNotifBadge();
-  const list=_notifVerLeidas?todas:noLeidas;
+  let list=_notifVerLeidas?todas:noLeidas;
+  const accion=noLeidas.filter(notifRequiereAccion);
+  const tiposPresentes=[...new Set(list.map(n=>n.tipo))];
+  if(_notifFiltro==='accion') list=list.filter(notifRequiereAccion);
+  else if(_notifFiltro) list=list.filter(n=>n.tipo===_notifFiltro);
   const body=document.getElementById('dlg-notif-body');
-  const filaHTML=n=>{
-    const leida=n.leidoPor.includes(SESSION?.userId);
-    return `<div class="card" style="margin-bottom:8px;${leida?'opacity:.65':'border-color:var(--accent);background:var(--accent-bg)'}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-        <div style="cursor:pointer;flex:1;min-width:0" data-ir-notif="${n.id}">
-          <div style="font-size:13px">${NOTIF_ICON[n.tipo]||'🔔'} ${esc(n.texto)}</div>
-          <div class="small muted" style="margin-top:3px">${fmtWhen(n.createdAt)}</div>
-        </div>
-        ${leida?'':`<button class="btn xs" data-marcar-leida="${n.id}" title="Marcar como leída, sin ir al proyecto">✕</button>`}
+  const chip=(k,txt,n)=>`<button class="btn xs ${_notifFiltro===k?'primary':''}" data-notif-filtro="${k}">${txt}${n!==undefined?` <b>${n}</b>`:''}</button>`;
+  const tarjeta=n=>{
+    const leida=esLeida(n);
+    const {p,d,quien}=notifContexto(n);
+    const t=NOTIF_TIPO[n.tipo]||{label:'Aviso',cls:'muted'};
+    const necesita=notifRequiereAccion(n);
+    const yaAprobada=n.tipo==='por_aprobar'&&d&&d.approved;
+    const de=n.createdBy&&n.createdBy!==SESSION?.userId?byId(DB.users,n.createdBy)?.name:'';
+    const vence=leida?'':(n.tipo==='proyecto_nuevo'?p?.dueDate:(d&&d.status!=='Entregado'?d.dueDate:''));
+    return `<div class="card" style="margin-bottom:8px;${leida?'opacity:.65;':''}${necesita?'border-left:4px solid #C9871F;':(leida?'':'border-color:var(--accent);background:var(--accent-bg);')}">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:5px">
+        <span class="pill ${t.cls}">${NOTIF_ICON[n.tipo]||'🔔'} ${t.label}</span>
+        ${yaAprobada?'<span class="pill ok">ya aprobada</span>':''}
+        ${chipVenceHTML(vence)}
+        <span class="small muted" style="margin-left:auto">${fmtWhen(n.createdAt)}</span>
+      </div>
+      <div style="font-size:13.5px;font-weight:600;cursor:pointer" data-ir-notif="${n.id}">${esc(n.texto)}</div>
+      <div class="small muted" style="margin-top:3px">${p?'📁 '+esc(p.name):''}${quien?' · 👤 '+esc(quien.name):''}${de?' · de '+esc(de):''}</div>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        ${necesita&&n.tipo==='por_aprobar'?`<button class="btn xs primary" data-notif-aprobar="${n.id}">✓ Aprobar</button><button class="btn xs" data-notif-devolver="${n.id}">↩ Devolver</button>`:''}
+        <button class="btn xs ${necesita?'':'primary'}" data-ir-notif="${n.id}">Abrir →</button>
+        ${leida?'':`<button class="btn xs" data-marcar-leida="${n.id}" title="Ya la vi — quitarla de pendientes">✓ Leída</button>`}
       </div>
     </div>`;
   };
+  const grupos=notifPorGrupoFecha(list.slice(0,80));
   body.innerHTML=`
-    ${leidas.length?`<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
-      <button class="btn xs" id="btn-toggle-leidas">${_notifVerLeidas?'Ocultar':'Ver'} leídas (${leidas.length})</button>
-    </div>`:''}
-    ${list.length?list.slice(0,50).map(filaHTML).join(''):emptyStateHTML('Nada pendiente','Aquí aparecerán tus proyectos/entregables nuevos y aprobaciones.')}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+      ${chip('','Todas')}
+      ${accion.length?chip('accion','⚡ Requieren mi acción',accion.length):''}
+      ${tiposPresentes.filter(t=>t!=='por_aprobar'&&t!=='devuelto').map(t=>chip(t,(NOTIF_TIPO[t]||{label:t}).label)).join('')}
+      <span style="margin-left:auto;display:flex;gap:6px">
+        ${noLeidas.length?`<button class="btn xs" id="btn-notif-todas-leidas">✓ Marcar todas como leídas (${noLeidas.length})</button>`:''}
+        ${leidas.length?`<button class="btn xs" id="btn-toggle-leidas">${_notifVerLeidas?'Ocultar':'Ver'} leídas (${leidas.length})</button>`:''}
+      </span>
+    </div>
+    ${grupos.length?grupos.map(g=>`<div class="small muted" style="font-weight:700;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.04em">${g.titulo} · ${g.items.length}</div>${g.items.map(tarjeta).join('')}`).join('')
+      :emptyStateHTML('Todo al día','No tienes nada pendiente. Aquí aparecerán tus proyectos/entregables nuevos, aprobaciones y devoluciones.')}
   `;
   document.getElementById('btn-toggle-leidas')?.addEventListener('click',()=>{ _notifVerLeidas=!_notifVerLeidas; renderNotifPanel(); });
+  document.getElementById('btn-notif-todas-leidas')?.addEventListener('click',()=>{
+    // lo que pide tu acción NO se marca solo — se queda hasta que lo resuelvas
+    noLeidas.filter(n=>!notifRequiereAccion(n)).forEach(n=>{ if(!n.leidoPor.includes(SESSION.userId)) n.leidoPor.push(SESSION.userId); });
+    saveDB(); renderNotifPanel();
+    if(accion.length) toast(accion.length+' se quedan porque necesitan tu acción');
+  });
+  body.querySelectorAll('[data-notif-filtro]').forEach(b=>b.addEventListener('click',()=>{ _notifFiltro=b.dataset.notifFiltro; renderNotifPanel(); }));
   body.querySelectorAll('[data-ir-notif]').forEach(el=>{
     el.addEventListener('click',()=>irANotificacion(byId(DB.notificaciones,el.dataset.irNotif)));
   });
   body.querySelectorAll('[data-marcar-leida]').forEach(btn=>{
     btn.addEventListener('click',ev=>{ ev.stopPropagation(); marcarNotifLeida(btn.dataset.marcarLeida); renderNotifPanel(); });
   });
+  body.querySelectorAll('[data-notif-aprobar]').forEach(btn=>{
+    btn.addEventListener('click',ev=>{ ev.stopPropagation(); const n=byId(DB.notificaciones,btn.dataset.notifAprobar); eaAprobar(n.entregableId); marcarNotifLeida(n.id); renderNotifPanel(); });
+  });
+  body.querySelectorAll('[data-notif-devolver]').forEach(btn=>{
+    btn.addEventListener('click',ev=>{ ev.stopPropagation(); const n=byId(DB.notificaciones,btn.dataset.notifDevolver); document.getElementById('dlg-notif').close(); marcarNotifLeida(n.id); eaDevolver(n.entregableId); });
+  });
 }
-function openNotifPanel(){ _notifVerLeidas=false; renderNotifPanel(); document.getElementById('dlg-notif').showModal(); }
-// 📤 Panel de envío — solo admin/líder. Todo lo que se puede avisar por
-// correo a su gente (nunca lo tuyo propio, eso vive en la campana). Cada fila
-// dice para quién es y trae el botón real de mandar el mailto.
-let _enviarVerResueltas=false; // toggle del panel 📤 — false = solo pendientes (se "limpia" sola)
+function openNotifPanel(){ _notifVerLeidas=false; _notifFiltro=''; renderNotifPanel(); document.getElementById('dlg-notif').showModal(); }
+
+// 📤 Avisar a mi equipo — solo admin/líder. Agrupado POR PERSONA: un solo
+// botón arma UN correo con todo lo pendiente de esa persona (en vez de uno por
+// aviso) y deja todo marcado como enviado. Lo ya visto, cerrado o viejo se
+// limpia solo. Nada se manda sin que tú abras y confirmes el correo.
+let _enviarVerResueltas=false;
+function emailDigestPersona(uid,notifs){
+  const u=byId(DB.users,uid);
+  const quienManda=SESSION?.name||'Tu líder';
+  if(notifs.length===1) return emailBodyParaNotificacion(notifs[0]); // con uno solo, el correo detallado de siempre
+  const lineas=notifs.slice(0,12).map(n=>{
+    const {p,d}=notifContexto(n);
+    const venc=n.tipo==='proyecto_nuevo'?p?.dueDate:d?.dueDate;
+    return `• ${n.texto}${venc?' — fecha límite '+fmtDate(venc):''}`;
+  });
+  const extra=notifs.length>12?`\n…y ${notifs.length-12} más (los ves en la app).`:'';
+  return {
+    subject:`LI · Procesos — tienes ${notifs.length} pendientes`,
+    body:`Hola ${u?u.name.split(' ')[0]:''},\n\nEstos son tus pendientes en Procesos:\n\n${lineas.join('\n')}${extra}\n\n`
+      +`Recuerda que las fechas son fijas: si ves que alguna no va a poder cumplirse, avísame antes para platicarlo.\n\nEntra aquí para ver el detalle:\n${PUBLIC_APP_URL}\n\nCualquier duda, avísame.\n\n— ${quienManda}`,
+  };
+}
+function avisarPersonaPorCorreo(uid){
+  const notifs=pendientesPorPersona()[uid]||[];
+  const u=byId(DB.users,uid);
+  if(!notifs.length) return;
+  if(!u?.email||!u.email.includes('@')){ toast('Esa persona no tiene correo capturado (Administración → Usuarios)','err'); return; }
+  const {subject,body}=emailDigestPersona(uid,notifs);
+  notifs.forEach(n=>resolverNotifPara(n,uid,'enviado'));
+  saveDB();
+  abrirMailto(`mailto:${u.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+}
+function copiarPersonaPorCorreo(uid){
+  const notifs=pendientesPorPersona()[uid]||[]; const u=byId(DB.users,uid);
+  if(!notifs.length) return;
+  const {subject,body}=emailDigestPersona(uid,notifs);
+  copiarAlPortapapeles(`Para: ${u?.email||'(sin correo capturado)'}\nAsunto: ${subject}\n\n${body}`);
+}
 function renderEnviarPanel(){
-  const todas=notificacionesParaEnviar();
-  const pendientes=todas.filter(n=>!n.emailEnviado&&!n.descartado);
-  const resueltas=todas.filter(n=>n.emailEnviado||n.descartado);
+  const porPersona=pendientesPorPersona();
+  const uids=Object.keys(porPersona).sort((a,b)=>(byId(DB.users,a)?.name||'').localeCompare(byId(DB.users,b)?.name||''));
+  const pend=notifPendientesDeEnviar();
+  const total=pend.length;
+  const resueltas=notificacionesParaEnviar().filter(n=>!pend.includes(n));
   refreshEnviarBadge();
-  const list=_enviarVerResueltas?todas:pendientes;
   const body=document.getElementById('dlg-enviar-body');
-  const filaHTML=n=>{
-    const paraNombres=n.paraUserIds.map(uid=>byId(DB.users,uid)?.name).filter(Boolean);
-    const resuelto=n.emailEnviado||n.descartado;
-    return `<div class="card" style="margin-bottom:8px;${resuelto?'opacity:.65':''}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-        <div style="cursor:pointer;flex:1;min-width:0" data-ir-notif="${n.id}">
-          <div style="font-size:13px">${NOTIF_ICON[n.tipo]||'🔔'} ${esc(n.texto)}</div>
-          <div class="small muted" style="margin-top:3px">Para: <b>${paraNombres.length?esc(paraNombres.join(', ')):'—'}</b></div>
-          <div class="small muted" style="margin-top:2px">${fmtWhen(n.createdAt)}
-            ${n.emailEnviado?` · <span style="color:var(--ok)">✉️ enviado ${fmtWhen(n.emailEnviado.at)}</span>`:''}
-            ${n.descartado?` · <span style="color:var(--muted)">✕ descartado ${fmtWhen(n.descartado.at)}</span>`:''}
+  const personaHTML=uid=>{
+    const u=byId(DB.users,uid), items=porPersona[uid];
+    const sinCorreo=!u?.email||!u.email.includes('@');
+    return `<details class="card" style="margin-bottom:10px;padding:0" ${uids.length<=3?'open':''}>
+      <summary style="cursor:pointer;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;list-style:none">
+        <span style="font-weight:700;font-size:14px">${esc(u?.name||'—')}</span>
+        <span class="pill warn">${items.length} pendiente${items.length!==1?'s':''}</span>
+        ${sinCorreo?'<span class="pill bad" title="Administración → Usuarios">sin correo</span>':''}
+        <span style="margin-left:auto;display:flex;gap:6px">
+          <button class="btn xs primary" data-avisar="${uid}" ${sinCorreo?'disabled':''}>✉️ Avisar a ${esc((u?.name||'').split(' ')[0])} (${items.length})</button>
+          <button class="btn xs" data-copiar="${uid}" title="Copia el correo para pegarlo tú">📋</button>
+          <button class="btn xs" data-ignorar="${uid}" title="Ya no hace falta avisarle — se quitan sin mandar nada">Ya no hace falta</button>
+        </span>
+      </summary>
+      <div style="padding:0 14px 12px">${items.map(n=>{
+        const {d}=notifContexto(n);
+        return `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--border2)">
+          <div style="flex:1;min-width:0;cursor:pointer" data-ir-notif="${n.id}">
+            <div style="font-size:12.5px">${NOTIF_ICON[n.tipo]||'🔔'} ${esc(n.texto)}</div>
+            <div class="small muted">${fmtWhen(n.createdAt)}${d?.dueDate?' · fecha límite '+fmtDate(d.dueDate):''}</div>
           </div>
-        </div>
-        ${resuelto?'':`<div style="display:flex;gap:4px;flex-shrink:0">
-          <button class="btn xs" data-mail-notif="${n.id}" title="Enviar por correo">✉️ Enviar</button>
-          <button class="btn xs" data-copy-notif="${n.id}" title="Por si el correo no abre solo — copia el texto para pegarlo tú">📋</button>
-          <button class="btn xs danger" data-descartar-notif="${n.id}" title="No hace falta avisarlo por correo — se quita de pendientes sin mandar nada">✕</button>
-        </div>`}
-      </div>
-    </div>`;
+          <button class="btn xs" data-ignorar-uno="${n.id}|${uid}" title="Quitar solo este">✕</button>
+        </div>`;}).join('')}</div>
+    </details>`;
   };
   body.innerHTML=`
-    ${resueltas.length?`<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
-      <button class="btn xs" id="btn-toggle-resueltas">${_enviarVerResueltas?'Ocultar':'Ver'} resueltas (${resueltas.length})</button>
-    </div>`:''}
-    ${list.length?list.slice(0,50).map(filaHTML).join(''):emptyStateHTML('Nada pendiente','Todo lo que había por avisar ya se envió o se descartó.')}
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+      <div class="small muted" style="flex:1">${total?`<b>${uids.length} persona${uids.length!==1?'s':''}</b> con avisos pendientes. Un clic en “Avisar” arma <b>un solo correo</b> con todo lo suyo y lo deja marcado como enviado.`:'Todo al día — no hay nada por avisar.'}</div>
+      ${total?'<button class="btn xs" id="btn-enviar-limpiar">Marcar todo como atendido</button>':''}
+      ${resueltas.length?`<button class="btn xs" id="btn-toggle-resueltas">${_enviarVerResueltas?'Ocultar':'Ver'} resueltas (${resueltas.length})</button>`:''}
+    </div>
+    ${uids.length?uids.map(personaHTML).join(''):emptyStateHTML('Nada pendiente','Los avisos ya vistos por la persona, cerrados o con más de '+NOTIF_VIGENCIA_DIAS+' días se limpian solos.')}
+    ${_enviarVerResueltas?`<div class="small muted" style="font-weight:700;margin:14px 0 6px">RESUELTAS</div>`+resueltas.slice(0,40).map(n=>{
+      const para=n.paraUserIds.map(id=>byId(DB.users,id)?.name).filter(Boolean).join(', ');
+      const motivo=n.emailEnviado?'✉️ enviado '+fmtWhen(n.emailEnviado.at):n.descartado?'✕ atendido '+fmtWhen(n.descartado.at):(n.paraUserIds.map(u=>notifObsoletaPara(n,u)).find(Boolean)||'resuelto');
+      return `<div class="small" style="padding:5px 0;border-top:1px solid var(--border2);opacity:.7">${NOTIF_ICON[n.tipo]||'🔔'} ${esc(n.texto)} <span class="muted">— ${esc(para)} · ${esc(motivo)}</span></div>`;}).join(''):''}
   `;
   document.getElementById('btn-toggle-resueltas')?.addEventListener('click',()=>{ _enviarVerResueltas=!_enviarVerResueltas; renderEnviarPanel(); });
+  document.getElementById('btn-enviar-limpiar')?.addEventListener('click',async()=>{
+    if(!await appConfirm('¿Marcar todo como atendido?',`Se quitan ${total} aviso${total!==1?'s':''} pendiente${total!==1?'s':''} sin mandar ningún correo.`)) return;
+    Object.entries(porPersona).forEach(([uid,ns])=>ns.forEach(n=>resolverNotifPara(n,uid,'descartado')));
+    saveDB(); renderEnviarPanel();
+  });
   body.querySelectorAll('[data-ir-notif]').forEach(el=>{
     el.addEventListener('click',()=>irANotificacion(byId(DB.notificaciones,el.dataset.irNotif)));
   });
-  body.querySelectorAll('[data-mail-notif]').forEach(btn=>{
-    btn.addEventListener('click',ev=>{ ev.stopPropagation(); avisarNotifPorCorreo(byId(DB.notificaciones,btn.dataset.mailNotif)); renderEnviarPanel(); });
-  });
-  body.querySelectorAll('[data-copy-notif]').forEach(btn=>{
-    btn.addEventListener('click',ev=>{ ev.stopPropagation(); copiarNotifPorCorreo(byId(DB.notificaciones,btn.dataset.copyNotif)); });
-  });
-  body.querySelectorAll('[data-descartar-notif]').forEach(btn=>{
-    btn.addEventListener('click',ev=>{ ev.stopPropagation(); descartarNotificacion(btn.dataset.descartarNotif); renderEnviarPanel(); });
-  });
+  body.querySelectorAll('[data-avisar]').forEach(btn=>btn.addEventListener('click',ev=>{ ev.preventDefault(); avisarPersonaPorCorreo(btn.dataset.avisar); renderEnviarPanel(); }));
+  body.querySelectorAll('[data-copiar]').forEach(btn=>btn.addEventListener('click',ev=>{ ev.preventDefault(); copiarPersonaPorCorreo(btn.dataset.copiar); }));
+  body.querySelectorAll('[data-ignorar]').forEach(btn=>btn.addEventListener('click',ev=>{
+    ev.preventDefault(); (porPersona[btn.dataset.ignorar]||[]).forEach(n=>resolverNotifPara(n,btn.dataset.ignorar,'descartado')); saveDB(); renderEnviarPanel();
+  }));
+  body.querySelectorAll('[data-ignorar-uno]').forEach(btn=>btn.addEventListener('click',ev=>{
+    ev.stopPropagation(); const [nid,uid]=btn.dataset.ignorarUno.split('|'); const n=byId(DB.notificaciones,nid); if(n){ resolverNotifPara(n,uid,'descartado'); saveDB(); } renderEnviarPanel();
+  }));
 }
 function openEnviarPanel(){ _enviarVerResueltas=false; renderEnviarPanel(); document.getElementById('dlg-enviar').showModal(); }
 function refreshEnviarBadge(){
