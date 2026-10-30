@@ -436,6 +436,10 @@ tr.ea-child td{background:var(--surface2)}tr.ea-child .ea-name{padding-left:30px
 .mc-roca .enl b.ok{background:var(--ok-bg);color:var(--ok)}.mc-roca .enl b.bad{background:var(--bad-bg);color:var(--bad)}
 .mc-note{padding:20px;color:var(--muted);text-align:center;font-size:13px}
 .mc-link{margin-top:20px;font-size:13px}.mc-link button{border:0;background:none;color:var(--accent);font-weight:700;cursor:pointer;padding:0}
+.mc-pers{display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--border2)}
+.mc-pers button{border:1px solid var(--border2);background:var(--surface2);color:inherit;border-radius:18px;padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer}
+.mc-pers button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.mc-pers button i{font-style:normal;font-weight:800;margin-left:7px;opacity:.85}.mc-pers button i.bad{color:var(--bad);opacity:1}.mc-pers button.on i.bad{color:#fff}
 
 /* ══ Ajuste de bloques en pantallas medianas (que todo se vea sin desplazarse de lado) ══ */
 .ea-card td,.ea-card th{padding:11px 9px}
@@ -2921,7 +2925,7 @@ VIEW_RENDERERS['rocas']=renderRocas;
    - ROCAS:  promedio de avance de las rocas del trimestre ÷ 10 (igual que Junta de Pulso en EOS).
    - GLOBAL: 25% tareas + 25% KPIS + 50% rocas, usando solo lo que tenga datos. (Pesos inferidos de EOS; ajustables.)
 ══════════════════════════════════════════════════════ */
-let _mcSec=null, _mcQ=null;
+let _mcSec=null, _mcQ=null, _mcPer=null;
 const MC_MESES={1:'ene-mar',2:'abr-jun',3:'jul-sep',4:'oct-dic'};
 function mcAreas(){
   if(isAdmin()) return (DB.secciones||[]).filter(s=>s.liderId||true).slice().sort((a,b)=>a.nombre.localeCompare(b.nombre));
@@ -2979,8 +2983,13 @@ function renderMiCumplimiento(root){
   const rBody=rs.length?rs.map((r,j)=>{const a=+r.avance||0,col=a>=67?'var(--ok)':a>=34?'#C4922A':'var(--bad)',lin=a>=Math.max(0,(esActual?Math.round(((new Date()-new Date(qy,(qn-1)*3,1))/864e5)/91*100):100)-10);
     return `<div class="mc-roca"><span class="no">${j+1}</span><div class="t"><div class="tt">${esc(r.title)}</div><div class="bar"><i style="width:${a}%;background:${col}"></i></div></div><div class="pct" style="color:${col}">${a}%</div><div class="enl">EN LÍNEA<b class="${lin?'ok':'bad'}">${lin?'Sí':'No'}</b></div></div>`;}).join(''):`<div class="mc-note">Sin rocas capturadas para este trimestre. Se agregan en <b>Junta semanal → Rocas</b>.</div>`;
   // Tareas
-  const ts=mcTareas(sec);
-  const tBody=ts.length?`<table><thead><tr><th>ACTIVIDAD</th><th>RESPONSABLE</th><th>ENTREGA</th><th>PROYECTO</th><th class="ea-hm">CENTRO DE TRABAJO</th><th>% AVANCE</th><th>MINUTA</th></tr></thead><tbody>${ts.map(eaFila).join('')}</tbody></table>`:'<div class="mc-note">Sin actividades abiertas de esta área.</div>';
+  // Filtro por reporte directo: todo el equipo, el líder o cada persona que le reporta (con sus pendientes y vencidas)
+  const tsTodas=mcTareas(sec), personas=[...mcGente(sec)].map(id=>byId(DB.users,id)).filter(Boolean).sort((a,b)=>(a.id===sec.liderId?-1:b.id===sec.liderId?1:0)||a.name.localeCompare(b.name));
+  if(_mcPer&&!personas.some(p=>p.id===_mcPer)) _mcPer=null;
+  const esVenc=d=>d.dueDate&&(eaDias(d.dueDate)??1)<0, ts=_mcPer?tsTodas.filter(d=>d.assigneeId===_mcPer):tsTodas, vencTs=ts.filter(esVenc).length;
+  const chipP=(id,txt,list)=>{ const v=list.filter(esVenc).length; return `<button data-per="${esc(id)}" class="${(_mcPer||'')===id?'on':''}">${txt}<i>${list.length}</i>${v?`<i class="bad">⚠ ${v}</i>`:''}</button>`; };
+  const filtroP=personas.length>1?`<div class="mc-pers"><span class="ea-sm" style="align-self:center">Ver:</span>${chipP('','Todo el equipo',tsTodas)}${personas.map(p=>chipP(p.id,esc(p.name)+(p.id===sec.liderId?' (líder)':''),tsTodas.filter(d=>d.assigneeId===p.id))).join('')}</div>`:'';
+  const tBody=ts.length?`<table><thead><tr><th>ACTIVIDAD</th><th>RESPONSABLE</th><th>ENTREGA</th><th>PROYECTO</th><th class="ea-hm">CENTRO DE TRABAJO</th><th>% AVANCE</th><th>MINUTA</th></tr></thead><tbody>${ts.map(eaFila).join('')}</tbody></table>`:`<div class="mc-note">${_mcPer?'Sin actividades abiertas de esta persona.':'Sin actividades abiertas de esta área.'}</div>`;
   const idx=areas.findIndex(a=>a.id===_mcSec);
   root.innerHTML=`
     <div class="mc-bar"><button class="ea-btn" id="mc-prev">◀ Anterior</button>
@@ -2992,11 +3001,12 @@ function renderMiCumplimiento(root){
       <div class="mc-gauges"><div class="mc-g">TAREAS${mcGauge(sc.tareas)}</div><div class="mc-g">KPIS${mcGauge(sc.kpis)}</div><div class="mc-g">ROCAS${mcGauge(sc.rocas)}</div><div class="mc-g glob">CALIFICACIÓN GLOBAL · ${qn}Q ${qy}${mcGauge(sc.global)}</div></div></div>
     <div class="mc-sec blue"><span>KPIS — CAPTURA DE LA ÚLTIMA SEMANA</span></div><div class="mc-body">${kBody}</div>
     <div class="mc-sec green"><span>ROCAS DE ${qn}Q ${qy} · ${MC_MESES[qn].toUpperCase()}</span><span>${rs.length} ROCA${rs.length!==1?'S':''}</span></div><div class="mc-body">${rBody}</div>
-    <div class="mc-sec dark"><span>TAREAS Y ACTIVIDADES</span><span>${sc.vencidas} VENCIDA${sc.vencidas!==1?'S':''}</span></div><div class="mc-body">${tBody}</div>
+    <div class="mc-sec dark"><span>TAREAS Y ACTIVIDADES${_mcPer?' · '+esc((byId(DB.users,_mcPer)?.name||'').toUpperCase()):''}</span><span>${vencTs} VENCIDA${vencTs!==1?'S':''}</span></div><div class="mc-body">${filtroP}${tBody}</div>
     <div class="mc-link"><button id="mc-exp">Ver mi expediente (puesto, desempeño y PT del mes) →</button></div>`;
-  const ir=d=>{ const i=(idx+d+areas.length)%areas.length; _mcSec=areas[i].id; renderMiCumplimiento(root); };
+  const ir=d=>{ const i=(idx+d+areas.length)%areas.length; _mcSec=areas[i].id; _mcPer=null; renderMiCumplimiento(root); };
   root.querySelector('#mc-prev').onclick=()=>ir(-1); root.querySelector('#mc-next').onclick=()=>ir(1);
-  root.querySelector('#mc-area').onchange=e=>{ _mcSec=e.target.value; renderMiCumplimiento(root); };
+  root.querySelector('#mc-area').onchange=e=>{ _mcSec=e.target.value; _mcPer=null; renderMiCumplimiento(root); };
+  root.querySelectorAll('.mc-pers [data-per]').forEach(b=>{ b.onclick=()=>{ _mcPer=b.dataset.per||null; renderMiCumplimiento(root); }; });
   root.querySelector('#mc-q').onchange=e=>{ _mcQ=e.target.value; renderMiCumplimiento(root); };
   root.querySelector('#mc-exp').onclick=()=>{ _profileUserId=null; showView('mipuesto'); };
   eaWireProyTabla(root);
