@@ -332,6 +332,7 @@ dialog::backdrop{background:rgba(28,31,23,.4)}
 .ea-av:hover input[type=range]:not(:disabled)::-webkit-slider-thumb,.ea-av input[type=range]:focus::-webkit-slider-thumb{opacity:1}
 .ea-av input[type=range]::-moz-range-thumb{width:5px;height:22px;border:0;border-radius:3px;background:rgba(40,40,45,.55)}
 .ea-av .pc{font-weight:800;font-size:14px;width:44px;text-align:right}
+.ea-av .ea-bar{flex:1;height:16px;border-radius:8px;background:linear-gradient(to right,var(--c) 0,var(--c) var(--p),var(--surface2) var(--p),var(--surface2) 100%)}
 .ea-c-bad{--c:var(--bad);color:var(--bad)}.ea-c-warn{--c:#C4922A;color:#b58720}.ea-c-ok{--c:var(--ok);color:var(--ok)}
 .ea-min{border:1px solid var(--border2);background:var(--surface);border-radius:9px;padding:6px 10px;display:inline-flex;align-items:center;gap:6px;font-size:15px;cursor:pointer}
 .ea-min:hover{background:var(--surface2)}
@@ -3903,7 +3904,8 @@ function resumenPendientesRows(dels){
       const u=byId(DB.users,d.assigneeId);
       const secs=p?seccionesDeProyecto(p):[];
       const liderNombres=secs.map(s=>byId(DB.users,s.liderId)).filter(Boolean).map(l=>l.name);
-      const {done,total}=p?projectProgress(p):{done:0,total:0};
+      const av=eaAvance(d), n=eaDias(d.dueDate);
+      const cts=(p?.centroIds||[]).map(id=>byId(DB.centros,id)?.nombre).filter(Boolean);
       return {
         deliverableId:d.id,
         projectId:d.projectId,
@@ -3915,7 +3917,10 @@ function resumenPendientesRows(dels){
         estatus:d.status,
         dueDate:d.dueDate,
         overdue:d.dueDate&&d.dueDate<today&&isOpenOverdueStatus(d.status),
-        pct:total?Math.round(done/total*100):0,
+        pct:av,                      // % de avance de LA ACTIVIDAD (igual que Mi cumplimiento), no del proyecto
+        chip:n==null?'':n<0?'bad':n<=7?'warn':'',
+        centros:cts,
+        alta:eaPrioridad(d)==='Alta',
         secciones:secs, // solo para agrupar el PDF por equipo — no se pinta tal cual
       };
     })
@@ -3927,6 +3932,8 @@ function resumenPendientesRows(dels){
         ||a.actividad.localeCompare(b.actividad,'es');
     });
 }
+// Barra de avance en texto (correo / portapapeles): ▓▓▓▓░░░░░░ 43%
+function resumenBarraTxt(pct){ const n=Math.round(pct/10); return '▓'.repeat(n)+'░'.repeat(10-n)+' '+pct+'%'; }
 // Las mismas filas ya ordenadas, partidas por persona (conserva el orden). Con
 // `liderPrimero` (nombre) el líder del equipo va al inicio de su bloque.
 function resumenPorPersona(rows,liderPrimero){
@@ -3961,11 +3968,15 @@ function resumenPdfHTML(dels,titulo){
   const gruposHTML=grupos.map(g=>`
     <h2>${esc(g.nombre)}${g.lider?` — líder ${esc(g.lider)}`:''} <span class="n">(${g.rows.length})</span></h2>
     <table>
-      <thead><tr><th>Actividad</th><th>Proyecto</th><th>Responsable</th><th>Entrega</th><th>Avance</th></tr></thead>
-      <tbody>${resumenPorPersona(g.rows,g.lider).map(pp=>`<tr><td colspan="5" class="per">${esc(pp.nombre)} <span class="n">(${pp.rows.length})</span></td></tr>`+pp.rows.map(r=>`<tr>
-        <td>${esc(r.actividad)}</td><td>${esc(r.proyecto)}</td><td>${esc(r.responsable)}</td>
-        <td${r.overdue?' class="bad"':''}>${fmtDate(r.dueDate)}</td><td>${r.pct}%</td>
-      </tr>`).join('')).join('')}</tbody>
+      <thead><tr><th>Actividad</th><th>Responsable</th><th>Entrega</th><th>Proyecto</th><th>Centro de trabajo</th><th>% Avance</th></tr></thead>
+      <tbody>${resumenPorPersona(g.rows,g.lider).map(pp=>`<tr><td colspan="6" class="per">${esc(pp.nombre)} <span class="n">(${pp.rows.length})</span></td></tr>`+pp.rows.map(r=>{ const k=r.pct>=67?'ok':r.pct>=34?'warn':'bad'; return `<tr>
+        <td class="nm">${esc(r.actividad)}${r.alta?' <span class="chip bad">🔥 Alta</span>':''}${r.estatus==='En pausa'?'<small>En pausa</small>':''}</td>
+        <td class="nw">${esc(r.responsable)}</td>
+        <td class="nw"><span class="chip ${r.chip}">${r.dueDate?fmtDate(r.dueDate):'—'}</span></td>
+        <td><span class="tag">${esc(r.proyecto)}</span></td>
+        <td>${r.centros.length?`<span class="ct">${esc(r.centros[0])}${r.centros.length>1?' +'+(r.centros.length-1):''}</span>`:'—'}</td>
+        <td><div class="av"><div class="bar"><i class="${k}" style="width:${r.pct}%"></i></div><b class="${k}">${r.pct}%</b></div></td>
+      </tr>`; }).join('')).join('')}</tbody>
     </table>`).join('');
   const tituloReal=titulo||'Resumen de pendientes por equipo';
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(tituloReal)}</title>
@@ -3978,7 +3989,19 @@ function resumenPdfHTML(dels,titulo){
   table{width:100%;border-collapse:collapse;margin-bottom:4px;font-size:11px}
   th,td{border:1px solid #ccc;padding:5px 7px;text-align:left}
   th{background:#f0f0f0}
-  td.bad{color:#a6402f;font-weight:700}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  td.nm{font-size:11.5px;line-height:1.3;min-width:170px} td.nm small{display:block;color:#82817C;font-size:9.5px}
+  td.nw{white-space:nowrap}
+  .chip{display:inline-block;border-radius:6px;padding:3px 8px;font-weight:700;font-size:10.5px;white-space:nowrap;background:#f0efe9;color:#333}
+  .chip.bad{background:#f3dcd9;color:#B0463C}.chip.warn{background:#f6e9cc;color:#9a6f12}
+  .tag{display:inline-block;border-radius:12px;padding:3px 9px;font-weight:700;font-size:10px;background:#dde7f3;color:#24476F}
+  .ct{display:inline-block;border-radius:6px;padding:3px 8px;font-weight:700;font-size:10px;background:#dde7f3;color:#24476F}
+  .av{display:flex;align-items:center;gap:7px;min-width:110px}
+  .bar{flex:1;height:11px;border-radius:6px;background:#e6e5e0;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:6px}
+  i.ok{background:#3C8A5C}i.warn{background:#C4922A}i.bad{background:#B0463C}
+  b.ok{color:#3C8A5C}b.warn{color:#b58720}b.bad{color:#B0463C}
+  .av b{font-size:11.5px;width:34px;text-align:right}
   td.per{background:#e6e6e6;font-weight:700}
   td.per .n{font-weight:400;color:#666}
   @media print{ h2{page-break-after:avoid} tr{page-break-inside:avoid} }
@@ -4039,7 +4062,7 @@ function resumenPendientesEmailPartes(delsOverride,tituloAlcance){
     let s=`▌ ${g.nombre}${g.lider?' — líder '+g.lider:''} (${g.rows.length})\n`+'─'.repeat(44);
     s+='\n\n'+resumenPorPersona(g.rows,g.lider).map(pp=>
       `■ ${pp.nombre} (${pp.rows.length})\n`+pp.rows.map((r,i)=>
-        `${i+1}. ${r.actividad}\n${r.proyecto} · Entrega: ${fmtDate(r.dueDate)}${r.overdue?' — ATRASADO':''} · Avance: ${r.pct}%`
+        `${i+1}. ${r.actividad}\n${r.proyecto} · Entrega: ${fmtDate(r.dueDate)}${r.overdue?' — ATRASADO':''}\nAvance: ${resumenBarraTxt(r.pct)}`
       ).join('\n\n')
     ).join('\n\n\n');
     return s;
@@ -4120,20 +4143,17 @@ function copiarAlPortapapeles(texto){
 // (renderReporteResumen), mismo patrón que vencidosTableHTML/rowsHTML arriba.
 function resumenPendientesTableHTML(rows){
   if(!rows.length) return emptyStateHTML('Nada pendiente','Todo tu alcance está al día ahora mismo.');
+  const fila=r=>{ const k=eaCls(r.pct); return `<tr class="row-clickable" data-resumen-pid="${esc(r.projectId||'')}" data-resumen-did="${esc(r.deliverableId||'')}" title="Clic para abrir">
+        <td class="ea-name">${esc(r.actividad)}${r.alta?' <span class="ea-chip bad" style="padding:2px 7px;font-size:10.5px" title="Prioridad alta">🔥 Alta</span>':''}${r.estatus==='En pausa'?'<small>En pausa</small>':''}</td>
+        <td style="white-space:nowrap">${esc(r.responsable)}</td>
+        <td><span class="ea-chip ${r.chip}">${r.dueDate?fmtDate(r.dueDate):'—'}</span></td>
+        <td>${r.proyecto&&r.proyecto!=='—'?`<span class="ea-tag t${r.proyecto.length%3}" title="${esc(r.proyecto)}">${esc(r.proyecto)}</span>`:'<span class="ea-tag none">— proyecto —</span>'}</td>
+        <td class="ea-hm">${r.centros.length?`<span class="ea-ct" title="${esc(r.centros.join(', '))}">${esc(r.centros[0])}${r.centros.length>1?' +'+(r.centros.length-1):''}</span>`:'<span class="ea-tag none">—</span>'}</td>
+        <td><div class="ea-av"><div class="ea-bar ${k}" style="--p:${r.pct}%"></div><span class="pc ${k}">${r.pct}%</span></div></td>
+      </tr>`; };
   return `<div style="overflow-x:auto"><table class="tbl">
-      <thead><tr><th>Actividad</th><th>Proyecto</th><th>Responsable</th><th>Líder</th><th>Estatus</th><th>Entrega</th><th>Avance</th></tr></thead>
-      <tbody>${resumenPorPersona(rows).map(pp=>{ const nAt=pp.rows.filter(r=>r.overdue).length; return `<tr><td colspan="7" style="background:var(--surface2);font-weight:700;padding:9px 12px">${esc(pp.nombre)} <span class="small muted" style="font-weight:400">· ${pp.rows.length} pendiente${pp.rows.length!==1?'s':''}${nAt?` · <b style="color:var(--bad)">${nAt} atrasado${nAt!==1?'s':''}</b>`:''}</span></td></tr>`+pp.rows.map(r=>`<tr class="row-clickable" data-resumen-pid="${esc(r.projectId||'')}" data-resumen-did="${esc(r.deliverableId||'')}" title="Clic para abrir">
-        <td>${esc(r.actividad)}</td>
-        <td class="small muted">${esc(r.proyecto)}</td>
-        <td>${esc(r.responsable)}</td>
-        <td>${esc(r.lider)}</td>
-        <td>${statusPillHTML(DELIVERABLE_STATUS,r.estatus)}</td>
-        <td>${r.overdue?`<span class="pill bad">${fmtDate(r.dueDate)}</span>`:`<span class="pill muted">${fmtDate(r.dueDate)}</span>`}</td>
-        <td><div style="display:flex;align-items:center;gap:6px">
-          <div class="bar-track" style="width:60px"><div class="bar-fill" style="width:${r.pct}%"></div></div>
-          <span class="small muted">${r.pct}%</span>
-        </div></td>
-      </tr>`).join(''); }).join('')}</tbody>
+      <thead><tr><th>Actividad</th><th>Responsable</th><th>Entrega</th><th>Proyecto</th><th class="ea-hm">Centro de trabajo</th><th>% Avance</th></tr></thead>
+      <tbody>${resumenPorPersona(rows).map(pp=>{ const nAt=pp.rows.filter(r=>r.overdue).length; return `<tr><td colspan="6" style="background:var(--surface2);font-weight:700;padding:9px 12px">${esc(pp.nombre)} <span class="small muted" style="font-weight:400">· ${pp.rows.length} pendiente${pp.rows.length!==1?'s':''}${nAt?` · <b style="color:var(--bad)">${nAt} atrasado${nAt!==1?'s':''}</b>`:''}</span></td></tr>`+pp.rows.map(fila).join(''); }).join('')}</tbody>
     </table></div>`;
 }
 // Engancha el clic de cualquier tabla pintada con resumenPendientesTableHTML —
