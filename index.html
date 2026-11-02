@@ -3889,11 +3889,11 @@ VIEW_RENDERERS['scorecard']=renderScorecard;
    pendiente. Mismo alcance que reportDeliverables() (todo para líder/admin,
    solo lo propio para integrante) — una sola fuente de "qué es mío".
 ══════════════════════════════════════════════════════ */
-// Orden de "actividad" para el Resumen de pendientes: los que de verdad se
-// están trabajando primero, luego los que ni se han tocado, y al final los
-// bloqueados a propósito — pedido del usuario 22-sep-2026 ("primero los
-// activos"). Dentro de cada grupo, sigue el orden por fecha de entrega.
-const RESUMEN_ESTATUS_PRIORIDAD={'En proceso':0,'Pendiente':1,'En pausa':2};
+// Orden del Resumen de pendientes (pedido del usuario 02-nov-2026: "ordena por
+// persona y por fecha de menor a mayor"): primero por responsable (A→Z, los
+// "sin responsable" al final) y, dentro de cada persona, por fecha de entrega
+// de la más antigua a la más lejana (sin fecha al final). Reemplaza el orden
+// anterior por estatus (22-sep), que dejaba a todas las personas revueltas.
 function resumenPendientesRows(dels){
   const today=todayISO();
   return (dels||reportDeliverables())
@@ -3907,6 +3907,7 @@ function resumenPendientesRows(dels){
       return {
         deliverableId:d.id,
         projectId:d.projectId,
+        responsableId:d.assigneeId||'',
         actividad:d.name,
         proyecto:p?p.name:'—',
         responsable:u?u.name:'—',
@@ -3919,10 +3920,26 @@ function resumenPendientesRows(dels){
       };
     })
     .sort((a,b)=>{
-      const pa=RESUMEN_ESTATUS_PRIORIDAD[a.estatus]??1, pb=RESUMEN_ESTATUS_PRIORIDAD[b.estatus]??1;
-      if(pa!==pb) return pa-pb;
-      return (a.dueDate||'9999').localeCompare(b.dueDate||'9999');
+      const sa=a.responsable==='—', sb=b.responsable==='—';
+      if(sa!==sb) return sa?1:-1;
+      return a.responsable.localeCompare(b.responsable,'es')
+        ||(a.dueDate||'9999').localeCompare(b.dueDate||'9999')
+        ||a.actividad.localeCompare(b.actividad,'es');
     });
+}
+// Las mismas filas ya ordenadas, partidas por persona (conserva el orden). Con
+// `liderPrimero` (nombre) el líder del equipo va al inicio de su bloque.
+function resumenPorPersona(rows,liderPrimero){
+  const m=new Map();
+  rows.forEach(r=>{
+    const k=r.responsableId||'';
+    if(!m.has(k)) m.set(k,{nombre:r.responsable,rows:[]});
+    m.get(k).rows.push(r);
+  });
+  const g=[...m.values()];
+  const i=liderPrimero?g.findIndex(x=>x.nombre===liderPrimero):-1;
+  if(i>0) g.unshift(g.splice(i,1)[0]);
+  return g;
 }
 // Mismas filas de arriba, agrupadas por Sección/equipo (para el PDF) — un
 // renglón puede repetirse bajo 2 equipos si su proyecto pertenece a 2
@@ -3945,10 +3962,10 @@ function resumenPdfHTML(dels,titulo){
     <h2>${esc(g.nombre)}${g.lider?` — líder ${esc(g.lider)}`:''} <span class="n">(${g.rows.length})</span></h2>
     <table>
       <thead><tr><th>Actividad</th><th>Proyecto</th><th>Responsable</th><th>Entrega</th><th>Avance</th></tr></thead>
-      <tbody>${g.rows.map(r=>`<tr>
+      <tbody>${resumenPorPersona(g.rows,g.lider).map(pp=>`<tr><td colspan="5" class="per">${esc(pp.nombre)} <span class="n">(${pp.rows.length})</span></td></tr>`+pp.rows.map(r=>`<tr>
         <td>${esc(r.actividad)}</td><td>${esc(r.proyecto)}</td><td>${esc(r.responsable)}</td>
         <td${r.overdue?' class="bad"':''}>${fmtDate(r.dueDate)}</td><td>${r.pct}%</td>
-      </tr>`).join('')}</tbody>
+      </tr>`).join('')).join('')}</tbody>
     </table>`).join('');
   const tituloReal=titulo||'Resumen de pendientes por equipo';
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(tituloReal)}</title>
@@ -3962,6 +3979,8 @@ function resumenPdfHTML(dels,titulo){
   th,td{border:1px solid #ccc;padding:5px 7px;text-align:left}
   th{background:#f0f0f0}
   td.bad{color:#a6402f;font-weight:700}
+  td.per{background:#e6e6e6;font-weight:700}
+  td.per .n{font-weight:400;color:#666}
   @media print{ h2{page-break-after:avoid} tr{page-break-inside:avoid} }
 </style></head>
 <body>
@@ -4018,9 +4037,11 @@ function resumenPendientesEmailPartes(delsOverride,tituloAlcance){
   // una línea en blanco del siguiente, para que no se corran entre sí.
   const cuerpoCompleto=grupos.map(g=>{
     let s=`▌ ${g.nombre}${g.lider?' — líder '+g.lider:''} (${g.rows.length})\n`+'─'.repeat(44);
-    s+='\n\n'+g.rows.map((r,i)=>
-      `${i+1}. ${r.actividad}\n${r.proyecto} · ${r.responsable} · Entrega: ${fmtDate(r.dueDate)}${r.overdue?' — ATRASADO':''} · Avance: ${r.pct}%`
-    ).join('\n\n');
+    s+='\n\n'+resumenPorPersona(g.rows,g.lider).map(pp=>
+      `■ ${pp.nombre} (${pp.rows.length})\n`+pp.rows.map((r,i)=>
+        `${i+1}. ${r.actividad}\n${r.proyecto} · Entrega: ${fmtDate(r.dueDate)}${r.overdue?' — ATRASADO':''} · Avance: ${r.pct}%`
+      ).join('\n\n')
+    ).join('\n\n\n');
     return s;
   }).join('\n\n\n');
   const subject=`Resumen de pendientes — ${titulo} — ${fecha}`;
@@ -4101,7 +4122,7 @@ function resumenPendientesTableHTML(rows){
   if(!rows.length) return emptyStateHTML('Nada pendiente','Todo tu alcance está al día ahora mismo.');
   return `<div style="overflow-x:auto"><table class="tbl">
       <thead><tr><th>Actividad</th><th>Proyecto</th><th>Responsable</th><th>Líder</th><th>Estatus</th><th>Entrega</th><th>Avance</th></tr></thead>
-      <tbody>${rows.map(r=>`<tr class="row-clickable" data-resumen-pid="${esc(r.projectId||'')}" data-resumen-did="${esc(r.deliverableId||'')}" title="Clic para abrir">
+      <tbody>${resumenPorPersona(rows).map(pp=>{ const nAt=pp.rows.filter(r=>r.overdue).length; return `<tr><td colspan="7" style="background:var(--surface2);font-weight:700;padding:9px 12px">${esc(pp.nombre)} <span class="small muted" style="font-weight:400">· ${pp.rows.length} pendiente${pp.rows.length!==1?'s':''}${nAt?` · <b style="color:var(--bad)">${nAt} atrasado${nAt!==1?'s':''}</b>`:''}</span></td></tr>`+pp.rows.map(r=>`<tr class="row-clickable" data-resumen-pid="${esc(r.projectId||'')}" data-resumen-did="${esc(r.deliverableId||'')}" title="Clic para abrir">
         <td>${esc(r.actividad)}</td>
         <td class="small muted">${esc(r.proyecto)}</td>
         <td>${esc(r.responsable)}</td>
@@ -4112,7 +4133,7 @@ function resumenPendientesTableHTML(rows){
           <div class="bar-track" style="width:60px"><div class="bar-fill" style="width:${r.pct}%"></div></div>
           <span class="small muted">${r.pct}%</span>
         </div></td>
-      </tr>`).join('')}</tbody>
+      </tr>`).join(''); }).join('')}</tbody>
     </table></div>`;
 }
 // Engancha el clic de cualquier tabla pintada con resumenPendientesTableHTML —
