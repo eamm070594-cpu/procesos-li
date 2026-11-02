@@ -16292,5 +16292,40 @@ VIEW_RENDERERS['leadtime']=renderLeadTime;
   }
 })();
 </script>
+<script>
+/* Aviso de versión nueva. El acceso directo de la barra de tareas abre la app como ventana
+   propia y se puede quedar abierta días: jamás se entera de que se subió una versión.
+   Compara la fecha del index.html que cargó (document.lastModified) contra la del servidor y,
+   si el servidor es más nuevo, ofrece "Actualizar ahora". No recarga solo (podrías estar
+   capturando); revisa al abrir, al volver a la ventana y cada 5 min. */
+(function(){
+  if(!/^https?:$/.test(location.protocol)) return;
+  let ultimo=0, mostrado=false;
+  const cargada=()=>{ const t=new Date(document.lastModified).getTime(); return isNaN(t)?Infinity:t; };
+  function mostrar(){
+    if(mostrado) return; mostrado=true;
+    const b=document.createElement('div');
+    b.setAttribute('role','status');
+    b.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99999;display:flex;gap:12px;align-items:center;background:#2A2A2C;color:#fff;padding:11px 16px;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.3);font:600 13.5px/1.3 system-ui,sans-serif;max-width:92vw';
+    b.innerHTML='<span>🔄 Hay una versión nueva de LI · Procesos</span><button style="border:0;background:#fff;color:#2A2A2C;font:700 13px system-ui,sans-serif;padding:7px 13px;border-radius:8px;cursor:pointer">Actualizar ahora</button><button aria-label="Cerrar" style="border:0;background:transparent;color:#bbb;font-size:18px;cursor:pointer;padding:0 2px">×</button>';
+    const [ok,cerrar]=b.querySelectorAll('button');
+    ok.onclick=async()=>{ ok.textContent='Actualizando…'; try{ await fetch(location.pathname,{cache:'reload'}); }catch(e){} location.reload(); };
+    cerrar.onclick=()=>{ b.remove(); setTimeout(()=>{ mostrado=false; },30*60000); };
+    document.body.appendChild(b);
+  }
+  async function revisar(forzar){
+    if(mostrado||(!forzar&&Date.now()-ultimo<120000)) return; ultimo=Date.now();
+    try{
+      const r=await fetch(location.pathname,{method:'HEAD',cache:'no-store'});
+      const lm=r.ok&&r.headers.get('last-modified'); if(!lm) return;
+      if(Date.parse(lm)>cargada()+60000) mostrar();
+    }catch(e){}
+  }
+  setTimeout(()=>revisar(true),8000);
+  setInterval(()=>revisar(false),5*60000);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) revisar(false); });
+  window.addEventListener('focus',()=>revisar(false));
+})();
+</script>
 </body>
 </html>
